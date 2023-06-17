@@ -1,0 +1,15 @@
+{
+  "extends": "@tsconfig/node18/tsconfig.json",
+  "include": [
+    "src/**/*.ts"
+  ],
+  "compilerOptions": {
+    "importHelpers": true,
+    "outDir": "dist",
+    "module": "commonjs",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  }
+}

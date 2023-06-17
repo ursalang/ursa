@@ -1,0 +1,164 @@
+Hak {
+  Sequence
+    = Exp ";" Sequence ";"? -- seq
+    | Exp
+
+  Exp
+    = If
+    | Fn
+    | Loop
+    | Let
+    | Assignment
+    | LogicExp
+
+  If
+    = "if" Exp Block ("else" Block)?
+
+  Fn
+    = "fn" "(" ListOf<ident, ","> ")" Block
+
+  Loop
+    = "loop" Block
+
+  Let
+    = "let" ident "=" Exp Block
+
+  Assignment
+    = CallExp "[" Exp "]" "=" Exp  -- index
+    | ident "=" Exp                -- ident
+
+  LogicExp
+    = LogicExp "and" CompareExp -- and
+    | LogicExp "or" CompareExp  -- or
+    | "not" LogicExp            -- not
+    | CompareExp
+
+  CompareExp
+    = CompareExp "==" ArithmeticExp -- eq
+    | CompareExp "!=" ArithmeticExp -- neq
+    | CompareExp "<"  ArithmeticExp -- lt
+    | CompareExp "<=" ArithmeticExp -- leq
+    | CompareExp ">"  ArithmeticExp -- gt
+    | CompareExp ">=" ArithmeticExp -- geq
+    | ArithmeticExp
+
+  ArithmeticExp
+    = ArithmeticExp "+" ProductExp  -- plus
+    | ArithmeticExp "-" ProductExp  -- minus
+    | ProductExp
+
+  ProductExp
+    = ProductExp "*" ExponentExp  -- times
+    | ProductExp "/" ExponentExp  -- divide
+    | ProductExp "//" ExponentExp -- mod
+    | ExponentExp
+
+  ExponentExp
+    = UnaryExp "**" ExponentExp  -- power
+    | UnaryExp
+
+  UnaryExp
+    = "+" Exp           -- pos
+    | "-" Exp           -- neg
+    | IndexExp
+    | CallExp
+
+  IndexExp
+    = CallExp "[" Exp "]" -- index
+
+  CallExp
+    = PropertyExp "(" ListOf<Exp, ","> ")"  -- call
+    | PropertyExp
+
+  PropertyExp
+    = PropertyExp #"." #ident           -- property
+    | PrimaryExp
+
+  PrimaryExp
+    = "(" Exp ")"       -- paren
+    | Block
+    | List
+    | Dict
+    | "break" Exp?      -- break
+    | "return" Exp?     -- return
+    | "continue"        -- continue
+    | "null"            -- null
+    | bool
+    | string
+    | ident
+    | number
+
+  Block
+    = "{" Sequence? "}"
+
+  List
+    = "[" ListOf<Exp, ","> "]"
+
+  Dict
+    = "{" ListOf<KeyValue, ","> "}"
+
+  KeyValue
+    = Exp ":" Exp
+
+  ExpSeq
+    = Exp "," Exp ","? -- expseq
+    | Exp?             -- exp
+
+  ident  (an identifier)
+    = letter alnum*
+
+  bool  (a boolean)
+    = "false" | "true"
+
+  number  (a number)
+    = digit* "." digit+  -- fract
+    | digit+             -- whole
+
+  string
+    = "\"" doubleStringCharacter* "\""
+  doubleStringCharacter
+    = ~("\"" | "\\" | lineTerminator) any -- nonEscaped
+    | "\\" escapeSequence                 -- escaped
+    | lineContinuation                    -- lineContinuation
+  lineContinuation
+    = "\\" lineTerminatorSequence
+  escapeSequence
+    = unicodeEscapeSequence
+    | hexEscapeSequence
+    | characterEscapeSequence  // Must come last.
+  characterEscapeSequence
+    = singleEscapeCharacter
+    | nonEscapeCharacter
+  singleEscapeCharacter =
+    "\"" | "\\" | "b" | "f" | "n" | "r" | "t" | "v"
+  nonEscapeCharacter
+    = ~(escapeCharacter | lineTerminator) any
+  escapeCharacter
+    = singleEscapeCharacter | digit | "x" | "u"
+  hexEscapeSequence
+    = "x" hexDigit hexDigit
+  unicodeEscapeSequence
+    = "u" hexDigit hexDigit hexDigit hexDigit
+  lineTerminator
+    = "\n" | "\r" | "\u2028" | "\u2029"
+  lineTerminatorSequence
+    = "\n" | "\r" ~"\n" | "\u2028" | "\u2029" | "\r\n"
+
+  comment
+    = "//" (~lineTerminator any)*
+
+  // Override Ohm's built-in definition
+  space := whitespace | lineTerminator | comment
+
+  whitespace
+    = "\t"
+    | "\x0B"    -- verticalTab
+    | "\x0C"    -- formFeed
+    | " "
+    | "\u00A0"  -- noBreakSpace
+    | "\uFEFF"  -- byteOrderMark
+    | unicodeSpaceSeparator
+
+  unicodeSpaceSeparator
+    = "\u2000".."\u200B" | "\u3000"
+}
