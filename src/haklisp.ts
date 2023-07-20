@@ -3,8 +3,8 @@ import grammar, {HakLispSemantics} from './haklisp.ohm-bundle'
 // Specify precise type so semantics can be precisely type-checked.
 const semantics: HakLispSemantics = grammar.createSemantics()
 
-// Unify with Object? then can be directly evalled. At least in Let…
-type Binding = {[key: string]: Val}
+// An alias for Obj.
+type Binding = Obj
 
 // Base class for parsing the language, extended directly by classes used
 // only during parsing.
@@ -78,9 +78,9 @@ export class IndexException extends HakException {}
 export class PropertyException extends HakException {}
 
 function bindArgsToParams(params: string[], args: Val[]): Binding {
-  const binding = Object.fromEntries(params.map((key, index) => [key, args[index]]))
+  const binding = new Obj(new Map(params.map((key, index) => [key, args[index]])))
   if (args.length > params.length) {
-    binding['...'] = new List(args.slice(params.length))
+    binding.map.set('...', new List(args.slice(params.length)))
   }
   return binding
 }
@@ -173,11 +173,11 @@ class Ref extends Val {
 }
 
 export class Sym extends Ref {
-  static globals: {[name: string]: Val} = {}
+  static globals: Binding
 
   static findBinding(env: Binding[], id: string): Binding {
     for (let i = env.length - 1; i >= 0; i -= 1) {
-      if (env[i][id] !== undefined) {
+      if (env[i].map.has(id)) {
         return env[i]
       }
     }
@@ -190,13 +190,13 @@ export class Sym extends Ref {
 
   eval(env: Binding[]): Val {
     const disp = Sym.findBinding(env, this.name)
-    return disp[this.name]
+    return disp.map.get(this.name) ?? new Null()
   }
 
   set(env: Binding[], val: Val) {
     const disp = Sym.findBinding(env, this.name)
     const evaluatedVal = val.eval(env)
-    disp[this.name] = evaluatedVal
+    disp.map.set(this.name, evaluatedVal)
     return evaluatedVal
   }
 
@@ -204,14 +204,14 @@ export class Sym extends Ref {
     set: (env: Binding[], val: Val) => {
       const disp = Sym.findBinding(env, this.name)
       const evaluatedVal = val.eval(env)
-      disp[this.name] = evaluatedVal
+      disp.map.set(this.name, evaluatedVal)
       return evaluatedVal
     },
   }
 }
 
 export class HakMap<K> extends Val {
-  constructor(protected map: Map<K, Val>) {
+  constructor(public map: Map<K, Val>) {
     super()
   }
 
@@ -237,15 +237,7 @@ export class HakMap<K> extends Val {
   }
 }
 
-export class Obj extends HakMap<string> {
-  toBinding(): Binding {
-    const binding: Binding = {}
-    for (const [name, arg] of this.map) {
-      binding[name] = arg
-    }
-    return binding
-  }
-}
+export class Obj extends HakMap<string> {}
 
 // Until we can evaluate a dict literal, we don't know the values of its
 // keys.
@@ -269,7 +261,7 @@ export class DictLiteral extends Val {
 }
 
 export class Dict extends HakMap<any> {
-  constructor(protected map: Map<Val, Val>) {
+  constructor(public map: Map<Val, Val>) {
     super(map)
   }
 
@@ -327,7 +319,7 @@ export class Let extends Val {
   }
 
   eval(env: Binding[]) {
-    env.push((this.binding.eval(env) as Obj).toBinding())
+    env.push((this.binding.eval(env) as Obj))
     const res = this.body.eval(env)
     env.pop()
     return res
@@ -346,20 +338,20 @@ export class Call extends Val {
 }
 
 // FIXME: prepend to env
-Object.assign(Sym.globals, {
-  pi: new Num(Math.PI),
-  e: new Num(Math.E),
-  true: new Bool(true),
-  false: new Bool(false),
-  new: new NativeFn((val: Val) => new Ref(val)),
-  quote: new NativeFexpr((_env: Binding[], val: Val) => val),
-  eval: new NativeFexpr((env: Binding[], ref: Val) => ref.eval(env).eval(env)),
+Sym.globals = new Obj(new Map<string, Val>([
+  ['pi', new Num(Math.PI)],
+  ['e', new Num(Math.E)],
+  ['true', new Bool(true)],
+  ['false', new Bool(false)],
+  ['new', new NativeFn((val: Val) => new Ref(val))],
+  ['quote', new NativeFexpr((_env: Binding[], val: Val) => val)],
+  ['eval', new NativeFexpr((env: Binding[], ref: Val) => ref.eval(env).eval(env))],
   // FIXME: This should be a NativeFn, once Sym no longer needs env passed to its set method
-  set: new NativeFexpr((env: Binding[], ref: Val, val: Val) => {
+  ['set', new NativeFexpr((env: Binding[], ref: Val, val: Val) => {
     const evaluatedRef = ref.eval(env) as Ref
     return evaluatedRef.set(env, val.eval(env))
-  }),
-  prop: new NativeFexpr((env: Binding[], prop: Val, ref: Val, ...rest: Val[]): Val => {
+  })],
+  ['prop', new NativeFexpr((env: Binding[], prop: Val, ref: Val, ...rest: Val[]): Val => {
     const evaluatedRef = ref.eval(env)
     const props = evaluatedRef.properties
     const propName = (prop.eval(env) as Sym).name
@@ -367,53 +359,53 @@ Object.assign(Sym.globals, {
       throw new PropertyException(new Str(`no property '${propName}'`))
     }
     return evaluatedRef.properties[propName](...rest.map((e) => e.eval(env)))
-  }),
-  pos: new NativeFn((val: Val) => new Num(+val.value())),
-  neg: new NativeFn((val: Val) => new Num(-val.value())),
-  not: new NativeFn((val: Val) => new Bool(!val.value())),
-  seq: new NativeFexpr((env: Binding[], ...args: Val[]) => {
+  })],
+  ['pos', new NativeFn((val: Val) => new Num(+val.value()))],
+  ['neg', new NativeFn((val: Val) => new Num(-val.value()))],
+  ['not', new NativeFn((val: Val) => new Bool(!val.value()))],
+  ['seq', new NativeFexpr((env: Binding[], ...args: Val[]) => {
     let res: Val = new Null()
     for (const exp of args) {
       res = exp.eval(env)
     }
     return res
-  }),
-  fexpr: new NativeFexpr((_env: Binding[], params: Val, body: Val) => new Fexpr(
+  })],
+  ['fexpr', new NativeFexpr((_env: Binding[], params: Val, body: Val) => new Fexpr(
     (params as List).toParamList(),
     new Obj(new Map()),
     body,
-  )),
-  let: new NativeFexpr((env: Binding[], object: Val, body: Val) => new Let(
+  ))],
+  ['let', new NativeFexpr((env: Binding[], object: Val, body: Val) => new Let(
     object.eval(env) as Obj,
     body,
-  ).eval(env)),
-  fn: new NativeFexpr((_env: Binding[], params: Val, body: Val) => new Fn(
+  ).eval(env))],
+  ['fn', new NativeFexpr((_env: Binding[], params: Val, body: Val) => new Fn(
     (params as List).toParamList(),
     new Obj(new Map()),
     body,
-  )),
-  if: new NativeFexpr((env: Binding[], cond: Val, e_then: Val, e_else: Val) => {
+  ))],
+  ['if', new NativeFexpr((env: Binding[], cond: Val, e_then: Val, e_else: Val) => {
     const condVal = cond.eval(env)
     if (condVal.value()) {
       return e_then.eval(env)
     }
     return e_else ? e_else.eval(env) : new Null()
-  }),
-  and: new NativeFexpr((env: Binding[], left: Val, right: Val) => {
+  })],
+  ['and', new NativeFexpr((env: Binding[], left: Val, right: Val) => {
     const leftVal = left.eval(env)
     if (leftVal.value()) {
       return right.eval(env)
     }
     return leftVal
-  }),
-  or: new NativeFexpr((env: Binding[], left: Val, right: Val) => {
+  })],
+  ['or', new NativeFexpr((env: Binding[], left: Val, right: Val) => {
     const leftVal = left.eval(env)
     if (leftVal.value()) {
       return leftVal
     }
     return right.eval(env)
-  }),
-  loop: new NativeFexpr((env: Binding[], body: Val) => {
+  })],
+  ['loop', new NativeFexpr((env: Binding[], body: Val) => {
     for (; ;) {
       try {
         body.eval(env)
@@ -426,29 +418,29 @@ Object.assign(Sym.globals, {
         }
       }
     }
-  }),
-  break: new NativeFn((val: Val) => {
+  })],
+  ['break', new NativeFn((val: Val) => {
     throw new BreakException(val)
-  }),
-  continue: new NativeFn(() => {
+  })],
+  ['continue', new NativeFn(() => {
     throw new ContinueException()
-  }),
-  return: new NativeFn((val: Val) => {
+  })],
+  ['return', new NativeFn((val: Val) => {
     throw new ReturnException(val)
-  }),
-  '=': new NativeFn((left: Val, right: Val) => new Bool(left.value() === right.value())),
-  '!=': new NativeFn((left: Val, right: Val) => new Bool(left.value() !== right.value())),
-  '<': new NativeFn((left: Val, right: Val) => new Bool(left.value() < right.value())),
-  '<=': new NativeFn((left: Val, right: Val) => new Bool(left.value() <= right.value())),
-  '>': new NativeFn((left: Val, right: Val) => new Bool(left.value() > right.value())),
-  '>=': new NativeFn((left: Val, right: Val) => new Bool(left.value() >= right.value())),
-  '+': new NativeFn((left: Val, right: Val) => new Num(left.value() + right.value())),
-  '-': new NativeFn((left: Val, right: Val) => new Num(left.value() - right.value())),
-  '*': new NativeFn((left: Val, right: Val) => new Num(left.value() * right.value())),
-  '/': new NativeFn((left: Val, right: Val) => new Num(left.value() / right.value())),
-  '%': new NativeFn((left: Val, right: Val) => new Num(left.value() % right.value())),
-  '**': new NativeFn((left: Val, right: Val) => new Num(left.value() ** right.value())),
-})
+  })],
+  ['=', new NativeFn((left: Val, right: Val) => new Bool(left.value() === right.value()))],
+  ['!=', new NativeFn((left: Val, right: Val) => new Bool(left.value() !== right.value()))],
+  ['<', new NativeFn((left: Val, right: Val) => new Bool(left.value() < right.value()))],
+  ['<=', new NativeFn((left: Val, right: Val) => new Bool(left.value() <= right.value()))],
+  ['>', new NativeFn((left: Val, right: Val) => new Bool(left.value() > right.value()))],
+  ['>=', new NativeFn((left: Val, right: Val) => new Bool(left.value() >= right.value()))],
+  ['+', new NativeFn((left: Val, right: Val) => new Num(left.value() + right.value()))],
+  ['-', new NativeFn((left: Val, right: Val) => new Num(left.value() - right.value()))],
+  ['*', new NativeFn((left: Val, right: Val) => new Num(left.value() * right.value()))],
+  ['/', new NativeFn((left: Val, right: Val) => new Num(left.value() / right.value()))],
+  ['%', new NativeFn((left: Val, right: Val) => new Num(left.value() % right.value()))],
+  ['**', new NativeFn((left: Val, right: Val) => new Num(left.value() ** right.value()))],
+]))
 
 class KeyValue extends AST {
   constructor(public key: AST, public val: AST) {
