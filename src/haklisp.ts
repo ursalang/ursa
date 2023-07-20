@@ -301,20 +301,12 @@ export class List extends Val {
   }
 
   toParamList(): string[] {
-    const params = []
+    const params: string[] = []
     for (const param of this.val) {
       params.push((param as Sym).name)
     }
     if (params.length !== new Set(params).size) {
       throw new Error(`parameters not unique: ${params}`)
-    }
-    return params
-  }
-
-  toArgList(): Val[] {
-    const params = []
-    for (const param of this.val) {
-      params.push((param as Val))
     }
     return params
   }
@@ -494,7 +486,7 @@ semantics.addOperation<AST>('toAST()', {
     )
   },
   List(_open, elems, _close) {
-    const inits = []
+    const inits: Val[] = []
     for (const elem of elems.children.map((value) => value.toAST())) {
       inits.push(elem)
     }
