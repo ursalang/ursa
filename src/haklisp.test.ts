@@ -53,7 +53,6 @@ test('basic', (t) => {
   t.deepEqual(toVal('[1 2 3]').eval([]).value(), [1, 2, 3])
   t.is(toVal('(prop (quote length) [1 2 3])').eval([]).value(), 3)
   t.is(toVal('(prop (quote get) [4 5 6] 1)').eval([]).value(), 5)
-  t.is(toVal('(eval (prop (quote index) [4 5 6] 1))').eval([]).value(), 5)
   t.is(toVal(`
     (let {sum: (fn [l]
       (let {tot: 0 i: 0}

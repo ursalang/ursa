@@ -269,17 +269,6 @@ export class DictLiteral extends Val {
 }
 
 export class Dict extends HakMap<any> {
-  static DictElemRef = class extends Ref {
-    constructor(private dict: Dict, private index: Val) {
-      super()
-    }
-
-    set(_env: Binding[], val: Val): Val {
-      this.dict.map.set(this.index.value(), val)
-      return val
-    }
-  }
-
   constructor(protected map: Map<Val, Val>) {
     super(map)
   }
@@ -299,26 +288,10 @@ export class Dict extends HakMap<any> {
       return val
     },
     get: (index: Val) => this.map.get(index.value()) ?? new Null(),
-    index: (index: Val) => new Dict.DictElemRef(this, index),
   }
 }
 
 export class List extends Val {
-  static ListElemRef = class extends Ref {
-    constructor(private list: List, private index: Val) {
-      super()
-    }
-
-    eval() {
-      return this.list.val[(this.index as Num).value()]
-    }
-
-    set(_env: Binding[], val: Val): Val {
-      this.list.val[(this.index as Num).value()] = val
-      return val
-    }
-  }
-
   constructor(private val: Val[]) {
     super()
   }
@@ -348,7 +321,6 @@ export class List extends Val {
 
   properties = {
     length: () => new Num(this.val.length),
-    index: (index: Val) => new List.ListElemRef(this, index),
     get: (index: Val) => this.val[(index as Num).value()],
     set: (index: Val, val: Val) => {
       this.val[index.value()] = val
