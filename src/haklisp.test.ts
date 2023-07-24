@@ -54,6 +54,14 @@ test('basic', (t) => {
   //         (* x (fac (- x 1)))))}
   //    (fac 6))
   // `).eval(new EnvironmentVal([])).value(), 720)
+  t.is(toVal(`
+    (let {
+      fac: (fn [self x]
+        (if (= x 0)
+          1
+          (* x (self self (- x 1)))))}
+     (fac fac 6))
+  `).eval(new EnvironmentVal([])).value(), 720)
   t.deepEqual(toVal('[1 2 3]').eval(new EnvironmentVal([])).value(), [1, 2, 3])
   t.is(toVal('(prop length [1 2 3])').eval(new EnvironmentVal([])).value(), 3)
   t.is(toVal('(prop get [4 5 6] 1)').eval(new EnvironmentVal([])).value(), 5)
