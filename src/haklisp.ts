@@ -1,10 +1,11 @@
+import {Node} from 'ohm-js'
 import grammar, {HakLispSemantics} from './haklisp.ohm-bundle'
 
 // Specify precise type so semantics can be precisely type-checked.
 const semantics: HakLispSemantics = grammar.createSemantics()
 
-// An alias for Obj.
-type Binding = Obj
+export type Binding = BindingVal
+type Environment = EnvironmentVal
 
 // Base class for parsing the language, extended directly by classes used
 // only during parsing.
@@ -12,7 +13,7 @@ export class AST {}
 
 // Base class for compiled code.
 export class Val extends AST {
-  eval(_env: Binding[]): Val {
+  eval(_env: Environment): Val {
     return this
   }
 
@@ -73,53 +74,57 @@ export class ReturnException extends HakException {}
 
 export class ContinueException extends HakException {}
 
-export class IndexException extends HakException {}
-
 export class PropertyException extends HakException {}
 
-function bindArgsToParams(params: string[], args: Val[]): Binding {
-  const binding = new Obj(new Map(params.map((key, index) => [key, args[index]])))
+export function bindArgsToParams(params: string[], args: Val[]): Binding {
+  const binding = new BindingVal(
+    new Map(params.map((key, index) => [key, new Ref(args[index] ?? new Null())])),
+  )
   if (args.length > params.length) {
-    binding.map.set('...', new List(args.slice(params.length)))
+    binding.map.set('...', new Ref(new List(args.slice(params.length))))
   }
   return binding
 }
 
+export function bindFreeVars(env: Environment, freeVars: Set<string>): Binding {
+  return new BindingVal(new Map([...freeVars].map((v): [string, Ref] => [v, new SymRef(env, v)])))
+}
+
 class Fexpr extends Val {
-  // FIXME: close over env supplied to constructor
-  constructor(public params: string[], protected env: Obj, protected body: Val) {
+  constructor(protected params: string[], protected freeVars: Binding, protected body: Val) {
     super()
   }
 
-  properties = {
-    call: (args: Val[], env: Binding[]) => {
-      let res: Val = new Null()
-      try {
-        res = this.body.eval([...env, bindArgsToParams(this.params, args)])
-      } catch (e) {
-        if (!(e instanceof ReturnException)) {
-          throw e
-        }
-        res = e.value()
+  // FIXME: When a closure is instantiated (when the Fn/Fexpr constructor is
+  // eval'ed), copy SymRefs to its freeVars into its Binding.
+  call(env: Environment, args: Val[]) {
+    let res: Val = new Null()
+    try {
+      const binding = bindArgsToParams(this.params, args)
+      res = this.body.eval(env.extend(binding))
+    } catch (e) {
+      if (!(e instanceof ReturnException)) {
+        throw e
       }
-      return res
-    },
+      res = e.value()
+    }
+    return res
   }
 }
 
-class NativeFexpr extends Val {
+export class NativeFexpr extends Val {
   constructor(
-    protected body: (env: Binding[], ...args: Val[]) => Val,
+    protected body: (env: Environment, ...args: Val[]) => Val,
   ) {
     super()
   }
 
-  properties = {
-    call: (args: Val[], env: Binding[]) => this.body(env, ...args),
+  call(env: Environment, args: Val[]) {
+    return this.body(env, ...args)
   }
 }
 
-function evaluateArgs(env: Binding[], args: Val[]) {
+function evaluateArgs(env: Environment, args: Val[]) {
   const evaluatedArgs: Val[] = []
   for (const arg of args) {
     evaluatedArgs.push(arg.eval(env))
@@ -127,21 +132,10 @@ function evaluateArgs(env: Binding[], args: Val[]) {
   return evaluatedArgs
 }
 
-class Fn extends Fexpr {
-  properties = {
-    call: (args: Val[], env: Binding[]) => {
-      let res: Val = new Null()
-      try {
-        const binding = bindArgsToParams(this.params, evaluateArgs(env, args))
-        res = this.body.eval([...env, binding])
-      } catch (e) {
-        if (!(e instanceof ReturnException)) {
-          throw e
-        }
-        res = e.value()
-      }
-      return res
-    },
+export class Fn extends Fexpr {
+  call(env: Environment, args: Val[]) {
+    const evaluatedArgs = evaluateArgs(env, args)
+    return super.call(env, evaluatedArgs)
   }
 }
 
@@ -152,73 +146,57 @@ class NativeFn extends Val {
     super()
   }
 
-  properties = {
-    call: (args: Val[], env: Binding[]) => this.body(...evaluateArgs(env, args)),
+  call(env: Environment, args: Val[]) {
+    return this.body(...evaluateArgs(env, args))
   }
 }
 
-class Ref extends Val {
+export class Ref extends Val {
   constructor(protected val: Val = new Null()) {
     super()
   }
 
-  eval(_env: Binding[]) {
+  eval(_env: Environment) {
     return this.val
   }
 
-  set(_env: Binding[], val: Val): Val {
+  set(_env: Environment, val: Val): Val {
     this.val = val
     return this.val
   }
 }
 
-export class Sym extends Ref {
+export class SymRef extends Ref {
   static globals: Binding
 
-  static findBinding(env: Binding[], id: string): Binding {
-    for (let i = env.length - 1; i >= 0; i -= 1) {
-      if (env[i].map.has(id)) {
-        return env[i]
-      }
-    }
-    return Sym.globals
-  }
-
-  constructor(public name: string) {
+  constructor(env: Environment, public name: string) {
     super()
+    if (env.getIndex(name) === undefined) {
+      throw new Error(`undefined symbol ${name}`)
+    }
   }
 
-  eval(env: Binding[]): Val {
-    const disp = Sym.findBinding(env, this.name)
-    return disp.map.get(this.name) ?? new Null()
+  eval(env: Environment): Val {
+    const val = env.get(this.name)
+    return val.eval(env)
   }
 
-  set(env: Binding[], val: Val) {
-    const disp = Sym.findBinding(env, this.name)
+  set(env: Environment, val: Val) {
     const evaluatedVal = val.eval(env)
-    disp.map.set(this.name, evaluatedVal)
+    env.set(this.name, new Ref(evaluatedVal))
     return evaluatedVal
-  }
-
-  properties = {
-    set: (env: Binding[], val: Val) => {
-      const disp = Sym.findBinding(env, this.name)
-      const evaluatedVal = val.eval(env)
-      disp.map.set(this.name, evaluatedVal)
-      return evaluatedVal
-    },
   }
 }
 
-export class HakMap<K> extends Val {
-  constructor(public map: Map<K, Val>) {
+export class HakMap<K, V extends Val> extends Val {
+  constructor(public map: Map<K, V>) {
     super()
   }
 
-  eval(env: Binding[]): Val {
-    const evaluatedMap = new Map<K, Val>()
+  eval(env: Environment): Val {
+    const evaluatedMap = new Map<K, V>()
     for (const [k, v] of this.map) {
-      evaluatedMap.set(k, v.eval(env))
+      evaluatedMap.set(k, v.eval(env) as V)
     }
     this.map = evaluatedMap
     return this
@@ -237,7 +215,11 @@ export class HakMap<K> extends Val {
   }
 }
 
-export class Obj extends HakMap<string> {}
+export class Obj extends HakMap<string, Val> {}
+
+// A BindingVal holds Refs to Vals, so that the Vals can be referred to in
+// multiple BindingVals, in particular in closures.
+class BindingVal extends HakMap<string, Ref> {}
 
 // Until we can evaluate a dict literal, we don't know the values of its
 // keys.
@@ -246,7 +228,7 @@ export class DictLiteral extends Val {
     super()
   }
 
-  eval(env: Binding[]): Dict {
+  eval(env: Environment): Dict {
     const evaluatedMap = new Map<any, Val>()
     for (const [k, v] of this.map) {
       evaluatedMap.set(k.eval(env).value(), v.eval(env))
@@ -256,11 +238,11 @@ export class DictLiteral extends Val {
 
   // Best effort.
   value() {
-    return this.eval([]).value()
+    return this.eval(new EnvironmentVal([])).value()
   }
 }
 
-export class Dict extends HakMap<any> {
+export class Dict extends HakMap<any, Val> {
   constructor(public map: Map<Val, Val>) {
     super(map)
   }
@@ -268,7 +250,7 @@ export class Dict extends HakMap<any> {
   value() {
     const evaluatedMap = new Map<any, Val>()
     for (const [k, v] of this.map) {
-      evaluatedMap.set(k, v.eval([]).value())
+      evaluatedMap.set(k, v.eval(new EnvironmentVal([])).value())
     }
     return evaluatedMap
   }
@@ -292,10 +274,16 @@ export class List extends Val {
     return this.val.map((e: Val) => e.value())
   }
 
+  // FIXME: This is a parser utility. Use a separate semantic action to
+  // obtain it, not a method of List.
   toParamList(): string[] {
     const params: string[] = []
     for (const param of this.val) {
-      params.push((param as Sym).name)
+      if (param instanceof SymRef) {
+        params.push((param as SymRef).name)
+      } else {
+        params.push(param.value())
+      }
     }
     if (params.length !== new Set(params).size) {
       throw new Error(`parameters not unique: ${params}`)
@@ -313,16 +301,24 @@ export class List extends Val {
   }
 }
 
+function listToBinding(elems: [string, Val][]): BindingVal {
+  return new BindingVal(new Map(elems.map(([k, v]): [string, Ref] => [k, new Ref(v)])))
+}
+
 export class Let extends Val {
-  constructor(private binding: Obj, private body: Val) {
+  private binding: Binding
+
+  constructor(bindingObj: Obj, private body: Val) {
     super()
+    this.binding = listToBinding([...bindingObj.map])
   }
 
-  eval(env: Binding[]) {
-    env.push((this.binding.eval(env) as Obj))
-    const res = this.body.eval(env)
-    env.pop()
-    return res
+  eval(env: Environment) {
+    this.binding.map.forEach((v) => {
+      // First eval the Ref, then eval the value
+      v.set(env, v.eval(env).eval(env))
+    })
+    return this.body.eval(env.extend(this.binding))
   }
 }
 
@@ -331,81 +327,55 @@ export class Call extends Val {
     super()
   }
 
-  eval(env: Binding[]) {
+  eval(env: Environment) {
     const fn = this.fn.eval(env) as Fn
-    return fn.properties.call(this.args, env)
+    return fn.call(env, this.args)
   }
 }
 
-// FIXME: prepend to env
-Sym.globals = new Obj(new Map<string, Val>([
+const globals: [string, Val][] = [
   ['pi', new Num(Math.PI)],
   ['e', new Num(Math.E)],
   ['true', new Bool(true)],
   ['false', new Bool(false)],
   ['new', new NativeFn((val: Val) => new Ref(val))],
-  ['quote', new NativeFexpr((_env: Binding[], val: Val) => val)],
-  ['eval', new NativeFexpr((env: Binding[], ref: Val) => ref.eval(env).eval(env))],
-  // FIXME: This should be a NativeFn, once Sym no longer needs env passed to its set method
-  ['set', new NativeFexpr((env: Binding[], ref: Val, val: Val) => {
+  ['eval', new NativeFexpr((env: Environment, ref: Val) => ref.eval(env).eval(env))],
+  ['set', new NativeFexpr((env: Environment, ref: Val, val: Val) => {
     const evaluatedRef = ref.eval(env) as Ref
-    return evaluatedRef.set(env, val.eval(env))
-  })],
-  ['prop', new NativeFexpr((env: Binding[], prop: Val, ref: Val, ...rest: Val[]): Val => {
-    const evaluatedRef = ref.eval(env)
-    const props = evaluatedRef.properties
-    const propName = (prop.eval(env) as Sym).name
-    if (!(propName in props)) {
-      throw new PropertyException(new Str(`no property '${propName}'`))
-    }
-    return evaluatedRef.properties[propName](...rest.map((e) => e.eval(env)))
+    return evaluatedRef.set(env, val)
   })],
   ['pos', new NativeFn((val: Val) => new Num(+val.value()))],
   ['neg', new NativeFn((val: Val) => new Num(-val.value()))],
   ['not', new NativeFn((val: Val) => new Bool(!val.value()))],
-  ['seq', new NativeFexpr((env: Binding[], ...args: Val[]) => {
+  ['seq', new NativeFexpr((env: Environment, ...args: Val[]) => {
     let res: Val = new Null()
     for (const exp of args) {
       res = exp.eval(env)
     }
     return res
   })],
-  ['fexpr', new NativeFexpr((_env: Binding[], params: Val, body: Val) => new Fexpr(
-    (params as List).toParamList(),
-    new Obj(new Map()),
-    body,
-  ))],
-  ['let', new NativeFexpr((env: Binding[], object: Val, body: Val) => new Let(
-    object.eval(env) as Obj,
-    body,
-  ).eval(env))],
-  ['fn', new NativeFexpr((_env: Binding[], params: Val, body: Val) => new Fn(
-    (params as List).toParamList(),
-    new Obj(new Map()),
-    body,
-  ))],
-  ['if', new NativeFexpr((env: Binding[], cond: Val, e_then: Val, e_else: Val) => {
+  ['if', new NativeFexpr((env: Environment, cond: Val, e_then: Val, e_else: Val) => {
     const condVal = cond.eval(env)
     if (condVal.value()) {
       return e_then.eval(env)
     }
     return e_else ? e_else.eval(env) : new Null()
   })],
-  ['and', new NativeFexpr((env: Binding[], left: Val, right: Val) => {
+  ['and', new NativeFexpr((env: Environment, left: Val, right: Val) => {
     const leftVal = left.eval(env)
     if (leftVal.value()) {
       return right.eval(env)
     }
     return leftVal
   })],
-  ['or', new NativeFexpr((env: Binding[], left: Val, right: Val) => {
+  ['or', new NativeFexpr((env: Environment, left: Val, right: Val) => {
     const leftVal = left.eval(env)
     if (leftVal.value()) {
       return leftVal
     }
     return right.eval(env)
   })],
-  ['loop', new NativeFexpr((env: Binding[], body: Val) => {
+  ['loop', new NativeFexpr((env: Environment, body: Val) => {
     for (; ;) {
       try {
         body.eval(env)
@@ -440,7 +410,46 @@ Sym.globals = new Obj(new Map<string, Val>([
   ['/', new NativeFn((left: Val, right: Val) => new Num(left.value() / right.value()))],
   ['%', new NativeFn((left: Val, right: Val) => new Num(left.value() % right.value()))],
   ['**', new NativeFn((left: Val, right: Val) => new Num(left.value() ** right.value()))],
-]))
+]
+
+SymRef.globals = listToBinding(globals)
+
+export class EnvironmentVal {
+  private env: Binding[]
+
+  constructor(localEnv: Binding[]) {
+    this.env = [...localEnv, SymRef.globals]
+  }
+
+  get(sym: string) {
+    const index = this.getIndex(sym)
+    if (index === undefined) {
+      throw new Error(`undefined symbol at run-time ${sym}`)
+    }
+    return this.env[index].map.get(sym)!
+  }
+
+  set(sym: string, ref: Ref) {
+    const index = this.getIndex(sym)
+    if (index === undefined) {
+      throw new Error(`undefined symbol at run-time ${sym}`)
+    }
+    this.env[index].map.set(sym, ref)
+  }
+
+  getIndex(sym: string) {
+    for (let i = 0; i < this.env.length; i += 1) {
+      if (this.env[i].map.has(sym)) {
+        return i
+      }
+    }
+    return undefined
+  }
+
+  extend(binding: Binding): Environment {
+    return new EnvironmentVal([binding, ...this.env])
+  }
+}
 
 class KeyValue extends AST {
   constructor(public key: AST, public val: AST) {
@@ -454,54 +463,110 @@ class PropertyValue extends AST {
   }
 }
 
-semantics.addOperation<AST>('toAST()', {
+export class Quote extends Val {
+  constructor(public sym: string) {
+    super()
+  }
+
+  eval(env: EnvironmentVal): Val {
+    return new SymRef(env, this.sym)
+  }
+}
+
+semantics.addOperation<AST>('toAST(env)', {
   Program(atoms) {
     if (atoms.children.length === 0) {
       return new Null()
     }
-    return new Call(new Sym('seq'), atoms.children.map((value) => value.toAST()))
+    return new Call(new SymRef(this.args.env, 'seq'), atoms.children.map((value) => value.toAST(this.args.env)))
+  },
+  Atom_stmt(_open, stmt, _close) {
+    return stmt.toAST(this.args.env)
   },
   Object(_open, elems, _close) {
     const inits = new Map<string, Val>()
-    for (const elem of elems.children.map((value) => value.toAST())) {
+    for (const elem of elems.children.map((value) => value.toAST(this.args.env))) {
       inits.set((elem as PropertyValue).key, (elem as PropertyValue).val as Val)
     }
     return new Obj(inits)
   },
   PropertyValue(sym, _colon, val) {
-    return new PropertyValue(sym.sourceString, val.toAST())
+    return new PropertyValue(sym.sourceString, val.toAST(this.args.env))
   },
-  Call(_open, exp, args, _close) {
+  Stmt_call(exp, args) {
     return new Call(
-      exp.toAST(),
-      args.children.map((value) => value.toAST()),
+      exp.toAST(this.args.env),
+      args.children.map((value) => value.toAST(this.args.env)),
     )
+  },
+  Stmt_let(_let, binding, body) {
+    const bindingEnv: Obj = binding.toAST(this.args.env)
+    return new Let(bindingEnv, body.toAST(this.args.env.extend(bindingEnv)))
+  },
+  Stmt_fn(_fn, params, body) {
+    const paramBinding = bindArgsToParams(params.toAST(this.args.env).toParamList(), [])
+    const freeVarsBinding = bindFreeVars(this.args.env, this.freeVars)
+    return new Fn(
+      (params.toAST(this.args.env) as List).toParamList(),
+      freeVarsBinding,
+      body.toAST(this.args.env.extend(paramBinding)),
+    )
+  },
+  Stmt_fexpr(_fn, params, body) {
+    const paramBinding = bindArgsToParams(params.toAST(this.args.env).toParamList(), [])
+    const freeVarsBinding = bindFreeVars(this.args.env, this.freeVars)
+    return new Fexpr(
+      (params.toAST(this.args.env) as List).toParamList(),
+      freeVarsBinding,
+      body.toAST(this.args.env.extend(paramBinding)),
+    )
+  },
+  Stmt_quote(_quote, sym) {
+    return new Quote(sym.sourceString)
+  },
+  Stmt_prop(_prop, prop, ref, rest) {
+    const propName = prop.sourceString
+    const refVal = ref.toAST(this.args.env)
+    return new Call(
+      new NativeFexpr((env, ...args) => {
+        const evaluatedRef = refVal.eval(env)
+        const props = evaluatedRef.properties
+        if (!(propName in props)) {
+          throw new PropertyException(new Str(`no property '${propName}'`))
+        }
+        return evaluatedRef.properties[propName](...args.map((e) => e.eval(env)))
+      }),
+      rest.children.map((value: Node) => value.toAST(this.args.env)),
+    )
+  },
+  ParamList(_open, params, _close) {
+    return new List(params.children.map((name) => new Str(name.sourceString)))
   },
   List(_open, elems, _close) {
     const inits: Val[] = []
-    for (const elem of elems.children.map((value) => value.toAST())) {
+    for (const elem of elems.children.map((value) => value.toAST(this.args.env))) {
       inits.push(elem)
     }
     return new List(inits)
   },
   Map(_open, elems, _close) {
     const inits = new Map<Val, Val>()
-    for (const elem of elems.children.map((value) => value.toAST())) {
+    for (const elem of elems.children.map((value) => value.toAST(this.args.env))) {
       inits.set((elem as KeyValue).key as Val, (elem as KeyValue).val as Val)
     }
     return new DictLiteral(inits)
   },
   KeyValue(key, _colon, value) {
-    return new KeyValue(key.toAST(), value.toAST())
+    return new KeyValue(key.toAST(this.args.env), value.toAST(this.args.env))
   },
   Literal_null(_null) {
     return new Null()
   },
   symbol_alphanum(_l, _ns) {
-    return new Sym(this.sourceString)
+    return new SymRef(this.args.env, this.sourceString)
   },
   symbol_punct(_p) {
-    return new Sym(this.sourceString)
+    return new SymRef(this.args.env, this.sourceString)
   },
   bool(flag) {
     return new Bool(flag.sourceString === 'true')
@@ -514,11 +579,74 @@ semantics.addOperation<AST>('toAST()', {
   },
 })
 
-export function toVal(expr: string): Val {
-  const matchResult = grammar.match(expr)
-  return semantics(matchResult).toAST()
+// N.B.: boundVars is only correct (and only used) for Let bindings.
+semantics.addAttribute<Set<string>>('boundVars', {
+  _terminal() {
+    return new Set()
+  },
+  _nonterminal() {
+    return new Set()
+  },
+  _iter(..._children) {
+    return new Set()
+  },
+  Object(_open, binding, _close) {
+    return new Set(binding.children.map((child) => [...child.boundVars]).flat())
+  },
+  PropertyValue(sym, _colon, _val) {
+    return new Set([sym.sourceString])
+  },
+})
+
+export function mergeFreeVars(children: Node[]): Set<string> {
+  return new Set<string>(children.map((child) => [...child.freeVars]).flat())
 }
 
-export function debug(x: any) {
-  console.dir(x, {depth: null})
+export function setDifference<T>(setA: Set<T>, setB: Set<T>) {
+  const difference = new Set(setA)
+  for (const elem of setB) {
+    difference.delete(elem)
+  }
+  return difference
+}
+
+semantics.addAttribute<Set<string>>('freeVars', {
+  _terminal() {
+    return new Set()
+  },
+  _nonterminal(...children) {
+    return mergeFreeVars(children)
+  },
+  _iter(...children) {
+    return mergeFreeVars(children)
+  },
+  Stmt_let(_let, binding, body) {
+    return setDifference(new Set([...body.freeVars, ...binding.freeVars]), binding.boundVars)
+  },
+  Stmt_fn(_fn, params, body) {
+    return setDifference(body.freeVars, params.freeVars)
+  },
+  Stmt_prop(_prop, _propName, ref, rest) {
+    return mergeFreeVars([ref, rest])
+  },
+  symbol_alphanum(_l, _ns) {
+    return new Set<string>([this.sourceString])
+  },
+  symbol_punct(_p) {
+    return new Set([this.sourceString])
+  },
+})
+
+export function toVal(expr: string): Val {
+  const matchResult = grammar.match(expr)
+  return semantics(matchResult).toAST(new EnvironmentVal([]))
+}
+
+export function freeVars(expr: string): Val {
+  const matchResult = grammar.match(expr)
+  return semantics(matchResult).freeVars
+}
+
+export function debug(x: any, depth: number | undefined = undefined) {
+  console.dir(x, {depth: depth ?? null})
 }

@@ -2,14 +2,22 @@ HakLisp {
   Program = Atom*
 
   Atom
-    = Call
+    = "(" Stmt ")"      -- stmt
     | List
     | Object
     | Map
     | Literal
     | symbol
 
-  Call = "(" Atom Atom* ")"
+  Stmt
+    = "let" Object Atom        -- let
+    | "fn" ParamList Atom      -- fn
+    | "fexpr" ParamList Atom   -- fexpr
+    | "prop" symbol Atom Atom* -- prop
+    | "quote" symbol           -- quote
+    | Atom Atom*               -- call
+
+  ParamList = "[" symbol* "]"
 
   List = "[" Atom* "]"
 
@@ -20,7 +28,7 @@ HakLisp {
   KeyValue = Atom ":" Atom
 
   Literal
-    = "null"            -- null
+    = "null"             -- null
     | bool
     | number
     | string

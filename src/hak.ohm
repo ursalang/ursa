@@ -85,7 +85,7 @@ Hak {
     | "null"            -- null
     | bool
     | string
-    | ident
+    | ident             -- ident
     | number
 
   Block
