@@ -274,23 +274,6 @@ export class List extends Val {
     return this.val.map((e: Val) => e.value())
   }
 
-  // FIXME: This is a parser utility. Use a separate semantic action to
-  // obtain it, not a method of List.
-  toParamList(): string[] {
-    const params: string[] = []
-    for (const param of this.val) {
-      if (param instanceof SymRef) {
-        params.push((param as SymRef).name)
-      } else {
-        params.push(param.value())
-      }
-    }
-    if (params.length !== new Set(params).size) {
-      throw new Error(`parameters not unique: ${params}`)
-    }
-    return params
-  }
-
   properties = {
     length: () => new Num(this.val.length),
     get: (index: Val) => this.val[(index as Num).value()],
@@ -504,19 +487,20 @@ semantics.addOperation<AST>('toAST(env)', {
     return new Let(bindingEnv, body.toAST(this.args.env.extend(bindingEnv)))
   },
   Stmt_fn(_fn, params, body) {
-    const paramBinding = bindArgsToParams(params.toAST(this.args.env).toParamList(), [])
+    const paramList = params.toAST(this.args.env)
+    const paramBinding = bindArgsToParams(paramList, [])
     const freeVarsBinding = bindFreeVars(this.args.env, this.freeVars)
     return new Fn(
-      (params.toAST(this.args.env) as List).toParamList(),
+      paramList,
       freeVarsBinding,
       body.toAST(this.args.env.extend(paramBinding)),
     )
   },
   Stmt_fexpr(_fn, params, body) {
-    const paramBinding = bindArgsToParams(params.toAST(this.args.env).toParamList(), [])
+    const paramBinding = bindArgsToParams(params.toAST(this.args.env), [])
     const freeVarsBinding = bindFreeVars(this.args.env, this.freeVars)
     return new Fexpr(
-      (params.toAST(this.args.env) as List).toParamList(),
+      params.toAST(this.args.env),
       freeVarsBinding,
       body.toAST(this.args.env.extend(paramBinding)),
     )
@@ -540,7 +524,7 @@ semantics.addOperation<AST>('toAST(env)', {
     )
   },
   ParamList(_open, params, _close) {
-    return new List(params.children.map((name) => new Str(name.sourceString)))
+    return params.children.map((name) => name.sourceString)
   },
   List(_open, elems, _close) {
     const inits: Val[] = []

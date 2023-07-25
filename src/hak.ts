@@ -1,7 +1,7 @@
 import {Node, IterationNode} from 'ohm-js'
 import {
-  AST, Val, Null, Bool, Num, Str, Quote, Ref, SymRef, List, DictLiteral, Obj, Binding,
-  NativeFexpr, PropertyException,
+  AST, Val, Null, Bool, Num, Str, Quote, SymRef, List, DictLiteral, Obj, Binding,
+  NativeFexpr, PropertyException, debug,
   Call, Let, Fn, bindArgsToParams, EnvironmentVal, setDifference, mergeFreeVars, bindFreeVars,
 } from './haklisp'
 import grammar, {HakSemantics} from './hak.ohm-bundle'
@@ -43,9 +43,9 @@ semantics.addOperation<AST>('toAST(env)', {
     return new Call(new SymRef(this.args.env, 'if'), args)
   },
   Fn(_fn, _open, params, _close, body) {
-    const paramList = new List(
-      params.asIteration().children.map((value) => value.toAST(this.args.env)),
-    ).toParamList()
+    const paramList = params.asIteration().children.map(
+      (value) => value.toAST(this.args.env).value(),
+    )
     const paramBinding = bindArgsToParams(paramList, [])
     const freeVarsBinding = bindFreeVars(this.args.env, this.freeVars)
     return new Fn(
