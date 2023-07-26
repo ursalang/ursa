@@ -84,7 +84,7 @@ export class ReturnException extends HakException {}
 
 export class ContinueException extends HakException {}
 
-export class PropertyException extends HakException {}
+export class PropertyException extends Error {}
 
 export function bindArgsToParams(params: string[], args: Val[]): Binding {
   const binding = new BindingVal(
@@ -556,7 +556,7 @@ semantics.addOperation<AST>('toAST(env)', {
         const evaluatedRef = refVal.eval(env)
         const props = evaluatedRef.properties
         if (!(propName in props)) {
-          throw new PropertyException(new Str(`no property '${propName}'`))
+          throw new PropertyException(`no property '${propName}'`)
         }
         return evaluatedRef.properties[propName](...args.map((e) => e.eval(env)))
       }),

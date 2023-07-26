@@ -26,7 +26,7 @@ function propAccess(env: any, ref: Node, prop: string, ...rest: Node[]): Val {
       const evaluatedRef = refVal.eval(env)
       const props = evaluatedRef.properties
       if (!(prop in props)) {
-        throw new PropertyException(new Str(`no property '${prop}'`))
+        throw new PropertyException(`no property '${prop}'`)
       }
       return evaluatedRef.properties[prop](...args.map((e) => e.eval(env)))
     }),
