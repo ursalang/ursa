@@ -19,16 +19,15 @@ function maybeValue(env: Binding[], exp: IterationNode): Val {
   return exp.children.length > 0 ? exp.children[0].toAST(env) : new Null()
 }
 
-function propAccess(env: any, ref: Node, prop: string, ...rest: Node[]): Val {
-  const refVal = ref.toAST(env)
+function propAccess(env: EnvironmentVal, ref: Val, prop: string, ...rest: Node[]): Val {
   return new Call(
     new NativeFexpr((env, ...args) => {
-      const evaluatedRef = refVal.eval(env)
+      const evaluatedRef = ref.eval(env)
       const props = evaluatedRef.properties
       if (!(prop in props)) {
         throw new PropertyException(`no property '${prop}'`)
       }
-      return evaluatedRef.properties[prop](...args.map((e) => e.eval(env)))
+      return evaluatedRef.properties[prop](env, ...args.map((e) => e.eval(env)))
     }),
     rest.map((e) => e.toAST(env)),
   )
@@ -61,7 +60,7 @@ semantics.addOperation<AST>('toAST(env)', {
     )
   },
   IndexExp_index(object, _open, index, _close) {
-    return propAccess(this.args.env, object, 'get', index)
+    return propAccess(this.args.env, object.toAST(this.args.env), 'get', index)
   },
   Loop(_loop, e_body) {
     return new Call(new SymRef(this.args.env, 'loop'), [e_body.toAST(this.args.env)])
@@ -73,10 +72,10 @@ semantics.addOperation<AST>('toAST(env)', {
     return new Let(bindingEnv, body.toAST(this.args.env.extend(bindingEnv)))
   },
   Assignment_index(callExp, _open, index, _close, _eq, value) {
-    return propAccess(this.args.env, callExp, 'set', index, value)
+    return propAccess(this.args.env, callExp.toAST(this.args.env), 'set', index, value)
   },
   Assignment_ident(sym, _eq, value) {
-    return new Call(new SymRef(this.args.env, 'set'), [new Quote(sym.sourceString), value.toAST(this.args.env)])
+    return propAccess(this.args.env, new Quote(sym.sourceString), 'set', value)
   },
   LogicExp_and(left, _and, right) {
     return new Call(new SymRef(this.args.env, 'and'), [left.toAST(this.args.env), right.toAST(this.args.env)])
@@ -154,7 +153,7 @@ semantics.addOperation<AST>('toAST(env)', {
     return new Call(new SymRef(this.args.env, 'neg'), [exp.toAST(this.args.env)])
   },
   PropertyExp_property(object, _dot, property) {
-    return propAccess(this.args.env, object, property.sourceString)
+    return propAccess(this.args.env, object.toAST(this.args.env), property.sourceString)
   },
   PrimaryExp_break(_break, exp) {
     return new Call(new SymRef(this.args.env, 'break'), [maybeValue(this.args.env, exp)])

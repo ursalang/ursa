@@ -26,26 +26,26 @@ test('basic', (t) => {
   }
   t.is(toVal('(loop (break 3))').eval(new EnvironmentVal([])).value(), 3)
   t.is(toVal('(let {a: 3} a)').eval(new EnvironmentVal([])).value(), 3)
-  t.is(toVal('(let {b: 5} (seq (set (quote b) 7) b))').eval(new EnvironmentVal([])).value(), 7)
+  t.is(toVal('(let {b: 5} (seq (prop set (quote b) 7) b))').eval(new EnvironmentVal([])).value(), 7)
   t.is(toVal(`
     (let {a: 0}
      (loop
       (seq
-        (set (quote a) (+ a 1))
+        (prop set (quote a) (+ a 1))
         (if (= a 3)
          (break a)))))`).eval(new EnvironmentVal([])).value(), 3)
   t.is(toVal(`
     (let {total: 0 i: 0}
       (loop
         (seq
-          (set (quote i) (+ i 1))
-          (set (quote total) (+ total i))
+          (prop set (quote i) (+ i 1))
+          (prop set (quote total) (+ total i))
           (if (= i 10)
             (break total)))))`).eval(new EnvironmentVal([])).value(), 55)
   t.is(toVal('; Comment\n3').eval(new EnvironmentVal([])).value(), 3)
   t.is(toVal('"hello \u00e9"').eval(new EnvironmentVal([])).value(), 'hello é')
   t.is(toVal('(let {f: (fn [x] (+ x 1))} (f 1))').eval(new EnvironmentVal([])).value(), 2)
-  // t.is(toVal('(seq (set (quote f) (fn [x] (+ x 1))) (f 1))').eval(new EnvironmentVal([])).value(), 2)
+  // t.is(toVal('(seq (prop set (quote f) (fn [x] (+ x 1))) (f 1))').eval(new EnvironmentVal([])).value(), 2)
   // t.is(toVal(`
   //   (let {
   //     fac: (fn [x]
@@ -72,8 +72,8 @@ test('basic', (t) => {
           (seq
             (if (= i (prop length l))
               (break tot))
-            (set (quote tot) (+ tot (prop get l i)))
-            (set (quote i) (+ i 1))
+            (prop set (quote tot) (+ tot (prop get l i)))
+            (prop set (quote i) (+ i 1))
         ))
       ))} (sum [10 30 50 5 5]))
   `).eval(new EnvironmentVal([])).value(), 100)
@@ -84,12 +84,12 @@ test('basic', (t) => {
           (seq
             (if (= i (prop length l))
               (return tot))
-            (set (quote tot) (+ tot (prop get l i)))
-            (set (quote i) (+ i 1))
+            (prop set (quote tot) (+ tot (prop get l i)))
+            (prop set (quote i) (+ i 1))
         ))
       ))} (sum [10 30 50 5 5]))
   `).eval(new EnvironmentVal([])).value(), 100)
-  // t.is(toVal('(set (quote x) 1)').eval(new EnvironmentVal([])).value(), 1)
+  // t.is(toVal('(prop set (quote x) 1)').eval(new EnvironmentVal([])).value(), 1)
   t.deepEqual(toVal(`
     (let {double: (fn [l]
       (let {i: 0}
@@ -98,7 +98,7 @@ test('basic', (t) => {
             (if (= i (prop length l))
               (return l))
             (prop set l i (* (prop get l i) 2))
-            (set (quote i) (+ i 1))
+            (prop set (quote i) (+ i 1))
             ))))
     } (double [1 2 3]))
   `).eval(new EnvironmentVal([])).value(), [2, 4, 6])
@@ -107,7 +107,7 @@ test('basic', (t) => {
   t.deepEqual(toVal(`
     (let {tot: 0}
       (let {accum: (fn [x]
-        (set (quote tot) (+ tot x))
+        (prop set (quote tot) (+ tot x))
       )}
         [(accum 1) (accum 1)]))
   `).eval(new EnvironmentVal([])).value(), [1, 2])

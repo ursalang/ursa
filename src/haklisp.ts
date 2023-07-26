@@ -198,6 +198,13 @@ export class Ref extends Val {
     this.val = val
     return this.val
   }
+
+  properties = {
+    set: (_env: Environment, val: Val) => {
+      this.val = val
+      return val
+    },
+  }
 }
 
 export class SymRef extends Ref {
@@ -219,6 +226,13 @@ export class SymRef extends Ref {
     const evaluatedVal = val.eval(env)
     env.set(this.name, evaluatedVal)
     return evaluatedVal
+  }
+
+  properties = {
+    set: (env: Environment, val: Val) => {
+      this.set(env, val)
+      return val
+    },
   }
 }
 
@@ -245,7 +259,7 @@ export class HakMap<K, V extends Val> extends Val {
   }
 
   properties = {
-    get: (index: Val) => this.map.get(index.value()),
+    get: (_env: Environment, index: Val) => this.map.get(index.value()),
   }
 }
 
@@ -291,11 +305,11 @@ export class Dict extends HakMap<any, Val> {
 
   properties = {
     ...super.properties,
-    set: (index: Val, val: Val) => {
+    set: (_env: Environment, index: Val, val: Val) => {
       this.map.set(index.value(), val)
       return val
     },
-    get: (index: Val) => this.map.get(index.value()) ?? new Null(),
+    get: (_env: Environment, index: Val) => this.map.get(index.value()) ?? new Null(),
   }
 }
 
@@ -314,9 +328,9 @@ export class List extends Val {
   }
 
   properties = {
-    length: () => new Num(this.val.length),
-    get: (index: Val) => this.val[(index as Num).value()],
-    set: (index: Val, val: Val) => {
+    length: (_env: Environment) => new Num(this.val.length),
+    get: (_env: Environment, index: Val) => this.val[(index as Num).value()],
+    set: (_env: Environment, index: Val, val: Val) => {
       this.val[index.value()] = val
       return val
     },
@@ -362,10 +376,6 @@ const globals: [string, Val][] = [
   ['false', new Bool(false)],
   ['new', new NativeFn((val: Val) => new Ref(val))],
   ['eval', new NativeFexpr((env: Environment, ref: Val) => ref.eval(env).eval(env))],
-  ['set', new NativeFexpr((env: Environment, ref: Val, val: Val) => {
-    const evaluatedRef = ref.eval(env) as Ref
-    return evaluatedRef.set(env, val)
-  })],
   ['pos', new NativeFn((val: Val) => new Num(+val.value()))],
   ['neg', new NativeFn((val: Val) => new Num(-val.value()))],
   ['not', new NativeFn((val: Val) => new Bool(!val.value()))],
@@ -558,7 +568,7 @@ semantics.addOperation<AST>('toAST(env)', {
         if (!(propName in props)) {
           throw new PropertyException(`no property '${propName}'`)
         }
-        return evaluatedRef.properties[propName](...args.map((e) => e.eval(env)))
+        return evaluatedRef.properties[propName](env, ...args.map((e) => e.eval(env)))
       }),
       rest.children.map((value: Node) => value.toAST(this.args.env)),
     )
