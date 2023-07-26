@@ -96,10 +96,6 @@ export function bindArgsToParams(params: string[], args: Val[]): Binding {
   return binding
 }
 
-export function bindFreeVars(env: Environment, freeVars: Set<string>): Binding {
-  return new BindingVal(new Map([...freeVars].map((v): [string, Ref] => [v, new SymRef(env, v)])))
-}
-
 class FexprClosure extends Val {
   constructor(protected params: string[], protected freeVars: Binding, protected body: Val) {
     super()
@@ -128,22 +124,18 @@ class FnClosure extends FexprClosure {
 }
 
 class Fexpr extends Val {
-  constructor(protected params: string[], protected freeVars: Binding, protected body: Val) {
+  constructor(protected params: string[], protected freeVars: Set<string>, protected body: Val) {
     super()
   }
 
-  evalFreeVars(env: Environment): Binding {
-    // Evaluate free variables.
-    const freeVarMap = new Map<string, Ref>()
-    for (const [name, ref] of this.freeVars.map.entries()) {
-      const val = new Ref(ref.eval(env))
-      freeVarMap.set(name, val)
-    }
-    return new BindingVal(freeVarMap)
+  bindFreeVars(env: Environment): Binding {
+    return new BindingVal(new Map(
+      [...this.freeVars].map((name): [string, Ref] => [name, env.get(name)]),
+    ))
   }
 
   eval(env: Environment) {
-    return new FexprClosure(this.params, this.evalFreeVars(env), this.body)
+    return new FexprClosure(this.params, this.bindFreeVars(env), this.body)
   }
 }
 
@@ -169,7 +161,7 @@ function evaluateArgs(env: Environment, args: Val[]) {
 
 export class Fn extends Fexpr {
   eval(env: Environment) {
-    return new FnClosure(this.params, this.evalFreeVars(env), this.body)
+    return new FnClosure(this.params, this.bindFreeVars(env), this.body)
   }
 }
 
@@ -218,8 +210,8 @@ export class SymRef extends Ref {
   }
 
   eval(env: Environment): Val {
-    const val = env.get(this.name)
-    return val.eval(env)
+    const ref = env.get(this.name)
+    return ref.eval(env)
   }
 
   set(env: Environment, val: Val) {
@@ -266,7 +258,7 @@ export class HakMap<K, V extends Val> extends Val {
 export class Obj extends HakMap<string, Val> {}
 
 // A BindingVal holds Refs to Vals, so that the Vals can be referred to in
-// multiple BindingVals, in particular in closures.
+// multiple BindingVals, in particular by closures' free variables.
 class BindingVal extends HakMap<string, Ref> {}
 
 // Until we can evaluate a dict literal, we don't know the values of its
@@ -342,19 +334,17 @@ function listToBinding(elems: [string, Val][]): BindingVal {
 }
 
 export class Let extends Val {
-  private binding: Binding
-
-  constructor(bindingObj: Obj, private body: Val) {
+  constructor(private bindingObj: Obj, private body: Val) {
     super()
-    this.binding = listToBinding([...bindingObj.map])
   }
 
   eval(env: Environment) {
-    this.binding.map.forEach((v) => {
+    const binding = listToBinding([...this.bindingObj.map])
+    binding.map.forEach((v) => {
       // First eval the Ref, then eval the value
       v.set(env, v.eval(env).eval(env))
     })
-    return this.body.eval(env.extend(this.binding))
+    return this.body.eval(env.extend(binding))
   }
 }
 
@@ -539,19 +529,17 @@ semantics.addOperation<AST>('toAST(env)', {
   Stmt_fn(_fn, params, body) {
     const paramList = params.toAST(this.args.env)
     const paramBinding = bindArgsToParams(paramList, [])
-    const freeVarsBinding = bindFreeVars(this.args.env, this.freeVars)
     return new Fn(
       paramList,
-      freeVarsBinding,
+      this.freeVars,
       body.toAST(this.args.env.extend(paramBinding)),
     )
   },
   Stmt_fexpr(_fn, params, body) {
     const paramBinding = bindArgsToParams(params.toAST(this.args.env), [])
-    const freeVarsBinding = bindFreeVars(this.args.env, this.freeVars)
     return new Fexpr(
       params.toAST(this.args.env),
-      freeVarsBinding,
+      this.freeVars,
       body.toAST(this.args.env.extend(paramBinding)),
     )
   },

@@ -46,14 +46,18 @@ test('basic', (t) => {
   t.is(toVal('"hello \u00e9"').eval(new EnvironmentVal([])).value(), 'hello é')
   t.is(toVal('(let {f: (fn [x] (+ x 1))} (f 1))').eval(new EnvironmentVal([])).value(), 2)
   // t.is(toVal('(seq (prop set (quote f) (fn [x] (+ x 1))) (f 1))').eval(new EnvironmentVal([])).value(), 2)
-  // t.is(toVal(`
-  //   (let {
-  //     fac: (fn [x]
-  //       (if (= x 0)
-  //         1
-  //         (* x (fac (- x 1)))))}
-  //    (fac 6))
-  // `).eval(new EnvironmentVal([])).value(), 720)
+  t.is(toVal(`
+    (let {fac: null}
+      (seq
+        (prop set (quote fac)
+          (fn [x]
+            (if (= x 0)
+              1
+              (* x (fac (- x 1)))
+          ))
+        )
+        (fac 6)))
+  `).eval(new EnvironmentVal([])).value(), 720)
   t.is(toVal(`
     (let {
       fac: (fn [self x]
