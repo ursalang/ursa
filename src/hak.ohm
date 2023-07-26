@@ -1,13 +1,13 @@
 Hak {
   Sequence
     = Exp ";" Sequence ";"? -- seq
+    | "let" ident "=" Exp ";" Sequence ";"? -- let
     | Exp
 
   Exp
     = If
     | Fn
     | Loop
-    | Let
     | Assignment
     | LogicExp
 
@@ -19,9 +19,6 @@ Hak {
 
   Loop
     = "loop" Block
-
-  Let
-    = "let" ident "=" Exp Block
 
   Assignment
     = CallExp "[" Exp "]" "=" Exp  -- index

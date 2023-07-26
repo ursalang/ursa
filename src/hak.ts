@@ -65,12 +65,6 @@ semantics.addOperation<AST>('toAST(env)', {
   Loop(_loop, e_body) {
     return new Call(new SymRef(this.args.env, 'loop'), [e_body.toAST(this.args.env)])
   },
-  Let(_let, ident, _eq, value, body) {
-    const bindingEnv = new Obj(
-      new Map([[ident.sourceString, value.toAST(this.args.env)]]),
-    )
-    return new Let(bindingEnv, body.toAST(this.args.env.extend(bindingEnv)))
-  },
   Assignment_index(callExp, _open, index, _close, _eq, value) {
     return propAccess(this.args.env, callExp.toAST(this.args.env), 'set', index, value)
   },
@@ -176,6 +170,12 @@ semantics.addOperation<AST>('toAST(env)', {
   Sequence_seq(e_first, _sep, e_rest, _maybe_sep) {
     return new Call(new SymRef(this.args.env, 'seq'), [e_first.toAST(this.args.env), e_rest.toAST(this.args.env)])
   },
+  Sequence_let(_let, ident, _eq, value, _sep, seq, _maybe_sep) {
+    const bindingEnv = new Obj(
+      new Map([[ident.sourceString, value.toAST(this.args.env)]]),
+    )
+    return new Let(bindingEnv, seq.toAST(this.args.env.extend(bindingEnv)))
+  },
   ident(_l, _ns) {
     return new Str(this.sourceString)
   },
@@ -200,9 +200,9 @@ semantics.addAttribute<Set<string>>('freeVars', {
   _iter(...children) {
     return mergeFreeVars(children)
   },
-  Let(_let, ident, _eq, value, body) {
+  Sequence_let(_let, ident, _eq, value, _sep, seq, _maybe_sep) {
     return setDifference(
-      new Set([...body.freeVars, ...value.freeVars]),
+      new Set([...seq.freeVars, ...value.freeVars]),
       new Set([ident.sourceString]),
     )
   },
