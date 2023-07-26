@@ -1,18 +1,6 @@
 # Hak to-do
 
-## Lispy version
-
-* To optimize symbol references, add `const` (`let` but constant), and
-  evaluate as much as we can at compile time. Any expression with no free
-  variables can be fully evaluated.
-* Make everything objects (arithmetic should be methods of `Num`).
-* Compiled form of Lispy version has only "fresh names"; textual version has
-  "let" as a convenience for readability.
-* Put HakLisp AST hierarchy in another file, ditto the interpreter.
-* Study vau, fexprs, first-class environments (objects), and delimited
-  continuations. Implement new semantics in HakLisp first.
-
-## MVP
+## Hak MVP
 
 * Better error messages
 * Tail recursion elimination
@@ -23,10 +11,23 @@
 * Maps: iteration (with yield), indexing (lvalue), symbol keys
 * FFI (JavaScript)
 * Tree-sitter grammar, usable in Emacs and VSCode. (First, tidy up the grammar.)
-* `recurse` (or make `let` == `letrec`?)
+* Syntatic sugar for `fn f(x) {}` that scopes f over function body.
 * `self`
 
-## Next
+## HakLisp improvements
+
+* To optimize symbol references, add `const` (`let` but constant), and
+  evaluate as much as we can at compile time. Any expression with no free
+  variables can be fully evaluated.
+* Make everything objects (arithmetic should be methods of `Num`).
+* Compiled form has only "fresh names"; textual version has "let" as a
+  convenience for readability.
+* Put HakLisp AST hierarchy in another file, ditto the interpreter.
+* Study vau, fexprs, first-class environments (objects), and delimited
+  continuations.
+* Implement new semantics in HakLisp first.
+
+## Hak v1
 
 * Inter-working with C. Initial quick-and-dirty version: allow arbitrary C
   APIs to be declared (especially for POSIX; later add GLib introspection),
