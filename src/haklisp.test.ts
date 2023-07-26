@@ -104,4 +104,11 @@ test('basic', (t) => {
   `).eval(new EnvironmentVal([])).value(), [2, 4, 6])
   t.deepEqual(toVal('{"a": 1 "b": (+ 2 0) 3: 4}').eval(new EnvironmentVal([])).value(), new Map<any, any>([['a', 1], ['b', 2], [3, 4]]))
   t.deepEqual(toVal('(let {t: {"a": 1 "b": (+ 2 0) 3: 4}} (seq (prop set t "b" 1) t))').eval(new EnvironmentVal([])).value(), new Map<any, any>([['a', 1], ['b', 1], [3, 4]]))
+  t.deepEqual(toVal(`
+    (let {tot: 0}
+      (let {accum: (fn [x]
+        (set (quote tot) (+ tot x))
+      )}
+        [(accum 1) (accum 1)]))
+  `).eval(new EnvironmentVal([])).value(), [1, 2])
 })

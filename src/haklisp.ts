@@ -13,6 +13,16 @@ export class AST {}
 
 // Base class for compiled code.
 export class Val extends AST {
+  static counter = 0
+
+  uid: number
+
+  constructor() {
+    super()
+    this.uid = Val.counter
+    Val.counter += 1
+  }
+
   eval(_env: Environment): Val {
     return this
   }
@@ -90,18 +100,16 @@ export function bindFreeVars(env: Environment, freeVars: Set<string>): Binding {
   return new BindingVal(new Map([...freeVars].map((v): [string, Ref] => [v, new SymRef(env, v)])))
 }
 
-class Fexpr extends Val {
+class FexprClosure extends Val {
   constructor(protected params: string[], protected freeVars: Binding, protected body: Val) {
     super()
   }
 
-  // FIXME: When a closure is instantiated (when the Fn/Fexpr constructor is
-  // eval'ed), copy SymRefs to its freeVars into its Binding.
   call(env: Environment, args: Val[]) {
     let res: Val = new Null()
     try {
       const binding = bindArgsToParams(this.params, args)
-      res = this.body.eval(env.extend(binding))
+      res = this.body.eval(env.extend(this.freeVars).extend(binding))
     } catch (e) {
       if (!(e instanceof ReturnException)) {
         throw e
@@ -109,6 +117,33 @@ class Fexpr extends Val {
       res = e.value()
     }
     return res
+  }
+}
+
+class FnClosure extends FexprClosure {
+  call(env: Environment, args: Val[]) {
+    const evaluatedArgs = evaluateArgs(env, args)
+    return super.call(env, evaluatedArgs)
+  }
+}
+
+class Fexpr extends Val {
+  constructor(protected params: string[], protected freeVars: Binding, protected body: Val) {
+    super()
+  }
+
+  evalFreeVars(env: Environment): Binding {
+    // Evaluate free variables.
+    const freeVarMap = new Map<string, Ref>()
+    for (const [name, ref] of this.freeVars.map.entries()) {
+      const val = new Ref(ref.eval(env))
+      freeVarMap.set(name, val)
+    }
+    return new BindingVal(freeVarMap)
+  }
+
+  eval(env: Environment) {
+    return new FexprClosure(this.params, this.evalFreeVars(env), this.body)
   }
 }
 
@@ -133,9 +168,8 @@ function evaluateArgs(env: Environment, args: Val[]) {
 }
 
 export class Fn extends Fexpr {
-  call(env: Environment, args: Val[]) {
-    const evaluatedArgs = evaluateArgs(env, args)
-    return super.call(env, evaluatedArgs)
+  eval(env: Environment) {
+    return new FnClosure(this.params, this.evalFreeVars(env), this.body)
   }
 }
 
@@ -183,7 +217,7 @@ export class SymRef extends Ref {
 
   set(env: Environment, val: Val) {
     const evaluatedVal = val.eval(env)
-    env.set(this.name, new Ref(evaluatedVal))
+    env.set(this.name, evaluatedVal)
     return evaluatedVal
   }
 }
@@ -270,6 +304,11 @@ export class List extends Val {
     super()
   }
 
+  eval(env: Environment): Val {
+    this.val = this.val.map((e: Val) => e.eval(env))
+    return this
+  }
+
   value() {
     return this.val.map((e: Val) => e.value())
   }
@@ -311,7 +350,7 @@ export class Call extends Val {
   }
 
   eval(env: Environment) {
-    const fn = this.fn.eval(env) as Fn
+    const fn = this.fn.eval(env) as FexprClosure
     return fn.call(env, this.args)
   }
 }
@@ -398,7 +437,7 @@ const globals: [string, Val][] = [
 SymRef.globals = listToBinding(globals)
 
 export class EnvironmentVal {
-  private env: Binding[]
+  public env: Binding[]
 
   constructor(localEnv: Binding[]) {
     this.env = [...localEnv, SymRef.globals]
@@ -412,12 +451,13 @@ export class EnvironmentVal {
     return this.env[index].map.get(sym)!
   }
 
-  set(sym: string, ref: Ref) {
+  set(sym: string, val: Val) {
     const index = this.getIndex(sym)
     if (index === undefined) {
       throw new Error(`undefined symbol at run-time ${sym}`)
     }
-    this.env[index].map.set(sym, ref)
+    const ref = this.env[index].map.get(sym)!
+    ref.set(this, val)
   }
 
   getIndex(sym: string) {
@@ -430,7 +470,7 @@ export class EnvironmentVal {
   }
 
   extend(binding: Binding): Environment {
-    return new EnvironmentVal([binding, ...this.env])
+    return new EnvironmentVal([binding, ...this.env.slice(0, -1)])
   }
 }
 

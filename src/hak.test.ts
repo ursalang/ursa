@@ -109,4 +109,29 @@ test('basic', (t) => {
   `).eval(new EnvironmentVal([])).value(), [2, 4, 6])
   t.deepEqual(toVal('{"a": 1, "b": 2 + 0, 3: 4}').eval(new EnvironmentVal([])).value(), new Map<any, any>([['a', 1], ['b', 2], [3, 4]]))
   t.deepEqual(toVal('let t = {"a": 1, "b": 2 + 0, 3: 4} {t["b"] = 1; t}').eval(new EnvironmentVal([])).value(), new Map<any, any>([['a', 1], ['b', 1], [3, 4]]))
+  t.deepEqual(toVal(`
+    let tot = 0 {
+      let accum = fn(x) {
+        tot = tot + x
+      }
+      {
+        [accum(1), accum(1)]
+      }
+    }
+  `).eval(new EnvironmentVal([])).value(), [1, 2])
+  t.deepEqual(toVal(`
+    let newAccum = fn() {
+      let tot = 0 {
+        fn(x) {
+          tot = tot + x
+        }
+      }
+    } {
+      let accum = newAccum() {
+        let accum2 = newAccum() {
+          [accum(1), accum(1), accum2(1)]
+        }
+      }
+    }
+  `).eval(new EnvironmentVal([])).value(), [1, 2, 1])
 })
