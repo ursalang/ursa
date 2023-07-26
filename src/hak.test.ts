@@ -79,19 +79,18 @@ test('basic', (t) => {
     };
     sum([10, 30, 50, 5, 5])
   `).eval(new EnvironmentVal([])).value(), 100)
-  // FIXME: make semi-colons optional.
-  // t.is(toVal(`
-  //   let sum = fn(l) {
-  //     let tot = 0
-  //     let i = 0
-  //     loop {
-  //       if i == l.length { return tot }
-  //       tot = tot + l[i]
-  //       i = i + 1
-  //     }
-  //   };
-  //   sum([10, 30, 50, 5, 5])
-  // `).eval(new EnvironmentVal([])).val, 100)
+  t.is(toVal(`
+    let sum = fn(l) {
+      let tot = 0
+      let i = 0
+      loop {
+        if i == l.length { return tot }
+        tot = tot + l[i]
+        i = i + 1
+      }
+    }
+    sum([10, 30, 50, 5, 5])
+  `).eval(new EnvironmentVal([])).value(), 100)
   // t.is(toVal('x = 1').eval(new EnvironmentVal([])).value(), 1)
   t.deepEqual(toVal(`
     let double = fn(l) {
@@ -115,13 +114,13 @@ test('basic', (t) => {
   `).eval(new EnvironmentVal([])).value(), [1, 2])
   t.deepEqual(toVal(`
     let newAccum = fn() {
-      let tot = 0;
+      let tot = 0
       fn(x) {
         tot = tot + x
       }
-    };
-    let accum = newAccum();
-    let accum2 = newAccum();
+    }
+    let accum = newAccum()
+    let accum2 = newAccum()
     [accum(1), accum(1), accum2(1)]
   `).eval(new EnvironmentVal([])).value(), [1, 2, 1])
 })

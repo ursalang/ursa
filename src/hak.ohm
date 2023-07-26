@@ -1,8 +1,15 @@
 Hak {
   Sequence
-    = Exp ";" Sequence ";"? -- seq
-    | "let" ident "=" Exp ";" Sequence ";"? -- let
+    = Exp #sc Sequence #sc                 -- seq
+    | "let" ident "=" Exp #sc Sequence #sc -- let
     | Exp
+
+  // A semicolon is "automatically inserted" if a newline or the end of the input stream is
+  // reached, or the offending token is "}".
+  // NOTE: Applications of this rule *must* appear in a lexical context -- either in the body of a
+  // lexical rule, or inside `#()`.
+  sc = space* (";" | end)
+     | spacesNoNL (lineTerminator | &"}")
 
   Exp
     = If
@@ -146,6 +153,9 @@ Hak {
 
   // Override Ohm's built-in definition
   space := whitespace | lineTerminator | comment
+
+  // Does not accept lineTerminators
+  spacesNoNL = (whitespace | comment)*
 
   whitespace
     = "\t"

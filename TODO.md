@@ -21,7 +21,6 @@
 * Lists: iteration (with yield)
 * Vectors
 * Maps: iteration (with yield), indexing (lvalue), symbol keys
-* Make semi-colons optional.
 * FFI (JavaScript)
 * Tree-sitter grammar, usable in Emacs and VSCode. (First, tidy up the grammar.)
 * `recurse` (or make `let` == `letrec`?)
