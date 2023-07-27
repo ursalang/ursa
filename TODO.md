@@ -28,6 +28,7 @@
 * Study vau, fexprs, first-class environments (objects), and delimited
   continuations.
 * Implement new semantics in HakLisp first.
+* Put tests in separate source files.
 
 ## Hak v1
 
