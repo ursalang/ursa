@@ -1,16 +1,18 @@
 {
   "extends": "@tsconfig/node18/tsconfig.json",
   "include": [
-    "src/**/*.ts"
+    "src/**/*"
   ],
   "compilerOptions": {
+    "composite": true,
+    "declaration": true,
     "importHelpers": true,
-    "outDir": "dist",
-    "module": "commonjs",
+    "module": "ES6",
+    "moduleResolution": "Node",
+    "outDir": "lib",
+    "rootDir": "./src",
+    "sourceMap": true,
     "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "sourceMap": true
+    "forceConsistentCasingInFileNames": true
   }
 }

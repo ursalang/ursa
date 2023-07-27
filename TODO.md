@@ -4,7 +4,7 @@
 
 ## Hak MVP
 
-* Standalone runner.
+* REPL.
 * Tail recursion elimination
 * Method invocation
 * Co-routines (copy Python?)
@@ -18,6 +18,7 @@
 
 ## HakLisp improvements
 
+* Standalone runner.
 * To optimize symbol references, add `const` (`let` but constant), and
   evaluate as much as we can at compile time. Any expression with no free
   variables can be fully evaluated.
@@ -28,7 +29,7 @@
 * Study vau, fexprs, first-class environments (objects), and delimited
   continuations.
 * Implement new semantics in HakLisp first.
-* Put tests in separate source files.
+* Put tests in separate source files (but how to deal with tests that return values?).
 
 ## Hak v1
 

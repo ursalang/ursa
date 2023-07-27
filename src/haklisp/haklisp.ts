@@ -1,5 +1,6 @@
 import {Node} from 'ohm-js'
-import grammar, {HakLispSemantics} from './haklisp.ohm-bundle'
+// eslint-disable-next-line import/extensions
+import grammar, {HakLispSemantics} from './haklisp.ohm-bundle.js'
 
 // Specify precise type so semantics can be precisely type-checked.
 const semantics: HakLispSemantics = grammar.createSemantics()

@@ -1,11 +1,11 @@
 import test from 'ava'
 
-import {toVal} from './hak'
+import {toVal} from './hak.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
   BreakException, EnvironmentVal,
-} from '../haklisp/haklisp'
+} from '../haklisp/haklisp.js'
 
 Error.stackTraceLimit = Infinity
 
