@@ -1,7 +1,8 @@
 Hak {
   Sequence
-    = Exp #sc Sequence #sc                 -- seq
-    | "let" ident "=" Exp #sc Sequence #sc -- let
+    = Exp #sc Sequence #sc                                               -- seq
+    | "let" ident "=" Exp #sc Sequence #sc                               -- let
+    | "let" "fn" ident "(" ListOf<ident, ","> ")" Block #sc Sequence #sc -- letfn
     | Exp
 
   // A semicolon is "automatically inserted" if a newline or the end of the input stream is

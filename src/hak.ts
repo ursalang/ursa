@@ -32,7 +32,7 @@ function makeFn(env: Environment, freeVars: Set<string>, params: Node, body: Nod
   )
 }
 
-function propAccess(env: EnvironmentVal, ref: Val, prop: string, ...rest: Val[]): Val {
+function propAccess(ref: Val, prop: string, ...rest: Val[]): Val {
   return new Call(
     new NativeFexpr((env, ...args) => {
       const evaluatedRef = ref.eval(env)
@@ -62,7 +62,6 @@ semantics.addOperation<AST>('toAST(env)', {
       new Map([[ident.sourceString, new Ref(new Null())]]),
     )
     return propAccess(
-      this.args.env,
       new Quote(ident.sourceString),
       'set',
       makeFn(
@@ -80,16 +79,16 @@ semantics.addOperation<AST>('toAST(env)', {
     )
   },
   IndexExp_index(object, _open, index, _close) {
-    return propAccess(this.args.env, object.toAST(this.args.env), 'get', index.toAST(this.args.env))
+    return propAccess(object.toAST(this.args.env), 'get', index.toAST(this.args.env))
   },
   Loop(_loop, e_body) {
     return new Call(new SymRef(this.args.env, 'loop'), [e_body.toAST(this.args.env)])
   },
   Assignment_index(callExp, _open, index, _close, _eq, value) {
-    return propAccess(this.args.env, callExp.toAST(this.args.env), 'set', index.toAST(this.args.env), value.toAST(this.args.env))
+    return propAccess(callExp.toAST(this.args.env), 'set', index.toAST(this.args.env), value.toAST(this.args.env))
   },
   Assignment_ident(ident, _eq, value) {
-    return propAccess(this.args.env, new Quote(ident.sourceString), 'set', value.toAST(this.args.env))
+    return propAccess(new Quote(ident.sourceString), 'set', value.toAST(this.args.env))
   },
   LogicExp_and(left, _and, right) {
     return new Call(new SymRef(this.args.env, 'and'), [left.toAST(this.args.env), right.toAST(this.args.env)])
@@ -167,7 +166,7 @@ semantics.addOperation<AST>('toAST(env)', {
     return new Call(new SymRef(this.args.env, 'neg'), [exp.toAST(this.args.env)])
   },
   PropertyExp_property(object, _dot, property) {
-    return propAccess(this.args.env, object.toAST(this.args.env), property.sourceString)
+    return propAccess(object.toAST(this.args.env), property.sourceString)
   },
   PrimaryExp_break(_break, exp) {
     return new Call(new SymRef(this.args.env, 'break'), [maybeValue(this.args.env, exp)])
@@ -197,7 +196,28 @@ semantics.addOperation<AST>('toAST(env)', {
     return new Let(
       [ident.sourceString],
       new Call(new SymRef(this.args.env, 'seq'), [
-        propAccess(this.args.env, new Quote(ident.sourceString), 'set', value.toAST(this.args.env)),
+        propAccess(new Quote(ident.sourceString), 'set', value.toAST(this.args.env)),
+        seq.toAST(this.args.env.extend(bindingEnv)),
+      ]),
+    )
+  },
+  Sequence_letfn(_let, _fn, ident, _open, params, _close, block, _sep, seq, _maybe_sep) {
+    const bindingEnv = new BindingVal(
+      new Map([[ident.sourceString, new Ref(new Null())]]),
+    )
+    return new Let(
+      [ident.sourceString],
+      new Call(new SymRef(this.args.env, 'seq'), [
+        propAccess(
+          new Quote(ident.sourceString),
+          'set',
+          makeFn(
+            this.args.env.extend(bindingEnv),
+            new Set([...this.freeVars, ident.sourceString]),
+            params,
+            block,
+          ),
+        ),
         seq.toAST(this.args.env.extend(bindingEnv)),
       ]),
     )
@@ -230,6 +250,12 @@ semantics.addAttribute<Set<string>>('freeVars', {
     return setDifference(
       new Set([...seq.freeVars, ...value.freeVars]),
       new Set([ident.sourceString]),
+    )
+  },
+  Sequence_letfn(_let, _fn, ident, _open, params, _close, body, _sep, seq, _maybe_sep) {
+    return setDifference(
+      new Set([...seq.freeVars, ...body.freeVars]),
+      new Set([...params.freeVars, ident.sourceString]),
     )
   },
   Fn_anon(_fn, _open, params, _close, body) {

@@ -53,6 +53,12 @@ test('basic', (t) => {
     };
     fac(fac, 6)
   `).eval(new EnvironmentVal([])).value(), 720)
+  t.is(toVal(`
+    let fn fac(x) {
+      if x == 0 {1} else {x * fac(x - 1)}
+    }
+    fac(6)
+  `).eval(new EnvironmentVal([])).value(), 720)
   t.deepEqual(toVal('[1, 2, 3]').eval(new EnvironmentVal([])).value(), [1, 2, 3])
   t.is(toVal('[1, 2, 3].length').eval(new EnvironmentVal([])).value(), 3)
   t.is(toVal('[1, 2, 3][1]').eval(new EnvironmentVal([])).value(), 2)
