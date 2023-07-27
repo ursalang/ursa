@@ -280,5 +280,8 @@ semantics.addAttribute<Set<string>>('freeVars', {
 // eslint-disable-next-line import/prefer-default-export
 export function toVal(expr: string): Val {
   const matchResult = grammar.match(expr)
+  if (matchResult.failed()) {
+    console.log(matchResult.message)
+  }
   return semantics(matchResult).toAST(new EnvironmentVal([]))
 }
