@@ -430,6 +430,10 @@ const globals: [string, Val][] = [
   ['/', new NativeFn((left: Val, right: Val) => new Num(left.value() / right.value()))],
   ['%', new NativeFn((left: Val, right: Val) => new Num(left.value() % right.value()))],
   ['**', new NativeFn((left: Val, right: Val) => new Num(left.value() ** right.value()))],
+  ['print', new NativeFn((obj: Val) => {
+    debug(obj.value())
+    return new Null()
+  })],
 ]
 
 function listToBinding(elems: [string, Val][]): BindingVal {
