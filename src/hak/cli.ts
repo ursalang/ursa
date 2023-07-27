@@ -13,8 +13,10 @@ const parser = new ArgumentParser({
   description: 'The Hak language.',
   formatter_class: RawDescriptionHelpFormatter,
 })
-parser.add_argument('module', {metavar: 'FILE', help: 'Hak module to run'})
+const inputGroup = parser.add_mutually_exclusive_group()
+inputGroup.add_argument('module', {metavar: 'FILE', help: 'Hak module to run', nargs: '?'})
 parser.add_argument('argument', {metavar: 'ARGUMENT', help: 'arguments to the Hak module', nargs: '*'})
+inputGroup.add_argument('--eval', '-e', {metavar: 'EXPRESSION', help: 'execute the given expression'})
 parser.add_argument('--version', {
   action: 'version',
   version: `%(prog)s ${programVersion}
@@ -25,6 +27,7 @@ your option) any later version. There is no warranty.`,
 })
 interface Args {
   module: string
+  eval: string
   argument: string[]
 }
 // FIXME: add as a Hak global
@@ -32,7 +35,12 @@ const args: Args = parser.parse_args() as Args
 
 // Run the program
 try {
-  const source = fs.readFileSync(args.module, {encoding: 'utf-8'})
+  let source: string
+  if (args.eval !== undefined) {
+    source = args.eval
+  } else {
+    source = fs.readFileSync(args.module, {encoding: 'utf-8'})
+  }
   toVal(source).eval(new EnvironmentVal([]))
 } catch (error) {
   if (process.env.DEBUG) {
