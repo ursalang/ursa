@@ -650,11 +650,6 @@ export function toVal(expr: string): Val {
   return semantics(matchResult).toAST(new EnvironmentVal([]))
 }
 
-export function freeVars(expr: string): Val {
-  const matchResult = grammar.match(expr)
-  return semantics(matchResult).freeVars
-}
-
 export function debug(x: any, depth: number | undefined = undefined) {
   console.dir(x, {depth: depth ?? null})
 }

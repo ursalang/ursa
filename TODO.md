@@ -1,8 +1,10 @@
 # Hak to-do
 
+* Compile-time environment should just be names (and later, types).
+
 ## Hak MVP
 
-* Better error messages
+* Standalone runner.
 * Tail recursion elimination
 * Method invocation
 * Co-routines (copy Python?)
