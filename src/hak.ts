@@ -1,8 +1,9 @@
 import {Node, IterationNode} from 'ohm-js'
 import {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  debug,
   AST, Val, Null, Bool, Num, Str, Quote, Ref, SymRef, List, DictLiteral,
-  NativeFexpr, PropertyException, debug,
-  Call, Let, Fn,
+  Call, Let, Fn, NativeFexpr, PropertyException,
   bindArgsToParams, BindingVal, Environment, EnvironmentVal, setDifference, mergeFreeVars,
 } from './haklisp'
 import grammar, {HakSemantics} from './hak.ohm-bundle'
