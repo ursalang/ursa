@@ -11,8 +11,9 @@
 * Maps: iteration (with yield), indexing (lvalue), symbol keys
 * FFI (JavaScript)
 * Tree-sitter grammar, usable in Emacs and VSCode. (First, tidy up the grammar.)
-* Syntatic sugar for `fn f(x) {}` that scopes f over function body.
+* Syntatic sugar for `let fn f(x) {}` that scopes f over function body.
 * `self`
+* Sort out globals access.
 
 ## HakLisp improvements
 

@@ -22,7 +22,8 @@ Hak {
     = "if" Exp Block ("else" Block)?
 
   Fn
-    = "fn" "(" ListOf<ident, ","> ")" Block
+    = "fn" "(" ListOf<ident, ","> ")" Block        -- anon
+    | "fn" ident "(" ListOf<ident, ","> ")" Block  -- named
 
   Loop
     = "loop" Block

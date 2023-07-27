@@ -40,12 +40,13 @@ test('basic', (t) => {
   t.is(toVal('"hello \u00e9"').eval(new EnvironmentVal([])).value(), 'hello é')
   t.is(toVal('let f = fn(x) {x + 1}; f(1)').eval(new EnvironmentVal([])).value(), 2)
   // t.is(toVal('f = fn(x) {x + 1}; f(1)').eval(new EnvironmentVal([])).value(), 2)
-  // t.is(toVal(`
-  //   let fac = fn(x) {
-  //     if x == 0 {1} else {x * fac(x - 1)}
-  //   };
-  //   fac(6)
-  // `).eval(new EnvironmentVal([])).value(), 720)
+  t.is(toVal(`
+    let fac = null
+    fn fac(x) {
+      if x == 0 {1} else {x * fac(x - 1)}
+    };
+    fac(6)
+  `).eval(new EnvironmentVal([])).value(), 720)
   t.is(toVal(`
     let fac = fn(self, x) {
       if x == 0 {1} else {x * self(self, x - 1)}

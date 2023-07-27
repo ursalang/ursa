@@ -5,7 +5,7 @@ import grammar, {HakLispSemantics} from './haklisp.ohm-bundle'
 const semantics: HakLispSemantics = grammar.createSemantics()
 
 export type Binding = BindingVal
-type Environment = EnvironmentVal
+export type Environment = EnvironmentVal
 
 // Base class for parsing the language, extended directly by classes used
 // only during parsing.
@@ -260,7 +260,7 @@ export class Obj extends HakMap<string, Val> {}
 
 // A BindingVal holds Refs to Vals, so that the Vals can be referred to in
 // multiple BindingVals, in particular by closures' free variables.
-class BindingVal extends HakMap<string, Ref> {}
+export class BindingVal extends HakMap<string, Ref> {}
 
 // Until we can evaluate a dict literal, we don't know the values of its
 // keys.
@@ -525,6 +525,7 @@ semantics.addOperation<AST>('toAST(env)', {
   },
   Stmt_let(_let, binding, body) {
     const bindingEnv: Obj = binding.toAST(this.args.env)
+    // FIXME: Argument to extend should be a BindingVal
     return new Let(bindingEnv, body.toAST(this.args.env.extend(bindingEnv)))
   },
   Stmt_fn(_fn, params, body) {
