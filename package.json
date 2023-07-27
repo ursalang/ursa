@@ -24,10 +24,10 @@
     "prebuild": "node --print \"'export default \\'' + require('./package.json').version + '\\';'\" > src/version.ts",
     "build": "tsc --build",
     "clean": "tsc --build --clean",
-    "generate": "ohm generateBundles --withTypes 'src/*.ohm' && cp src/*ohm-bundle.js dist/",
+    "generate": "ohm generateBundles --withTypes 'src/*/*.ohm' && cp src/hak/*ohm-bundle.js dist/hak/ && cp src/haklisp/*ohm-bundle.js dist/haklisp/",
     "test": "npm run generate && npm run build && ava",
-    "test-hak": "ava src/hak.test.ts",
-    "test-lisp": "ava src/haklisp.test.ts"
+    "test-hak": "ava src/hak/hak.test.ts",
+    "test-lisp": "ava src/haklisp/haklisp.test.ts"
   },
   "ava": {
     "typescript": {

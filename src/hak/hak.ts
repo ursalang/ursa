@@ -5,7 +5,7 @@ import {
   AST, Val, Null, Bool, Num, Str, Quote, Ref, SymRef, List, DictLiteral,
   Call, Let, Fn, NativeFexpr, PropertyException,
   bindArgsToParams, BindingVal, Environment, EnvironmentVal, setDifference, mergeFreeVars,
-} from './haklisp'
+} from '../haklisp/haklisp'
 import grammar, {HakSemantics} from './hak.ohm-bundle'
 
 // Specify precise type so semantics can be precisely type-checked.
