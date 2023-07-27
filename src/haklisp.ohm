@@ -10,7 +10,7 @@ HakLisp {
     | symbol
 
   Stmt
-    = "let" Object Atom        -- let
+    = "let" ParamList Atom     -- let
     | "fn" ParamList Atom      -- fn
     | "fexpr" ParamList Atom   -- fexpr
     | "prop" symbol Atom Atom* -- prop

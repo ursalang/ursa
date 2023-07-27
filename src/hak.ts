@@ -194,7 +194,13 @@ semantics.addOperation<AST>('toAST(env)', {
     const bindingEnv = new BindingVal(
       new Map([[ident.sourceString, value.toAST(this.args.env)]]),
     )
-    return new Let(bindingEnv, seq.toAST(this.args.env.extend(bindingEnv)))
+    return new Let(
+      [ident.sourceString],
+      new Call(new SymRef(this.args.env, 'seq'), [
+        propAccess(this.args.env, new Quote(ident.sourceString), 'set', value.toAST(this.args.env)),
+        seq.toAST(this.args.env.extend(bindingEnv)),
+      ]),
+    )
   },
   ident(_l, _ns) {
     return new Str(this.sourceString)

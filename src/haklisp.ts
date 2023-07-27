@@ -330,17 +330,13 @@ export class List extends Val {
   }
 }
 
-function listToBinding(elems: [string, Val][]): BindingVal {
-  return new BindingVal(new Map(elems.map(([k, v]): [string, Ref] => [k, new Ref(v)])))
-}
-
 export class Let extends Val {
-  constructor(private bindingObj: Obj, private body: Val) {
+  constructor(private boundVars: string[], private body: Val) {
     super()
   }
 
   eval(env: Environment) {
-    const binding = listToBinding([...this.bindingObj.map])
+    const binding = bindArgsToParams(this.boundVars, [])
     binding.map.forEach((v) => {
       // First eval the Ref, then eval the value
       v.set(env, v.eval(env).eval(env))
@@ -435,6 +431,10 @@ const globals: [string, Val][] = [
   ['**', new NativeFn((left: Val, right: Val) => new Num(left.value() ** right.value()))],
 ]
 
+function listToBinding(elems: [string, Val][]): BindingVal {
+  return new BindingVal(new Map(elems.map(([k, v]): [string, Ref] => [k, new Ref(v)])))
+}
+
 SymRef.globals = listToBinding(globals)
 
 export class EnvironmentVal {
@@ -523,10 +523,10 @@ semantics.addOperation<AST>('toAST(env)', {
       args.children.map((value) => value.toAST(this.args.env)),
     )
   },
-  Stmt_let(_let, binding, body) {
-    const bindingEnv: Obj = binding.toAST(this.args.env)
-    // FIXME: Argument to extend should be a BindingVal
-    return new Let(bindingEnv, body.toAST(this.args.env.extend(bindingEnv)))
+  Stmt_let(_let, params, body) {
+    const paramList = params.toAST(this.args.env)
+    const paramBinding = bindArgsToParams(paramList, [])
+    return new Let(paramList, body.toAST(this.args.env.extend(paramBinding)))
   },
   Stmt_fn(_fn, params, body) {
     const paramList = params.toAST(this.args.env)
@@ -603,25 +603,6 @@ semantics.addOperation<AST>('toAST(env)', {
   },
 })
 
-// N.B.: boundVars is only correct (and only used) for Let bindings.
-semantics.addAttribute<Set<string>>('boundVars', {
-  _terminal() {
-    return new Set()
-  },
-  _nonterminal() {
-    return new Set()
-  },
-  _iter(..._children) {
-    return new Set()
-  },
-  Object(_open, binding, _close) {
-    return new Set(binding.children.map((child) => [...child.boundVars]).flat())
-  },
-  PropertyValue(sym, _colon, _val) {
-    return new Set([sym.sourceString])
-  },
-})
-
 export function mergeFreeVars(children: Node[]): Set<string> {
   return new Set<string>(children.map((child) => [...child.freeVars]).flat())
 }
@@ -645,7 +626,7 @@ semantics.addAttribute<Set<string>>('freeVars', {
     return mergeFreeVars(children)
   },
   Stmt_let(_let, binding, body) {
-    return setDifference(new Set([...body.freeVars, ...binding.freeVars]), binding.boundVars)
+    return setDifference(body.freeVars, binding.freeVars)
   },
   Stmt_fn(_fn, params, body) {
     return setDifference(body.freeVars, params.freeVars)
@@ -663,6 +644,9 @@ semantics.addAttribute<Set<string>>('freeVars', {
 
 export function toVal(expr: string): Val {
   const matchResult = grammar.match(expr)
+  if (matchResult.failed()) {
+    console.log(matchResult.message)
+  }
   return semantics(matchResult).toAST(new EnvironmentVal([]))
 }
 
