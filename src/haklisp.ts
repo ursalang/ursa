@@ -13,15 +13,16 @@ export class AST {}
 
 // Base class for compiled code.
 export class Val extends AST {
-  static counter = 0
+  // Uncomment the following for debug.
+  // static counter = 0
 
-  uid: number
+  // uid: number
 
-  constructor() {
-    super()
-    this.uid = Val.counter
-    Val.counter += 1
-  }
+  // constructor() {
+  //   super()
+  //   this.uid = Val.counter
+  //   Val.counter += 1
+  // }
 
   eval(_env: Environment): Val {
     return this
