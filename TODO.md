@@ -1,8 +1,8 @@
-# Hak to-do
+# Ursa to-do
 
 * Compile-time environment should just be names (and later, types).
 
-## Hak MVP
+## Ursa MVP
 
 * REPL.
 * Tail recursion elimination
@@ -15,8 +15,10 @@
 * Tree-sitter grammar, usable in Emacs and VSCode. (First, tidy up the grammar.)
 * `self`
 * Sort out globals access.
+* README.md.
+* Run in browser.
 
-## HakLisp improvements
+## Hak improvements
 
 * Standalone runner.
 * To optimize symbol references, add `const` (`let` but constant), and
@@ -25,18 +27,18 @@
 * Make everything objects (arithmetic should be methods of `Num`).
 * Compiled form has only "fresh names"; textual version has "let" as a
   convenience for readability.
-* Put HakLisp AST hierarchy in another file, ditto the interpreter.
+* Put Hak AST hierarchy in another file, ditto the interpreter.
 * Study vau, fexprs, first-class environments (objects), and delimited
   continuations.
-* Implement new semantics in HakLisp first.
-* Put tests in separate source files (but how to deal with tests that return values?).
+* Implement new semantics in Hak first.
+* Put tests in separate source files.
 
-## Hak v1
+## Ursa v1
 
 * Inter-working with C. Initial quick-and-dirty version: allow arbitrary C
   APIs to be declared (especially for POSIX; later add GLib introspection),
   and allow C bindings to be generated for Hak values that have C types, and
-  any base Hack type.
+  any base Hak type.
 * Type checking
 * Structs
 * Enums

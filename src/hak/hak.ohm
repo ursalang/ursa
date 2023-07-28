@@ -1,117 +1,42 @@
 Hak {
-  Sequence
-    = Exp #sc Sequence #sc                                               -- seq
-    | "let" ident "=" Exp #sc Sequence #sc                               -- let
-    | "let" "fn" ident "(" ListOf<ident, ","> ")" Block #sc Sequence #sc -- letfn
-    | Exp
+  Program = Atom*
 
-  // A semicolon is "automatically inserted" if a newline or the end of the input stream is
-  // reached, or the offending token is "}".
-  // NOTE: Applications of this rule *must* appear in a lexical context -- either in the body of a
-  // lexical rule, or inside `#()`.
-  sc = space* (";" | end)
-     | spacesNoNL (lineTerminator | &"}")
-
-  Exp
-    = If
-    | Fn
-    | Loop
-    | Assignment
-    | LogicExp
-
-  If
-    = "if" Exp Block ("else" Block)?
-
-  Fn
-    = "fn" "(" ListOf<ident, ","> ")" Block        -- anon
-    | "fn" ident "(" ListOf<ident, ","> ")" Block  -- named
-
-  Loop
-    = "loop" Block
-
-  Assignment
-    = CallExp "[" Exp "]" "=" Exp  -- index
-    | ident "=" Exp                -- ident
-
-  LogicExp
-    = LogicExp "and" CompareExp -- and
-    | LogicExp "or" CompareExp  -- or
-    | "not" LogicExp            -- not
-    | CompareExp
-
-  CompareExp
-    = CompareExp "==" ArithmeticExp -- eq
-    | CompareExp "!=" ArithmeticExp -- neq
-    | CompareExp "<"  ArithmeticExp -- lt
-    | CompareExp "<=" ArithmeticExp -- leq
-    | CompareExp ">"  ArithmeticExp -- gt
-    | CompareExp ">=" ArithmeticExp -- geq
-    | ArithmeticExp
-
-  ArithmeticExp
-    = ArithmeticExp "+" ProductExp  -- plus
-    | ArithmeticExp "-" ProductExp  -- minus
-    | ProductExp
-
-  ProductExp
-    = ProductExp "*" ExponentExp  -- times
-    | ProductExp "/" ExponentExp  -- divide
-    | ProductExp "//" ExponentExp -- mod
-    | ExponentExp
-
-  ExponentExp
-    = UnaryExp "**" ExponentExp  -- power
-    | UnaryExp
-
-  UnaryExp
-    = "+" Exp           -- pos
-    | "-" Exp           -- neg
-    | IndexExp
-    | CallExp
-
-  IndexExp
-    = CallExp "[" Exp "]" -- index
-
-  CallExp
-    = PropertyExp "(" ListOf<Exp, ","> ")"  -- call
-    | PropertyExp
-
-  PropertyExp
-    = PropertyExp #"." #ident           -- property
-    | PrimaryExp
-
-  PrimaryExp
-    = "(" Exp ")"       -- paren
-    | Block
+  Atom
+    = "(" Stmt ")"      -- stmt
     | List
-    | Dict
-    | "break" Exp?      -- break
-    | "return" Exp?     -- return
-    | "continue"        -- continue
-    | "null"            -- null
+    | Object
+    | Map
+    | Literal
+    | symbol
+
+  Stmt
+    = "let" ParamList Atom     -- let
+    | "fn" ParamList Atom      -- fn
+    | "fexpr" ParamList Atom   -- fexpr
+    | "prop" symbol Atom Atom* -- prop
+    | "quote" symbol           -- quote
+    | Atom Atom*               -- call
+
+  ParamList = "[" symbol* "]"
+
+  List = "[" Atom* "]"
+
+  Object = "{" PropertyValue* "}"
+  PropertyValue = symbol ":" Atom
+
+  Map = "{" KeyValue* "}"
+  KeyValue = Atom ":" Atom
+
+  Literal
+    = "null"             -- null
     | bool
-    | string
-    | ident             -- ident
     | number
+    | string
 
-  Block
-    = "{" Sequence? "}"
-
-  List
-    = "[" ListOf<Exp, ","> "]"
-
-  Dict
-    = "{" ListOf<KeyValue, ","> "}"
-
-  KeyValue
-    = Exp ":" Exp
-
-  ExpSeq
-    = Exp "," Exp ","? -- expseq
-    | Exp?             -- exp
-
-  ident  (an identifier)
-    = letter alnum*
+  symbol
+    = letter alnum*      -- alphanum
+    | sign+              -- punct
+  sign = "_" | "+" | "-" | "/" | "*" | ">" | "<" | "=" | "!" | "?" | "~"
 
   bool  (a boolean)
     = "false" | "true"
@@ -151,13 +76,9 @@ Hak {
     = "\n" | "\r" ~"\n" | "\u2028" | "\u2029" | "\r\n"
 
   comment
-    = "//" (~lineTerminator any)*
+    = ";" (~lineTerminator any)*
 
-  // Override Ohm's built-in definition
   space := whitespace | lineTerminator | comment
-
-  // Does not accept lineTerminators
-  spacesNoNL = (whitespace | comment)*
 
   whitespace
     = "\t"

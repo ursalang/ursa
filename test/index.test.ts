@@ -4,8 +4,8 @@ import {createPatch} from 'diff'
 import chai, {assert, expect} from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 
-import {toVal} from '../src/hak/hak.js'
-import {EnvironmentVal} from '../src/haklisp/haklisp.js'
+import {toVal} from '../src/ursa/ursa.js'
+import {EnvironmentVal} from '../src/hak/hak.js'
 
 chai.use(chaiAsPromised)
 

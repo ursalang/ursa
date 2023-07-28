@@ -7,4 +7,4 @@ import tsNode from 'ts-node'
 import fs from 'fs-extra'
 tsNode.register(fs.readJsonSync(path.join(__dirname, '../tsconfig.json')))
 
-import '../src/hak/cli.js'
+import '../src/ursa/cli.js'
