@@ -23,7 +23,7 @@ function assertStringEqual(output: string, expected: string) {
 function test(inputFile: string, expected: string) {
   const input = fs.readFileSync(inputFile, {encoding: 'utf-8'})
   const output = toVal(input).eval(new EnvironmentVal([]))
-  assertStringEqual(output.value(), expected)
+  assertStringEqual(String(output.value()), expected)
 }
 
 function failingTest(inputFile: string, expected: string) {
@@ -61,10 +61,17 @@ describe('nancy', function t() {
   })
 
   // Module tests
-  it('Simple expression', () => {
-    test(
-      '3 + 4',
-      '7',
+  it('Repeated closure', () => {
+    cliTest(
+      ['repeated-closure.ursa'],
+      '[ 1, 2, 1 ]',
+    )
+  })
+
+  it('Repeated closure (sexp syntax)', () => {
+    cliTest(
+      ['--sexp', 'repeated-closure.ursa'],
+      '[ 1, 2, 1 ]',
     )
   })
 
