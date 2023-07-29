@@ -245,11 +245,11 @@ export class HakMap<K, V extends Val> extends Val {
   }
 
   value() {
-    const valElems = new Map()
+    const evaluatedMap = new Map<K, Val>()
     for (const [k, v] of this.map) {
-      valElems.set(k, v.value())
+      evaluatedMap.set(k, v.eval(new EnvironmentVal([])).value())
     }
-    return valElems
+    return evaluatedMap
   }
 
   properties = {
@@ -287,14 +287,6 @@ export class DictLiteral extends Val {
 export class Dict extends HakMap<any, Val> {
   constructor(public map: Map<Val, Val>) {
     super(map)
-  }
-
-  value() {
-    const evaluatedMap = new Map<any, Val>()
-    for (const [k, v] of this.map) {
-      evaluatedMap.set(k, v.eval(new EnvironmentVal([])).value())
-    }
-    return evaluatedMap
   }
 
   properties = {
