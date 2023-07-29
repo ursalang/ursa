@@ -4,7 +4,6 @@
 
 ## Ursa MVP
 
-* REPL.
 * Tail recursion elimination
 * Method invocation
 * Co-routines (copy Python?)

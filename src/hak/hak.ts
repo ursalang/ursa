@@ -650,7 +650,7 @@ semantics.addAttribute<Set<string>>('freeVars', {
 export function toVal(expr: string): Val {
   const matchResult = grammar.match(expr)
   if (matchResult.failed()) {
-    console.log(matchResult.message)
+    throw new Error(matchResult.message)
   }
   return semantics(matchResult).toAST(new EnvironmentVal([]))
 }

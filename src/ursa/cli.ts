@@ -2,6 +2,7 @@
 
 import path from 'path'
 import fs from 'fs'
+import * as readline from 'node:readline'
 import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
 import programVersion from '../version.js'
 // eslint-disable-next-line import/no-named-as-default
@@ -39,15 +40,46 @@ interface Args {
 // FIXME: add as a Ursa global
 const args: Args = parser.parse_args() as Args
 
+function evaluate(exp: string) {
+  return (args.sexp ? lispToVal : toVal)(exp).eval(new EnvironmentVal([]))
+}
+
+async function repl() {
+  console.log(`Welcome to Ursa ${programVersion}.`)
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    prompt: '> ',
+  })
+  rl.prompt()
+  for await (const line of rl) {
+    try {
+      const val = evaluate(line).value()
+      console.dir(val, {depth: null})
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error(error.message)
+      } else {
+        console.error(error)
+      }
+    }
+    rl.prompt()
+  }
+}
+
 // Run the program
 try {
-  let source: string
+  let source: string | undefined
   if (args.eval !== undefined) {
     source = args.eval
-  } else {
+  } else if (args.module !== undefined) {
     source = fs.readFileSync(args.module, {encoding: 'utf-8'})
   }
-  (args.sexp ? lispToVal : toVal)(source).eval(new EnvironmentVal([]))
+  if (source !== undefined) {
+    evaluate(source)
+  } else {
+    repl()
+  }
 } catch (error) {
   if (process.env.DEBUG) {
     console.error(error)
