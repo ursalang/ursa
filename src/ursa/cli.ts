@@ -54,7 +54,7 @@ async function repl() {
   rl.prompt()
   for await (const line of rl) {
     try {
-      const val = evaluate(line).value()
+      const val = evaluate(line)._value()
       console.dir(val, {depth: null})
     } catch (error) {
       if (error instanceof Error) {

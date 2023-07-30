@@ -23,7 +23,7 @@ function assertStringEqual(output: string, expected: string) {
 function test(inputFile: string, expected: string) {
   const input = fs.readFileSync(inputFile, {encoding: 'utf-8'})
   const output = toVal(input).eval(new EnvironmentVal([]))
-  assertStringEqual(String(output.value()), expected)
+  assertStringEqual(String(output._value()), expected)
 }
 
 function failingTest(inputFile: string, expected: string) {

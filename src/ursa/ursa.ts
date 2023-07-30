@@ -24,7 +24,7 @@ function maybeValue(env: Environment, exp: IterationNode): Val {
 
 function makeFn(env: Environment, freeVars: Set<string>, params: Node, body: Node): Val {
   const paramList = params.asIteration().children.map(
-    (value) => value.toAST(env).value(),
+    (value) => value.toAST(env)._value(),
   )
   const paramBinding = bindArgsToParams(paramList, [])
   return new Fn(

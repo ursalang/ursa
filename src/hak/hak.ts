@@ -29,7 +29,7 @@ export class Val extends AST {
     return this
   }
 
-  value(): any {
+  _value(): any {
     return this
   }
 
@@ -41,7 +41,7 @@ class ConcreteVal extends Val {
     super()
   }
 
-  value(): any {
+  _value(): any {
     return this.val
   }
 }
@@ -75,7 +75,7 @@ export class HakException extends Error {
     super()
   }
 
-  value(): Val {
+  _value(): Val {
     return this.val
   }
 }
@@ -112,7 +112,7 @@ class FexprClosure extends Val {
       if (!(e instanceof ReturnException)) {
         throw e
       }
-      res = e.value()
+      res = e._value()
     }
     return res
   }
@@ -234,16 +234,16 @@ export class HakMap<K, V extends Val> extends Val {
     return this
   }
 
-  value() {
+  _value() {
     const evaluatedMap = new Map<K, Val>()
     for (const [k, v] of this.map) {
-      evaluatedMap.set(k, v.eval(new EnvironmentVal([])).value())
+      evaluatedMap.set(k, v.eval(new EnvironmentVal([]))._value())
     }
     return evaluatedMap
   }
 
   properties = {
-    get: (_env: Environment, index: Val) => this.map.get(index.value()),
+    get: (_env: Environment, index: Val) => this.map.get(index._value()),
   }
 }
 
@@ -263,14 +263,14 @@ export class DictLiteral extends Val {
   eval(env: Environment): Dict {
     const evaluatedMap = new Map<any, Val>()
     for (const [k, v] of this.map) {
-      evaluatedMap.set(k.eval(env).value(), v.eval(env))
+      evaluatedMap.set(k.eval(env)._value(), v.eval(env))
     }
     return new Dict(evaluatedMap)
   }
 
   // Best effort.
-  value() {
-    return this.eval(new EnvironmentVal([])).value()
+  _value() {
+    return this.eval(new EnvironmentVal([]))._value()
   }
 }
 
@@ -282,10 +282,10 @@ export class Dict extends HakMap<any, Val> {
   properties = {
     ...super.properties,
     set: (_env: Environment, index: Val, val: Val) => {
-      this.map.set(index.value(), val)
+      this.map.set(index._value(), val)
       return val
     },
-    get: (_env: Environment, index: Val) => this.map.get(index.value()) ?? new Null(),
+    get: (_env: Environment, index: Val) => this.map.get(index._value()) ?? new Null(),
   }
 }
 
@@ -299,15 +299,15 @@ export class List extends Val {
     return this
   }
 
-  value() {
-    return this.val.map((e: Val) => e.value())
+  _value() {
+    return this.val.map((e: Val) => e._value())
   }
 
   properties = {
     length: (_env: Environment) => new Num(this.val.length),
-    get: (_env: Environment, index: Val) => this.val[(index as Num).value()],
+    get: (_env: Environment, index: Val) => this.val[(index as Num)._value()],
     set: (_env: Environment, index: Val, val: Val) => {
-      this.val[index.value()] = val
+      this.val[index._value()] = val
       return val
     },
   }
@@ -346,9 +346,9 @@ const globals: [string, Val][] = [
   ['false', new Bool(false)],
   ['new', new NativeFn((val: Val) => new Ref(val))],
   ['eval', new NativeFexpr((env: Environment, ref: Val) => ref.eval(env).eval(env))],
-  ['pos', new NativeFn((val: Val) => new Num(+val.value()))],
-  ['neg', new NativeFn((val: Val) => new Num(-val.value()))],
-  ['not', new NativeFn((val: Val) => new Bool(!val.value()))],
+  ['pos', new NativeFn((val: Val) => new Num(+val._value()))],
+  ['neg', new NativeFn((val: Val) => new Num(-val._value()))],
+  ['not', new NativeFn((val: Val) => new Bool(!val._value()))],
   ['seq', new NativeFexpr((env: Environment, ...args: Val[]) => {
     let res: Val = new Null()
     for (const exp of args) {
@@ -358,21 +358,21 @@ const globals: [string, Val][] = [
   })],
   ['if', new NativeFexpr((env: Environment, cond: Val, e_then: Val, e_else: Val) => {
     const condVal = cond.eval(env)
-    if (condVal.value()) {
+    if (condVal._value()) {
       return e_then.eval(env)
     }
     return e_else ? e_else.eval(env) : new Null()
   })],
   ['and', new NativeFexpr((env: Environment, left: Val, right: Val) => {
     const leftVal = left.eval(env)
-    if (leftVal.value()) {
+    if (leftVal._value()) {
       return right.eval(env)
     }
     return leftVal
   })],
   ['or', new NativeFexpr((env: Environment, left: Val, right: Val) => {
     const leftVal = left.eval(env)
-    if (leftVal.value()) {
+    if (leftVal._value()) {
       return leftVal
     }
     return right.eval(env)
@@ -383,7 +383,7 @@ const globals: [string, Val][] = [
         body.eval(env)
       } catch (e) {
         if (e instanceof BreakException) {
-          return e.value()
+          return e._value()
         }
         if (!(e instanceof ContinueException)) {
           throw e
@@ -400,20 +400,20 @@ const globals: [string, Val][] = [
   ['return', new NativeFn((val: Val) => {
     throw new ReturnException(val)
   })],
-  ['=', new NativeFn((left: Val, right: Val) => new Bool(left.value() === right.value()))],
-  ['!=', new NativeFn((left: Val, right: Val) => new Bool(left.value() !== right.value()))],
-  ['<', new NativeFn((left: Val, right: Val) => new Bool(left.value() < right.value()))],
-  ['<=', new NativeFn((left: Val, right: Val) => new Bool(left.value() <= right.value()))],
-  ['>', new NativeFn((left: Val, right: Val) => new Bool(left.value() > right.value()))],
-  ['>=', new NativeFn((left: Val, right: Val) => new Bool(left.value() >= right.value()))],
-  ['+', new NativeFn((left: Val, right: Val) => new Num(left.value() + right.value()))],
-  ['-', new NativeFn((left: Val, right: Val) => new Num(left.value() - right.value()))],
-  ['*', new NativeFn((left: Val, right: Val) => new Num(left.value() * right.value()))],
-  ['/', new NativeFn((left: Val, right: Val) => new Num(left.value() / right.value()))],
-  ['%', new NativeFn((left: Val, right: Val) => new Num(left.value() % right.value()))],
-  ['**', new NativeFn((left: Val, right: Val) => new Num(left.value() ** right.value()))],
+  ['=', new NativeFn((left: Val, right: Val) => new Bool(left._value() === right._value()))],
+  ['!=', new NativeFn((left: Val, right: Val) => new Bool(left._value() !== right._value()))],
+  ['<', new NativeFn((left: Val, right: Val) => new Bool(left._value() < right._value()))],
+  ['<=', new NativeFn((left: Val, right: Val) => new Bool(left._value() <= right._value()))],
+  ['>', new NativeFn((left: Val, right: Val) => new Bool(left._value() > right._value()))],
+  ['>=', new NativeFn((left: Val, right: Val) => new Bool(left._value() >= right._value()))],
+  ['+', new NativeFn((left: Val, right: Val) => new Num(left._value() + right._value()))],
+  ['-', new NativeFn((left: Val, right: Val) => new Num(left._value() - right._value()))],
+  ['*', new NativeFn((left: Val, right: Val) => new Num(left._value() * right._value()))],
+  ['/', new NativeFn((left: Val, right: Val) => new Num(left._value() / right._value()))],
+  ['%', new NativeFn((left: Val, right: Val) => new Num(left._value() % right._value()))],
+  ['**', new NativeFn((left: Val, right: Val) => new Num(left._value() ** right._value()))],
   ['print', new NativeFn((obj: Val) => {
-    debug(obj.value())
+    debug(obj._value())
     return new Null()
   })],
 ]

@@ -20,12 +20,7 @@
       "except-parens"
     ],
     "no-console": "off",
-    "no-underscore-dangle": [
-      "error",
-      {
-        "enforceInMethodNames": false
-      }
-    ],
+    "no-underscore-dangle": "off",
     "no-warning-comments": "off",
     "no-restricted-syntax": "off",
     "prefer-destructuring": "off",
