@@ -32,8 +32,6 @@ export class Val extends AST {
   _value(): any {
     return this
   }
-
-  properties: {[key: string]: Function} = {}
 }
 
 class ConcreteVal extends Val {
@@ -188,11 +186,9 @@ export class Ref extends Val {
     return this.val
   }
 
-  properties = {
-    set: (_env: Environment, val: Val) => {
-      this.val = val
-      return val
-    },
+  set(_env: Environment, val: Val) {
+    this.val = val
+    return val
   }
 }
 
@@ -211,12 +207,10 @@ export class SymRef extends Ref {
     return ref.eval(env)
   }
 
-  properties = {
-    set: (env: Environment, val: Val) => {
-      const evaluatedVal = val.eval(env)
-      env.set(this.name, evaluatedVal)
-      return evaluatedVal
-    },
+  set(env: Environment, val: Val) {
+    const evaluatedVal = val.eval(env)
+    env.set(this.name, evaluatedVal)
+    return evaluatedVal
   }
 }
 
@@ -242,8 +236,8 @@ export class HakMap<K, V extends Val> extends Val {
     return evaluatedMap
   }
 
-  properties = {
-    get: (_env: Environment, index: Val) => this.map.get(index._value()),
+  get(_env: Environment, index: Val) {
+    return this.map.get(index._value())
   }
 }
 
@@ -279,13 +273,13 @@ export class Dict extends HakMap<any, Val> {
     super(map)
   }
 
-  properties = {
-    ...super.properties,
-    set: (_env: Environment, index: Val, val: Val) => {
-      this.map.set(index._value(), val)
-      return val
-    },
-    get: (_env: Environment, index: Val) => this.map.get(index._value()) ?? new Null(),
+  set(_env: Environment, index: Val, val: Val) {
+    this.map.set(index._value(), val)
+    return val
+  }
+
+  get(_env: Environment, index: Val) {
+    return this.map.get(index._value()) ?? new Null()
   }
 }
 
@@ -303,13 +297,17 @@ export class List extends Val {
     return this.val.map((e: Val) => e._value())
   }
 
-  properties = {
-    length: (_env: Environment) => new Num(this.val.length),
-    get: (_env: Environment, index: Val) => this.val[(index as Num)._value()],
-    set: (_env: Environment, index: Val, val: Val) => {
-      this.val[index._value()] = val
-      return val
-    },
+  length(_env: Environment) {
+    return new Num(this.val.length)
+  }
+
+  get(_env: Environment, index: Val) {
+    return this.val[(index as Num)._value()]
+  }
+
+  set(_env: Environment, index: Val, val: Val) {
+    this.val[index._value()] = val
+    return val
   }
 }
 
@@ -322,7 +320,7 @@ export class Let extends Val {
     const binding = bindArgsToParams(this.boundVars, [])
     binding.map.forEach((v) => {
       // First eval the Ref, then eval the value
-      v.properties.set(env, v.eval(env).eval(env))
+      v.set(env, v.eval(env).eval(env))
     })
     return this.body.eval(env.extend(binding))
   }
@@ -445,7 +443,7 @@ export class EnvironmentVal {
       throw new Error(`undefined symbol at run-time ${sym}`)
     }
     const ref = this.env[index].map.get(sym)!
-    ref.properties.set(this, val)
+    ref.set(this, val)
   }
 
   getIndex(sym: string) {
@@ -540,12 +538,11 @@ semantics.addOperation<AST>('toAST(env)', {
     const refVal = ref.toAST(this.args.env)
     return new Call(
       new NativeFexpr((env, ...args) => {
-        const evaluatedRef = refVal.eval(env)
-        const props = evaluatedRef.properties
-        if (!(propName in props)) {
+        const obj = refVal.eval(env)
+        if (!(propName in obj)) {
           throw new PropertyException(`no property '${propName}'`)
         }
-        return evaluatedRef.properties[propName](env, ...args.map((e) => e.eval(env)))
+        return obj[propName](env, ...args.map((e) => e.eval(env)))
       }),
       rest.children.map((value: Node) => value.toAST(this.args.env)),
     )

@@ -37,12 +37,11 @@ function makeFn(env: Environment, freeVars: Set<string>, params: Node, body: Nod
 function propAccess(ref: Val, prop: string, ...rest: Val[]): Val {
   return new Call(
     new NativeFexpr((env, ...args) => {
-      const evaluatedRef = ref.eval(env)
-      const props = evaluatedRef.properties
-      if (!(prop in props)) {
+      const obj: any = ref.eval(env)
+      if (!(prop in obj)) {
         throw new PropertyException(`no property '${prop}'`)
       }
-      return evaluatedRef.properties[prop](env, ...args.map((e) => e.eval(env)))
+      return obj[prop](env, ...args.map((e) => e.eval(env)))
     }),
     rest,
   )
