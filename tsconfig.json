@@ -7,8 +7,6 @@
     "composite": true,
     "declaration": true,
     "importHelpers": true,
-    "module": "ES6",
-    "moduleResolution": "Node",
     "outDir": "lib",
     "rootDir": "./src",
     "sourceMap": true,

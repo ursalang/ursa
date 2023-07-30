@@ -1,3 +1,3 @@
 #!/usr/bin/env node
-import path from 'path'
-import(path.join('..', 'lib', 'ursa', 'cli.js'))
+path = require('path')
+require(path.join('..', 'lib', 'ursa', 'cli.js'))

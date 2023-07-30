@@ -3,6 +3,7 @@ Ursa {
     = Exp #sc Sequence #sc                                               -- seq
     | "let" ident "=" Exp #sc Sequence #sc                               -- let
     | "let" "fn" ident "(" ListOf<ident, ","> ")" Block #sc Sequence #sc -- letfn
+    | "use" ListOf<ident, #"."> #sc Sequence #sc                         -- use
     | Exp
 
   // A semicolon is "automatically inserted" if a newline or the end of the input stream is

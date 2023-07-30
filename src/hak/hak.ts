@@ -215,10 +215,12 @@ export class SymRef extends Ref {
 }
 
 export class Obj extends Val {
-  constructor(map: Map<string, Val>) {
+  constructor(jsObj: Object) {
     super()
-    for (const [k, v] of map) {
-      (this as any)[k] = v
+    for (const key in jsObj) {
+      if (Object.hasOwn(jsObj, key)) {
+        (this as any)[key] = (jsObj as any)[key]
+      }
     }
   }
 }
@@ -415,6 +417,14 @@ const globals: [string, Val][] = [
     debug(obj._value())
     return new Null()
   })],
+  ['js', new Obj({
+    use: (_env: EnvironmentVal, ...args: Val[]) => {
+      const requirePath = (args.map((e) => e._value()).join('.'))
+      // eslint-disable-next-line import/no-dynamic-require, global-require
+      return new Obj(require(requirePath))
+    },
+  }),
+  ],
 ]
 
 function listToBinding(elems: [string, Val][]): BindingVal {
@@ -636,5 +646,5 @@ export function toVal(expr: string): Val {
 }
 
 export function debug(x: any, depth: number | undefined = undefined) {
-  console.dir(x, {depth: depth ?? null})
+  console.dir(x, {depth: depth ?? 1})
 }

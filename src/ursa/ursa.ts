@@ -223,6 +223,29 @@ semantics.addOperation<AST>('toAST(env)', {
       ]),
     )
   },
+  Sequence_use(_use, pathList, _sep, seq, _maybe_sep) {
+    const path = pathList.asIteration().children.map((id) => id.sourceString)
+    const ident = path[path.length - 1]
+    const bindingEnv = new BindingVal(
+      new Map([[ident, new Ref(new Null())]]),
+    )
+    // For path x.y.z, compile `let z = x.use(y.z); …`
+    return new Let(
+      [ident],
+      new Call(new SymRef(this.args.env, 'seq'), [
+        propAccess(
+          new Quote(ident),
+          'set',
+          propAccess(
+            new SymRef(this.args.env.extend(bindingEnv), path[0]),
+            'use',
+            ...path.slice(1).map((id) => new Str(id)),
+          ),
+        ),
+        seq.toAST(this.args.env.extend(bindingEnv)),
+      ]),
+    )
+  },
   ident(_l, _ns) {
     return new Str(this.sourceString)
   },
