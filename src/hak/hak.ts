@@ -214,17 +214,22 @@ export class SymRef extends Ref {
   }
 }
 
-export class HakMap<K, V extends Val> extends Val {
-  constructor(public map: Map<K, V>) {
+export class Obj extends Val {
+  constructor(map: Map<string, Val>) {
     super()
+    for (const [k, v] of map) {
+      (this as any)[k] = v
+    }
   }
 }
 
-export class Obj extends HakMap<string, Val> {}
-
 // A BindingVal holds Refs to Vals, so that the Vals can be referred to in
 // multiple BindingVals, in particular by closures' free variables.
-export class BindingVal extends HakMap<string, Ref> {}
+export class BindingVal extends Val {
+  constructor(public map: Map<string, Ref>) {
+    super()
+  }
+}
 
 // Until we can evaluate a dict literal, we don't know the values of its
 // keys.
@@ -247,9 +252,9 @@ export class DictLiteral extends Val {
   }
 }
 
-export class Dict extends HakMap<any, Val> {
+export class Dict extends Val {
   constructor(public map: Map<Val, Val>) {
-    super(map)
+    super()
   }
 
   eval(env: Environment): Val {
