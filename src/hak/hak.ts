@@ -218,27 +218,6 @@ export class HakMap<K, V extends Val> extends Val {
   constructor(public map: Map<K, V>) {
     super()
   }
-
-  eval(env: Environment): Val {
-    const evaluatedMap = new Map<K, V>()
-    for (const [k, v] of this.map) {
-      evaluatedMap.set(k, v.eval(env) as V)
-    }
-    this.map = evaluatedMap
-    return this
-  }
-
-  _value() {
-    const evaluatedMap = new Map<K, Val>()
-    for (const [k, v] of this.map) {
-      evaluatedMap.set(k, v.eval(new EnvironmentVal([]))._value())
-    }
-    return evaluatedMap
-  }
-
-  get(_env: Environment, index: Val) {
-    return this.map.get(index._value())
-  }
 }
 
 export class Obj extends HakMap<string, Val> {}
@@ -271,6 +250,23 @@ export class DictLiteral extends Val {
 export class Dict extends HakMap<any, Val> {
   constructor(public map: Map<Val, Val>) {
     super(map)
+  }
+
+  eval(env: Environment): Val {
+    const evaluatedMap = new Map<any, Val>()
+    for (const [k, v] of this.map) {
+      evaluatedMap.set(k, v.eval(env) as Val)
+    }
+    this.map = evaluatedMap
+    return this
+  }
+
+  _value() {
+    const evaluatedMap = new Map<any, Val>()
+    for (const [k, v] of this.map) {
+      evaluatedMap.set(k, v.eval(new EnvironmentVal([]))._value())
+    }
+    return evaluatedMap
   }
 
   set(_env: Environment, index: Val, val: Val) {
