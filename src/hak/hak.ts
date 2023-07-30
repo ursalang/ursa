@@ -188,11 +188,6 @@ export class Ref extends Val {
     return this.val
   }
 
-  set(_env: Environment, val: Val): Val {
-    this.val = val
-    return this.val
-  }
-
   properties = {
     set: (_env: Environment, val: Val) => {
       this.val = val
@@ -216,16 +211,11 @@ export class SymRef extends Ref {
     return ref.eval(env)
   }
 
-  set(env: Environment, val: Val) {
-    const evaluatedVal = val.eval(env)
-    env.set(this.name, evaluatedVal)
-    return evaluatedVal
-  }
-
   properties = {
     set: (env: Environment, val: Val) => {
-      this.set(env, val)
-      return val
+      const evaluatedVal = val.eval(env)
+      env.set(this.name, evaluatedVal)
+      return evaluatedVal
     },
   }
 }
@@ -332,7 +322,7 @@ export class Let extends Val {
     const binding = bindArgsToParams(this.boundVars, [])
     binding.map.forEach((v) => {
       // First eval the Ref, then eval the value
-      v.set(env, v.eval(env).eval(env))
+      v.properties.set(env, v.eval(env).eval(env))
     })
     return this.body.eval(env.extend(binding))
   }
@@ -455,7 +445,7 @@ export class EnvironmentVal {
       throw new Error(`undefined symbol at run-time ${sym}`)
     }
     const ref = this.env[index].map.get(sym)!
-    ref.set(this, val)
+    ref.properties.set(this, val)
   }
 
   getIndex(sym: string) {
