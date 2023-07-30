@@ -36,7 +36,7 @@ export class Val extends AST {
   properties: {[key: string]: Function} = {}
 }
 
-abstract class ConcreteVal extends Val {
+class ConcreteVal extends Val {
   constructor(protected val: any = null) {
     super()
   }
