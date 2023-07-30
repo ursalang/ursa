@@ -17,11 +17,11 @@ export class Val extends AST {
   // Uncomment the following for debug.
   // static counter = 0
 
-  // uid: number
+  // _uid: number
 
   // constructor() {
   //   super()
-  //   this.uid = Val.counter
+  //   this._uid = Val.counter
   //   Val.counter += 1
   // }
 
