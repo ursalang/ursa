@@ -10,7 +10,6 @@
 * Lists: iteration (with yield)
 * Vectors
 * Maps: iteration (with yield), indexing (lvalue), symbol keys
-* FFI (JavaScript)
 * Tree-sitter grammar, usable in Emacs and VSCode. (First, tidy up the grammar.)
 * `self`
 * Sort out globals access.
@@ -19,7 +18,6 @@
 
 ## Hak improvements
 
-* Standalone runner.
 * To optimize symbol references, add `const` (`let` but constant), and
   evaluate as much as we can at compile time. Any expression with no free
   variables can be fully evaluated.
@@ -46,8 +44,6 @@
 * Tuples
 * Variadic functions?
 * Slices (implement on lists and strings)
-* Closures: resolve symbols at compile-time, not run-time. Add to `Function`
-  a closure environment, references to all its free variables.
 * Match statement
 * String interpolation
 * Raw strings
