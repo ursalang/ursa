@@ -24,7 +24,6 @@
 * Make everything objects (arithmetic should be methods of `Num`).
 * Compiled form has only "fresh names"; textual version has "let" as a
   convenience for readability.
-* Put Hak AST hierarchy in another file, ditto the interpreter.
 * Study vau, fexprs, first-class environments (objects), and delimited
   continuations.
 * Implement new semantics in Hak first.

@@ -2,10 +2,11 @@ import {Node, IterationNode} from 'ohm-js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  AST, Val, Null, Bool, Num, Str, Quote, Ref, SymRef, List, Obj, DictLiteral,
+  Val, Null, Bool, Num, Str, Quote, Ref, SymRef, List, Obj, DictLiteral,
   Call, Let, Fn, NativeFexpr, PropertyException,
-  bindArgsToParams, BindingVal, Environment, EnvironmentVal, setDifference, mergeFreeVars,
-} from '../hak/hak.js'
+  bindArgsToParams, BindingVal, Environment, EnvironmentVal,
+} from '../hak/interp.js'
+import {AST, setDifference, mergeFreeVars} from '../hak/parser.js'
 // eslint-disable-next-line import/extensions
 import grammar, {UrsaSemantics} from './ursa.ohm-bundle.js'
 
