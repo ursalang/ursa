@@ -128,14 +128,14 @@ class Fexpr extends Val {
     super()
   }
 
-  bindFreeVars(env: Environment): Binding {
+  _bindFreeVars(env: Environment): Binding {
     return new BindingVal(new Map(
       [...this.freeVars].map((name): [string, Ref] => [name, env.get(name)]),
     ))
   }
 
   eval(env: Environment) {
-    return new FexprClosure(this.params, this.bindFreeVars(env), this.body)
+    return new FexprClosure(this.params, this._bindFreeVars(env), this.body)
   }
 }
 
@@ -161,7 +161,7 @@ function evaluateArgs(env: Environment, args: Val[]) {
 
 export class Fn extends Fexpr {
   eval(env: Environment) {
-    return new FnClosure(this.params, this.bindFreeVars(env), this.body)
+    return new FnClosure(this.params, this._bindFreeVars(env), this.body)
   }
 }
 
