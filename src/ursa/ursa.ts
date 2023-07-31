@@ -2,7 +2,7 @@ import {Node, IterationNode} from 'ohm-js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  AST, Val, Null, Bool, Num, Str, Quote, Ref, SymRef, List, DictLiteral,
+  AST, Val, Null, Bool, Num, Str, Quote, Ref, SymRef, List, Obj, DictLiteral,
   Call, Let, Fn, NativeFexpr, PropertyException,
   bindArgsToParams, BindingVal, Environment, EnvironmentVal, setDifference, mergeFreeVars,
 } from '../hak/hak.js'
@@ -11,6 +11,12 @@ import grammar, {UrsaSemantics} from './ursa.ohm-bundle.js'
 
 // Specify precise type so semantics can be precisely type-checked.
 const semantics: UrsaSemantics = grammar.createSemantics()
+
+class PropertyValue extends AST {
+  constructor(public key: string, public val: Val) {
+    super()
+  }
+}
 
 class KeyValue extends AST {
   constructor(public key: Val, public val: Val) {
@@ -147,7 +153,20 @@ semantics.addOperation<AST>('toAST(env)', {
       elems.asIteration().children.map((value, _i, _arr) => value.toAST(this.args.env)),
     )
   },
-  Dict(_open, elems, _close) {
+  Object(_open, elems, _close) {
+    const inits = {}
+    const parsedElems = elems.asIteration().children.map(
+      (value, _i, _arr) => value.toAST(this.args.env),
+    )
+    for (const elem of parsedElems) {
+      (inits as any)[(elem as PropertyValue).key] = (elem as PropertyValue).val
+    }
+    return new Obj(inits)
+  },
+  PropertyValue(ident, _colon, value) {
+    return new PropertyValue(ident.sourceString, value.toAST(this.args.env))
+  },
+  Map(_open, elems, _close) {
     const inits = new Map<Val, Val>()
     const parsedElems = elems.asIteration().children.map(
       (value, _i, _arr) => value.toAST(this.args.env),

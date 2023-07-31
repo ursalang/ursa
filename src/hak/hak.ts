@@ -223,6 +223,15 @@ export class Obj extends Val {
       }
     }
   }
+
+  _value(): object {
+    const jsObj = {}
+    // eslint-disable-next-line guard-for-in
+    for (const key in this) {
+      (jsObj as any)[key] = (this[key] as Val)._value()
+    }
+    return jsObj
+  }
 }
 
 // A BindingVal holds Refs to Vals, so that the Vals can be referred to in
@@ -340,6 +349,29 @@ export class Call extends Val {
   }
 }
 
+function jsToVal(x: any): Val {
+  if (x === null || x === undefined) {
+    return new Null()
+  }
+  if (typeof x === 'boolean') {
+    return new Bool(x)
+  }
+  if (typeof x === 'number') {
+    return new Num(x)
+  }
+  if (typeof x === 'string') {
+    return new Str(x)
+  }
+  if (typeof x === 'function') {
+    return new NativeFn((...args: Val[]) => jsToVal(x(...args.map((x) => x._value()))))
+  }
+  if (typeof x === 'object') {
+    return new Obj(x)
+  }
+  // FIXME: some sort of error value?
+  return new Null()
+}
+
 const globals: [string, Val][] = [
   ['pi', new Num(Math.PI)],
   ['e', new Num(Math.E)],
@@ -420,7 +452,13 @@ const globals: [string, Val][] = [
     use: (_env: EnvironmentVal, ...args: Val[]) => {
       const requirePath = (args.map((e) => e._value()).join('.'))
       // eslint-disable-next-line import/no-dynamic-require, global-require
-      return new Obj(require(requirePath))
+      const module = require(requirePath)
+      const wrappedModule = {}
+      // eslint-disable-next-line guard-for-in
+      for (const key in module) {
+        (wrappedModule as any)[key] = () => jsToVal(module[key])
+      }
+      return new Obj(wrappedModule)
     },
   }),
   ],

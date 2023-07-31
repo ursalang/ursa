@@ -27,8 +27,7 @@ Ursa {
     = "fn" "(" ListOf<ident, ","> ")" Block        -- anon
     | "fn" ident "(" ListOf<ident, ","> ")" Block  -- named
 
-  Loop
-    = "loop" Block
+  Loop = "loop" Block
 
   Assignment
     = CallExp "[" Exp "]" "=" Exp  -- index
@@ -70,8 +69,7 @@ Ursa {
     | IndexExp
     | CallExp
 
-  IndexExp
-    = CallExp "[" Exp "]" -- index
+  IndexExp = CallExp "[" Exp "]" -- index
 
   CallExp
     = PropertyExp "(" ListOf<Exp, ","> ")"  -- call
@@ -85,7 +83,8 @@ Ursa {
     = "(" Exp ")"       -- paren
     | Block
     | List
-    | Dict
+    | Object
+    | Map
     | "break" Exp?      -- break
     | "return" Exp?     -- return
     | "continue"        -- continue
@@ -95,34 +94,29 @@ Ursa {
     | ident             -- ident
     | number
 
-  Block
-    = "{" Sequence? "}"
+  Block = "{" Sequence? "}"
 
-  List
-    = "[" ListOf<Exp, ","> "]"
+  List = "[" ListOf<Exp, ","> "]"
 
-  Dict
-    = "{" ListOf<KeyValue, ","> "}"
+  Object = "{" ListOf<PropertyValue, ","> "}"
+  PropertyValue = ident ":" Exp
 
-  KeyValue
-    = Exp ":" Exp
+  Map = "{" ListOf<KeyValue, ","> "}"
+  KeyValue = Exp ":" Exp
 
   ExpSeq
     = Exp "," Exp ","? -- expseq
     | Exp?             -- exp
 
-  ident  (an identifier)
-    = letter alnum*
+  ident = letter alnum*
 
-  bool  (a boolean)
-    = "false" | "true"
+  bool = "false" | "true"
 
-  number  (a number)
+  number
     = digit* "." digit+  -- fract
     | digit+             -- whole
 
-  string
-    = "\"" doubleStringCharacter* "\""
+  string = "\"" doubleStringCharacter* "\""
   doubleStringCharacter
     = ~("\"" | "\\" | lineTerminator) any -- nonEscaped
     | "\\" escapeSequence                 -- escaped
@@ -151,8 +145,7 @@ Ursa {
   lineTerminatorSequence
     = "\n" | "\r" ~"\n" | "\u2028" | "\u2029" | "\r\n"
 
-  comment
-    = "//" (~lineTerminator any)*
+  comment = "//" (~lineTerminator any)*
 
   // Override Ohm's built-in definition
   space := whitespace | lineTerminator | comment
@@ -169,6 +162,5 @@ Ursa {
     | "\uFEFF"  -- byteOrderMark
     | unicodeSpaceSeparator
 
-  unicodeSpaceSeparator
-    = "\u2000".."\u200B" | "\u3000"
+  unicodeSpaceSeparator = "\u2000".."\u200B" | "\u3000"
 }
