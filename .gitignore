@@ -1,4 +1,5 @@
 package-lock.json
 tsconfig.tsbuildinfo
+coverage/
 node_modules/
 lib/
