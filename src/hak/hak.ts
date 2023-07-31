@@ -346,7 +346,6 @@ const globals: [string, Val][] = [
   ['true', new Bool(true)],
   ['false', new Bool(false)],
   ['new', new NativeFn((val: Val) => new Ref(val))],
-  ['eval', new NativeFexpr((env: Environment, ref: Val) => ref.eval(env).eval(env))],
   ['pos', new NativeFn((val: Val) => new Num(+val._value()))],
   ['neg', new NativeFn((val: Val) => new Num(-val._value()))],
   ['not', new NativeFn((val: Val) => new Bool(!val._value()))],
