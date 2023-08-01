@@ -1,0 +1,9 @@
+let double = fn(l) {
+  let i = 0;
+  loop {
+    if i == l.length { return l };
+    l[i] = l[i] * 2;
+    i = i + 1
+  }
+};
+print(double([1, 2, 3]))

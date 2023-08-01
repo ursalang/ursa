@@ -1,0 +1,6 @@
+(print
+  (let [f]
+    (seq
+      (prop set (quote f)
+        (fn [x] (+ x 1)))
+      (f 1))))

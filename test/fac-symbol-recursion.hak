@@ -1,0 +1,11 @@
+(print
+  (let [fac]
+    (seq
+      (prop set (quote fac)
+        (fn [x]
+          (if (= x 0)
+            1
+            (* x (fac (- x 1)))
+        ))
+      )
+      (fac 6))))

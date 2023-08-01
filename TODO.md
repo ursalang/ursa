@@ -27,7 +27,7 @@
 * Study vau, fexprs, first-class environments (objects), and delimited
   continuations.
 * Implement new semantics in Hak first.
-* Put tests in separate source files.
+* Add CLI option to output value as JSON and use that for tests.
 
 ## Ursa v1
 

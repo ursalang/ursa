@@ -1,0 +1,6 @@
+(print
+  (let [t]
+    (seq
+      (prop set (quote t) {"a": 1 "b": (+ 2 0) 3: 4})
+      (prop set t "b" 1)
+      t)))

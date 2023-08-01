@@ -1,0 +1,10 @@
+let total = 0;
+let i = 0;
+loop {
+  i = i + 1;
+  total = total + i;
+  if i == 10 {
+    break total
+  }
+}
+print(total)

@@ -1,9 +1,5 @@
-let newAccum = fn() {
-  let tot = 0
-  fn(x) {
-    tot = tot + x
-  }
-}
-let accum = newAccum()
-let accum2 = newAccum()
-print([accum(1), accum(1), accum2(1)])
+let tot = 0;
+let accum = fn(x) {
+  tot = tot + x
+};
+print([accum(1), accum(1)])

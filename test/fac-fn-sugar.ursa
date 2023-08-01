@@ -1,0 +1,4 @@
+let fn fac(x) {
+  if x == 0 {1} else {x * fac(x - 1)}
+}
+print(fac(6))

@@ -1,5 +1,3 @@
-import test from 'ava'
-
 import execa from 'execa'
 
 const command = process.env.NODE_ENV === 'coverage' ? './bin/test-run.sh' : './bin/run.js'
@@ -25,7 +23,8 @@ async function run(args: string[]) {
 //   throw new Error('test passed unexpectedly')
 // }
 
-async function cliTest(args: string[]) {
+// eslint-disable-next-line import/prefer-default-export
+export async function cliTest(args: string[]) {
   const {stdout} = await run(args)
   return stdout
 }
@@ -39,11 +38,3 @@ async function cliTest(args: string[]) {
 //   }
 //   throw new Error('test passed unexpectedly')
 // }
-
-test('Repeated closure', async (t) => {
-  t.is(await cliTest(['test/repeated-closure.ursa']), '[ 1, 2, 1 ]')
-})
-
-test('Repeated closure (sexp syntax)', async (t) => {
-  t.is(await cliTest(['--sexp', 'test/repeated-closure.hak']), '[ 1, 2 ]')
-})

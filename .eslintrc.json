@@ -20,6 +20,15 @@
       "except-parens"
     ],
     "no-console": "off",
+    "import/no-extraneous-dependencies": [
+      "error",
+      {
+        "devDependencies": [
+          "**/*.test.ts",
+          "**/testutil.ts"
+        ]
+      }
+    ],
     "no-underscore-dangle": "off",
     "no-warning-comments": "off",
     "no-restricted-syntax": "off",

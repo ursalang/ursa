@@ -1,0 +1,16 @@
+(print
+  (let [sum]
+    (seq
+      (prop set (quote sum)
+        (fn [l]
+          (let [tot i]
+            (seq
+              (prop set (quote tot) 0)
+              (prop set (quote i) 0)
+              (loop
+                (seq
+                  (if (= i (prop length l))
+                    (break tot))
+                  (prop set (quote tot) (+ tot (prop get l i)))
+                  (prop set (quote i) (+ i 1))))))))
+      (sum [10 30 50 5 5]))))

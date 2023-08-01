@@ -1,0 +1,16 @@
+(print
+  (let [double]
+    (seq
+      (prop set (quote double)
+        (fn [l]
+          (let [i]
+            (seq
+              (prop set (quote i) 0)
+              (loop
+                (seq
+                  (if (= i (prop length l))
+                    (return l))
+                  (prop set l i (* (prop get l i) 2))
+                  (prop set (quote i) (+ i 1))
+                  ))))))
+      (double [1 2 3]))))
