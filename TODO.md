@@ -1,6 +1,7 @@
 # Ursa to-do
 
-* Compile-time environment should just be names (and later, types).
+* Compile-time environment should just be names (and later, types) mapped to
+  continuation location.
 
 ## Ursa MVP
 
@@ -9,7 +10,7 @@
 * Co-routines (copy Python?)
 * Lists: iteration (with yield)
 * Vectors
-* Maps: iteration (with yield), indexing (lvalue), symbol keys
+* Maps: iteration (with yield), symbol keys
 * Tree-sitter grammar, usable in Emacs and VSCode. (First, tidy up the grammar.)
 * `self`
 * Sort out globals access.
