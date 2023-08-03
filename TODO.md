@@ -14,7 +14,6 @@
 * Tree-sitter grammar, usable in Emacs and VSCode. (First, tidy up the grammar.)
 * `self`
 * Sort out globals access.
-* README.md.
 * Run in browser.
 
 ## Hak improvements
