@@ -50,9 +50,6 @@ Hak {
   doubleStringCharacter
     = ~("\"" | "\\" | lineTerminator) any -- nonEscaped
     | "\\" escapeSequence                 -- escaped
-    | lineContinuation                    -- lineContinuation
-  lineContinuation
-    = "\\" lineTerminatorSequence
   escapeSequence
     = unicodeEscapeSequence
     | hexEscapeSequence

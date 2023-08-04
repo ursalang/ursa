@@ -15,6 +15,7 @@
 * `self`
 * Sort out globals access.
 * Run in browser.
+* Long strings.
 
 ## Hak improvements
 
