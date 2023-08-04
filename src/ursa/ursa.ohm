@@ -116,8 +116,8 @@ Ursa {
     = digit* "." digit+  -- fract
     | digit+             -- whole
 
-  string = "\"" doubleStringCharacter* "\""
-  doubleStringCharacter
+  string = "\"" stringCharacter* "\""
+  stringCharacter
     = ~("\"" | "\\" | lineTerminator) any -- nonEscaped
     | "\\" escapeSequence                 -- escaped
   escapeSequence

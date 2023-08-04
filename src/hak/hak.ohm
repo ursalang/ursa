@@ -46,8 +46,8 @@ Hak {
     | digit+             -- whole
 
   string
-    = "\"" doubleStringCharacter* "\""
-  doubleStringCharacter
+    = "\"" stringCharacter* "\""
+  stringCharacter
     = ~("\"" | "\\" | lineTerminator) any -- nonEscaped
     | "\\" escapeSequence                 -- escaped
   escapeSequence
