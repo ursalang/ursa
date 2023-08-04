@@ -275,8 +275,10 @@ semantics.addOperation<AST>('toAST(env)', {
   number(_) {
     return new Num(parseFloat(this.sourceString))
   },
-  string(_open, str, _close) {
-    return new Str(str.sourceString)
+  string(_open, _str, _close) {
+    // FIXME: Parse string properly
+    // eslint-disable-next-line no-eval
+    return new Str(eval(this.sourceString))
   },
 })
 

@@ -15,7 +15,7 @@ test('Comment', (t) => {
 
 test('Concrete values', (t) => {
   t.is(toVal('4').eval(new EnvironmentVal([]))._value(), 4)
-  t.is(toVal('"hello \u00e9"').eval(new EnvironmentVal([]))._value(), 'hello é')
+  t.is(toVal(String.raw`"hello \u00e9"`).eval(new EnvironmentVal([]))._value(), 'hello é')
 })
 
 test('Global values', (t) => {
