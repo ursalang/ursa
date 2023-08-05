@@ -1,4 +1,6 @@
 Ursa {
+  Module = Sequence?
+
   Sequence
     = Exp #sc Sequence #sc                                               -- seq
     | "let" ident "=" Exp #sc Sequence #sc                               -- let

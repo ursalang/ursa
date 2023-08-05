@@ -204,6 +204,12 @@ semantics.addOperation<AST>('toAST(env)', {
   PrimaryExp_ident(_sym) {
     return new SymRef(this.args.env, this.sourceString)
   },
+  Module(mod) {
+    if (mod.children.length > 0) {
+      return mod.children[0].toAST(this.args.env)
+    }
+    return new Null()
+  },
   Sequence(exp) {
     return exp.toAST(this.args.env)
   },

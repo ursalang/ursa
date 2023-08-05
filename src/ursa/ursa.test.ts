@@ -10,6 +10,7 @@ import {
 Error.stackTraceLimit = Infinity
 
 test('Comment', (t) => {
+  t.is(toVal('// Comment').eval(new EnvironmentVal([]))._value(), null)
   t.is(toVal('// Comment\n3').eval(new EnvironmentVal([]))._value(), 3)
 })
 
