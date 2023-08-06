@@ -213,10 +213,10 @@ semantics.addOperation<AST>('toAST(env)', {
   Sequence(exp) {
     return exp.toAST(this.args.env)
   },
-  Sequence_seq(e_first, _sep, e_rest, _maybe_sep) {
+  Sequence_seq(e_first, _sep, e_rest) {
     return new Call(new SymRef(this.args.env, 'seq'), [e_first.toAST(this.args.env), e_rest.toAST(this.args.env)])
   },
-  Sequence_let(_let, ident, _eq, value, _sep, seq, _maybe_sep) {
+  Sequence_let(_let, ident, _eq, value, _sep, seq) {
     const bindingEnv = new BindingVal(
       new Map([[ident.sourceString, value.toAST(this.args.env)]]),
     )
@@ -228,7 +228,7 @@ semantics.addOperation<AST>('toAST(env)', {
       ]),
     )
   },
-  Sequence_letfn(_let, _fn, ident, _open, params, _close, block, _sep, seq, _maybe_sep) {
+  Sequence_letfn(_let, _fn, ident, _open, params, _close, block, _sep, seq) {
     const bindingEnv = new BindingVal(
       new Map([[ident.sourceString, new Ref(new Null())]]),
     )
@@ -249,7 +249,7 @@ semantics.addOperation<AST>('toAST(env)', {
       ]),
     )
   },
-  Sequence_use(_use, pathList, _sep, seq, _maybe_sep) {
+  Sequence_use(_use, pathList, _sep, seq) {
     const path = pathList.asIteration().children.map((id) => id.sourceString)
     const ident = path[path.length - 1]
     const bindingEnv = new BindingVal(
@@ -271,6 +271,9 @@ semantics.addOperation<AST>('toAST(env)', {
         seq.toAST(this.args.env.extend(bindingEnv)),
       ]),
     )
+  },
+  Sequence_exp(exp, _sc) {
+    return exp.toAST(this.args.env)
   },
   ident(_l, _ns) {
     return new Str(this.sourceString)
@@ -298,13 +301,13 @@ semantics.addAttribute<Set<string>>('freeVars', {
   _iter(...children) {
     return mergeFreeVars(children)
   },
-  Sequence_let(_let, ident, _eq, value, _sep, seq, _maybe_sep) {
+  Sequence_let(_let, ident, _eq, value, _sep, seq) {
     return setDifference(
       new Set([...seq.freeVars, ...value.freeVars]),
       new Set([ident.sourceString]),
     )
   },
-  Sequence_letfn(_let, _fn, ident, _open, params, _close, body, _sep, seq, _maybe_sep) {
+  Sequence_letfn(_let, _fn, ident, _open, params, _close, body, _sep, seq) {
     return setDifference(
       new Set([...seq.freeVars, ...body.freeVars]),
       new Set([...params.freeVars, ident.sourceString]),
