@@ -204,17 +204,14 @@ semantics.addOperation<AST>('toAST(env)', {
   PrimaryExp_ident(_sym) {
     return new SymRef(this.args.env, this.sourceString)
   },
-  Module(mod) {
-    if (mod.children.length > 0) {
-      return mod.children[0].toAST(this.args.env)
-    }
-    return new Null()
-  },
   Sequence(exp) {
     return exp.toAST(this.args.env)
   },
-  Sequence_seq(e_first, _sep, e_rest) {
-    return new Call(new SymRef(this.args.env, 'seq'), [e_first.toAST(this.args.env), e_rest.toAST(this.args.env)])
+  Sequence_seq(seq, _sep) {
+    return new Call(
+      new SymRef(this.args.env, 'seq'),
+      seq.asIteration().children.map((exp) => exp.toAST(this.args.env)),
+    )
   },
   Sequence_let(_let, ident, _eq, value, _sep, seq) {
     const bindingEnv = new BindingVal(

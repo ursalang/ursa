@@ -1,18 +1,6 @@
 Ursa {
-  // FIXME: Use the following, which will be harder to treat for let/use in
-  // the parser: emit a single Call to 'seq', with Lets wrapped around the
-  // correct places in the list.
-  // Sequence = ListOf<Statement, _sc>
-  // Statement
-  //   = "let" ident "=" Exp                                -- let
-  //   | "let" "fn" ident "(" ListOf<ident, ","> ")" Block  -- letfn
-  //   | "use" ListOf<ident, #".">                          -- use
-  //   | Exp                                                -- exp
-
-  Module = Sequence?
-
   Sequence
-    = Exp #sc Sequence                                                -- seq
+    = ListOf<Exp, #sc> #sc                                            -- seq
     | "let" ident "=" Exp #sc Sequence                                -- let
     | "let" "fn" ident "(" ListOf<ident, ","> ")" Block #sc Sequence  -- letfn
     | "use" ListOf<ident, #"."> #sc Sequence                          -- use
