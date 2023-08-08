@@ -83,7 +83,7 @@ There’s very little documentation as yet, sorry! See:
 ```sh
 $ ursa --help
 src/ursa/ursa.ohm # Language grammar
-src/hak/interp.ts # the guts of the semantics
+src/ark/interp.ts # the guts of the semantics
 test*.ursa # test/example programs
 ```
 

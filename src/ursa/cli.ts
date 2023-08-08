@@ -7,8 +7,8 @@ import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
 import programVersion from '../version.js'
 // eslint-disable-next-line import/no-named-as-default
 import {toVal} from './parser.js'
-import {EnvironmentVal} from '../hak/interp.js'
-import {toVal as lispToVal} from '../hak/parser.js'
+import {EnvironmentVal} from '../ark/interp.js'
+import {toVal as lispToVal} from '../ark/parser.js'
 
 // Read and process arguments
 const parser = new ArgumentParser({
@@ -39,7 +39,7 @@ interface Args {
   argument: string[]
 }
 // FIXME: add as a Ursa global
-// To do this, need a persistent Hak state.
+// To do this, need a persistent Ark state.
 const args: Args = parser.parse_args() as Args
 
 function evaluate(exp: string) {

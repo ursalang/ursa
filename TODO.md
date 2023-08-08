@@ -17,7 +17,7 @@
 * Run in browser.
 * Long strings.
 
-## Hak improvements
+## Ark improvements
 
 * To optimize symbol references, add `const` (`let` but constant), and
   evaluate as much as we can at compile time. Any expression with no free
@@ -27,15 +27,15 @@
   convenience for readability.
 * Study vau, fexprs, first-class environments (objects), and delimited
   continuations.
-* Implement new semantics in Hak first.
+* Implement new semantics in Ark first.
 * Add CLI option to output value as JSON and use that for tests.
 
 ## Ursa v1
 
 * Inter-working with C. Initial quick-and-dirty version: allow arbitrary C
   APIs to be declared (especially for POSIX; later add GLib introspection),
-  and allow C bindings to be generated for Hak values that have C types, and
-  any base Hak type.
+  and allow C bindings to be generated for Ark values that have C types, and
+  any base Ark type.
 * Type checking
 * Structs
 * Enums

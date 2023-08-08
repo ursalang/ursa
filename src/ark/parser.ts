@@ -1,6 +1,6 @@
 import {Node} from 'ohm-js'
 // eslint-disable-next-line import/extensions
-import grammar, {HakSemantics} from './hak.ohm-bundle.js'
+import grammar, {ArkSemantics} from './ark.ohm-bundle.js'
 
 import {
   Val,
@@ -11,7 +11,7 @@ import {
 } from './interp.js'
 
 // Specify precise type so semantics can be precisely type-checked.
-const semantics: HakSemantics = grammar.createSemantics()
+const semantics: ArkSemantics = grammar.createSemantics()
 
 // Base class for parsing the language, extended directly by classes used
 // only during parsing.

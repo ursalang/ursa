@@ -5,8 +5,8 @@ import {
   Val, Null, Bool, Num, Str, Quote, Ref, SymRef, List, Obj, DictLiteral,
   Call, Let, Fn, NativeFexpr, PropertyException,
   bindArgsToParams, BindingVal, Environment, EnvironmentVal,
-} from '../hak/interp.js'
-import {AST, setDifference, mergeFreeVars} from '../hak/parser.js'
+} from '../ark/interp.js'
+import {AST, setDifference, mergeFreeVars} from '../ark/parser.js'
 // eslint-disable-next-line import/extensions
 import grammar, {UrsaSemantics} from './ursa.ohm-bundle.js'
 
@@ -147,7 +147,7 @@ semantics.addOperation<AST>('toAST(env)', {
     return exp.toAST(this.args.env)
   },
   Block(_open, seq, _close) {
-    return maybeValue(this.args.env, seq)
+    return seq.toAST(this.args.env)
   },
   List(_open, elems, _close) {
     return new List(

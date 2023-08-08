@@ -5,7 +5,7 @@ import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
   BreakException, EnvironmentVal,
-} from '../hak/interp.js'
+} from '../ark/interp.js'
 
 Error.stackTraceLimit = Infinity
 
