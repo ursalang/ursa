@@ -137,7 +137,7 @@ semantics.addOperation<AST>('toAST(env)', {
 })
 
 export function mergeFreeVars(children: Node[]): Set<string> {
-  return new Set<string>(children.map((child) => [...child.freeVars]).flat())
+  return new Set<string>(children.flatMap((child) => [...child.freeVars]))
 }
 
 export function setDifference<T>(setA: Set<T>, setB: Set<T>) {
