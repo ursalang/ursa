@@ -509,6 +509,6 @@ export class Quote extends Val {
   }
 }
 
-export function debug(x: any, depth: number | undefined = undefined) {
-  console.dir(x, {depth: depth ?? 1})
+export function debug(x: any, depth: number | null = 1) {
+  console.dir(x, {depth})
 }
