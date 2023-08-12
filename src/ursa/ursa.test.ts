@@ -70,6 +70,10 @@ test('Lists', (t) => {
   t.is(toVal('[1, 2, 3][1]').eval(new EnvironmentVal([]))._value(), 2)
 })
 
+test('Objects', (t) => {
+  t.deepEqual(toVal('{}').eval(new EnvironmentVal([]))._value(), {})
+})
+
 test('Maps', (t) => {
   t.deepEqual(toVal('{"a": 1, "b": 2 + 0, 3: 4}').eval(new EnvironmentVal([]))._value(), new Map<any, any>([['a', 1], ['b', 2], [3, 4]]))
   t.deepEqual(toVal('let t = {"a": 1, "b": 2 + 0, 3: 4}; t["b"] = 1; t').eval(new EnvironmentVal([]))._value(), new Map<any, any>([['a', 1], ['b', 1], [3, 4]]))

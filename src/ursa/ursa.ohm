@@ -81,9 +81,9 @@ Ursa {
 
   PrimaryExp
     = "(" Exp ")"       -- paren
+    | Object
     | Block
     | List
-    | Object
     | Map
     | "break" Exp?      -- break
     | "return" Exp?     -- return
