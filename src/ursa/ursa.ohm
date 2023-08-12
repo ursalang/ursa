@@ -1,4 +1,5 @@
 Ursa {
+  // FIXME: Use NamedFn (Fn_named) in "let" "fn" rule.
   Sequence
     = ListOf<Exp, #sc> #sc                                            -- seq
     | "let" ident "=" Exp #sc Sequence                                -- let
