@@ -57,7 +57,7 @@ Ursa {
   ProductExp
     = ProductExp "*" ExponentExp  -- times
     | ProductExp "/" ExponentExp  -- divide
-    | ProductExp "//" ExponentExp -- mod
+    | ProductExp "%" ExponentExp  -- mod
     | ExponentExp
 
   ExponentExp
