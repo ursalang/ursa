@@ -1,11 +1,10 @@
 Ursa {
-  // FIXME: Use NamedFn (Fn_named) in "let" "fn" rule.
   Sequence
-    = ListOf<Exp, #sc> #sc                                            -- seq
-    | "let" ident "=" Exp #sc Sequence                                -- let
-    | "let" "fn" ident "(" ListOf<ident, ","> ")" Block #sc Sequence  -- letfn
-    | "use" ListOf<ident, #"."> #sc Sequence                          -- use
-    | Exp #sc                                                         -- exp
+    = ListOf<Exp, #sc> #sc                    -- seq
+    | "let" ident "=" Exp #sc Sequence        -- let
+    | "let" NamedFn #sc Sequence              -- letfn
+    | "use" ListOf<ident, #"."> #sc Sequence  -- use
+    | Exp #sc                                 -- exp
 
   // A semicolon is "automatically inserted" if a newline or the end of the input stream is
   // reached, or the offending token is "}".
@@ -26,7 +25,9 @@ Ursa {
 
   Fn
     = "fn" "(" ListOf<ident, ","> ")" Block        -- anon
-    | "fn" ident "(" ListOf<ident, ","> ")" Block  -- named
+    | NamedFn
+
+  NamedFn = "fn" ident "(" ListOf<ident, ","> ")" Block
 
   Loop = "loop" Block
 

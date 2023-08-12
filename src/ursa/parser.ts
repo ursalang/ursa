@@ -65,7 +65,7 @@ semantics.addOperation<AST>('toAST(env)', {
   Fn_anon(_fn, _open, params, _close, body) {
     return makeFn(this.args.env, this.freeVars, params, body)
   },
-  Fn_named(_fn, ident, _open, params, _close, body) {
+  NamedFn(_fn, ident, _open, params, _close, body) {
     const bindingEnv = new BindingVal(
       new Map([[ident.sourceString, new Ref(new Null())]]),
     )
@@ -225,23 +225,16 @@ semantics.addOperation<AST>('toAST(env)', {
       ]),
     )
   },
-  Sequence_letfn(_let, _fn, ident, _open, params, _close, block, _sep, seq) {
+  Sequence_letfn(_let, namedFn, _sep, seq) {
+    const fn = namedFn.toAST(this.args.env)
+    const ident = namedFn.children[1].sourceString
     const bindingEnv = new BindingVal(
-      new Map([[ident.sourceString, new Ref(new Null())]]),
+      new Map([[ident, new Ref(new Null())]]),
     )
     return new Let(
-      [ident.sourceString],
+      [ident],
       new Call(new SymRef(this.args.env, 'seq'), [
-        propAccess(
-          new Quote(ident.sourceString),
-          'set',
-          makeFn(
-            this.args.env.extend(bindingEnv),
-            new Set([...this.freeVars, ident.sourceString]),
-            params,
-            block,
-          ),
-        ),
+        fn,
         seq.toAST(this.args.env.extend(bindingEnv)),
       ]),
     )
@@ -304,16 +297,16 @@ semantics.addAttribute<Set<string>>('freeVars', {
       new Set([ident.sourceString]),
     )
   },
-  Sequence_letfn(_let, _fn, ident, _open, params, _close, body, _sep, seq) {
+  Sequence_letfn(_let, namedFn, _sep, seq) {
     return setDifference(
-      new Set([...seq.freeVars, ...body.freeVars]),
-      new Set([...params.freeVars, ident.sourceString]),
+      new Set([...seq.freeVars, ...namedFn.freeVars]),
+      new Set([...namedFn.children[3].freeVars, namedFn.children[1].sourceString]),
     )
   },
   Fn_anon(_fn, _open, params, _close, body) {
     return setDifference(body.freeVars, params.freeVars)
   },
-  Fn_named(_fn, ident, _open, params, _close, body) {
+  NamedFn(_fn, ident, _open, params, _close, body) {
     return setDifference(
       setDifference(body.freeVars, new Set([ident.sourceString])),
       params.freeVars,
