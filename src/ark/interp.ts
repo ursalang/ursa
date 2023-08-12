@@ -366,8 +366,6 @@ function jsToVal(x: any): Val {
 const globals: [string, Val][] = [
   ['pi', new Num(Math.PI)],
   ['e', new Num(Math.E)],
-  ['true', new Bool(true)],
-  ['false', new Bool(false)],
   ['new', new NativeFn((val: Val) => new Ref(val))],
   ['pos', new NativeFn((val: Val) => new Num(+val._value()))],
   ['neg', new NativeFn((val: Val) => new Num(-val._value()))],
