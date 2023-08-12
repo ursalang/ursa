@@ -16,6 +16,9 @@
 * Sort out globals access.
 * Run in browser.
 * Long strings.
+* Streams, and use as interface to files.
+* Map interface to file system and internet.
+* Bitwise operations: & | ~ >> >>> <<.
 
 ## Ark improvements
 
@@ -49,4 +52,4 @@
 * Raw strings
 * Long Unicode escapes
 * Namespaces
-* Macros: use for syntactic sugar to get e.g. "fn a () { }", and for +=
+* Macros: use for syntactic sugar to get e.g. `fn a () { }`, and for `+=`
