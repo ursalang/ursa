@@ -45,7 +45,7 @@
   ],
   "license": "GPL-3.0-or-later",
   "main": "lib/index.js",
-  "repository": "rrthomas/nancy",
+  "repository": "ursalang/ursa",
   "scripts": {
     "lint": "eslint . --ext .ts && depcheck",
     "prebuild": "node --print \"'export default \\'' + require('./package.json').version + '\\';'\" > src/version.ts",

@@ -3,7 +3,7 @@
 ![logo](mascot/ursula.svg)
 
 © 2023 Reuben Thomas <rrt@sc3d.org>  
-https://github.com/rrthomas/ursa  
+https://github.com/ursalang/ursa  
 
 Ursa is intended to be a friendly, stable general-purpose programming
 language and runtime: the sort of language you can easily start writing code
@@ -92,7 +92,7 @@ test*.ursa # test/example programs
 Check out the git repository and download dependencies with:
 
 ```
-git clone https://github.com/rrthomas/ursa
+git clone https://github.com/ursalang/ursa
 npm install
 ```
 

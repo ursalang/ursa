@@ -27,7 +27,7 @@ parser.add_argument('--version', {
   action: 'version',
   version: `%(prog)s ${programVersion}
 © 2023 Reuben Thomas <rrt@sc3d.org>
-https://github.com/rrthomas/ursa
+https://github.com/ursalang/ursa
 Distributed under the GNU General Public License version 3, or (at
 your option) any later version. There is no warranty.`,
 })
