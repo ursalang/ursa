@@ -29,7 +29,8 @@
 * Compiled form has only "fresh names"; textual version has "let" as a
   convenience for readability.
 * Study vau, fexprs, first-class environments (objects), and delimited
-  continuations.
+  continuations: https://github.com/catseye/Robin ; also see
+  https://github.com/nukata/little-scheme-in-typescript
 * Implement new semantics in Ark first.
 * Add CLI option to output value as JSON and use that for tests.
 
