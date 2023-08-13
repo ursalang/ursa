@@ -3,7 +3,7 @@ import {Node} from 'ohm-js'
 import grammar, {ArkSemantics} from './ark.ohm-bundle.js'
 
 import {
-  Val,
+  Val, intrinsics,
   Null, Bool, Num, Str,
   List, Obj, DictLiteral, PropertyException,
   Fn, Fexpr, NativeFexpr, bindArgsToParams,
@@ -34,7 +34,7 @@ semantics.addOperation<AST>('toAST(env)', {
     if (atoms.children.length === 0) {
       return new Null()
     }
-    return new Call(new SymRef(this.args.env, 'seq'), atoms.children.map((value) => value.toAST(this.args.env)))
+    return new Call(intrinsics.seq, atoms.children.map((value) => value.toAST(this.args.env)))
   },
   Atom_stmt(_open, stmt, _close) {
     return stmt.toAST(this.args.env)

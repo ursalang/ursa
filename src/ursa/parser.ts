@@ -1,7 +1,7 @@
 import {Node, IterationNode} from 'ohm-js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  debug,
+  debug, intrinsics,
   Val, Null, Bool, Num, Str, Quote, Ref, SymRef, List, Obj, DictLiteral,
   Call, Let, Fn, NativeFexpr, PropertyException,
   bindArgsToParams, BindingVal, Environment, EnvironmentVal,
@@ -60,7 +60,7 @@ semantics.addOperation<AST>('toAST(env)', {
     if (e_else.children.length > 0) {
       args.push(e_else.children[0].toAST(this.args.env))
     }
-    return new Call(new SymRef(this.args.env, 'if'), args)
+    return new Call(intrinsics.if, args)
   },
   Fn_anon(_fn, _open, params, _close, body) {
     return makeFn(this.args.env, this.freeVars, params, body)
@@ -90,7 +90,7 @@ semantics.addOperation<AST>('toAST(env)', {
     return propAccess(object.toAST(this.args.env), 'get', index.toAST(this.args.env))
   },
   Loop(_loop, e_body) {
-    return new Call(new SymRef(this.args.env, 'loop'), [e_body.toAST(this.args.env)])
+    return new Call(intrinsics.loop, [e_body.toAST(this.args.env)])
   },
   Assignment_index(callExp, _open, index, _close, _eq, value) {
     return propAccess(callExp.toAST(this.args.env), 'set', index.toAST(this.args.env), value.toAST(this.args.env))
@@ -99,49 +99,49 @@ semantics.addOperation<AST>('toAST(env)', {
     return propAccess(new Quote(ident.sourceString), 'set', value.toAST(this.args.env))
   },
   LogicExp_and(left, _and, right) {
-    return new Call(new SymRef(this.args.env, 'and'), [left.toAST(this.args.env), right.toAST(this.args.env)])
+    return new Call(intrinsics.and, [left.toAST(this.args.env), right.toAST(this.args.env)])
   },
   LogicExp_or(left, _or, right) {
-    return new Call(new SymRef(this.args.env, 'or'), [left.toAST(this.args.env), right.toAST(this.args.env)])
+    return new Call(intrinsics.or, [left.toAST(this.args.env), right.toAST(this.args.env)])
   },
   LogicExp_not(_not, exp) {
-    return new Call(new SymRef(this.args.env, 'not'), [exp.toAST(this.args.env)])
+    return new Call(intrinsics.not, [exp.toAST(this.args.env)])
   },
   CompareExp_eq(left, _eq, right) {
-    return new Call(new SymRef(this.args.env, '='), [left.toAST(this.args.env), right.toAST(this.args.env)])
+    return new Call(intrinsics['='], [left.toAST(this.args.env), right.toAST(this.args.env)])
   },
   CompareExp_neq(left, _neq, right) {
-    return new Call(new SymRef(this.args.env, '!='), [left.toAST(this.args.env), right.toAST(this.args.env)])
+    return new Call(intrinsics['!='], [left.toAST(this.args.env), right.toAST(this.args.env)])
   },
   CompareExp_lt(left, _le, right) {
-    return new Call(new SymRef(this.args.env, '<'), [left.toAST(this.args.env), right.toAST(this.args.env)])
+    return new Call(intrinsics['<'], [left.toAST(this.args.env), right.toAST(this.args.env)])
   },
   CompareExp_leq(left, _leq, right) {
-    return new Call(new SymRef(this.args.env, '<='), [left.toAST(this.args.env), right.toAST(this.args.env)])
+    return new Call(intrinsics['<='], [left.toAST(this.args.env), right.toAST(this.args.env)])
   },
   CompareExp_gt(left, _gt, right) {
-    return new Call(new SymRef(this.args.env, '>'), [left.toAST(this.args.env), right.toAST(this.args.env)])
+    return new Call(intrinsics['>'], [left.toAST(this.args.env), right.toAST(this.args.env)])
   },
   CompareExp_geq(left, _geq, right) {
-    return new Call(new SymRef(this.args.env, '>='), [left.toAST(this.args.env), right.toAST(this.args.env)])
+    return new Call(intrinsics['>='], [left.toAST(this.args.env), right.toAST(this.args.env)])
   },
   ArithmeticExp_plus(left, _plus, right) {
-    return new Call(new SymRef(this.args.env, '+'), [left.toAST(this.args.env), right.toAST(this.args.env)])
+    return new Call(intrinsics['+'], [left.toAST(this.args.env), right.toAST(this.args.env)])
   },
   ArithmeticExp_minus(left, _minus, right) {
-    return new Call(new SymRef(this.args.env, '-'), [left.toAST(this.args.env), right.toAST(this.args.env)])
+    return new Call(intrinsics['-'], [left.toAST(this.args.env), right.toAST(this.args.env)])
   },
   ProductExp_times(left, _times, right) {
-    return new Call(new SymRef(this.args.env, '*'), [left.toAST(this.args.env), right.toAST(this.args.env)])
+    return new Call(intrinsics['*'], [left.toAST(this.args.env), right.toAST(this.args.env)])
   },
   ProductExp_divide(left, _divide, right) {
-    return new Call(new SymRef(this.args.env, '/'), [left.toAST(this.args.env), right.toAST(this.args.env)])
+    return new Call(intrinsics['/'], [left.toAST(this.args.env), right.toAST(this.args.env)])
   },
   ProductExp_mod(left, _mod, right) {
-    return new Call(new SymRef(this.args.env, '%'), [left.toAST(this.args.env), right.toAST(this.args.env)])
+    return new Call(intrinsics['%'], [left.toAST(this.args.env), right.toAST(this.args.env)])
   },
   ExponentExp_power(left, _power, right) {
-    return new Call(new SymRef(this.args.env, '**'), [left.toAST(this.args.env), right.toAST(this.args.env)])
+    return new Call(intrinsics['**'], [left.toAST(this.args.env), right.toAST(this.args.env)])
   },
   PrimaryExp_paren(_open, exp, _close) {
     return exp.toAST(this.args.env)
@@ -181,22 +181,22 @@ semantics.addOperation<AST>('toAST(env)', {
     return new KeyValue(key.toAST(this.args.env), value.toAST(this.args.env))
   },
   UnaryExp_pos(_plus, exp) {
-    return new Call(new SymRef(this.args.env, 'pos'), [exp.toAST(this.args.env)])
+    return new Call(intrinsics.pos, [exp.toAST(this.args.env)])
   },
   UnaryExp_neg(_minus, exp) {
-    return new Call(new SymRef(this.args.env, 'neg'), [exp.toAST(this.args.env)])
+    return new Call(intrinsics.neg, [exp.toAST(this.args.env)])
   },
   PropertyExp_property(object, _dot, property) {
     return propAccess(object.toAST(this.args.env), property.sourceString)
   },
   PrimaryExp_break(_break, exp) {
-    return new Call(new SymRef(this.args.env, 'break'), [maybeValue(this.args.env, exp)])
+    return new Call(intrinsics.break, [maybeValue(this.args.env, exp)])
   },
   PrimaryExp_return(_return, exp) {
-    return new Call(new SymRef(this.args.env, 'return'), [maybeValue(this.args.env, exp)])
+    return new Call(intrinsics.return, [maybeValue(this.args.env, exp)])
   },
   PrimaryExp_continue(_continue) {
-    return new Call(new SymRef(this.args.env, 'continue'), [])
+    return new Call(intrinsics.continue, [])
   },
   PrimaryExp_null(_null) {
     return new Null()
@@ -209,7 +209,7 @@ semantics.addOperation<AST>('toAST(env)', {
   },
   Sequence_seq(seq, _sep) {
     return new Call(
-      new SymRef(this.args.env, 'seq'),
+      intrinsics.seq,
       seq.asIteration().children.map((exp) => exp.toAST(this.args.env)),
     )
   },
@@ -219,7 +219,7 @@ semantics.addOperation<AST>('toAST(env)', {
     )
     return new Let(
       [ident.sourceString],
-      new Call(new SymRef(this.args.env, 'seq'), [
+      new Call(intrinsics.seq, [
         propAccess(new Quote(ident.sourceString), 'set', value.toAST(this.args.env)),
         seq.toAST(this.args.env.extend(bindingEnv)),
       ]),
@@ -233,7 +233,7 @@ semantics.addOperation<AST>('toAST(env)', {
     )
     return new Let(
       [ident],
-      new Call(new SymRef(this.args.env, 'seq'), [
+      new Call(intrinsics.seq, [
         fn,
         seq.toAST(this.args.env.extend(bindingEnv)),
       ]),
@@ -248,7 +248,7 @@ semantics.addOperation<AST>('toAST(env)', {
     // For path x.y.z, compile `let z = x.use(y.z); …`
     return new Let(
       [ident],
-      new Call(new SymRef(this.args.env, 'seq'), [
+      new Call(intrinsics.seq, [
         propAccess(
           new Quote(ident),
           'set',

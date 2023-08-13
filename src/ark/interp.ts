@@ -184,7 +184,7 @@ export class Ref extends Val {
 }
 
 export class SymRef extends Ref {
-  static globals: Binding
+  static intrinsics: Binding
 
   constructor(env: Environment, public name: string) {
     super()
@@ -363,42 +363,42 @@ function jsToVal(x: any): Val {
   return new Null()
 }
 
-const globals: [string, Val][] = [
-  ['pi', new Num(Math.PI)],
-  ['e', new Num(Math.E)],
-  ['new', new NativeFn((val: Val) => new Ref(val))],
-  ['pos', new NativeFn((val: Val) => new Num(+val._value()))],
-  ['neg', new NativeFn((val: Val) => new Num(-val._value()))],
-  ['not', new NativeFn((val: Val) => new Bool(!val._value()))],
-  ['seq', new NativeFexpr((env: Environment, ...args: Val[]) => {
+export const intrinsics = {
+  pi: new Num(Math.PI),
+  e: new Num(Math.E),
+  new: new NativeFn((val: Val) => new Ref(val)),
+  pos: new NativeFn((val: Val) => new Num(+val._value())),
+  neg: new NativeFn((val: Val) => new Num(-val._value())),
+  not: new NativeFn((val: Val) => new Bool(!val._value())),
+  seq: new NativeFexpr((env: Environment, ...args: Val[]) => {
     let res: Val = new Null()
     for (const exp of args) {
       res = exp.eval(env)
     }
     return res
-  })],
-  ['if', new NativeFexpr((env: Environment, cond: Val, e_then: Val, e_else: Val) => {
+  }),
+  if: new NativeFexpr((env: Environment, cond: Val, e_then: Val, e_else: Val) => {
     const condVal = cond.eval(env)
     if (condVal._value()) {
       return e_then.eval(env)
     }
     return e_else ? e_else.eval(env) : new Null()
-  })],
-  ['and', new NativeFexpr((env: Environment, left: Val, right: Val) => {
+  }),
+  and: new NativeFexpr((env: Environment, left: Val, right: Val) => {
     const leftVal = left.eval(env)
     if (leftVal._value()) {
       return right.eval(env)
     }
     return leftVal
-  })],
-  ['or', new NativeFexpr((env: Environment, left: Val, right: Val) => {
+  }),
+  or: new NativeFexpr((env: Environment, left: Val, right: Val) => {
     const leftVal = left.eval(env)
     if (leftVal._value()) {
       return leftVal
     }
     return right.eval(env)
-  })],
-  ['loop', new NativeFexpr((env: Environment, body: Val) => {
+  }),
+  loop: new NativeFexpr((env: Environment, body: Val) => {
     for (; ;) {
       try {
         body.eval(env)
@@ -411,33 +411,33 @@ const globals: [string, Val][] = [
         }
       }
     }
-  })],
-  ['break', new NativeFn((val: Val) => {
+  }),
+  break: new NativeFn((val: Val) => {
     throw new BreakException(val)
-  })],
-  ['continue', new NativeFn(() => {
+  }),
+  continue: new NativeFn(() => {
     throw new ContinueException()
-  })],
-  ['return', new NativeFn((val: Val) => {
+  }),
+  return: new NativeFn((val: Val) => {
     throw new ReturnException(val)
-  })],
-  ['=', new NativeFn((left: Val, right: Val) => new Bool(left._value() === right._value()))],
-  ['!=', new NativeFn((left: Val, right: Val) => new Bool(left._value() !== right._value()))],
-  ['<', new NativeFn((left: Val, right: Val) => new Bool(left._value() < right._value()))],
-  ['<=', new NativeFn((left: Val, right: Val) => new Bool(left._value() <= right._value()))],
-  ['>', new NativeFn((left: Val, right: Val) => new Bool(left._value() > right._value()))],
-  ['>=', new NativeFn((left: Val, right: Val) => new Bool(left._value() >= right._value()))],
-  ['+', new NativeFn((left: Val, right: Val) => new Num(left._value() + right._value()))],
-  ['-', new NativeFn((left: Val, right: Val) => new Num(left._value() - right._value()))],
-  ['*', new NativeFn((left: Val, right: Val) => new Num(left._value() * right._value()))],
-  ['/', new NativeFn((left: Val, right: Val) => new Num(left._value() / right._value()))],
-  ['%', new NativeFn((left: Val, right: Val) => new Num(left._value() % right._value()))],
-  ['**', new NativeFn((left: Val, right: Val) => new Num(left._value() ** right._value()))],
-  ['print', new NativeFn((obj: Val) => {
+  }),
+  '=': new NativeFn((left: Val, right: Val) => new Bool(left._value() === right._value())),
+  '!=': new NativeFn((left: Val, right: Val) => new Bool(left._value() !== right._value())),
+  '<': new NativeFn((left: Val, right: Val) => new Bool(left._value() < right._value())),
+  '<=': new NativeFn((left: Val, right: Val) => new Bool(left._value() <= right._value())),
+  '>': new NativeFn((left: Val, right: Val) => new Bool(left._value() > right._value())),
+  '>=': new NativeFn((left: Val, right: Val) => new Bool(left._value() >= right._value())),
+  '+': new NativeFn((left: Val, right: Val) => new Num(left._value() + right._value())),
+  '-': new NativeFn((left: Val, right: Val) => new Num(left._value() - right._value())),
+  '*': new NativeFn((left: Val, right: Val) => new Num(left._value() * right._value())),
+  '/': new NativeFn((left: Val, right: Val) => new Num(left._value() / right._value())),
+  '%': new NativeFn((left: Val, right: Val) => new Num(left._value() % right._value())),
+  '**': new NativeFn((left: Val, right: Val) => new Num(left._value() ** right._value())),
+  print: new NativeFn((obj: Val) => {
     debug(obj._value())
     return new Null()
-  })],
-  ['js', new Obj({
+  }),
+  js: new Obj({
     use: (_env: EnvironmentVal, ...args: Val[]) => {
       const requirePath = (args.map((e) => e._value()).join('.'))
       // eslint-disable-next-line import/no-dynamic-require, global-require
@@ -450,20 +450,21 @@ const globals: [string, Val][] = [
       return new Obj(wrappedModule)
     },
   }),
-  ],
-]
-
-function listToBinding(elems: [string, Val][]): BindingVal {
-  return new BindingVal(new Map(elems.map(([k, v]): [string, Ref] => [k, new Ref(v)])))
 }
 
-SymRef.globals = listToBinding(globals)
+function listToBinding(elems: {[key: string]: Val}): BindingVal {
+  return new BindingVal(
+    new Map(Object.entries(elems).map(([k, v]): [string, Ref] => [k, new Ref(v)])),
+  )
+}
+
+SymRef.intrinsics = listToBinding(intrinsics)
 
 export class EnvironmentVal {
   public env: Binding[]
 
   constructor(localEnv: Binding[]) {
-    this.env = [...localEnv, SymRef.globals]
+    this.env = [...localEnv, SymRef.intrinsics]
   }
 
   get(sym: string) {
