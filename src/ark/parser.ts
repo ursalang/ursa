@@ -7,7 +7,7 @@ import {
   Null, Bool, Num, Str,
   List, Obj, DictLiteral, PropertyException,
   Fn, Fexpr, NativeFexpr, bindArgsToParams,
-  Let, Quote, SymRef, Call, EnvironmentVal,
+  Let, Ref, SymRef, Call, EnvironmentVal,
 } from './interp.js'
 
 // Specify precise type so semantics can be precisely type-checked.
@@ -77,8 +77,8 @@ semantics.addOperation<AST>('toAST(env)', {
       body.toAST(this.args.env.extend(paramBinding)),
     )
   },
-  Stmt_quote(_quote, sym) {
-    return new Quote(sym.sourceString)
+  Stmt_ref(_quote, sym) {
+    return new Ref(sym.toAST(this.args.env))
   },
   Stmt_prop(_prop, prop, ref, rest) {
     const propName = prop.sourceString

@@ -14,7 +14,7 @@ Ark {
     | "fn" ParamList Atom      -- fn
     | "fexpr" ParamList Atom   -- fexpr
     | "prop" symbol Atom Atom* -- prop
-    | "quote" symbol           -- quote
+    | "ref" Atom               -- ref
     | Atom Atom*               -- call
 
   ParamList = "[" symbol* "]"

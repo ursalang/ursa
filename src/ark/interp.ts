@@ -498,16 +498,6 @@ export class EnvironmentVal {
   }
 }
 
-export class Quote extends Val {
-  constructor(public sym: string) {
-    super()
-  }
-
-  eval(env: EnvironmentVal): Val {
-    return new SymRef(env, this.sym)
-  }
-}
-
 export function debug(x: any, depth: number | null = 1) {
   console.dir(x, {depth})
 }

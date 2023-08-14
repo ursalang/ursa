@@ -1,11 +1,11 @@
 (print
   (let [total i]
     (seq
-      (prop set (quote total) 0)
-      (prop set (quote i) 0)
+      (prop set (ref total) 0)
+      (prop set (ref i) 0)
       (loop
         (seq
-          (prop set (quote i) (+ i 1))
-          (prop set (quote total) (+ total i))
+          (prop set (ref i) (+ i 1))
+          (prop set (ref total) (+ total i))
           (if (= i 10)
             (break total)))))))

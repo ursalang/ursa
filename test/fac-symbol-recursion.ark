@@ -1,7 +1,7 @@
 (print
   (let [fac]
     (seq
-      (prop set (quote fac)
+      (prop set (ref fac)
         (fn [x]
           (if (= x 0)
             1

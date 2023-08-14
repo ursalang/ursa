@@ -2,7 +2,7 @@ import {Node, IterationNode} from 'ohm-js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug, intrinsics,
-  Val, Null, Bool, Num, Str, Quote, Ref, SymRef, List, Obj, DictLiteral,
+  Val, Null, Bool, Num, Str, Ref, SymRef, List, Obj, DictLiteral,
   Call, Let, Fn, NativeFexpr, PropertyException,
   bindArgsToParams, BindingVal, Environment, EnvironmentVal,
 } from '../ark/interp.js'
@@ -70,7 +70,7 @@ semantics.addOperation<AST>('toAST(env)', {
       new Map([[ident.sourceString, new Ref(new Null())]]),
     )
     return propAccess(
-      new Quote(ident.sourceString),
+      new Ref(new SymRef(this.args.env, ident.sourceString)),
       'set',
       makeFn(
         this.args.env.extend(bindingEnv),
@@ -96,7 +96,7 @@ semantics.addOperation<AST>('toAST(env)', {
     return propAccess(callExp.toAST(this.args.env), 'set', index.toAST(this.args.env), value.toAST(this.args.env))
   },
   Assignment_ident(ident, _eq, value) {
-    return propAccess(new Quote(ident.sourceString), 'set', value.toAST(this.args.env))
+    return propAccess(new Ref(new SymRef(this.args.env, ident.sourceString)), 'set', value.toAST(this.args.env))
   },
   LogicExp_and(left, _and, right) {
     return new Call(intrinsics.and, [left.toAST(this.args.env), right.toAST(this.args.env)])
@@ -217,25 +217,25 @@ semantics.addOperation<AST>('toAST(env)', {
     const bindingEnv = new BindingVal(
       new Map([[ident.sourceString, value.toAST(this.args.env)]]),
     )
+    const innerBinding = this.args.env.extend(bindingEnv)
     return new Let(
       [ident.sourceString],
       new Call(intrinsics.seq, [
-        propAccess(new Quote(ident.sourceString), 'set', value.toAST(this.args.env)),
-        seq.toAST(this.args.env.extend(bindingEnv)),
+        propAccess(new Ref(new SymRef(innerBinding, ident.sourceString)), 'set', value.toAST(this.args.env)),
+        seq.toAST(innerBinding),
       ]),
     )
   },
   Sequence_letfn(_let, namedFn, _sep, seq) {
-    const fn = namedFn.toAST(this.args.env)
     const ident = namedFn.children[1].sourceString
-    const bindingEnv = new BindingVal(
-      new Map([[ident, new Ref(new Null())]]),
-    )
+    const bindingEnv = new BindingVal(new Map([[ident, new Ref(new Null())]]))
+    const innerEnv = this.args.env.extend(bindingEnv)
+    const fn = namedFn.toAST(innerEnv)
     return new Let(
       [ident],
       new Call(intrinsics.seq, [
         fn,
-        seq.toAST(this.args.env.extend(bindingEnv)),
+        seq.toAST(innerEnv),
       ]),
     )
   },
@@ -250,7 +250,7 @@ semantics.addOperation<AST>('toAST(env)', {
       [ident],
       new Call(intrinsics.seq, [
         propAccess(
-          new Quote(ident),
+          new Ref(new SymRef(this.args.env, ident)),
           'set',
           propAccess(
             new SymRef(this.args.env.extend(bindingEnv), path[0]),

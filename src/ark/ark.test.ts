@@ -49,12 +49,12 @@ test('loop and break', (t) => {
 
 // FIXME
 // test('Global assignment', (t) => {
-// t.is(toVal('(prop set (quote x) 1)').eval(new EnvironmentVal([]))._value(), 1)
-// t.is(toVal('(seq (prop set (quote f) (fn [x] (+ x 1))) (f 1))').eval(new EnvironmentVal([]))._value(), 2)
+// t.is(toVal('(prop set (ref x) 1)').eval(new EnvironmentVal([]))._value(), 1)
+// t.is(toVal('(seq (prop set (ref f) (fn [x] (+ x 1))) (f 1))').eval(new EnvironmentVal([]))._value(), 2)
 // })
 
 test('let', (t) => {
-  t.is(toVal('(let [a] (seq (prop set (quote a) 3) a))').eval(new EnvironmentVal([]))._value(), 3)
+  t.is(toVal('(let [a] (seq (prop set (ref a) 3) a))').eval(new EnvironmentVal([]))._value(), 3)
 })
 
 test('Lists', (t) => {

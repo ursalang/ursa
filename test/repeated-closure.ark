@@ -1,10 +1,10 @@
 (print
   (let [tot]
     (seq
-      (prop set (quote tot) 0)
+      (prop set (ref tot) 0)
       (let [accum]
         (seq
-          (prop set (quote accum)
+          (prop set (ref accum)
             (fn [x]
-              (prop set (quote tot) (+ tot x))))
+              (prop set (ref tot) (+ tot x))))
           [(accum 1) (accum 1)])))))

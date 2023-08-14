@@ -1,9 +1,9 @@
 (print
   (let [a]
    (seq
-    (prop set (quote a) 0)
+    (prop set (ref a) 0)
     (loop
       (seq
-        (prop set (quote a) (+ a 1))
+        (prop set (ref a) (+ a 1))
         (if (= a 3)
           (break a)))))))
