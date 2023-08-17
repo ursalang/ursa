@@ -19,7 +19,7 @@ test('Concrete values', (t) => {
   t.is(toVal(String.raw`"hello \u00e9"`).eval(new EnvironmentVal([]))._value(), 'hello é')
 })
 
-test('Global values', (t) => {
+test('Intrinsics', (t) => {
   t.is(toVal('3 + 4').eval(new EnvironmentVal([]))._value(), 7)
   t.is(toVal('(3 + 4) * 5').eval(new EnvironmentVal([]))._value(), 35)
   t.is(toVal('pi').eval(new EnvironmentVal([]))._value(), Math.PI)
