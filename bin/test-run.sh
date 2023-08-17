@@ -1,2 +1,2 @@
 #!/bin/sh
-tsx ./src/ursa/cli.ts "$@"
+npx tsx ./src/ursa/cli.ts "$@"
