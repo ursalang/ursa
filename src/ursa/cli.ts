@@ -38,7 +38,7 @@ interface Args {
   eval: string
   argument: string[]
 }
-// FIXME: add as a Ursa global
+// FIXME: add as an Ursa global.
 // To do this, need a persistent Ark state.
 const args: Args = parser.parse_args() as Args
 
