@@ -5,8 +5,8 @@ import grammar, {ArkSemantics} from './ark.ohm-bundle.js'
 import {
   Val, intrinsics,
   Null, Bool, Num, Str,
-  List, Obj, DictLiteral, PropertyException,
-  Fn, Fexpr, NativeFexpr, bindArgsToParams,
+  List, Obj, Prop, DictLiteral,
+  Fn, Fexpr, bindArgsToParams,
   Let, Ref, SymRef, Call, EnvironmentVal,
 } from './interp.js'
 
@@ -40,9 +40,9 @@ semantics.addOperation<AST>('toAST(env)', {
     return stmt.toAST(this.args.env)
   },
   Object(_open, elems, _close) {
-    const inits = new Map<string, Val>()
+    const inits: {[key: string]: any} = {}
     for (const elem of elems.children.map((value) => value.toAST(this.args.env))) {
-      inits.set((elem as PropertyValue).key, (elem as PropertyValue).val as Val)
+      inits[(elem as PropertyValue).key] = (elem as PropertyValue).val as Val
     }
     return new Obj(inits)
   },
@@ -83,14 +83,9 @@ semantics.addOperation<AST>('toAST(env)', {
   Stmt_prop(_prop, prop, ref, rest) {
     const propName = prop.sourceString
     const refVal = ref.toAST(this.args.env)
-    return new Call(
-      new NativeFexpr((env, ...args) => {
-        const obj = refVal.eval(env)
-        if (!(propName in obj)) {
-          throw new PropertyException(`no property '${propName}'`)
-        }
-        return obj[propName](env, ...args.map((e) => e.eval(env)))
-      }),
+    return new Prop(
+      propName,
+      refVal,
       rest.children.map((value: Node) => value.toAST(this.args.env)),
     )
   },

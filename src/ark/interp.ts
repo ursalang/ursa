@@ -23,6 +23,10 @@ export class Val extends AST {
   _value(): any {
     return this
   }
+
+  _toJs(): any {
+    return this._value()
+  }
 }
 
 class ConcreteVal extends Val {
@@ -132,9 +136,14 @@ export class Fexpr extends Val {
 
 export class NativeFexpr extends Val {
   constructor(
+    public name: string,
     protected body: (env: Environment, ...args: Val[]) => Val,
   ) {
     super()
+  }
+
+  _toJs() {
+    return this.name
   }
 
   call(env: Environment, args: Val[]) {
@@ -158,6 +167,7 @@ export class Fn extends Fexpr {
 
 class NativeFn extends Val {
   constructor(
+    public name: string,
     protected body: (...args: Val[]) => Val,
   ) {
     super()
@@ -175,6 +185,10 @@ export class Ref extends Val {
 
   eval(_env: Environment) {
     return this.val
+  }
+
+  _toJs(): any {
+    return ['ref', this.val._toJs()]
   }
 
   set(_env: Environment, val: Val) {
@@ -196,6 +210,10 @@ export class SymRef extends Ref {
   eval(env: Environment): Val {
     const ref = env.get(this.name)
     return ref.eval(env)
+  }
+
+  _toJs() {
+    return this.name
   }
 
   set(env: Environment, val: Val) {
@@ -220,6 +238,15 @@ export class Obj extends Val {
     // eslint-disable-next-line guard-for-in
     for (const key in this) {
       (jsObj as any)[key] = (this[key] as Val)._value()
+    }
+    return jsObj
+  }
+
+  _toJs() {
+    const jsObj = {}
+    // eslint-disable-next-line guard-for-in
+    for (const key in this) {
+      (jsObj as any)[key] = (this[key] as Val)._toJs()
     }
     return jsObj
   }
@@ -252,6 +279,14 @@ export class DictLiteral extends Val {
   _value() {
     return this.eval(new EnvironmentVal([]))._value()
   }
+
+  _toJs() {
+    const obj: any[] = ['map']
+    for (const [k, v] of this.map) {
+      obj.push([k._toJs(), v._toJs()])
+    }
+    return obj
+  }
 }
 
 export class Dict extends Val {
@@ -274,6 +309,14 @@ export class Dict extends Val {
       evaluatedMap.set(k, v.eval(new EnvironmentVal([]))._value())
     }
     return evaluatedMap
+  }
+
+  _toJs() {
+    const obj: any[] = ['map']
+    for (const [k, v] of this.map) {
+      obj.push([k._toJs(), v._toJs()])
+    }
+    return obj
   }
 
   set(_env: Environment, index: Val, val: Val) {
@@ -327,16 +370,42 @@ export class Let extends Val {
     })
     return this.body.eval(env.extend(binding))
   }
+
+  _toJs() {
+    return ['let', this.boundVars, this.body._toJs()]
+  }
 }
 
 export class Call extends Val {
-  constructor(private fn: Val, private args: Val[]) {
+  constructor(public fn: Val, public args: Val[]) {
     super()
   }
 
   eval(env: Environment) {
     const fn = this.fn.eval(env) as FexprClosure
     return fn.call(env, this.args)
+  }
+
+  _toJs() {
+    return [this.fn._toJs(), ...this.args.map((arg) => arg._toJs())]
+  }
+}
+
+export class Prop extends Val {
+  constructor(public prop: string, public ref: Val, public args: Val[]) {
+    super()
+  }
+
+  eval(env: Environment) {
+    const obj = this.ref.eval(env)
+    if (!(this.prop in obj)) {
+      throw new PropertyException(`no property '${this.prop}'`)
+    }
+    return (obj as any)[this.prop](env, ...this.args.map((e) => e.eval(env)))
+  }
+
+  _toJs() {
+    return ['prop', this.prop, this.ref._toJs(), ...this.args.map((e) => e._toJs())]
   }
 }
 
@@ -354,7 +423,7 @@ function jsToVal(x: any): Val {
     return new Str(x)
   }
   if (typeof x === 'function') {
-    return new NativeFn((...args: Val[]) => jsToVal(x(...args.map((x) => x._value()))))
+    return new NativeFn(x.name, (...args: Val[]) => jsToVal(x(...args.map((x) => x._value()))))
   }
   if (typeof x === 'object') {
     return new Obj(x)
@@ -366,39 +435,39 @@ function jsToVal(x: any): Val {
 export const intrinsics = {
   pi: new Num(Math.PI),
   e: new Num(Math.E),
-  new: new NativeFn((val: Val) => new Ref(val)),
-  pos: new NativeFn((val: Val) => new Num(+val._value())),
-  neg: new NativeFn((val: Val) => new Num(-val._value())),
-  not: new NativeFn((val: Val) => new Bool(!val._value())),
-  seq: new NativeFexpr((env: Environment, ...args: Val[]) => {
+  new: new NativeFn('new', (val: Val) => new Ref(val)),
+  pos: new NativeFn('pos', (val: Val) => new Num(+val._value())),
+  neg: new NativeFn('neg', (val: Val) => new Num(-val._value())),
+  not: new NativeFn('not', (val: Val) => new Bool(!val._value())),
+  seq: new NativeFexpr('seq', (env: Environment, ...args: Val[]) => {
     let res: Val = new Null()
     for (const exp of args) {
       res = exp.eval(env)
     }
     return res
   }),
-  if: new NativeFexpr((env: Environment, cond: Val, e_then: Val, e_else: Val) => {
+  if: new NativeFexpr('if', (env: Environment, cond: Val, e_then: Val, e_else: Val) => {
     const condVal = cond.eval(env)
     if (condVal._value()) {
       return e_then.eval(env)
     }
     return e_else ? e_else.eval(env) : new Null()
   }),
-  and: new NativeFexpr((env: Environment, left: Val, right: Val) => {
+  and: new NativeFexpr('and', (env: Environment, left: Val, right: Val) => {
     const leftVal = left.eval(env)
     if (leftVal._value()) {
       return right.eval(env)
     }
     return leftVal
   }),
-  or: new NativeFexpr((env: Environment, left: Val, right: Val) => {
+  or: new NativeFexpr('or', (env: Environment, left: Val, right: Val) => {
     const leftVal = left.eval(env)
     if (leftVal._value()) {
       return leftVal
     }
     return right.eval(env)
   }),
-  loop: new NativeFexpr((env: Environment, body: Val) => {
+  loop: new NativeFexpr('loop', (env: Environment, body: Val) => {
     for (; ;) {
       try {
         body.eval(env)
@@ -412,28 +481,28 @@ export const intrinsics = {
       }
     }
   }),
-  break: new NativeFn((val: Val) => {
+  break: new NativeFn('break', (val: Val) => {
     throw new BreakException(val)
   }),
-  continue: new NativeFn(() => {
+  continue: new NativeFn('continue', () => {
     throw new ContinueException()
   }),
-  return: new NativeFn((val: Val) => {
+  return: new NativeFn('return', (val: Val) => {
     throw new ReturnException(val)
   }),
-  '=': new NativeFn((left: Val, right: Val) => new Bool(left._value() === right._value())),
-  '!=': new NativeFn((left: Val, right: Val) => new Bool(left._value() !== right._value())),
-  '<': new NativeFn((left: Val, right: Val) => new Bool(left._value() < right._value())),
-  '<=': new NativeFn((left: Val, right: Val) => new Bool(left._value() <= right._value())),
-  '>': new NativeFn((left: Val, right: Val) => new Bool(left._value() > right._value())),
-  '>=': new NativeFn((left: Val, right: Val) => new Bool(left._value() >= right._value())),
-  '+': new NativeFn((left: Val, right: Val) => new Num(left._value() + right._value())),
-  '-': new NativeFn((left: Val, right: Val) => new Num(left._value() - right._value())),
-  '*': new NativeFn((left: Val, right: Val) => new Num(left._value() * right._value())),
-  '/': new NativeFn((left: Val, right: Val) => new Num(left._value() / right._value())),
-  '%': new NativeFn((left: Val, right: Val) => new Num(left._value() % right._value())),
-  '**': new NativeFn((left: Val, right: Val) => new Num(left._value() ** right._value())),
-  print: new NativeFn((obj: Val) => {
+  '=': new NativeFn('=', (left: Val, right: Val) => new Bool(left._value() === right._value())),
+  '!=': new NativeFn('!=', (left: Val, right: Val) => new Bool(left._value() !== right._value())),
+  '<': new NativeFn('<', (left: Val, right: Val) => new Bool(left._value() < right._value())),
+  '<=': new NativeFn('<=', (left: Val, right: Val) => new Bool(left._value() <= right._value())),
+  '>': new NativeFn('>', (left: Val, right: Val) => new Bool(left._value() > right._value())),
+  '>=': new NativeFn('>=', (left: Val, right: Val) => new Bool(left._value() >= right._value())),
+  '+': new NativeFn('+', (left: Val, right: Val) => new Num(left._value() + right._value())),
+  '-': new NativeFn('-', (left: Val, right: Val) => new Num(left._value() - right._value())),
+  '*': new NativeFn('*', (left: Val, right: Val) => new Num(left._value() * right._value())),
+  '/': new NativeFn('/', (left: Val, right: Val) => new Num(left._value() / right._value())),
+  '%': new NativeFn('%', (left: Val, right: Val) => new Num(left._value() % right._value())),
+  '**': new NativeFn('**', (left: Val, right: Val) => new Num(left._value() ** right._value())),
+  print: new NativeFn('print', (obj: Val) => {
     debug(obj._value())
     return new Null()
   }),
@@ -496,6 +565,10 @@ export class EnvironmentVal {
   extend(binding: Binding): Environment {
     return new EnvironmentVal([binding, ...this.env.slice(0, -1)])
   }
+}
+
+export function toJson(val: Val) {
+  return JSON.stringify(val._toJs())
 }
 
 export function debug(x: any, depth: number | null = 1) {
