@@ -61,6 +61,10 @@ export class Str extends ConcreteVal {
   constructor(protected val: string) {
     super(val)
   }
+
+  _toJs() {
+    return ['str', this.val]
+  }
 }
 
 export class HakException extends Error {
@@ -129,6 +133,10 @@ export class Fexpr extends Val {
     ))
   }
 
+  _toJs() {
+    return ['fexpr', ['params', ...this.params], this.body._toJs()]
+  }
+
   eval(env: Environment) {
     return new FexprClosure(this.params, this._bindFreeVars(env), this.body)
   }
@@ -162,6 +170,10 @@ function evaluateArgs(env: Environment, args: Val[]) {
 export class Fn extends Fexpr {
   eval(env: Environment) {
     return new FnClosure(this.params, this._bindFreeVars(env), this.body)
+  }
+
+  _toJs() {
+    return ['fn', ['params', ...this.params], this.body._toJs()]
   }
 }
 
@@ -335,12 +347,16 @@ export class List extends Val {
   }
 
   eval(env: Environment): Val {
-    this.val = this.val.map((e: Val) => e.eval(env))
+    this.val = this.val.map((e) => e.eval(env))
     return this
   }
 
   _value() {
-    return this.val.map((e: Val) => e._value())
+    return this.val.map((e) => e._value())
+  }
+
+  _toJs() {
+    return ['list', ...this.val.map((e) => e._toJs())]
   }
 
   length(_env: Environment) {
@@ -372,7 +388,7 @@ export class Let extends Val {
   }
 
   _toJs() {
-    return ['let', this.boundVars, this.body._toJs()]
+    return ['let', ['params', ...this.boundVars], this.body._toJs()]
   }
 }
 
@@ -567,7 +583,7 @@ export class EnvironmentVal {
   }
 }
 
-export function toJson(val: Val) {
+export function valToJson(val: Val) {
   return JSON.stringify(val._toJs())
 }
 

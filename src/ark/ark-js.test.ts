@@ -3,31 +3,31 @@ import test from 'ava'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug, EnvironmentVal,
-  toJson,
+  valToJson,
 } from './interp.js'
 
 import {toVal} from './parser.js'
 
-function jsonTests(title: string, tests: [string, ...any][]) {
+function testGroup(title: string, tests: [string, ...any][]) {
   test(title, (t) => {
     for (const [source, ...results] of tests) {
-      t.is(toJson(toVal(source)), JSON.stringify(['seq', ...results]))
+      t.is(valToJson(toVal(source)), JSON.stringify(['seq', ...results]))
     }
   })
 }
 
 Error.stackTraceLimit = Infinity
 
-jsonTests('Comment', [
+testGroup('Comment', [
   ['; Comment\n3', 3],
 ])
 
-jsonTests('Concrete values', [
+testGroup('Concrete values', [
   ['4', 4],
-  ['"hello \u00e9"', 'hello é'],
+  ['"hello \u00e9"', ['str', 'hello é']],
 ])
 
-jsonTests('Intrinsics', [
+testGroup('Intrinsics', [
   ['(+ 3 4)', ['+', 3, 4]],
   ['(* (+ 3 4) 5)', ['*', ['+', 3, 4], 5]],
   ['pi', 'pi'],
@@ -36,11 +36,14 @@ jsonTests('Intrinsics', [
   ['(not 2)', ['not', 2]],
 ])
 
-jsonTests('Sequences', [
+testGroup('Sequences', [
   ['(seq pi (+ 3 4))', ['seq', 'pi', ['+', 3, 4]]],
+  // FIXME: Global access.
+  // ['(seq (prop set (ref f) (fn [x] (+ x 1))) (f 1))',
+  //   ['seq', ['prop', 'set', ['ref', 'f'], ['fn', ['params', 'x'], ['+', 'x', 1]]]]],
 ])
 
-jsonTests('Conditionals', [
+testGroup('Conditionals', [
   ['(if true 3 4)', ['if', true, 3, 4]],
   ['(if false 3 4)', ['if', false, 3, 4]],
   ['(if (= (+ 3 4) 7) 1 0)', ['if', ['=', ['+', 3, 4], 7], 1, 0]],
@@ -48,30 +51,24 @@ jsonTests('Conditionals', [
   ['(and 1 2)', ['and', 1, 2]],
 ])
 
-jsonTests('loop and break', [
+testGroup('loop and break', [
   ['(loop (break 3))', ['loop', ['break', 3]]],
 ])
 
-// FIXME
-// jsonTests('Global assignment', [
-// t.is(compile('(prop set (ref x) 1)'), 1)
-// t.is(compile('(seq (prop set (ref f) (fn [x] (+ x 1))) (f 1))'), 2)
-// })
-
-jsonTests('let', [
-  ['(let [a] (seq (prop set (ref a) 3) a))', ['let', ['a'], ['seq', ['prop', 'set', ['ref', 'a'], 3], 'a']]],
+testGroup('let', [
+  ['(let [a] (seq (prop set (ref a) 3) a))', ['let', ['params', 'a'], ['seq', ['prop', 'set', ['ref', 'a'], 3], 'a']]],
 ])
 
-jsonTests('Lists', [
-  ['[1 2 3]', [1, 2, 3]],
-  ['(prop length [1 2 3])', ['prop', 'length', [1, 2, 3]]],
-  ['(prop get [4 5 6] 1)', ['prop', 'get', [4, 5, 6], 1]],
+testGroup('Lists', [
+  ['[1 2 3]', ['list', 1, 2, 3]],
+  ['(prop length [1 2 3])', ['prop', 'length', ['list', 1, 2, 3]]],
+  ['(prop get [4 5 6] 1)', ['prop', 'get', ['list', 4, 5, 6], 1]],
 ])
 
-jsonTests('Objects', [
+testGroup('Objects', [
   ['{a: 1 b: (+ 2 0) c: 4}', {a: 1, b: ['+', 2, 0], c: 4}],
 ])
 
-jsonTests('Maps', [
-  ['{"a": 1 "b": (+ 2 0) 3: 4}', ['map', ['a', 1], ['b', ['+', 2, 0]], [3, 4]]],
+testGroup('Maps', [
+  ['{"a": 1 "b": (+ 2 0) 3: 4}', ['map', [['str', 'a'], 1], [['str', 'b'], ['+', 2, 0]], [3, 4]]],
 ])

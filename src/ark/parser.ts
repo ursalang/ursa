@@ -153,17 +153,20 @@ semantics.addAttribute<Set<string>>('freeVars', {
   _iter(...children) {
     return mergeFreeVars(children)
   },
-  Stmt_let(_let, binding, body) {
-    return setDifference(body.freeVars, binding.freeVars)
+  Stmt_let(_let, params, body) {
+    return setDifference(body.freeVars, params.freeVars)
   },
   Stmt_fn(_fn, params, body) {
+    return setDifference(body.freeVars, params.freeVars)
+  },
+  Stmt_fexpr(_fn, params, body) {
     return setDifference(body.freeVars, params.freeVars)
   },
   Stmt_prop(_prop, _propName, ref, rest) {
     return mergeFreeVars([ref, rest])
   },
   symbol_alphanum(_l, _ns) {
-    return new Set<string>([this.sourceString])
+    return new Set([this.sourceString])
   },
   symbol_punct(_p) {
     return new Set([this.sourceString])

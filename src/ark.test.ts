@@ -2,46 +2,69 @@ import test from 'ava'
 
 import {cliTest as realCliTest} from './testutil.js'
 
-async function cliTest(args: string[]) {
-  return realCliTest(['--sexp', ...args])
+async function cliTest(title: string, file: string, result: string) {
+  test(title, async (t) => {
+    t.is(await realCliTest(['--syntax=sexp', `${file}.ark`]), result)
+    t.is(await realCliTest(['--syntax=json', `${file}.json`]), result)
+  })
 }
 
-test('Increment a variable in a loop', async (t) => {
-  t.is(await cliTest(['test/increment-variable-in-loop.ark']), '3')
-})
+cliTest(
+  'Increment a variable in a loop',
+  'test/increment-variable-in-loop',
+  '3',
+)
 
-test('Sum ints from 1 to 10', async (t) => {
-  t.is(await cliTest(['test/sum-ints-from-1-to-10.ark']), '55')
-})
+cliTest(
+  'Sum ints from 1 to 10',
+  'test/sum-ints-from-1-to-10',
+  '55',
+)
 
-test('Call first-class function', async (t) => {
-  t.is(await cliTest(['test/first-class-function.ark']), '2')
-})
+cliTest(
+  'Call first-class function',
+  'test/first-class-function',
+  '2',
+)
 
-test('Factorial (recurse with symbol reference)', async (t) => {
-  t.is(await cliTest(['test/fac-symbol-recursion.ark']), '720')
-})
+cliTest(
+  'Factorial (recurse with symbol reference)',
+  'test/fac-symbol-recursion',
+  '720',
+)
 
-test('Factorial (recurse with function argument)', async (t) => {
-  t.is(await cliTest(['test/fac-function-argument.ark']), '720')
-})
+cliTest(
+  'Factorial (recurse with function argument)',
+  'test/fac-function-argument',
+  '720',
+)
 
-test('Sum list (break result)', async (t) => {
-  t.is(await cliTest(['test/sum-list-break.ark']), '100')
-})
+cliTest(
+  'Sum list (break result)',
+  'test/sum-list-break',
+  '100',
+)
 
-test('Sum list (return result)', async (t) => {
-  t.is(await cliTest(['test/sum-list-return.ark']), '100')
-})
+cliTest(
+  'Sum list (return result)',
+  'test/sum-list-return',
+  '100',
+)
 
-test('Double list', async (t) => {
-  t.is(await cliTest(['test/double-list.ark']), '[ 2, 4, 6 ]')
-})
+cliTest(
+  'Double list',
+  'test/double-list',
+  '[ 2, 4, 6 ]',
+)
 
-test('Assign to table', async (t) => {
-  t.is(await cliTest(['test/assign-to-table.ark']), 'Map(3) { \'a\' => 1, \'b\' => 1, 3 => 4 }')
-})
+cliTest(
+  'Assign to table',
+  'test/assign-to-table',
+  'Map(3) { \'a\' => 1, \'b\' => 1, 3 => 4 }',
+)
 
-test('Repeated closure', async (t) => {
-  t.is(await cliTest(['test/repeated-closure.ark']), '[ 1, 2 ]')
-})
+cliTest(
+  'Repeated closure',
+  'test/repeated-closure',
+  '[ 1, 2 ]',
+)

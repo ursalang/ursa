@@ -1,0 +1,1 @@
+["seq",["print",["let",["params","t"],["seq",["prop","set",["ref","t"],["map",[["str","a"],1],[["str","b"],["+",2,0]],[3,4]]],["prop","set","t",["str","b"],1],"t"]]]]

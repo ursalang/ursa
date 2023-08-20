@@ -7,8 +7,9 @@ import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
 import programVersion from '../version.js'
 // eslint-disable-next-line import/no-named-as-default
 import {toVal} from './parser.js'
-import {EnvironmentVal, toJson} from '../ark/interp.js'
+import {EnvironmentVal, valToJson} from '../ark/interp.js'
 import {toVal as lispToVal} from '../ark/parser.js'
+import {jsonToVal} from '../ark/parser-json.js'
 
 // Read and process arguments
 const parser = new ArgumentParser({
@@ -21,7 +22,9 @@ inputGroup.add_argument('module', {metavar: 'FILE', help: 'Ursa module to run', 
 parser.add_argument('argument', {metavar: 'ARGUMENT', help: 'arguments to the Ursa module', nargs: '*'})
 inputGroup.add_argument('--eval', '-e', {metavar: 'EXPRESSION', help: 'execute the given expression'})
 
-parser.add_argument('--sexp', {action: 'store_true', help: 'use sexp syntax'})
+parser.add_argument('--syntax', {
+  default: 'ursa', choices: ['ursa', 'sexp', 'json'], help: 'syntax to use [default: ursa]',
+})
 parser.add_argument('--compile', '-c', {action: 'store_true', help: 'compile input to JSON file'})
 parser.add_argument('--output', '-o', {metavar: 'FILE', help: 'filename of compiled JSON [default: INPUT-FILE.json]'})
 parser.add_argument('--interactive', '-i', {action: 'store_true', help: 'enter interactive mode after running given code'})
@@ -38,7 +41,7 @@ your option) any later version. There is no warranty.`,
 interface Args {
   module: string
   eval: string
-  sexp: boolean
+  syntax: string
   compile: boolean
   output: string | undefined
   interactive: boolean
@@ -49,7 +52,14 @@ interface Args {
 const args: Args = parser.parse_args() as Args
 
 function compile(exp: string) {
-  return (args.sexp ? lispToVal : toVal)(exp)
+  switch (args.syntax) {
+    case 'sexp':
+      return lispToVal(exp)
+    case 'json':
+      return jsonToVal(exp)
+    default:
+      return toVal(exp)
+  }
 }
 
 function evaluate(exp: string) {
@@ -100,7 +110,7 @@ try {
       const parsedFilename = path.parse(args.module)
       jsonFile = path.join(parsedFilename.dir, `${parsedFilename.name}.json`)
     }
-    fs.writeFileSync(jsonFile, toJson(compile(source)))
+    fs.writeFileSync(jsonFile, valToJson(compile(source)))
   } else {
     // Run the program
     if (source !== undefined) {
