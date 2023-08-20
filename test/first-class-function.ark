@@ -1,6 +1,0 @@
-(print
-  (let [f]
-    (seq
-      (prop set (ref f)
-        (fn [x] (+ x 1)))
-      (f 1))))

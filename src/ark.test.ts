@@ -4,7 +4,6 @@ import {cliTest as realCliTest} from './testutil.js'
 
 async function cliTest(title: string, file: string, result: string) {
   test(title, async (t) => {
-    t.is(await realCliTest(['--syntax=sexp', `${file}.ark`]), result)
     t.is(await realCliTest(['--syntax=json', `${file}.json`]), result)
   })
 }

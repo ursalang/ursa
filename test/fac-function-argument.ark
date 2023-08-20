@@ -1,9 +1,0 @@
-(print
-  (let [fac]
-    (seq
-      (prop set (ref fac)
-      (fn [self x]
-        (if (= x 0)
-          1
-          (* x (self self (- x 1))))))
-      (fac fac 6))))

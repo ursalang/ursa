@@ -6,12 +6,15 @@ import {
   Call, Let, Fn, NativeFexpr, PropertyException,
   bindArgsToParams, BindingVal, Environment, EnvironmentVal,
 } from '../ark/interp.js'
-import {AST, setDifference, mergeFreeVars} from '../ark/parser.js'
 // eslint-disable-next-line import/extensions
 import grammar, {UrsaSemantics} from './ursa.ohm-bundle.js'
 
 // Specify precise type so semantics can be precisely type-checked.
 const semantics: UrsaSemantics = grammar.createSemantics()
+
+// Base class for parsing the language, extended directly by classes used
+// only during parsing.
+class AST {}
 
 class PropertyValue extends AST {
   constructor(public key: string, public val: Val) {
@@ -280,6 +283,18 @@ semantics.addOperation<AST>('toAST(env)', {
     return new Str(eval(this.sourceString))
   },
 })
+
+function mergeFreeVars(children: Node[]): Set<string> {
+  return new Set<string>(children.flatMap((child) => [...child.freeVars]))
+}
+
+function setDifference<T>(setA: Set<T>, setB: Set<T>) {
+  const difference = new Set(setA)
+  for (const elem of setB) {
+    difference.delete(elem)
+  }
+  return difference
+}
 
 semantics.addAttribute<Set<string>>('freeVars', {
   _terminal() {

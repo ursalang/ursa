@@ -32,8 +32,6 @@
   continuations: https://github.com/catseye/Robin ; also see
   https://github.com/nukata/little-scheme-in-typescript
 * Implement new semantics in Ark first.
-* Add CLI option to output value as JSON and use that for tests. (Most representation is obvious, except Map: represent that as list of pairs, to avoid the problem that we can’t use an arbitrary value as a key in JSON.)
-* Use JSON, not sexps.
 
 ## Ursa v1
 

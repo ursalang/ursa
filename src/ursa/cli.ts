@@ -8,8 +8,7 @@ import programVersion from '../version.js'
 // eslint-disable-next-line import/no-named-as-default
 import {toVal} from './parser.js'
 import {EnvironmentVal, valToJson} from '../ark/interp.js'
-import {toVal as lispToVal} from '../ark/parser.js'
-import {jsonToVal} from '../ark/parser-json.js'
+import {jsonToVal} from '../ark/parser.js'
 
 // Read and process arguments
 const parser = new ArgumentParser({
@@ -23,7 +22,7 @@ parser.add_argument('argument', {metavar: 'ARGUMENT', help: 'arguments to the Ur
 inputGroup.add_argument('--eval', '-e', {metavar: 'EXPRESSION', help: 'execute the given expression'})
 
 parser.add_argument('--syntax', {
-  default: 'ursa', choices: ['ursa', 'sexp', 'json'], help: 'syntax to use [default: ursa]',
+  default: 'ursa', choices: ['ursa', 'json'], help: 'syntax to use [default: ursa]',
 })
 parser.add_argument('--compile', '-c', {action: 'store_true', help: 'compile input to JSON file'})
 parser.add_argument('--output', '-o', {metavar: 'FILE', help: 'filename of compiled JSON [default: INPUT-FILE.json]'})
@@ -53,8 +52,6 @@ const args: Args = parser.parse_args() as Args
 
 function compile(exp: string) {
   switch (args.syntax) {
-    case 'sexp':
-      return lispToVal(exp)
     case 'json':
       return jsonToVal(exp)
     default:

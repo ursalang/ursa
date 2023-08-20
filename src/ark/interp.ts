@@ -1,10 +1,8 @@
-import {AST} from './parser.js'
-
 export type Binding = BindingVal
 export type Environment = EnvironmentVal
 
 // Base class for compiled code.
-export class Val extends AST {
+export class Val {
   // Uncomment the following for debug.
   // static counter = 0
 
