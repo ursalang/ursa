@@ -12,7 +12,6 @@
 * Vectors
 * Maps: iteration (with yield), symbol keys
 * `self`
-* Sort out globals access.
 * Run in browser.
 * Long strings.
 * Streams, and use as interface to files.

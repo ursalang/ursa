@@ -49,12 +49,6 @@ test('loop and break', (t) => {
   t.is(toVal('loop { break 3 }').eval(new EnvironmentVal([]))._value(), 3)
 })
 
-// FIXME
-// test('Global assignment', (t) => {
-// t.is(toVal('x = 1').eval(new EnvironmentVal([]))._value(), 1)
-// t.is(toVal('f = fn(x) {x + 1}; f(1)').eval(new EnvironmentVal([]))._value(), 2)
-// })
-
 test('let', (t) => {
   t.is(toVal('let a = 3; a').eval(new EnvironmentVal([]))._value(), 3)
   t.is(toVal('let b = 5; b = 7; b').eval(new EnvironmentVal([]))._value(), 7)

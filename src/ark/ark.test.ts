@@ -55,12 +55,6 @@ testGroup('loop and break', [
   ['["loop",["break",3]]', 3],
 ])
 
-// FIXME
-// arkTests('Global assignment', [
-// ['["prop","set",["ref","x"],1]', 1],
-// ['["seq",["prop","set",["ref","f"],["fn",["params","x"],["+","x",1]]],["f","1"]]', 2],
-// ])
-
 testGroup('let', [
   ['["let",["params","a"],["seq",["prop","set",["ref","a"],3],"a"]]', 3],
 ])

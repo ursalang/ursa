@@ -45,8 +45,7 @@ interface Args {
   compile: boolean
   output: string | undefined
   interactive: boolean
-  // FIXME: add as an Ursa global.
-  // To do this, need a persistent Ark state.
+  // FIXME: add to Ark state.
   argument: string[]
 }
 const args: Args = parser.parse_args() as Args
