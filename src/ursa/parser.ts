@@ -211,6 +211,10 @@ semantics.addOperation<AST>('toAST(env)', {
     return exp.toAST(this.args.env)
   },
   Sequence_seq(seq, _sep) {
+    const children = seq.asIteration().children
+    if (children.length === 1) {
+      return children[0].toAST(this.args.env)
+    }
     return new Call(
       intrinsics.seq,
       seq.asIteration().children.map((exp) => exp.toAST(this.args.env)),

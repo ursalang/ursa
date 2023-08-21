@@ -24,17 +24,17 @@ function testGroup(title: string, tests: [string, any][]) {
 // ])
 
 testGroup('Concrete values', [
-  ['["seq",4]', 4],
-  ['["seq",["str","hello é"]]', 'hello é'],
+  ['4', 4],
+  ['["str","hello é"]', 'hello é'],
 ])
 
 testGroup('Intrinsics', [
-  ['["seq",["+",3,4]]', 7],
-  ['["seq",["*",["+",3,4],5]]', 35],
-  ['["seq","pi"]', Math.PI],
+  ['["+",3,4]', 7],
+  ['["*",["+",3,4],5]', 35],
+  ['"pi"', Math.PI],
   ['["seq","pi",["+",3,5]]', 8],
-  ['["seq",["=",["+",3,4],7]]', true],
-  ['["seq",["not",2]]', false],
+  ['["=",["+",3,4],7]', true],
+  ['["not",2]', false],
 ])
 
 testGroup('Sequences', [
@@ -42,11 +42,11 @@ testGroup('Sequences', [
 ])
 
 testGroup('Conditionals', [
-  ['["seq",["if",false,3,4]]', 4],
-  ['["seq",["if",true,3,4]]', 3],
-  ['["seq",["if",["=",["+",3,4],7],1,0]]', 1],
-  ['["seq",["or",1,2]]', 1],
-  ['["seq",["and",1,2]]', 2],
+  ['["if",false,3,4]', 4],
+  ['["if",true,3,4]', 3],
+  ['["if",["=",["+",3,4],7],1,0]', 1],
+  ['["or",1,2]', 1],
+  ['["and",1,2]', 2],
 ])
 
 test('Bare break', (t) => {
@@ -57,7 +57,7 @@ test('Bare break', (t) => {
 })
 
 testGroup('loop and break', [
-  ['["seq",["loop",["break",3]]]', 3],
+  ['["loop",["break",3]]', 3],
 ])
 
 // FIXME
@@ -67,13 +67,13 @@ testGroup('loop and break', [
 // ])
 
 testGroup('let', [
-  ['["seq",["let",["params","a"],["seq",["prop","set",["ref","a"],3],"a"]]]', 3],
+  ['["let",["params","a"],["seq",["prop","set",["ref","a"],3],"a"]]', 3],
 ])
 
 testGroup('Lists', [
-  ['["seq",["list",1,2,3]]', [1, 2, 3]],
-  ['["seq",["prop","length",["list",1,2,3]]]', 3],
-  ['["seq",["prop","get",["list",4,5,6],1]]', 5],
+  ['["list",1,2,3]', [1, 2, 3]],
+  ['["prop","length",["list",1,2,3]]', 3],
+  ['["prop","get",["list",4,5,6],1]', 5],
 ])
 
 testGroup('Maps', [

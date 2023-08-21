@@ -147,6 +147,9 @@ function toVal(env: EnvironmentVal, value: any): Val {
           return new DictLiteral(inits)
         }
         case 'seq':
+          if (value.length === 2) {
+            return toVal(env, value[1])
+          }
           return new Call(intrinsics.seq, value.slice(1).map((v) => toVal(env, v)))
         default:
           return new Call(new SymRef(env, value[0]), value.slice(1).map((v) => toVal(env, v)))
