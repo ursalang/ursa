@@ -31,7 +31,7 @@ home.
 The other half is the run-time. Rather than try to create a program that
 will run in decades’ time, Ursa will have a simple run-time environment
 defined in much the same way as the language. It will specify basic I/O,
-rather like the [Z Machine](https://en.wikipedia.org/wiki/Z_machine) does
+rather like the [Z Machine](https://en.wikipedia.org/wiki/Z-machine) does
 for interactive fiction, but more like a cut-down web browser.
 
 Finally, Ursa should be comfortable to use. That means, beyond the language
