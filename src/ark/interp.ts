@@ -446,8 +446,7 @@ function jsToVal(x: any): Val {
   if (typeof x === 'object') {
     return new Obj(x)
   }
-  // FIXME: some sort of error value?
-  return new Null()
+  throw new Error(`cannot convert JavaScript value ${x}`)
 }
 
 export const intrinsics = {
