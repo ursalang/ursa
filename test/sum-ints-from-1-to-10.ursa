@@ -7,4 +7,3 @@ loop {
     break total
   }
 }
-print(total)

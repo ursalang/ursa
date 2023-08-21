@@ -1,3 +1,6 @@
+import fs from 'fs'
+import test from 'ava'
+import tmp from 'tmp'
 import execa from 'execa'
 
 const command = process.env.NODE_ENV === 'coverage' ? './bin/test-run.sh' : './bin/run.js'
@@ -23,10 +26,17 @@ async function run(args: string[]) {
 //   throw new Error('test passed unexpectedly')
 // }
 
-// eslint-disable-next-line import/prefer-default-export
-export async function cliTest(args: string[]) {
-  const {stdout} = await run(args)
-  return stdout
+export async function cliTest(syntax: string, title: string, file: string, output?: string) {
+  const tempFile = tmp.tmpNameSync()
+  test(title, async (t) => {
+    const {stdout} = await run([`${file}.${syntax}`, `--syntax=${syntax}`, `--output=${tempFile}`])
+    const result = fs.readFileSync(tempFile, {encoding: 'utf-8'})
+    const expected = fs.readFileSync(`${file}.result.json`, {encoding: 'utf-8'})
+    if (output !== undefined) {
+      t.is(output, stdout)
+    }
+    t.is(result, expected)
+  })
 }
 
 // async function failingCliTest(args: string[], expected: string) {

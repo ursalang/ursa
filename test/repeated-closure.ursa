@@ -2,4 +2,4 @@ let tot = 0;
 let accum = fn(x) {
   tot = tot + x
 };
-print([accum(1), accum(1)])
+[accum(1), accum(1)]

@@ -6,4 +6,4 @@ let newAccum = fn() {
 }
 let accum = newAccum()
 let accum2 = newAccum()
-print([accum(1), accum(1), accum2(1)])
+[accum(1), accum(1), accum2(1)]

@@ -1,4 +1,4 @@
 let fac = fn(self, x) {
   if x == 0 {1} else {x * self(self, x - 1)}
 }
-print(fac(fac, 6))
+fac(fac, 6)

@@ -6,4 +6,4 @@ let double = fn(l) {
     i = i + 1
   }
 };
-print(double([1, 2, 3]))
+double([1, 2, 3])

@@ -309,6 +309,8 @@ export class Dict extends Val {
     for (const [k, v] of this.map) {
       evaluatedMap.set(k, v.eval(env) as Val)
     }
+    // FIXME: Don't do this: need to be able to use ConcreteVal values as
+    // keys by their underlying value.
     this.map = evaluatedMap
     return this
   }
@@ -324,7 +326,9 @@ export class Dict extends Val {
   _toJs() {
     const obj: any[] = ['map']
     for (const [k, v] of this.map) {
-      obj.push([k._toJs(), v._toJs()])
+      // FIXME: see above.
+      const keyJs = k instanceof Val ? k._toJs() : k
+      obj.push([keyJs, v._toJs()])
     }
     return obj
   }
@@ -517,7 +521,11 @@ export const intrinsics = {
   '%': new NativeFn('%', (left: Val, right: Val) => new Num(left._value() % right._value())),
   '**': new NativeFn('**', (left: Val, right: Val) => new Num(left._value() ** right._value())),
   print: new NativeFn('print', (obj: Val) => {
-    debug(obj._value())
+    console.log(obj._value())
+    return new Null()
+  }),
+  debug: new NativeFn('debug', (obj: Val) => {
+    debug(obj)
     return new Null()
   }),
   js: new Obj({

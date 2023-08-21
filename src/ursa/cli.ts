@@ -4,6 +4,7 @@ import path from 'path'
 import fs from 'fs'
 import * as readline from 'node:readline'
 import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
+import assert from 'assert'
 import programVersion from '../version.js'
 // eslint-disable-next-line import/no-named-as-default
 import {toVal} from './parser.js'
@@ -25,7 +26,7 @@ parser.add_argument('--syntax', {
   default: 'ursa', choices: ['ursa', 'json'], help: 'syntax to use [default: ursa]',
 })
 parser.add_argument('--compile', '-c', {action: 'store_true', help: 'compile input to JSON file'})
-parser.add_argument('--output', '-o', {metavar: 'FILE', help: 'filename of compiled JSON [default: INPUT-FILE.json]'})
+parser.add_argument('--output', '-o', {metavar: 'FILE', help: 'JSON output file [default: INPUT-FILE.json]'})
 parser.add_argument('--interactive', '-i', {action: 'store_true', help: 'enter interactive mode after running given code'})
 
 parser.add_argument('--version', {
@@ -71,9 +72,10 @@ async function repl() {
     prompt: '> ',
   })
   rl.prompt()
+  let val
   for await (const line of rl) {
     try {
-      const val = evaluate(line)._value()
+      val = evaluate(line)._value()
       console.dir(val, {depth: null})
     } catch (error) {
       if (error instanceof Error) {
@@ -84,44 +86,57 @@ async function repl() {
     }
     rl.prompt()
   }
+  return val
 }
 
-// Any otherwise uncaught exception is reported as an error.
-try {
-  // Read input
-  let source: string | undefined
-  if (args.eval !== undefined) {
-    source = args.eval
-  } else if (args.module !== undefined) {
-    source = fs.readFileSync(args.module, {encoding: 'utf-8'})
-  }
-  if (args.compile) {
-    if (source === undefined) {
-      throw new Error('--compile given, but nothing to compile!')
+// Get output filename, if any
+let jsonFile = args.output
+if (jsonFile === undefined && args.module !== undefined) {
+  const parsedFilename = path.parse(args.module)
+  jsonFile = path.join(parsedFilename.dir, `${parsedFilename.name}.json`)
+}
+
+async function main() {
+  // Any otherwise uncaught exception is reported as an error.
+  try {
+    // Read input
+    let source: string | undefined
+    let result
+    if (args.eval !== undefined) {
+      source = args.eval
+    } else if (args.module !== undefined) {
+      source = fs.readFileSync(args.module, {encoding: 'utf-8'})
     }
-    let jsonFile = args.output
-    if (jsonFile === undefined) {
-      if (args.module === undefined) {
+    if (args.compile) {
+      if (source === undefined) {
+        throw new Error('--compile given, but nothing to compile!')
+      }
+      if (jsonFile === undefined) {
         throw new Error('--compile given with no input or output filename')
       }
-      const parsedFilename = path.parse(args.module)
-      jsonFile = path.join(parsedFilename.dir, `${parsedFilename.name}.json`)
+      result = compile(source)
+    } else {
+      // Run the program
+      if (source !== undefined) {
+        result = evaluate(source)
+      }
+      if (source === undefined || args.interactive) {
+        result = await repl()
+      }
+      assert(result !== undefined)
     }
-    fs.writeFileSync(jsonFile, valToJson(compile(source)))
-  } else {
-    // Run the program
-    if (source !== undefined) {
-      evaluate(source)
+    if (args.output) {
+      assert(jsonFile)
+      fs.writeFileSync(jsonFile, valToJson(result))
     }
-    if (source === undefined || args.interactive) {
-      repl()
+  } catch (error) {
+    if (process.env.DEBUG) {
+      console.error(error)
+    } else {
+      console.error(`${path.basename(process.argv[1])}: ${error}`)
     }
+    process.exitCode = 1
   }
-} catch (error) {
-  if (process.env.DEBUG) {
-    console.error(error)
-  } else {
-    console.error(`${path.basename(process.argv[1])}: ${error}`)
-  }
-  process.exitCode = 1
 }
+
+main()
