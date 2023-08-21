@@ -33,7 +33,6 @@ function setsUnion<T>(...sets: Set<T>[]): Set<T> {
 }
 
 // Get free variables, and check arity of intrinsics calls.
-// FIXME: memoize this function in toVal.
 export function freeVars(value: any): Set<string> {
   if (typeof value === 'string') {
     return new Set([value])
@@ -94,7 +93,6 @@ function toVal(env: EnvironmentVal, value: any): Val {
   }
   if (value instanceof Array) {
     if (value.length > 0) {
-      // FIXME: Use keywords as an enum for this switch
       switch (value[0]) {
         case 'str':
           if (value.length !== 2 || typeof value[1] !== 'string') {
