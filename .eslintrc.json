@@ -29,6 +29,7 @@
         ]
       }
     ],
+    "import/prefer-default-export": "off",
     "no-underscore-dangle": "off",
     "no-warning-comments": "off",
     "no-restricted-syntax": "off",
