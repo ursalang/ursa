@@ -11,7 +11,6 @@
 * Lists: iteration (with yield)
 * Vectors
 * Maps: iteration (with yield), symbol keys
-* Tree-sitter grammar, usable in Emacs and VSCode. (First, tidy up the grammar.)
 * `self`
 * Sort out globals access.
 * Run in browser.
