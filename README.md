@@ -84,8 +84,14 @@ There’s very little documentation as yet, sorry! See:
 $ ursa --help
 src/ursa/ursa.ohm # Language grammar
 src/ark/interp.ts # the guts of the semantics
-test*.ursa # test/example programs
+test/*.ursa # test/example programs
 ```
+
+## Editor support
+
+* [Tree-sitter grammar](https://github.com/ursalang/tree-sitter-ursa)
+* [Emacs mode](https://github.com/ursalang/ursa-ts-mode) (needs
+  tree-sitter, which is built in to Emacs ≥ 29)
 
 ## Development
 
