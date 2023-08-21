@@ -18,11 +18,6 @@ function testGroup(title: string, tests: [string, any][]) {
   })
 }
 
-// FIXME
-// testGroup('Comment', [
-//   ['; Comment\n3', 3],
-// ])
-
 testGroup('Concrete values', [
   ['4', 4],
   ['["str","hello é"]', 'hello é'],
