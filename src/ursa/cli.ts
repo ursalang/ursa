@@ -8,7 +8,9 @@ import assert from 'assert'
 import programVersion from '../version.js'
 // eslint-disable-next-line import/no-named-as-default
 import {toVal} from './parser.js'
-import {EnvironmentVal, valToJson} from '../ark/interp.js'
+import {
+  BindingVal, EnvironmentVal, List, Ref, Str, evalArk, valToJson, valueOf,
+} from '../ark/interp.js'
 import {jsonToVal} from '../ark/parser.js'
 
 // Read and process arguments
@@ -60,7 +62,10 @@ function compile(exp: string) {
 }
 
 function evaluate(exp: string) {
-  return compile(exp).eval(new EnvironmentVal([]))
+  return evalArk(compile(exp), new EnvironmentVal([
+    new BindingVal(new Map([['argv', new Ref(new List(
+      args.argument.map((s) => new Str(s)),
+    ))]]))]))
 }
 
 async function repl() {
@@ -74,7 +79,7 @@ async function repl() {
   let val
   for await (const line of rl) {
     try {
-      val = evaluate(line)._value()
+      val = valueOf(evaluate(line))
       console.dir(val, {depth: null})
     } catch (error) {
       if (error instanceof Error) {

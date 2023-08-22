@@ -4,7 +4,7 @@ import {
   debug, intrinsics,
   Val, Null, Bool, Num, Str, Ref, SymRef, List, Obj, DictLiteral,
   Call, Let, Fn, NativeFexpr, PropertyException,
-  bindArgsToParams, BindingVal, Environment, EnvironmentVal,
+  bindArgsToParams, BindingVal, Environment, EnvironmentVal, evalArk, valueOf,
 } from '../ark/interp.js'
 // eslint-disable-next-line import/extensions
 import grammar, {UrsaSemantics} from './ursa.ohm-bundle.js'
@@ -34,7 +34,7 @@ function maybeValue(env: Environment, exp: IterationNode): Val {
 
 function makeFn(env: Environment, freeVars: Set<string>, params: Node, body: Node): Val {
   const paramList = params.asIteration().children.map(
-    (value) => value.toAST(env)._value(),
+    (value) => valueOf(value.toAST(env)),
   )
   const paramBinding = bindArgsToParams(paramList, [])
   return new Fn(
@@ -47,11 +47,11 @@ function makeFn(env: Environment, freeVars: Set<string>, params: Node, body: Nod
 function propAccess(ref: Val, prop: string, ...rest: Val[]): Val {
   return new Call(
     new NativeFexpr(`prop_${prop}`, (env, ...args) => {
-      const obj: any = ref.eval(env)
+      const obj: any = evalArk(ref, env)
       if (!(prop in obj)) {
         throw new PropertyException(`no property '${prop}'`)
       }
-      return obj[prop](env, ...args.map((e) => e.eval(env)))
+      return obj[prop](env, ...args.map((e) => evalArk(e, env)))
     }),
     rest,
   )

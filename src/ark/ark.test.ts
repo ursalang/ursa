@@ -3,7 +3,7 @@ import test from 'ava'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  BreakException, EnvironmentVal,
+  BreakException, EnvironmentVal, evalArk, valueOf,
 } from './interp.js'
 import {jsonToVal} from './parser.js'
 
@@ -12,8 +12,7 @@ Error.stackTraceLimit = Infinity
 function testGroup(title: string, tests: [string, any][]) {
   test(title, (t) => {
     for (const [source, expected] of tests) {
-      const jsonVal = jsonToVal(source)
-      t.deepEqual(jsonVal.eval(new EnvironmentVal([]))._value(), expected)
+      t.deepEqual(valueOf(evalArk(jsonToVal(source), new EnvironmentVal([]))), expected)
     }
   })
 }
@@ -45,9 +44,9 @@ testGroup('Conditionals', [
 ])
 
 test('Bare break', (t) => {
-  const error = t.throws(() => jsonToVal('["break"]').eval(new EnvironmentVal([])), {instanceOf: BreakException})
+  const error = t.throws(() => evalArk(jsonToVal('["break"]'), new EnvironmentVal([])), {instanceOf: BreakException})
   if (error !== undefined) {
-    t.is(error._value()._value(), null)
+    t.is(valueOf(error.value()), null)
   }
 })
 
