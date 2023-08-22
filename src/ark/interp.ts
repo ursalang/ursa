@@ -160,6 +160,7 @@ export class Ref extends Val {
 }
 
 export class SymRef extends Ref {
+  // FIXME: This has no reason to be here.
   static intrinsics: Binding
 
   constructor(env: Environment, public name: string) {
