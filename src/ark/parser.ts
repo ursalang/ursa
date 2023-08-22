@@ -40,6 +40,10 @@ function listToVals(env: EnvironmentVal, l: any): [Val[], Set<string>[]] {
   ]
 }
 
+export function symRef(env: EnvironmentVal, name: string): Val {
+  return intrinsics[name] ?? new SymRef(name)
+}
+
 function toVal(env: EnvironmentVal, value: any): [Val, Set<string>] {
   if (value === null) {
     return [new Null(), new Set()]
@@ -51,7 +55,7 @@ function toVal(env: EnvironmentVal, value: any): [Val, Set<string>] {
     return [new Num(value), new Set()]
   }
   if (typeof value === 'string') {
-    return [new SymRef(env, value), new Set([value])]
+    return [symRef(env, value), new Set([value])]
   }
   if (value instanceof Array) {
     if (value.length > 0) {
@@ -132,7 +136,7 @@ function toVal(env: EnvironmentVal, value: any): [Val, Set<string>] {
         default: {
           const [args, argsFreeVars] = listToVals(env, value.slice(1))
           return [
-            new Call(new SymRef(env, value[0]), args),
+            new Call(symRef(env, value[0]), args),
             setsUnion(new Set<string>([value[0] as string]), ...argsFreeVars),
           ]
         }

@@ -163,11 +163,8 @@ export class SymRef extends Ref {
   // FIXME: This has no reason to be here.
   static intrinsics: Binding
 
-  constructor(env: Environment, public name: string) {
+  constructor(public name: string) {
     super()
-    if (env.getIndex(name) === undefined) {
-      throw new Error(`undefined symbol ${name}`)
-    }
   }
 
   set(env: Environment, val: Val) {
@@ -278,7 +275,7 @@ function jsToVal(x: any): Val {
   throw new Error(`cannot convert JavaScript value ${x}`)
 }
 
-export const intrinsics = {
+export const intrinsics: {[key: string]: Val} = {
   pi: new Num(Math.PI),
   e: new Num(Math.E),
   new: new NativeFn('new', (val: Val) => new Ref(val)),

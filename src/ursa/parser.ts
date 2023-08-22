@@ -2,10 +2,11 @@ import {Node, IterationNode} from 'ohm-js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug, intrinsics,
-  Val, Null, Bool, Num, Str, Ref, SymRef, List, Obj, DictLiteral,
+  Val, Null, Bool, Num, Str, Ref, List, Obj, DictLiteral,
   Call, Let, Fn, NativeFexpr, PropertyException,
   bindArgsToParams, BindingVal, Environment, EnvironmentVal, evalArk, valueOf,
 } from '../ark/interp.js'
+import {symRef} from '../ark/parser.js'
 // eslint-disable-next-line import/extensions
 import grammar, {UrsaSemantics} from './ursa.ohm-bundle.js'
 
@@ -73,7 +74,7 @@ semantics.addOperation<AST>('toAST(env)', {
       new Map([[ident.sourceString, new Ref(new Null())]]),
     )
     return propAccess(
-      new Ref(new SymRef(this.args.env, ident.sourceString)),
+      new Ref(symRef(this.args.env, ident.sourceString)),
       'set',
       makeFn(
         this.args.env.extend(bindingEnv),
@@ -99,7 +100,7 @@ semantics.addOperation<AST>('toAST(env)', {
     return propAccess(callExp.toAST(this.args.env), 'set', index.toAST(this.args.env), value.toAST(this.args.env))
   },
   Assignment_ident(ident, _eq, value) {
-    return propAccess(new Ref(new SymRef(this.args.env, ident.sourceString)), 'set', value.toAST(this.args.env))
+    return propAccess(new Ref(symRef(this.args.env, ident.sourceString)), 'set', value.toAST(this.args.env))
   },
   LogicExp_and(left, _and, right) {
     return new Call(intrinsics.and, [left.toAST(this.args.env), right.toAST(this.args.env)])
@@ -205,7 +206,7 @@ semantics.addOperation<AST>('toAST(env)', {
     return new Null()
   },
   PrimaryExp_ident(_sym) {
-    return new SymRef(this.args.env, this.sourceString)
+    return symRef(this.args.env, this.sourceString)
   },
   Sequence(exp) {
     return exp.toAST(this.args.env)
@@ -228,7 +229,7 @@ semantics.addOperation<AST>('toAST(env)', {
     return new Let(
       [ident.sourceString],
       new Call(intrinsics.seq, [
-        propAccess(new Ref(new SymRef(innerBinding, ident.sourceString)), 'set', value.toAST(this.args.env)),
+        propAccess(new Ref(symRef(innerBinding, ident.sourceString)), 'set', value.toAST(this.args.env)),
         seq.toAST(innerBinding),
       ]),
     )
@@ -257,10 +258,10 @@ semantics.addOperation<AST>('toAST(env)', {
       [ident],
       new Call(intrinsics.seq, [
         propAccess(
-          new Ref(new SymRef(this.args.env, ident)),
+          new Ref(symRef(this.args.env, ident)),
           'set',
           propAccess(
-            new SymRef(this.args.env.extend(bindingEnv), path[0]),
+            symRef(this.args.env.extend(bindingEnv), path[0]),
             'use',
             ...path.slice(1).map((id) => new Str(id)),
           ),
