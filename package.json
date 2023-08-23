@@ -58,7 +58,7 @@
     "test-ursa": "ava src/ursa/ursa.test.ts",
     "test-ark": "ava src/ark/ark.test.ts",
     "coverage": "NODE_ENV=coverage c8 --extension .ts npm test",
-    "loc": "cloc src/**/*.ts",
+    "loc": "cloc --exclude-ext=js --force-lang='JavaScript,ohm' --not-match-f='\\.test\\.ts|^version.ts$|\\.ohm-bundle\\.d\\.ts' src",
     "diff-check": "git diff --exit-code",
     "prepublishOnly": "npm run diff-check && git push --all",
     "postpublish": "git push --tags --no-verify && gh release create $(git describe) -t \"Release $(git describe)\""
