@@ -40,8 +40,12 @@ function listToVals(env: EnvironmentVal, l: any): [Val[], Set<string>[]] {
   ]
 }
 
-export function symRef(env: EnvironmentVal, name: string): Val {
-  return intrinsics[name] ?? new SymRef(name)
+export function symRef(env: EnvironmentVal, name: string): [Val, Set<string>] {
+  const val = intrinsics[name]
+  if (val) {
+    return [val, new Set()]
+  }
+  return [new SymRef(name), new Set([name])]
 }
 
 function toVal(env: EnvironmentVal, value: any): [Val, Set<string>] {
@@ -55,7 +59,7 @@ function toVal(env: EnvironmentVal, value: any): [Val, Set<string>] {
     return [new Num(value), new Set()]
   }
   if (typeof value === 'string') {
-    return [symRef(env, value), new Set([value])]
+    return symRef(env, value)
   }
   if (value instanceof Array) {
     if (value.length > 0) {
@@ -134,10 +138,11 @@ function toVal(env: EnvironmentVal, value: any): [Val, Set<string>] {
           return [new Call(intrinsics.seq, elems), setsUnion(...elemsFreeVars)]
         }
         default: {
+          const [fn, fnFreeVars] = symRef(env, value[0])
           const [args, argsFreeVars] = listToVals(env, value.slice(1))
           return [
-            new Call(symRef(env, value[0]), args),
-            setsUnion(new Set<string>([value[0] as string]), ...argsFreeVars),
+            new Call(fn, args),
+            setsUnion(fnFreeVars, ...argsFreeVars),
           ]
         }
       }
@@ -160,7 +165,6 @@ function toVal(env: EnvironmentVal, value: any): [Val, Set<string>] {
 
 export function jsonToVal(expr: string): Val {
   const [val, freeVars] = toVal(new EnvironmentVal([]), JSON.parse(expr))
-  // debug(freeVars)
-  // assert(freeVars.size === 0)
+  assert(freeVars.size === 0)
   return val
 }

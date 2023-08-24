@@ -380,13 +380,13 @@ export class EnvironmentVal {
   public env: Binding[]
 
   constructor(localEnv: Binding[]) {
-    this.env = [...localEnv, SymRef.intrinsics]
+    this.env = localEnv
   }
 
   get(sym: string) {
     const index = this.getIndex(sym)
     if (index === undefined) {
-      throw new Error(`undefined symbol at run-time ${sym}`)
+      throw new Error(`get undefined symbol at run-time ${sym}`)
     }
     return this.env[index].map.get(sym)!
   }
@@ -394,7 +394,7 @@ export class EnvironmentVal {
   set(sym: string, val: Val) {
     const index = this.getIndex(sym)
     if (index === undefined) {
-      throw new Error(`undefined symbol at run-time ${sym}`)
+      throw new Error(`set undefined symbol at run-time ${sym}`)
     }
     const ref = this.env[index].map.get(sym)!
     ref.set(this, val)
@@ -410,7 +410,7 @@ export class EnvironmentVal {
   }
 
   extend(binding: Binding): Environment {
-    return new EnvironmentVal([binding, ...this.env.slice(0, -1)])
+    return new EnvironmentVal([binding, ...this.env])
   }
 }
 
