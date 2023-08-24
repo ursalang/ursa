@@ -1,3 +1,5 @@
+import assert from 'assert'
+
 export type Binding = BindingVal
 export type Environment = EnvironmentVal
 
@@ -385,17 +387,13 @@ export class EnvironmentVal {
 
   get(sym: string) {
     const index = this.getIndex(sym)
-    if (index === undefined) {
-      throw new Error(`get undefined symbol at run-time ${sym}`)
-    }
+    assert(index !== undefined, `get undefined symbol at run-time ${sym}`)
     return this.env[index].map.get(sym)!
   }
 
   set(sym: string, val: Val) {
     const index = this.getIndex(sym)
-    if (index === undefined) {
-      throw new Error(`set undefined symbol at run-time ${sym}`)
-    }
+    assert(index !== undefined, `set undefined symbol at run-time ${sym}`)
     const ref = this.env[index].map.get(sym)!
     ref.set(this, val)
   }
