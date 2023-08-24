@@ -1,1 +1,14 @@
-[ "let", [ "params", "f" ], [ "seq", [ "prop", "set", [ "ref", "f" ], [ "fn", [ "params", "x" ], [ "+", "x", 1 ] ] ], [ "f", 1 ] ] ]
+[
+    "let",
+    ["params", "f"],
+    [
+        "seq",
+        [
+            "prop",
+            "set",
+            ["ref", "f"],
+            [ "fn", ["params", "x"], ["+", "x", 1] ]
+        ],
+        ["f", 1]
+    ]
+]
