@@ -538,5 +538,5 @@ export function valToJson(val: Val) {
 }
 
 export function debug(x: any, depth: number | null = 1) {
-  console.dir(x, {depth})
+  console.dir(x, {depth, colors: true})
 }
