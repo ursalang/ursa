@@ -1,12 +1,13 @@
 import {Node, IterationNode} from 'ohm-js'
+import assert from 'assert'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  debug, intrinsics,
+  debug,
   Val, Null, Bool, Num, Str, Ref, List, Obj, DictLiteral,
   Call, Let, Fn, NativeFexpr, PropertyException,
-  bindArgsToParams, BindingVal, Environment, EnvironmentVal, evalArk, valueOf,
+  bindArgsToParams, BindingVal, Environment, EnvironmentVal, evalArk, valueOf, intrinsics,
 } from '../ark/interp.js'
-import {symRef} from '../ark/parser.js'
+import {CompiledArk, symRef} from '../ark/parser.js'
 // eslint-disable-next-line import/extensions
 import grammar, {UrsaSemantics} from './ursa.ohm-bundle.js'
 
@@ -336,14 +337,21 @@ semantics.addAttribute<Set<string>>('freeVars', {
     return propertyExp.freeVars
   },
   ident(_l, _ns) {
-    return new Set([this.sourceString])
+    return intrinsics[this.sourceString] ? new Set() : new Set([this.sourceString])
   },
 })
 
-export function toVal(expr: string): Val {
+export function compile(env: EnvironmentVal, expr: string): CompiledArk {
   const matchResult = grammar.match(expr)
   if (matchResult.failed()) {
     throw new Error(matchResult.message)
   }
-  return semantics(matchResult).toAST(new EnvironmentVal([]))
+  const ast = semantics(matchResult)
+  return [ast.toAST(env), ast.freeVars]
+}
+
+export function toVal(expr: string): Val {
+  const [val, freeVars] = compile(new EnvironmentVal([]), expr)
+  assert(freeVars.size === 0)
+  return val
 }
