@@ -7,11 +7,11 @@ import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
 import assert from 'assert'
 import programVersion from '../version.js'
 // eslint-disable-next-line import/no-named-as-default
-import {toVal} from './parser.js'
+import {toVal as ursaToVal} from './parser.js'
 import {
   BindingVal, EnvironmentVal, List, Ref, Str, evalArk, valToJson, valueOf,
 } from '../ark/interp.js'
-import {jsonToVal} from '../ark/parser.js'
+import {toVal as arkToVal} from '../ark/parser.js'
 
 // Read and process arguments
 const parser = new ArgumentParser({
@@ -55,9 +55,9 @@ const args: Args = parser.parse_args() as Args
 function compile(exp: string) {
   switch (args.syntax) {
     case 'json':
-      return jsonToVal(exp)
+      return arkToVal(exp)
     default:
-      return toVal(exp)
+      return ursaToVal(exp)
   }
 }
 

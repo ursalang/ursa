@@ -34,7 +34,7 @@ function setsUnion<T>(...sets: Set<T>[]): Set<T> {
 }
 
 function listToVals(env: EnvironmentVal, l: any): [Val[], Set<string>[]] {
-  const compiledList: [Val, Set<string>][] = l.map((v: any) => toVal(env, v))
+  const compiledList: [Val, Set<string>][] = l.map((v: any) => compile(env, v))
   return [
     compiledList.map(([a, _fv]) => a), compiledList.map(([_a, fv]) => fv),
   ]
@@ -48,7 +48,7 @@ export function symRef(env: EnvironmentVal, name: string): [Val, Set<string>] {
   return [new SymRef(name), new Set([name])]
 }
 
-function toVal(env: EnvironmentVal, value: any): [Val, Set<string>] {
+function compile(env: EnvironmentVal, value: any): [Val, Set<string>] {
   if (value === null) {
     return [new Null(), new Set()]
   }
@@ -75,7 +75,7 @@ function toVal(env: EnvironmentVal, value: any): [Val, Set<string>] {
           }
           const params = paramList(value[1])
           const paramBinding = bindArgsToParams(params, [])
-          const [body, freeVars] = toVal(env.extend(paramBinding), value[2])
+          const [body, freeVars] = compile(env.extend(paramBinding), value[2])
           return [new Let(params, body), setDifference(freeVars, new Set(params))]
         }
         case 'fn': {
@@ -84,7 +84,7 @@ function toVal(env: EnvironmentVal, value: any): [Val, Set<string>] {
           }
           const params = paramList(value[1])
           const paramBinding = bindArgsToParams(params, [])
-          const [body, freeVars] = toVal(env.extend(paramBinding), value[2])
+          const [body, freeVars] = compile(env.extend(paramBinding), value[2])
           const fnFreeVars = setDifference(freeVars, new Set(params))
           return [new Fn(params, fnFreeVars, body), fnFreeVars]
         }
@@ -94,7 +94,7 @@ function toVal(env: EnvironmentVal, value: any): [Val, Set<string>] {
           }
           const params = paramList(value[1])
           const paramBinding = bindArgsToParams(params, [])
-          const [body, freeVars] = toVal(env.extend(paramBinding), value[2])
+          const [body, freeVars] = compile(env.extend(paramBinding), value[2])
           const fexprFreeVars = setDifference(freeVars, new Set(params))
           return [new Fexpr(params, fexprFreeVars, body), fexprFreeVars]
         }
@@ -102,7 +102,7 @@ function toVal(env: EnvironmentVal, value: any): [Val, Set<string>] {
           if (value.length < 3) {
             throw new Error("invalid 'prop'")
           }
-          const [ref, refFreeVars] = toVal(env, value[2])
+          const [ref, refFreeVars] = compile(env, value[2])
           const [args, argsFreeVars] = listToVals(env, value.slice(3))
           return [new Prop(value[1], ref, args), setsUnion(refFreeVars, ...argsFreeVars)]
         }
@@ -110,7 +110,7 @@ function toVal(env: EnvironmentVal, value: any): [Val, Set<string>] {
           if (value.length !== 2) {
             throw new Error("invalid 'ref'")
           }
-          const [val, freeVars] = toVal(env, value[1])
+          const [val, freeVars] = compile(env, value[1])
           return [new Ref(val), freeVars]
         }
         case 'list': {
@@ -122,8 +122,8 @@ function toVal(env: EnvironmentVal, value: any): [Val, Set<string>] {
           const initsFreeVars = []
           for (const pair of value.slice(1)) {
             assert(pair instanceof Array && pair.length === 2)
-            const [key, keyFreeVars] = toVal(env, pair[0])
-            const [val, valFreeVars] = toVal(env, pair[1])
+            const [key, keyFreeVars] = compile(env, pair[0])
+            const [val, valFreeVars] = compile(env, pair[1])
             inits.set(key, val)
             initsFreeVars.push(keyFreeVars)
             initsFreeVars.push(valFreeVars)
@@ -132,7 +132,7 @@ function toVal(env: EnvironmentVal, value: any): [Val, Set<string>] {
         }
         case 'seq': {
           if (value.length === 2) {
-            return toVal(env, value[1])
+            return compile(env, value[1])
           }
           const [elems, elemsFreeVars] = listToVals(env, value.slice(1))
           return [new Call(intrinsics.seq, elems), setsUnion(...elemsFreeVars)]
@@ -153,7 +153,7 @@ function toVal(env: EnvironmentVal, value: any): [Val, Set<string>] {
     const initsFreeVars = []
     for (const key in value) {
       if (Object.hasOwn(value, key)) {
-        const [val, freeVars] = toVal(env, value[key])
+        const [val, freeVars] = compile(env, value[key])
         inits[key] = val
         initsFreeVars.push(freeVars)
       }
@@ -163,8 +163,8 @@ function toVal(env: EnvironmentVal, value: any): [Val, Set<string>] {
   throw new Error(`invalid value ${value}`)
 }
 
-export function jsonToVal(expr: string): Val {
-  const [val, freeVars] = toVal(new EnvironmentVal([]), JSON.parse(expr))
+export function toVal(expr: string): Val {
+  const [val, freeVars] = compile(new EnvironmentVal([]), JSON.parse(expr))
   assert(freeVars.size === 0)
   return val
 }

@@ -5,17 +5,11 @@ import {
   debug,
   BreakException, EnvironmentVal, evalArk, valueOf,
 } from './interp.js'
-import {jsonToVal} from './parser.js'
+import {toVal} from './parser.js'
+
+import {testArkGroup as testGroup} from '../testutil.js'
 
 Error.stackTraceLimit = Infinity
-
-function testGroup(title: string, tests: [string, any][]) {
-  test(title, (t) => {
-    for (const [source, expected] of tests) {
-      t.deepEqual(valueOf(evalArk(jsonToVal(source), new EnvironmentVal([]))), expected)
-    }
-  })
-}
 
 testGroup('Concrete values', [
   ['4', 4],
@@ -44,7 +38,7 @@ testGroup('Conditionals', [
 ])
 
 test('Bare break', (t) => {
-  const error = t.throws(() => evalArk(jsonToVal('["break"]'), new EnvironmentVal([])), {instanceOf: BreakException})
+  const error = t.throws(() => evalArk(toVal('["break"]'), new EnvironmentVal([])), {instanceOf: BreakException})
   if (error !== undefined) {
     t.is(valueOf(error.value()), null)
   }

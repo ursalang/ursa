@@ -7,15 +7,9 @@ import {
   BreakException, EnvironmentVal, valueOf, evalArk,
 } from '../ark/interp.js'
 
-Error.stackTraceLimit = Infinity
+import {testUrsaGroup as testGroup} from '../testutil.js'
 
-function testGroup(title: string, tests: [string, any][]) {
-  test(title, (t) => {
-    for (const [source, expected] of tests) {
-      t.deepEqual(valueOf(evalArk(toVal(source), new EnvironmentVal([]))), expected)
-    }
-  })
-}
+Error.stackTraceLimit = Infinity
 
 testGroup('Comment', [
   ['// Comment', null],

@@ -2,6 +2,9 @@ import fs from 'fs'
 import test from 'ava'
 import tmp from 'tmp'
 import execa from 'execa'
+import {EnvironmentVal, evalArk, valueOf} from './ark/interp'
+import {toVal as arkToVal} from './ark/parser'
+import {toVal as ursaToVal} from './ursa/parser'
 
 const command = process.env.NODE_ENV === 'coverage' ? './bin/test-run.sh' : './bin/run.js'
 
@@ -9,22 +12,21 @@ async function run(args: string[]) {
   return execa(command, args)
 }
 
-// function doTest(inputFile: string, expected: string) {
-//   const input = fs.readFileSync(inputFile, {encoding: 'utf-8'})
-//   const output = toVal(input).eval(new EnvironmentVal([]))
-//   assertStringEqual(valueOf(String(output)), expected)
-// }
+function doTestGroup(title: string, toVal: Function, tests: [string, any][]) {
+  test(title, (t) => {
+    for (const [source, expected] of tests) {
+      t.deepEqual(valueOf(evalArk(toVal(source), new EnvironmentVal([]))), expected)
+    }
+  })
+}
 
-// function failingTest(inputFile: string, expected: string) {
-//   try {
-//     doTest(inputFile, expected)
-//   } catch (error: any) {
-//     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-//     expect(error.message).to.contain(expected)
-//     return
-//   }
-//   throw new Error('test passed unexpectedly')
-// }
+export function testArkGroup(title: string, tests: [string, any][]) {
+  return doTestGroup(title, arkToVal, tests)
+}
+
+export function testUrsaGroup(title: string, tests: [string, any][]) {
+  return doTestGroup(title, ursaToVal, tests)
+}
 
 export async function cliTest(syntax: string, title: string, file: string, output?: string) {
   const tempFile = tmp.tmpNameSync()
@@ -38,13 +40,3 @@ export async function cliTest(syntax: string, title: string, file: string, outpu
     t.is(result, expected)
   })
 }
-
-// async function failingCliTest(args: string[], expected: string) {
-//   try {
-//     await cliTest(args, '')
-//   } catch (error: any) {
-//     expect(error.stderr).to.contain(expected)
-//     return
-//   }
-//   throw new Error('test passed unexpectedly')
-// }
