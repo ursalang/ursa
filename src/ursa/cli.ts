@@ -7,7 +7,7 @@ import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
 import assert from 'assert'
 import programVersion from '../version.js'
 import {
-  BindingVal, EnvironmentVal, List, Ref, Str, evalArk, serialize, toJs,
+  BindingVal, EnvironmentVal, List, Ref, Str, runArk, serialize, toJs,
 } from '../ark/interp.js'
 import {compile as arkCompile} from '../ark/parser.js'
 import {compile as ursaCompile} from './parser.js'
@@ -54,14 +54,14 @@ const args: Args = parser.parse_args() as Args
 function compile(exp: string) {
   switch (args.syntax) {
     case 'json':
-      return arkCompile(exp)[0]
+      return arkCompile(exp)
     default:
-      return ursaCompile(exp)[0]
+      return ursaCompile(exp)
   }
 }
 
 function evaluate(exp: string) {
-  return evalArk(compile(exp), new EnvironmentVal([
+  return runArk(compile(exp), new EnvironmentVal([
     new BindingVal(new Map([['argv', new Ref(new List(
       args.argument.map((s) => new Str(s)),
     ))]]))]))

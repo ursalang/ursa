@@ -1,4 +1,5 @@
 import assert from 'assert'
+import {CompiledArk} from './parser'
 
 export type Binding = BindingVal
 export type Environment = EnvironmentVal
@@ -412,7 +413,7 @@ export class EnvironmentVal {
   }
 }
 
-export function evalArk(val: Val, env: EnvironmentVal = new EnvironmentVal([])): Val {
+export function evalArk(val: Val, env: EnvironmentVal): Val {
   if (val instanceof SymRef) {
     const ref = env.get(val.name)
     return evalArk(ref, env)
@@ -462,6 +463,14 @@ export function evalArk(val: Val, env: EnvironmentVal = new EnvironmentVal([])):
   return val
 }
 
+export function runArk(
+  compiledVal: CompiledArk,
+  env: EnvironmentVal = new EnvironmentVal([]),
+): Val {
+  assert(compiledVal[1].size === 0)
+  return evalArk(compiledVal[0], env)
+}
+
 export function toJs(val: Val): any {
   if (val instanceof ConcreteVal) {
     return val.val
@@ -474,11 +483,11 @@ export function toJs(val: Val): any {
     return obj
   } else if (val instanceof DictLiteral) {
     // Best effort.
-    return toJs(evalArk(val))
+    return toJs(evalArk(val, new EnvironmentVal([])))
   } else if (val instanceof Dict) {
     const evaluatedMap = new Map<any, Val>()
     for (const [k, v] of val.map) {
-      evaluatedMap.set(k, toJs(evalArk(v)))
+      evaluatedMap.set(k, toJs(evalArk(v, new EnvironmentVal([]))))
     }
     return evaluatedMap
   } else if (val instanceof List) {

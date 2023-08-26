@@ -4,7 +4,7 @@ import {compile} from './parser.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  BreakException, toJs, evalArk,
+  BreakException, toJs, runArk,
 } from '../ark/interp.js'
 
 import {testUrsaGroup as testGroup} from '../testutil.js'
@@ -44,11 +44,11 @@ testGroup('Conditionals', [
 ])
 
 test('loop and break', (t) => {
-  const error = t.throws(() => evalArk(compile('break')[0]), {instanceOf: BreakException})
+  const error = t.throws(() => runArk(compile('break')), {instanceOf: BreakException})
   if (error !== undefined) {
     t.is(toJs(error.value()), null)
   }
-  t.is(toJs(evalArk(compile('loop { break 3 }')[0])), 3)
+  t.is(toJs(runArk(compile('loop { break 3 }'))), 3)
 })
 
 testGroup('let', [

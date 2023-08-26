@@ -48,7 +48,7 @@ export function symRef(env: EnvironmentVal, name: string): [Val, Set<string>] {
   return [new SymRef(name), new Set([name])]
 }
 
-export type CompiledArk = [val: Val, freeVars: Set<string>]
+export type CompiledArk = [value: Val, freeVars: Set<string>]
 
 function doCompile(value: any, env: EnvironmentVal = new EnvironmentVal([])): CompiledArk {
   if (value === null) {

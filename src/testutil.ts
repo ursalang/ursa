@@ -2,7 +2,7 @@ import fs from 'fs'
 import test from 'ava'
 import tmp from 'tmp'
 import execa from 'execa'
-import {evalArk, toJs} from './ark/interp'
+import {runArk, toJs} from './ark/interp'
 import {compile as arkCompile, CompiledArk} from './ark/parser'
 import {compile as ursaCompile} from './ursa/parser'
 
@@ -19,7 +19,7 @@ function doTestGroup(
 ) {
   test(title, (t) => {
     for (const [source, expected] of tests) {
-      t.deepEqual(toJs(evalArk(compile(source)[0])), expected)
+      t.deepEqual(toJs(runArk(compile(source))), expected)
     }
   })
 }
