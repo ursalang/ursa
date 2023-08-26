@@ -2,6 +2,7 @@
 
 * Compile-time environment should just be names (and later, types) mapped to
   continuation location.
+* Compiled form of Ark has only "addresses" for bound variables.
 
 ## Ursa MVP
 
@@ -17,19 +18,18 @@
 * Streams, and use as interface to files.
 * Map interface to file system and internet.
 * Bitwise operations: & | ~ >> >>> <<.
+* Code formatting: `ursa fmt`.
 
 ## Ark improvements
 
-* To optimize symbol references, add `const` (`let` but constant), and
+* To optimize symbol references, add `var` (mutable `let`), and
   evaluate as much as we can at compile time. Any expression with no free
   variables can be fully evaluated.
 * Make everything objects (arithmetic should be methods of `Num`).
-* Compiled form has only "fresh names"; textual version has "let" as a
-  convenience for readability.
 * Study vau, fexprs, first-class environments (objects), and delimited
   continuations: https://github.com/catseye/Robin ; also see
   https://github.com/nukata/little-scheme-in-typescript
-* Implement new semantics in Ark first.
+* Add debug information: symbol names and source locations.
 
 ## Ursa v1
 
