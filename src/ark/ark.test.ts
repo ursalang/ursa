@@ -3,7 +3,7 @@ import test from 'ava'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  BreakException, EnvironmentVal, evalArk, valueOf,
+  BreakException, evalArk, valueOf,
 } from './interp.js'
 import {toVal} from './parser.js'
 
@@ -38,7 +38,7 @@ testGroup('Conditionals', [
 ])
 
 test('Bare break', (t) => {
-  const error = t.throws(() => evalArk(toVal('["break"]'), new EnvironmentVal([])), {instanceOf: BreakException})
+  const error = t.throws(() => evalArk(toVal('["break"]')), {instanceOf: BreakException})
   if (error !== undefined) {
     t.is(valueOf(error.value()), null)
   }

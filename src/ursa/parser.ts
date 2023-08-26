@@ -341,7 +341,7 @@ semantics.addAttribute<Set<string>>('freeVars', {
   },
 })
 
-export function compile(env: EnvironmentVal, expr: string): CompiledArk {
+export function compile(expr: string, env: EnvironmentVal = new EnvironmentVal([])): CompiledArk {
   const matchResult = grammar.match(expr)
   if (matchResult.failed()) {
     throw new Error(matchResult.message)
@@ -351,7 +351,7 @@ export function compile(env: EnvironmentVal, expr: string): CompiledArk {
 }
 
 export function toVal(expr: string): Val {
-  const [val, freeVars] = compile(new EnvironmentVal([]), expr)
+  const [val, freeVars] = compile(expr)
   assert(freeVars.size === 0)
   return val
 }

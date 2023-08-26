@@ -4,7 +4,7 @@ import {toVal} from './parser.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  BreakException, EnvironmentVal, valueOf, evalArk,
+  BreakException, valueOf, evalArk,
 } from '../ark/interp.js'
 
 import {testUrsaGroup as testGroup} from '../testutil.js'
@@ -44,11 +44,11 @@ testGroup('Conditionals', [
 ])
 
 test('loop and break', (t) => {
-  const error = t.throws(() => evalArk(toVal('break'), new EnvironmentVal([])), {instanceOf: BreakException})
+  const error = t.throws(() => evalArk(toVal('break')), {instanceOf: BreakException})
   if (error !== undefined) {
     t.is(valueOf(error.value()), null)
   }
-  t.is(valueOf(evalArk(toVal('loop { break 3 }'), new EnvironmentVal([]))), 3)
+  t.is(valueOf(evalArk(toVal('loop { break 3 }'))), 3)
 })
 
 testGroup('let', [

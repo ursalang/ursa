@@ -412,7 +412,7 @@ export class EnvironmentVal {
   }
 }
 
-export function evalArk(val: Val, env: EnvironmentVal): Val {
+export function evalArk(val: Val, env: EnvironmentVal = new EnvironmentVal([])): Val {
   if (val instanceof SymRef) {
     const ref = env.get(val.name)
     return evalArk(ref, env)
@@ -474,11 +474,11 @@ export function valueOf(val: Val): any {
     return obj
   } else if (val instanceof DictLiteral) {
     // Best effort.
-    return valueOf(evalArk(val, new EnvironmentVal([])))
+    return valueOf(evalArk(val))
   } else if (val instanceof Dict) {
     const evaluatedMap = new Map<any, Val>()
     for (const [k, v] of val.map) {
-      evaluatedMap.set(k, valueOf(evalArk(v, new EnvironmentVal([]))))
+      evaluatedMap.set(k, valueOf(evalArk(v)))
     }
     return evaluatedMap
   } else if (val instanceof List) {
