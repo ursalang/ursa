@@ -7,7 +7,7 @@ import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
 import assert from 'assert'
 import programVersion from '../version.js'
 import {
-  BindingVal, EnvironmentVal, List, Ref, Str, evalArk, valToJson, valueOf,
+  BindingVal, EnvironmentVal, List, Ref, Str, evalArk, serialize, toJs,
 } from '../ark/interp.js'
 import {compile as arkCompile} from '../ark/parser.js'
 import {compile as ursaCompile} from './parser.js'
@@ -78,7 +78,7 @@ async function repl() {
   let val
   for await (const line of rl) {
     try {
-      val = valueOf(evaluate(line))
+      val = toJs(evaluate(line))
       console.dir(val, {depth: null})
     } catch (error) {
       if (error instanceof Error) {
@@ -130,7 +130,7 @@ async function main() {
     }
     if (args.output) {
       assert(jsonFile)
-      fs.writeFileSync(jsonFile, valToJson(result))
+      fs.writeFileSync(jsonFile, serialize(result))
     }
   } catch (error) {
     if (process.env.DEBUG) {

@@ -209,12 +209,12 @@ export class Dict extends Val {
   }
 
   set(_env: Environment, index: Val, val: Val) {
-    this.map.set(valueOf(index), val)
+    this.map.set(toJs(index), val)
     return val
   }
 
   get(_env: Environment, index: Val) {
-    return this.map.get(valueOf(index)) ?? new Null()
+    return this.map.get(toJs(index)) ?? new Null()
   }
 }
 
@@ -228,11 +228,11 @@ export class List extends Val {
   }
 
   get(_env: Environment, index: Val) {
-    return this.val[valueOf(index as Num)]
+    return this.val[toJs(index as Num)]
   }
 
   set(_env: Environment, index: Val, val: Val) {
-    this.val[valueOf(index)] = val
+    this.val[toJs(index)] = val
     return val
   }
 }
@@ -269,7 +269,7 @@ function jsToVal(x: any): Val {
     return new Str(x)
   }
   if (typeof x === 'function') {
-    return new NativeFn(x.name, (...args: Val[]) => jsToVal(x(...args.map(valueOf))))
+    return new NativeFn(x.name, (...args: Val[]) => jsToVal(x(...args.map(toJs))))
   }
   if (typeof x === 'object') {
     return new Obj(x)
@@ -281,9 +281,9 @@ export const intrinsics: {[key: string]: Val} = {
   pi: new Num(Math.PI),
   e: new Num(Math.E),
   new: new NativeFn('new', (val: Val) => new Ref(val)),
-  pos: new NativeFn('pos', (val: Val) => new Num(+valueOf(val))),
-  neg: new NativeFn('neg', (val: Val) => new Num(-valueOf(val))),
-  not: new NativeFn('not', (val: Val) => new Bool(!valueOf(val))),
+  pos: new NativeFn('pos', (val: Val) => new Num(+toJs(val))),
+  neg: new NativeFn('neg', (val: Val) => new Num(-toJs(val))),
+  not: new NativeFn('not', (val: Val) => new Bool(!toJs(val))),
   seq: new NativeFexpr('seq', (env: Environment, ...args: Val[]) => {
     let res: Val = new Null()
     for (const exp of args) {
@@ -293,21 +293,21 @@ export const intrinsics: {[key: string]: Val} = {
   }),
   if: new NativeFexpr('if', (env: Environment, cond: Val, e_then: Val, e_else: Val) => {
     const condVal = evalArk(cond, env)
-    if (valueOf(condVal)) {
+    if (toJs(condVal)) {
       return evalArk(e_then, env)
     }
     return e_else ? evalArk(e_else, env) : new Null()
   }),
   and: new NativeFexpr('and', (env: Environment, left: Val, right: Val) => {
     const leftVal = evalArk(left, env)
-    if (valueOf(leftVal)) {
+    if (toJs(leftVal)) {
       return evalArk(right, env)
     }
     return leftVal
   }),
   or: new NativeFexpr('or', (env: Environment, left: Val, right: Val) => {
     const leftVal = evalArk(left, env)
-    if (valueOf(leftVal)) {
+    if (toJs(leftVal)) {
       return leftVal
     }
     return evalArk(right, env)
@@ -335,20 +335,20 @@ export const intrinsics: {[key: string]: Val} = {
   return: new NativeFn('return', (val: Val) => {
     throw new ReturnException(val)
   }),
-  '=': new NativeFn('=', (left: Val, right: Val) => new Bool(valueOf(left) === valueOf(right))),
-  '!=': new NativeFn('!=', (left: Val, right: Val) => new Bool(valueOf(left) !== valueOf(right))),
-  '<': new NativeFn('<', (left: Val, right: Val) => new Bool(valueOf(left) < valueOf(right))),
-  '<=': new NativeFn('<=', (left: Val, right: Val) => new Bool(valueOf(left) <= valueOf(right))),
-  '>': new NativeFn('>', (left: Val, right: Val) => new Bool(valueOf(left) > valueOf(right))),
-  '>=': new NativeFn('>=', (left: Val, right: Val) => new Bool(valueOf(left) >= valueOf(right))),
-  '+': new NativeFn('+', (left: Val, right: Val) => new Num(valueOf(left) + valueOf(right))),
-  '-': new NativeFn('-', (left: Val, right: Val) => new Num(valueOf(left) - valueOf(right))),
-  '*': new NativeFn('*', (left: Val, right: Val) => new Num(valueOf(left) * valueOf(right))),
-  '/': new NativeFn('/', (left: Val, right: Val) => new Num(valueOf(left) / valueOf(right))),
-  '%': new NativeFn('%', (left: Val, right: Val) => new Num(valueOf(left) % valueOf(right))),
-  '**': new NativeFn('**', (left: Val, right: Val) => new Num(valueOf(left) ** valueOf(right))),
+  '=': new NativeFn('=', (left: Val, right: Val) => new Bool(toJs(left) === toJs(right))),
+  '!=': new NativeFn('!=', (left: Val, right: Val) => new Bool(toJs(left) !== toJs(right))),
+  '<': new NativeFn('<', (left: Val, right: Val) => new Bool(toJs(left) < toJs(right))),
+  '<=': new NativeFn('<=', (left: Val, right: Val) => new Bool(toJs(left) <= toJs(right))),
+  '>': new NativeFn('>', (left: Val, right: Val) => new Bool(toJs(left) > toJs(right))),
+  '>=': new NativeFn('>=', (left: Val, right: Val) => new Bool(toJs(left) >= toJs(right))),
+  '+': new NativeFn('+', (left: Val, right: Val) => new Num(toJs(left) + toJs(right))),
+  '-': new NativeFn('-', (left: Val, right: Val) => new Num(toJs(left) - toJs(right))),
+  '*': new NativeFn('*', (left: Val, right: Val) => new Num(toJs(left) * toJs(right))),
+  '/': new NativeFn('/', (left: Val, right: Val) => new Num(toJs(left) / toJs(right))),
+  '%': new NativeFn('%', (left: Val, right: Val) => new Num(toJs(left) % toJs(right))),
+  '**': new NativeFn('**', (left: Val, right: Val) => new Num(toJs(left) ** toJs(right))),
   print: new NativeFn('print', (obj: Val) => {
-    console.log(valueOf(obj))
+    console.log(toJs(obj))
     return new Null()
   }),
   debug: new NativeFn('debug', (obj: Val) => {
@@ -357,7 +357,7 @@ export const intrinsics: {[key: string]: Val} = {
   }),
   js: new Obj({
     use: (_env: EnvironmentVal, ...args: Val[]) => {
-      const requirePath = (args.map(valueOf).join('.'))
+      const requirePath = (args.map(toJs).join('.'))
       // eslint-disable-next-line import/no-dynamic-require, global-require
       const module = require(requirePath)
       const wrappedModule = {}
@@ -425,7 +425,7 @@ export function evalArk(val: Val, env: EnvironmentVal = new EnvironmentVal([])):
   } else if (val instanceof DictLiteral) {
     const evaluatedMap = new Map<any, Val>()
     for (const [k, v] of val.map) {
-      evaluatedMap.set(valueOf(evalArk(k, env)), evalArk(v, env))
+      evaluatedMap.set(toJs(evalArk(k, env)), evalArk(v, env))
     }
     return new Dict(evaluatedMap)
   } else if (val instanceof Dict) {
@@ -462,79 +462,79 @@ export function evalArk(val: Val, env: EnvironmentVal = new EnvironmentVal([])):
   return val
 }
 
-export function valueOf(val: Val): any {
+export function toJs(val: Val): any {
   if (val instanceof ConcreteVal) {
     return val.val
   } else if (val instanceof Obj) {
     const obj = {}
     // eslint-disable-next-line guard-for-in
     for (const key in val) {
-      (obj as any)[key] = valueOf((val as any)[key] as Val)
+      (obj as any)[key] = toJs((val as any)[key] as Val)
     }
     return obj
   } else if (val instanceof DictLiteral) {
     // Best effort.
-    return valueOf(evalArk(val))
+    return toJs(evalArk(val))
   } else if (val instanceof Dict) {
     const evaluatedMap = new Map<any, Val>()
     for (const [k, v] of val.map) {
-      evaluatedMap.set(k, valueOf(evalArk(v)))
+      evaluatedMap.set(k, toJs(evalArk(v)))
     }
     return evaluatedMap
   } else if (val instanceof List) {
-    return val.val.map(valueOf)
+    return val.val.map(toJs)
   }
   return val
 }
 
-export function toJson(val: Val): any {
-  if (val instanceof SymRef || val instanceof NativeFexpr) {
-    return val.name
-  } else if (val instanceof Str) {
-    return ['str', val.val]
-  } else if (val instanceof ConcreteVal) {
-    return val.val
-  } else if (val instanceof Ref) {
-    return ['ref', toJson(val.val)]
-  } else if (val instanceof Fn) {
-    return ['fn', ['params', ...val.params], toJson(val.body)]
-  } else if (val instanceof Fexpr) {
-    return ['fexpr', ['params', ...val.params], toJson(val.body)]
-  } else if (val instanceof Obj) {
-    const obj = {}
-    // eslint-disable-next-line guard-for-in
-    for (const key in val) {
-      (obj as any)[key] = toJson((val as any)[key] as Val)
+export function serialize(val: Val) {
+  function doSerialize(val: Val): any {
+    if (val instanceof SymRef || val instanceof NativeFexpr) {
+      return val.name
+    } else if (val instanceof Str) {
+      return ['str', val.val]
+    } else if (val instanceof ConcreteVal) {
+      return val.val
+    } else if (val instanceof Ref) {
+      return ['ref', doSerialize(val.val)]
+    } else if (val instanceof Fn) {
+      return ['fn', ['params', ...val.params], doSerialize(val.body)]
+    } else if (val instanceof Fexpr) {
+      return ['fexpr', ['params', ...val.params], doSerialize(val.body)]
+    } else if (val instanceof Obj) {
+      const obj = {}
+      // eslint-disable-next-line guard-for-in
+      for (const key in val) {
+        (obj as any)[key] = doSerialize((val as any)[key] as Val)
+      }
+      return obj
+    } else if (val instanceof DictLiteral) {
+      const obj: any[] = ['map']
+      for (const [k, v] of val.map) {
+        obj.push([doSerialize(k), doSerialize(v)])
+      }
+      return obj
+    } else if (val instanceof Dict) {
+      const obj: any[] = ['map']
+      for (const [k, v] of val.map) {
+        // FIXME: see valueOf.
+        const keyJs = k instanceof Val ? doSerialize(k) : k
+        obj.push([keyJs, doSerialize(v)])
+      }
+      return obj
+    } else if (val instanceof List) {
+      return ['list', ...val.val.map(doSerialize)]
+    } else if (val instanceof Let) {
+      return ['let', ['params', ...val.boundVars], doSerialize(val.body)]
+    } else if (val instanceof Call) {
+      return [doSerialize(val.fn), ...val.args.map(doSerialize)]
+    } else if (val instanceof Prop) {
+      return ['prop', val.prop, doSerialize(val.ref), ...val.args.map(doSerialize)]
     }
-    return obj
-  } else if (val instanceof DictLiteral) {
-    const obj: any[] = ['map']
-    for (const [k, v] of val.map) {
-      obj.push([toJson(k), toJson(v)])
-    }
-    return obj
-  } else if (val instanceof Dict) {
-    const obj: any[] = ['map']
-    for (const [k, v] of val.map) {
-      // FIXME: see valueOf.
-      const keyJs = k instanceof Val ? toJson(k) : k
-      obj.push([keyJs, toJson(v)])
-    }
-    return obj
-  } else if (val instanceof List) {
-    return ['list', ...val.val.map(toJson)]
-  } else if (val instanceof Let) {
-    return ['let', ['params', ...val.boundVars], toJson(val.body)]
-  } else if (val instanceof Call) {
-    return [toJson(val.fn), ...val.args.map(toJson)]
-  } else if (val instanceof Prop) {
-    return ['prop', val.prop, toJson(val.ref), ...val.args.map(toJson)]
+    return val
   }
-  return val
-}
 
-export function valToJson(val: Val) {
-  return JSON.stringify(toJson(val))
+  return JSON.stringify(doSerialize(val))
 }
 
 export function debug(x: any, depth: number | null = 1) {

@@ -4,7 +4,7 @@ import {
   debug,
   Val, Null, Bool, Num, Str, Ref, List, Obj, DictLiteral,
   Call, Let, Fn, NativeFexpr, PropertyException,
-  bindArgsToParams, BindingVal, Environment, EnvironmentVal, evalArk, valueOf, intrinsics,
+  bindArgsToParams, BindingVal, Environment, EnvironmentVal, evalArk, toJs, intrinsics,
 } from '../ark/interp.js'
 import {CompiledArk, symRef} from '../ark/parser.js'
 // eslint-disable-next-line import/extensions
@@ -35,7 +35,7 @@ function maybeValue(env: Environment, exp: IterationNode): Val {
 
 function makeFn(env: Environment, freeVars: Set<string>, params: Node, body: Node): Val {
   const paramList = params.asIteration().children.map(
-    (value) => valueOf(value.toAST(env)),
+    (value) => toJs(value.toAST(env)),
   )
   const paramBinding = bindArgsToParams(paramList, [])
   return new Fn(
