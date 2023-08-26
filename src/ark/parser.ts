@@ -5,7 +5,7 @@ import {
   Val, intrinsics,
   Null, Bool, Num, Str,
   List, Obj, DictLiteral, SymRef,
-  Fn, Fexpr, Prop, Let, Ref, Call, EnvironmentVal, bindArgsToParams,
+  Fn, Fexpr, Prop, Let, Ref, Call, Environment, bindArgsToParams,
 } from './interp.js'
 
 function paramList(params: any[]): string[] {
@@ -33,14 +33,14 @@ function setsUnion<T>(...sets: Set<T>[]): Set<T> {
   return new Set(sets.flatMap((s) => [...s.values()]))
 }
 
-function listToVals(env: EnvironmentVal, l: any): [Val[], Set<string>[]] {
+function listToVals(env: Environment, l: any): [Val[], Set<string>[]] {
   const compiledList: [Val, Set<string>][] = l.map((v: any) => doCompile(v, env))
   return [
     compiledList.map(([a, _fv]) => a), compiledList.map(([_a, fv]) => fv),
   ]
 }
 
-export function symRef(env: EnvironmentVal, name: string): [Val, Set<string>] {
+export function symRef(env: Environment, name: string): [Val, Set<string>] {
   const val = intrinsics[name]
   if (val) {
     return [val, new Set()]
@@ -50,7 +50,7 @@ export function symRef(env: EnvironmentVal, name: string): [Val, Set<string>] {
 
 export type CompiledArk = [value: Val, freeVars: Set<string>]
 
-function doCompile(value: any, env: EnvironmentVal = new EnvironmentVal([])): CompiledArk {
+function doCompile(value: any, env: Environment = new Environment([])): CompiledArk {
   if (value === null) {
     return [new Null(), new Set()]
   }
@@ -165,6 +165,6 @@ function doCompile(value: any, env: EnvironmentVal = new EnvironmentVal([])): Co
   throw new Error(`invalid value ${value}`)
 }
 
-export function compile(expr: string, env: EnvironmentVal = new EnvironmentVal([])): CompiledArk {
+export function compile(expr: string, env: Environment = new Environment([])): CompiledArk {
   return doCompile(JSON.parse(expr), env)
 }

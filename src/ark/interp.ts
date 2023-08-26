@@ -1,8 +1,45 @@
 import assert from 'assert'
 import {CompiledArk} from './parser'
 
-export type Binding = BindingVal
-export type Environment = EnvironmentVal
+// A Binding holds Refs to Vals, so that the Vals can be referred to in
+// multiple Binding, in particular by closures' free variables.
+export class Binding {
+  constructor(public map: Map<string, Ref>) {}
+}
+
+export class Environment {
+  public env: Binding[]
+
+  constructor(localEnv: Binding[]) {
+    this.env = localEnv
+  }
+
+  get(sym: string) {
+    const index = this.getIndex(sym)
+    assert(index !== undefined, `get undefined symbol at run-time ${sym}`)
+    return this.env[index].map.get(sym)!
+  }
+
+  set(sym: string, val: Val) {
+    const index = this.getIndex(sym)
+    assert(index !== undefined, `set undefined symbol at run-time ${sym}`)
+    const ref = this.env[index].map.get(sym)!
+    ref.set(this, val)
+  }
+
+  getIndex(sym: string) {
+    for (let i = 0; i < this.env.length; i += 1) {
+      if (this.env[i].map.has(sym)) {
+        return i
+      }
+    }
+    return undefined
+  }
+
+  extend(binding: Binding): Environment {
+    return new Environment([binding, ...this.env])
+  }
+}
 
 // Base class for compiled code.
 export class Val {
@@ -67,7 +104,7 @@ export class ContinueException extends HakException {}
 export class PropertyException extends Error {}
 
 export function bindArgsToParams(params: string[], args: Val[]): Binding {
-  const binding = new BindingVal(
+  const binding = new Binding(
     new Map(params.map((key, index) => [key, new Ref(args[index] ?? new Null())])),
   )
   if (args.length > params.length) {
@@ -109,7 +146,7 @@ export class Fexpr extends Val {
   }
 
   bindFreeVars(env: Environment): Binding {
-    return new BindingVal(new Map(
+    return new Binding(new Map(
       [...this.freeVars].map((name): [string, Ref] => [name, env.get(name)]),
     ))
   }
@@ -163,9 +200,6 @@ export class Ref extends Val {
 }
 
 export class SymRef extends Ref {
-  // FIXME: This has no reason to be here.
-  static intrinsics: Binding
-
   constructor(public name: string) {
     super()
   }
@@ -185,14 +219,6 @@ export class Obj extends Val {
         (this as any)[key] = (jsObj as any)[key]
       }
     }
-  }
-}
-
-// A BindingVal holds Refs to Vals, so that the Vals can be referred to in
-// multiple BindingVals, in particular by closures' free variables.
-export class BindingVal extends Val {
-  constructor(public map: Map<string, Ref>) {
-    super()
   }
 }
 
@@ -279,8 +305,6 @@ function jsToVal(x: any): Val {
 }
 
 export const intrinsics: {[key: string]: Val} = {
-  pi: new Num(Math.PI),
-  e: new Num(Math.E),
   new: new NativeFn('new', (val: Val) => new Ref(val)),
   pos: new NativeFn('pos', (val: Val) => new Num(+toJs(val))),
   neg: new NativeFn('neg', (val: Val) => new Num(-toJs(val))),
@@ -348,6 +372,8 @@ export const intrinsics: {[key: string]: Val} = {
   '/': new NativeFn('/', (left: Val, right: Val) => new Num(toJs(left) / toJs(right))),
   '%': new NativeFn('%', (left: Val, right: Val) => new Num(toJs(left) % toJs(right))),
   '**': new NativeFn('**', (left: Val, right: Val) => new Num(toJs(left) ** toJs(right))),
+  pi: new Num(Math.PI),
+  e: new Num(Math.E),
   print: new NativeFn('print', (obj: Val) => {
     console.log(toJs(obj))
     return new Null()
@@ -357,7 +383,7 @@ export const intrinsics: {[key: string]: Val} = {
     return new Null()
   }),
   js: new Obj({
-    use: (_env: EnvironmentVal, ...args: Val[]) => {
+    use: (_env: Environment, ...args: Val[]) => {
       const requirePath = (args.map(toJs).join('.'))
       // eslint-disable-next-line import/no-dynamic-require, global-require
       const module = require(requirePath)
@@ -371,49 +397,7 @@ export const intrinsics: {[key: string]: Val} = {
   }),
 }
 
-function listToBinding(elems: {[key: string]: Val}): BindingVal {
-  return new BindingVal(
-    new Map(Object.entries(elems).map(([k, v]): [string, Ref] => [k, new Ref(v)])),
-  )
-}
-
-SymRef.intrinsics = listToBinding(intrinsics)
-
-export class EnvironmentVal {
-  public env: Binding[]
-
-  constructor(localEnv: Binding[]) {
-    this.env = localEnv
-  }
-
-  get(sym: string) {
-    const index = this.getIndex(sym)
-    assert(index !== undefined, `get undefined symbol at run-time ${sym}`)
-    return this.env[index].map.get(sym)!
-  }
-
-  set(sym: string, val: Val) {
-    const index = this.getIndex(sym)
-    assert(index !== undefined, `set undefined symbol at run-time ${sym}`)
-    const ref = this.env[index].map.get(sym)!
-    ref.set(this, val)
-  }
-
-  getIndex(sym: string) {
-    for (let i = 0; i < this.env.length; i += 1) {
-      if (this.env[i].map.has(sym)) {
-        return i
-      }
-    }
-    return undefined
-  }
-
-  extend(binding: Binding): Environment {
-    return new EnvironmentVal([binding, ...this.env])
-  }
-}
-
-export function evalArk(val: Val, env: EnvironmentVal): Val {
+export function evalArk(val: Val, env: Environment): Val {
   if (val instanceof SymRef) {
     const ref = env.get(val.name)
     return evalArk(ref, env)
@@ -463,11 +447,21 @@ export function evalArk(val: Val, env: EnvironmentVal): Val {
   return val
 }
 
+function subsetOf<T>(setA: Set<T>, setB: Set<T>): boolean {
+  for (const elem of setA) {
+    if (!setB.has(elem)) {
+      return false
+    }
+  }
+  return true
+}
+
 export function runArk(
   compiledVal: CompiledArk,
-  env: EnvironmentVal = new EnvironmentVal([]),
+  env: Environment = new Environment([]),
 ): Val {
-  assert(compiledVal[1].size === 0)
+  const envVars = new Set(env.env.flatMap((binding) => [...binding.map.keys()]))
+  assert(subsetOf(compiledVal[1], envVars))
   return evalArk(compiledVal[0], env)
 }
 
@@ -483,11 +477,11 @@ export function toJs(val: Val): any {
     return obj
   } else if (val instanceof DictLiteral) {
     // Best effort.
-    return toJs(evalArk(val, new EnvironmentVal([])))
+    return toJs(evalArk(val, new Environment([])))
   } else if (val instanceof Dict) {
     const evaluatedMap = new Map<any, Val>()
     for (const [k, v] of val.map) {
-      evaluatedMap.set(k, toJs(evalArk(v, new EnvironmentVal([]))))
+      evaluatedMap.set(k, toJs(evalArk(v, new Environment([]))))
     }
     return evaluatedMap
   } else if (val instanceof List) {
