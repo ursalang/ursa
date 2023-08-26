@@ -369,17 +369,20 @@ export const intrinsics: {[key: string]: Val} = {
   '/': new NativeFn('/', (left: Val, right: Val) => new Num(toJs(left) / toJs(right))),
   '%': new NativeFn('%', (left: Val, right: Val) => new Num(toJs(left) % toJs(right))),
   '**': new NativeFn('**', (left: Val, right: Val) => new Num(toJs(left) ** toJs(right))),
-  pi: new Num(Math.PI),
-  e: new Num(Math.E),
-  print: new NativeFn('print', (obj: Val) => {
+}
+
+export const globals: Binding = new Map([
+  ['pi', new Ref(new Num(Math.PI))],
+  ['e', new Ref(new Num(Math.E))],
+  ['print', new Ref(new NativeFn('print', (obj: Val) => {
     console.log(toJs(obj))
     return new Null()
-  }),
-  debug: new NativeFn('debug', (obj: Val) => {
+  }))],
+  ['debug', new Ref(new NativeFn('debug', (obj: Val) => {
     debug(obj)
     return new Null()
-  }),
-  js: new Obj({
+  }))],
+  ['js', new Ref(new Obj({
     use: (_env: Environment, ...args: Val[]) => {
       const requirePath = (args.map(toJs).join('.'))
       // eslint-disable-next-line import/no-dynamic-require, global-require
@@ -391,8 +394,8 @@ export const intrinsics: {[key: string]: Val} = {
       }
       return new Obj(wrappedModule)
     },
-  }),
-}
+  }))],
+])
 
 export function evalArk(val: Val, env: Environment): Val {
   if (val instanceof SymRef) {
@@ -457,9 +460,10 @@ export function runArk(
   compiledVal: CompiledArk,
   env: Environment = new Environment([]),
 ): Val {
-  const envVars = new Set(env.env.flatMap((binding) => [...binding.keys()]))
+  const envWithGlobals = env.extend(globals)
+  const envVars = new Set(envWithGlobals.env.flatMap((binding) => [...binding.keys()]))
   assert(subsetOf(compiledVal[1], envVars))
-  return evalArk(compiledVal[0], env)
+  return evalArk(compiledVal[0], envWithGlobals)
 }
 
 export function toJs(val: Val): any {
