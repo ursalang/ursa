@@ -1,11 +1,10 @@
 import assert from 'assert'
 import {CompiledArk} from './parser'
 
-// A Binding holds Refs to Vals, so that the Vals can be referred to in
-// multiple Binding, in particular by closures' free variables.
-export class Binding {
-  constructor(public map: Map<string, Ref>) {}
-}
+// A Binding holds Refs to Vals, so that the Vals can potentially be updated
+// while being be referred to in multiple Bindings, in particular by
+// closures' free variables.
+export type Binding = Map<string, Ref>
 
 export class Environment {
   public env: Binding[]
@@ -17,19 +16,19 @@ export class Environment {
   get(sym: string) {
     const index = this.getIndex(sym)
     assert(index !== undefined, `get undefined symbol at run-time ${sym}`)
-    return this.env[index].map.get(sym)!
+    return this.env[index].get(sym)!
   }
 
   set(sym: string, val: Val) {
     const index = this.getIndex(sym)
     assert(index !== undefined, `set undefined symbol at run-time ${sym}`)
-    const ref = this.env[index].map.get(sym)!
+    const ref = this.env[index].get(sym)!
     ref.set(this, val)
   }
 
   getIndex(sym: string) {
     for (let i = 0; i < this.env.length; i += 1) {
-      if (this.env[i].map.has(sym)) {
+      if (this.env[i].has(sym)) {
         return i
       }
     }
@@ -104,11 +103,9 @@ export class ContinueException extends HakException {}
 export class PropertyException extends Error {}
 
 export function bindArgsToParams(params: string[], args: Val[]): Binding {
-  const binding = new Binding(
-    new Map(params.map((key, index) => [key, new Ref(args[index] ?? new Null())])),
-  )
+  const binding = new Map(params.map((key, index) => [key, new Ref(args[index] ?? new Null())]))
   if (args.length > params.length) {
-    binding.map.set('...', new Ref(new List(args.slice(params.length))))
+    binding.set('...', new Ref(new List(args.slice(params.length))))
   }
   return binding
 }
@@ -146,9 +143,9 @@ export class Fexpr extends Val {
   }
 
   bindFreeVars(env: Environment): Binding {
-    return new Binding(new Map(
+    return new Map(
       [...this.freeVars].map((name): [string, Ref] => [name, env.get(name)]),
-    ))
+    )
   }
 }
 
@@ -429,7 +426,7 @@ export function evalArk(val: Val, env: Environment): Val {
     return val
   } else if (val instanceof Let) {
     const binding = bindArgsToParams(val.boundVars, [])
-    binding.map.forEach((v) => {
+    binding.forEach((v) => {
       // First eval the Ref, then eval the value
       v.set(env, evalArk(evalArk(v, env), env))
     })
@@ -460,7 +457,7 @@ export function runArk(
   compiledVal: CompiledArk,
   env: Environment = new Environment([]),
 ): Val {
-  const envVars = new Set(env.env.flatMap((binding) => [...binding.map.keys()]))
+  const envVars = new Set(env.env.flatMap((binding) => [...binding.keys()]))
   assert(subsetOf(compiledVal[1], envVars))
   return evalArk(compiledVal[0], env)
 }

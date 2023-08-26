@@ -7,7 +7,7 @@ import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
 import assert from 'assert'
 import programVersion from '../version.js'
 import {
-  Binding, Environment, List, Ref, Str, runArk, serialize, toJs,
+  Environment, List, Ref, Str, runArk, serialize, toJs,
 } from '../ark/interp.js'
 import {compile as arkCompile} from '../ark/parser.js'
 import {compile as ursaCompile} from './parser.js'
@@ -62,9 +62,9 @@ function compile(exp: string) {
 
 function evaluate(exp: string) {
   return runArk(compile(exp), new Environment([
-    new Binding(new Map([['argv', new Ref(new List(
+    new Map([['argv', new Ref(new List(
       args.argument.map((s) => new Str(s)),
-    ))]]))]))
+    ))]])]))
 }
 
 async function repl() {

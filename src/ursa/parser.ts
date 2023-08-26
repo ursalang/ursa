@@ -4,7 +4,7 @@ import {
   debug,
   Val, Null, Bool, Num, Str, Ref, List, Obj, DictLiteral,
   Call, Let, Fn, NativeFexpr, PropertyException,
-  bindArgsToParams, Binding, Environment, evalArk, toJs, intrinsics,
+  bindArgsToParams, Environment, evalArk, toJs, intrinsics,
 } from '../ark/interp.js'
 import {CompiledArk, symRef} from '../ark/parser.js'
 // eslint-disable-next-line import/extensions
@@ -70,9 +70,7 @@ semantics.addOperation<AST>('toAST(env)', {
     return makeFn(this.args.env, this.freeVars, params, body)
   },
   NamedFn(_fn, ident, _open, params, _close, body) {
-    const bindingEnv = new Binding(
-      new Map([[ident.sourceString, new Ref(new Null())]]),
-    )
+    const bindingEnv = new Map([[ident.sourceString, new Ref(new Null())]])
     return propAccess(
       new Ref(symRef(this.args.env, ident.sourceString)[0]),
       'set',
@@ -222,9 +220,7 @@ semantics.addOperation<AST>('toAST(env)', {
     )
   },
   Sequence_let(_let, ident, _eq, value, _sep, seq) {
-    const bindingEnv = new Binding(
-      new Map([[ident.sourceString, value.toAST(this.args.env)]]),
-    )
+    const bindingEnv = new Map([[ident.sourceString, value.toAST(this.args.env)]])
     const innerBinding = this.args.env.extend(bindingEnv)
     return new Let(
       [ident.sourceString],
@@ -236,7 +232,7 @@ semantics.addOperation<AST>('toAST(env)', {
   },
   Sequence_letfn(_let, namedFn, _sep, seq) {
     const ident = namedFn.children[1].sourceString
-    const bindingEnv = new Binding(new Map([[ident, new Ref(new Null())]]))
+    const bindingEnv = new Map([[ident, new Ref(new Null())]])
     const innerEnv = this.args.env.extend(bindingEnv)
     const fn = namedFn.toAST(innerEnv)
     return new Let(
@@ -250,9 +246,7 @@ semantics.addOperation<AST>('toAST(env)', {
   Sequence_use(_use, pathList, _sep, seq) {
     const path = pathList.asIteration().children.map((id) => id.sourceString)
     const ident = path[path.length - 1]
-    const bindingEnv = new Binding(
-      new Map([[ident, new Ref(new Null())]]),
-    )
+    const bindingEnv = new Map([[ident, new Ref(new Null())]])
     // For path x.y.z, compile `let z = x.use(y.z); …`
     return new Let(
       [ident],
