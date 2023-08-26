@@ -1,6 +1,6 @@
 import test from 'ava'
 
-import {toVal} from './parser.js'
+import {compile} from './parser.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
@@ -44,11 +44,11 @@ testGroup('Conditionals', [
 ])
 
 test('loop and break', (t) => {
-  const error = t.throws(() => evalArk(toVal('break')), {instanceOf: BreakException})
+  const error = t.throws(() => evalArk(compile('break')[0]), {instanceOf: BreakException})
   if (error !== undefined) {
     t.is(valueOf(error.value()), null)
   }
-  t.is(valueOf(evalArk(toVal('loop { break 3 }'))), 3)
+  t.is(valueOf(evalArk(compile('loop { break 3 }')[0])), 3)
 })
 
 testGroup('let', [

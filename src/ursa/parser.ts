@@ -1,5 +1,4 @@
 import {Node, IterationNode} from 'ohm-js'
-import assert from 'assert'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
@@ -348,10 +347,4 @@ export function compile(expr: string, env: EnvironmentVal = new EnvironmentVal([
   }
   const ast = semantics(matchResult)
   return [ast.toAST(env), ast.freeVars]
-}
-
-export function toVal(expr: string): Val {
-  const [val, freeVars] = compile(expr)
-  assert(freeVars.size === 0)
-  return val
 }

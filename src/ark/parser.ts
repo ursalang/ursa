@@ -168,9 +168,3 @@ function doCompile(value: any, env: EnvironmentVal = new EnvironmentVal([])): Co
 export function compile(expr: string, env: EnvironmentVal = new EnvironmentVal([])): CompiledArk {
   return doCompile(JSON.parse(expr), env)
 }
-
-export function toVal(expr: string): Val {
-  const [val, freeVars] = compile(expr)
-  assert(freeVars.size === 0)
-  return val
-}

@@ -2,9 +2,9 @@ import fs from 'fs'
 import test from 'ava'
 import tmp from 'tmp'
 import execa from 'execa'
-import {EnvironmentVal, evalArk, valueOf} from './ark/interp'
-import {toVal as arkToVal} from './ark/parser'
-import {toVal as ursaToVal} from './ursa/parser'
+import {evalArk, valueOf} from './ark/interp'
+import {compile as arkCompile, CompiledArk} from './ark/parser'
+import {compile as ursaCompile} from './ursa/parser'
 
 const command = process.env.NODE_ENV === 'coverage' ? './bin/test-run.sh' : './bin/run.js'
 
@@ -12,20 +12,24 @@ async function run(args: string[]) {
   return execa(command, args)
 }
 
-function doTestGroup(title: string, toVal: Function, tests: [string, any][]) {
+function doTestGroup(
+  title: string,
+  compile: (expr: string) => CompiledArk,
+  tests: [string, any][],
+) {
   test(title, (t) => {
     for (const [source, expected] of tests) {
-      t.deepEqual(valueOf(evalArk(toVal(source), new EnvironmentVal([]))), expected)
+      t.deepEqual(valueOf(evalArk(compile(source)[0])), expected)
     }
   })
 }
 
 export function testArkGroup(title: string, tests: [string, any][]) {
-  return doTestGroup(title, arkToVal, tests)
+  return doTestGroup(title, arkCompile, tests)
 }
 
 export function testUrsaGroup(title: string, tests: [string, any][]) {
-  return doTestGroup(title, ursaToVal, tests)
+  return doTestGroup(title, ursaCompile, tests)
 }
 
 export async function cliTest(syntax: string, title: string, file: string, output?: string) {
