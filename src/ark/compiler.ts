@@ -35,13 +35,16 @@ function paramList(params: any[]): string[] {
   if (params.length === 0 || params[0] !== 'params') {
     throw new Error(`invalid parameter list ${params}`)
   }
-  // FIXME: Check params are unique
-  for (const param of params.slice(1)) {
+  const paramList = params.slice(1)
+  for (const param of paramList) {
     if (typeof param !== 'string') {
       throw new Error(`bad type in list ${params}`)
     }
   }
-  return params.slice(1)
+  if (new Set(paramList).size !== paramList.length) {
+    throw new Error(`duplicate parameters in list ${params}`)
+  }
+  return paramList
 }
 
 function setDifference<T>(setA: Set<T>, setB: Set<T>) {
