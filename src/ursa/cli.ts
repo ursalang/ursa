@@ -46,7 +46,6 @@ interface Args {
   compile: boolean
   output: string | undefined
   interactive: boolean
-  // FIXME: add to Ark state.
   argument: string[]
 }
 const args: Args = parser.parse_args() as Args
@@ -61,6 +60,7 @@ function compile(exp: string) {
 }
 
 function evaluate(exp: string) {
+  // Add command-line arguments.
   return runArk(compile(exp), new Stack([
     new Map([['argv', new Ref(new List(
       args.argument.map((s) => new Str(s)),
