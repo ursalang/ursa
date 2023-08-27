@@ -1,5 +1,5 @@
 import assert from 'assert'
-import {CompiledArk} from './parser'
+import {CompiledArk} from './compiler'
 
 // A Binding holds Refs to Vals, so that the Vals can potentially be updated
 // while being be referred to in multiple Bindings, in particular by

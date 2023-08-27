@@ -1,6 +1,6 @@
 import test from 'ava'
 
-import {compile} from './parser.js'
+import {compile} from './compiler.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,

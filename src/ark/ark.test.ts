@@ -5,7 +5,7 @@ import {
   debug,
   BreakException, runArk, toJs,
 } from './interp.js'
-import {compile} from './parser.js'
+import {compile} from './compiler.js'
 
 import {testArkGroup as testGroup} from '../testutil.js'
 

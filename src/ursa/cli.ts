@@ -9,8 +9,8 @@ import programVersion from '../version.js'
 import {
   List, Ref, Stack, Str, runArk, serialize, toJs,
 } from '../ark/interp.js'
-import {compile as arkCompile} from '../ark/parser.js'
-import {compile as ursaCompile} from './parser.js'
+import {compile as arkCompile} from '../ark/compiler.js'
+import {compile as ursaCompile} from './compiler.js'
 
 // Read and process arguments
 const parser = new ArgumentParser({

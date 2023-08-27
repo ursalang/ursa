@@ -6,7 +6,7 @@ import {
   Call, Let, Fn, NativeFexpr, PropertyException,
   bindArgsToParams, evalArk, toJs, intrinsics,
 } from '../ark/interp.js'
-import {CompiledArk, symRef, Environment} from '../ark/parser.js'
+import {CompiledArk, symRef, Environment} from '../ark/compiler.js'
 // eslint-disable-next-line import/extensions
 import grammar, {UrsaSemantics} from './ursa.ohm-bundle.js'
 

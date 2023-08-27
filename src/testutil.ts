@@ -3,8 +3,8 @@ import test from 'ava'
 import tmp from 'tmp'
 import execa from 'execa'
 import {runArk, toJs} from './ark/interp'
-import {compile as arkCompile, CompiledArk} from './ark/parser'
-import {compile as ursaCompile} from './ursa/parser'
+import {compile as arkCompile, CompiledArk} from './ark/compiler'
+import {compile as ursaCompile} from './ursa/compiler'
 
 const command = process.env.NODE_ENV === 'coverage' ? './bin/test-run.sh' : './bin/run.js'
 
