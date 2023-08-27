@@ -6,7 +6,7 @@ import {CompiledArk} from './parser'
 // closures' free variables.
 export type Binding = Map<string, Ref>
 
-export class Environment {
+export class Stack {
   public env: Binding[]
 
   constructor(localEnv: Binding[]) {
@@ -35,8 +35,8 @@ export class Environment {
     return undefined
   }
 
-  extend(binding: Binding): Environment {
-    return new Environment([binding, ...this.env])
+  extend(binding: Binding): Stack {
+    return new Stack([binding, ...this.env])
   }
 }
 
@@ -115,7 +115,7 @@ class FexprClosure extends Val {
     super()
   }
 
-  call(env: Environment, args: Val[]) {
+  call(env: Stack, args: Val[]) {
     let res: Val = new Null()
     try {
       const binding = bindArgsToParams(this.params, args)
@@ -131,7 +131,7 @@ class FexprClosure extends Val {
 }
 
 class FnClosure extends FexprClosure {
-  call(env: Environment, args: Val[]) {
+  call(env: Stack, args: Val[]) {
     const evaluatedArgs = evaluateArgs(env, args)
     return super.call(env, evaluatedArgs)
   }
@@ -142,9 +142,9 @@ export class Fexpr extends Val {
     super()
   }
 
-  bindFreeVars(env: Environment): Binding {
+  bindFreeVars(stack: Stack): Binding {
     return new Map(
-      [...this.freeVars].map((name): [string, Ref] => [name, env.get(name)]),
+      [...this.freeVars].map((name): [string, Ref] => [name, stack.get(name)]),
     )
   }
 }
@@ -152,20 +152,20 @@ export class Fexpr extends Val {
 export class NativeFexpr extends Val {
   constructor(
     public name: string,
-    protected body: (env: Environment, ...args: Val[]) => Val,
+    protected body: (env: Stack, ...args: Val[]) => Val,
   ) {
     super()
   }
 
-  call(env: Environment, args: Val[]) {
-    return this.body(env, ...args)
+  call(stack: Stack, args: Val[]) {
+    return this.body(stack, ...args)
   }
 }
 
-function evaluateArgs(env: Environment, args: Val[]) {
+function evaluateArgs(stack: Stack, args: Val[]) {
   const evaluatedArgs: Val[] = []
   for (const arg of args) {
-    evaluatedArgs.push(evalArk(arg, env))
+    evaluatedArgs.push(evalArk(arg, stack))
   }
   return evaluatedArgs
 }
@@ -180,8 +180,8 @@ class NativeFn extends Val {
     super()
   }
 
-  call(env: Environment, args: Val[]) {
-    return this.body(...evaluateArgs(env, args))
+  call(stack: Stack, args: Val[]) {
+    return this.body(...evaluateArgs(stack, args))
   }
 }
 
@@ -190,7 +190,7 @@ export class Ref extends Val {
     super()
   }
 
-  set(_env: Environment, val: Val) {
+  set(_stack: Stack, val: Val) {
     this.val = val
     return val
   }
@@ -201,9 +201,9 @@ export class SymRef extends Ref {
     super()
   }
 
-  set(env: Environment, val: Val) {
-    const evaluatedVal = evalArk(val, env)
-    env.set(this.name, evaluatedVal)
+  set(stack: Stack, val: Val) {
+    const evaluatedVal = evalArk(val, stack)
+    stack.set(this.name, evaluatedVal)
     return evaluatedVal
   }
 }
@@ -232,12 +232,12 @@ export class Dict extends Val {
     super()
   }
 
-  set(_env: Environment, index: Val, val: Val) {
+  set(_stack: Stack, index: Val, val: Val) {
     this.map.set(toJs(index), val)
     return val
   }
 
-  get(_env: Environment, index: Val) {
+  get(_stack: Stack, index: Val) {
     return this.map.get(toJs(index)) ?? new Null()
   }
 }
@@ -247,15 +247,15 @@ export class List extends Val {
     super()
   }
 
-  length(_env: Environment) {
+  length(_stack: Stack) {
     return new Num(this.val.length)
   }
 
-  get(_env: Environment, index: Val) {
+  get(_stack: Stack, index: Val) {
     return this.val[toJs(index as Num)]
   }
 
-  set(_env: Environment, index: Val, val: Val) {
+  set(_stack: Stack, index: Val, val: Val) {
     this.val[toJs(index)] = val
     return val
   }
@@ -306,38 +306,38 @@ export const intrinsics: {[key: string]: Val} = {
   pos: new NativeFn('pos', (val: Val) => new Num(+toJs(val))),
   neg: new NativeFn('neg', (val: Val) => new Num(-toJs(val))),
   not: new NativeFn('not', (val: Val) => new Bool(!toJs(val))),
-  seq: new NativeFexpr('seq', (env: Environment, ...args: Val[]) => {
+  seq: new NativeFexpr('seq', (stack: Stack, ...args: Val[]) => {
     let res: Val = new Null()
     for (const exp of args) {
-      res = evalArk(exp, env)
+      res = evalArk(exp, stack)
     }
     return res
   }),
-  if: new NativeFexpr('if', (env: Environment, cond: Val, e_then: Val, e_else: Val) => {
-    const condVal = evalArk(cond, env)
+  if: new NativeFexpr('if', (stack: Stack, cond: Val, e_then: Val, e_else: Val) => {
+    const condVal = evalArk(cond, stack)
     if (toJs(condVal)) {
-      return evalArk(e_then, env)
+      return evalArk(e_then, stack)
     }
-    return e_else ? evalArk(e_else, env) : new Null()
+    return e_else ? evalArk(e_else, stack) : new Null()
   }),
-  and: new NativeFexpr('and', (env: Environment, left: Val, right: Val) => {
-    const leftVal = evalArk(left, env)
+  and: new NativeFexpr('and', (stack: Stack, left: Val, right: Val) => {
+    const leftVal = evalArk(left, stack)
     if (toJs(leftVal)) {
-      return evalArk(right, env)
+      return evalArk(right, stack)
     }
     return leftVal
   }),
-  or: new NativeFexpr('or', (env: Environment, left: Val, right: Val) => {
-    const leftVal = evalArk(left, env)
+  or: new NativeFexpr('or', (stack: Stack, left: Val, right: Val) => {
+    const leftVal = evalArk(left, stack)
     if (toJs(leftVal)) {
       return leftVal
     }
-    return evalArk(right, env)
+    return evalArk(right, stack)
   }),
-  loop: new NativeFexpr('loop', (env: Environment, body: Val) => {
+  loop: new NativeFexpr('loop', (stack: Stack, body: Val) => {
     for (; ;) {
       try {
-        evalArk(body, env)
+        evalArk(body, stack)
       } catch (e) {
         if (e instanceof BreakException) {
           return e.value()
@@ -383,7 +383,7 @@ export const globals: Binding = new Map([
     return new Null()
   }))],
   ['js', new Ref(new Obj({
-    use: (_env: Environment, ...args: Val[]) => {
+    use: (_stack: Stack, ...args: Val[]) => {
       const requirePath = (args.map(toJs).join('.'))
       // eslint-disable-next-line import/no-dynamic-require, global-require
       const module = require(requirePath)
@@ -397,26 +397,26 @@ export const globals: Binding = new Map([
   }))],
 ])
 
-export function evalArk(val: Val, env: Environment): Val {
+export function evalArk(val: Val, stack: Stack): Val {
   if (val instanceof SymRef) {
-    const ref = env.get(val.name)
-    return evalArk(ref, env)
+    const ref = stack.get(val.name)
+    return evalArk(ref, stack)
   } else if (val instanceof Ref) {
     return val.val
   } else if (val instanceof Fn) {
-    return new FnClosure(val.params, val.bindFreeVars(env), val.body)
+    return new FnClosure(val.params, val.bindFreeVars(stack), val.body)
   } else if (val instanceof Fexpr) {
-    return new FexprClosure(val.params, val.bindFreeVars(env), val.body)
+    return new FexprClosure(val.params, val.bindFreeVars(stack), val.body)
   } else if (val instanceof DictLiteral) {
     const evaluatedMap = new Map<any, Val>()
     for (const [k, v] of val.map) {
-      evaluatedMap.set(toJs(evalArk(k, env)), evalArk(v, env))
+      evaluatedMap.set(toJs(evalArk(k, stack)), evalArk(v, stack))
     }
     return new Dict(evaluatedMap)
   } else if (val instanceof Dict) {
     const evaluatedMap = new Map<any, Val>()
     for (const [k, v] of val.map) {
-      evaluatedMap.set(k, evalArk(v, env) as Val)
+      evaluatedMap.set(k, evalArk(v, stack) as Val)
     }
     // FIXME: Don't do this: need to be able to use ConcreteVal values as
     // keys by their underlying value.
@@ -425,24 +425,24 @@ export function evalArk(val: Val, env: Environment): Val {
     return val
   } else if (val instanceof List) {
     // eslint-disable-next-line no-param-reassign
-    val.val = val.val.map((e) => evalArk(e, env))
+    val.val = val.val.map((e) => evalArk(e, stack))
     return val
   } else if (val instanceof Let) {
     const binding = bindArgsToParams(val.boundVars, [])
     binding.forEach((v) => {
       // First eval the Ref, then eval the value
-      v.set(env, evalArk(evalArk(v, env), env))
+      v.set(stack, evalArk(evalArk(v, stack), stack))
     })
-    return evalArk(val.body, env.extend(binding))
+    return evalArk(val.body, stack.extend(binding))
   } else if (val instanceof Call) {
-    const fn = evalArk(val.fn, env) as FexprClosure
-    return fn.call(env, val.args)
+    const fn = evalArk(val.fn, stack) as FexprClosure
+    return fn.call(stack, val.args)
   } else if (val instanceof Prop) {
-    const obj = evalArk(val.ref, env)
+    const obj = evalArk(val.ref, stack)
     if (!(val.prop in obj)) {
       throw new PropertyException(`no property '${val.prop}'`)
     }
-    return (obj as any)[val.prop](env, ...val.args.map((e) => evalArk(e, env)))
+    return (obj as any)[val.prop](stack, ...val.args.map((e) => evalArk(e, stack)))
   }
   return val
 }
@@ -458,9 +458,9 @@ function subsetOf<T>(setA: Set<T>, setB: Set<T>): boolean {
 
 export function runArk(
   compiledVal: CompiledArk,
-  env: Environment = new Environment([]),
+  stack: Stack = new Stack([]),
 ): Val {
-  const envWithGlobals = env.extend(globals)
+  const envWithGlobals = stack.extend(globals)
   const envVars = new Set(envWithGlobals.env.flatMap((binding) => [...binding.keys()]))
   assert(subsetOf(compiledVal[1], envVars))
   return evalArk(compiledVal[0], envWithGlobals)
@@ -478,11 +478,11 @@ export function toJs(val: Val): any {
     return obj
   } else if (val instanceof DictLiteral) {
     // Best effort.
-    return toJs(evalArk(val, new Environment([])))
+    return toJs(evalArk(val, new Stack([])))
   } else if (val instanceof Dict) {
     const evaluatedMap = new Map<any, Val>()
     for (const [k, v] of val.map) {
-      evaluatedMap.set(k, toJs(evalArk(v, new Environment([]))))
+      evaluatedMap.set(k, toJs(evalArk(v, new Stack([]))))
     }
     return evaluatedMap
   } else if (val instanceof List) {

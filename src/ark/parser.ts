@@ -5,8 +5,42 @@ import {
   Val, intrinsics,
   Null, Bool, Num, Str,
   List, Obj, DictLiteral, SymRef,
-  Fn, Fexpr, Prop, Let, Ref, Call, Environment, bindArgsToParams,
+  Fn, Fexpr, Prop, Let, Ref, Call, Binding, bindArgsToParams,
 } from './interp.js'
+
+export class Environment {
+  public env: Binding[]
+
+  constructor(localEnv: Binding[]) {
+    this.env = localEnv
+  }
+
+  get(sym: string) {
+    const index = this.getIndex(sym)
+    assert(index !== undefined, `get undefined symbol at run-time ${sym}`)
+    return this.env[index].get(sym)!
+  }
+
+  set(sym: string, val: Val) {
+    const index = this.getIndex(sym)
+    assert(index !== undefined, `set undefined symbol at run-time ${sym}`)
+    const ref = this.env[index].get(sym)!
+    ref.set(this, val)
+  }
+
+  getIndex(sym: string) {
+    for (let i = 0; i < this.env.length; i += 1) {
+      if (this.env[i].has(sym)) {
+        return i
+      }
+    }
+    return undefined
+  }
+
+  extend(binding: Binding): Environment {
+    return new Environment([binding, ...this.env])
+  }
+}
 
 function paramList(params: any[]): string[] {
   if (params.length === 0 || params[0] !== 'params') {

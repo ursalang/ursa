@@ -4,9 +4,9 @@ import {
   debug,
   Val, Null, Bool, Num, Str, Ref, List, Obj, DictLiteral,
   Call, Let, Fn, NativeFexpr, PropertyException,
-  bindArgsToParams, Environment, evalArk, toJs, intrinsics,
+  bindArgsToParams, evalArk, toJs, intrinsics,
 } from '../ark/interp.js'
-import {CompiledArk, symRef} from '../ark/parser.js'
+import {CompiledArk, symRef, Environment} from '../ark/parser.js'
 // eslint-disable-next-line import/extensions
 import grammar, {UrsaSemantics} from './ursa.ohm-bundle.js'
 
