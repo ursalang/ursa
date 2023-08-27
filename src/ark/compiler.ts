@@ -5,40 +5,29 @@ import {
   Val, intrinsics,
   Null, Bool, Num, Str,
   List, Obj, DictLiteral, SymRef,
-  Fn, Fexpr, Prop, Let, Ref, Call, Binding, bindArgsToParams,
+  Fn, Fexpr, Prop, Let, Ref, Call,
 } from './interp.js'
 
+export type Syms = string[]
+
 export class Environment {
-  public env: Binding[]
+  public env: Syms[]
 
-  constructor(localEnv: Binding[]) {
-    this.env = localEnv
-  }
-
-  get(sym: string) {
-    const index = this.getIndex(sym)
-    assert(index !== undefined, `get undefined symbol at run-time ${sym}`)
-    return this.env[index].get(sym)!
-  }
-
-  set(sym: string, val: Val) {
-    const index = this.getIndex(sym)
-    assert(index !== undefined, `set undefined symbol at run-time ${sym}`)
-    const ref = this.env[index].get(sym)!
-    ref.set(this, val)
+  constructor(outerEnv: Syms[]) {
+    this.env = outerEnv
   }
 
   getIndex(sym: string) {
     for (let i = 0; i < this.env.length; i += 1) {
-      if (this.env[i].has(sym)) {
+      if (this.env[i].includes(sym)) {
         return i
       }
     }
     return undefined
   }
 
-  extend(binding: Binding): Environment {
-    return new Environment([binding, ...this.env])
+  extend(syms: Syms): Environment {
+    return new Environment([syms, ...this.env])
   }
 }
 
@@ -110,8 +99,7 @@ function doCompile(value: any, env: Environment): CompiledArk {
             throw new Error("invalid 'let'")
           }
           const params = paramList(value[1])
-          const paramBinding = bindArgsToParams(params, [])
-          const [body, freeVars] = doCompile(value[2], env.extend(paramBinding))
+          const [body, freeVars] = doCompile(value[2], env.extend(params))
           return [new Let(params, body), setDifference(freeVars, new Set(params))]
         }
         case 'fn': {
@@ -119,8 +107,7 @@ function doCompile(value: any, env: Environment): CompiledArk {
             throw new Error("invalid 'fn'")
           }
           const params = paramList(value[1])
-          const paramBinding = bindArgsToParams(params, [])
-          const [body, freeVars] = doCompile(value[2], env.extend(paramBinding))
+          const [body, freeVars] = doCompile(value[2], env.extend(params))
           const fnFreeVars = setDifference(freeVars, new Set(params))
           return [new Fn(params, fnFreeVars, body), fnFreeVars]
         }
@@ -129,8 +116,7 @@ function doCompile(value: any, env: Environment): CompiledArk {
             throw new Error("invalid 'fexpr'")
           }
           const params = paramList(value[1])
-          const paramBinding = bindArgsToParams(params, [])
-          const [body, freeVars] = doCompile(env.extend(paramBinding), value[2])
+          const [body, freeVars] = doCompile(env.extend(params), value[2])
           const fexprFreeVars = setDifference(freeVars, new Set(params))
           return [new Fexpr(params, fexprFreeVars, body), fexprFreeVars]
         }

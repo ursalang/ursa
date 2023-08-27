@@ -9,8 +9,8 @@ export type Binding = Map<string, Ref>
 export class Stack {
   public env: Binding[]
 
-  constructor(localEnv: Binding[]) {
-    this.env = localEnv
+  constructor(outerEnv: Binding[]) {
+    this.env = outerEnv
   }
 
   get(sym: string) {

@@ -4,7 +4,7 @@ import {
   debug,
   Val, Null, Bool, Num, Str, Ref, List, Obj, DictLiteral,
   Call, Let, Fn, NativeFexpr, PropertyException,
-  bindArgsToParams, evalArk, toJs, intrinsics,
+  evalArk, intrinsics,
 } from '../ark/interp.js'
 import {CompiledArk, symRef, Environment} from '../ark/compiler.js'
 // eslint-disable-next-line import/extensions
@@ -35,13 +35,12 @@ function maybeValue(env: Environment, exp: IterationNode): Val {
 
 function makeFn(env: Environment, freeVars: Set<string>, params: Node, body: Node): Val {
   const paramList = params.asIteration().children.map(
-    (value) => toJs(value.toAST(env)),
+    (value) => value.sourceString,
   )
-  const paramBinding = bindArgsToParams(paramList, [])
   return new Fn(
     paramList,
     freeVars,
-    body.toAST(env.extend(paramBinding)),
+    body.toAST(env.extend(paramList)),
   )
 }
 
@@ -70,12 +69,11 @@ semantics.addOperation<AST>('toAST(env)', {
     return makeFn(this.args.env, this.freeVars, params, body)
   },
   NamedFn(_fn, ident, _open, params, _close, body) {
-    const bindingEnv = new Map([[ident.sourceString, new Ref(new Null())]])
     return propAccess(
       new Ref(symRef(this.args.env, ident.sourceString)[0]),
       'set',
       makeFn(
-        this.args.env.extend(bindingEnv),
+        this.args.env.extend([ident.sourceString]),
         new Set([...this.freeVars, ident.sourceString]),
         params,
         body,
@@ -220,20 +218,18 @@ semantics.addOperation<AST>('toAST(env)', {
     )
   },
   Sequence_let(_let, ident, _eq, value, _sep, seq) {
-    const bindingEnv = new Map([[ident.sourceString, value.toAST(this.args.env)]])
-    const innerBinding = this.args.env.extend(bindingEnv)
+    const innerBinding = this.args.env.extend([ident.sourceString])
     return new Let(
       [ident.sourceString],
       new Call(intrinsics.seq, [
-        propAccess(new Ref(symRef(innerBinding, ident.sourceString)[0]), 'set', value.toAST(this.args.env)),
+        propAccess(new Ref(symRef(innerBinding, ident.sourceString)[0]), 'set', value.toAST(innerBinding)),
         seq.toAST(innerBinding),
       ]),
     )
   },
   Sequence_letfn(_let, namedFn, _sep, seq) {
     const ident = namedFn.children[1].sourceString
-    const bindingEnv = new Map([[ident, new Ref(new Null())]])
-    const innerEnv = this.args.env.extend(bindingEnv)
+    const innerEnv = this.args.env.extend([ident])
     const fn = namedFn.toAST(innerEnv)
     return new Let(
       [ident],
@@ -246,7 +242,6 @@ semantics.addOperation<AST>('toAST(env)', {
   Sequence_use(_use, pathList, _sep, seq) {
     const path = pathList.asIteration().children.map((id) => id.sourceString)
     const ident = path[path.length - 1]
-    const bindingEnv = new Map([[ident, new Ref(new Null())]])
     // For path x.y.z, compile `let z = x.use(y.z); …`
     return new Let(
       [ident],
@@ -255,12 +250,12 @@ semantics.addOperation<AST>('toAST(env)', {
           new Ref(symRef(this.args.env, ident)[0]),
           'set',
           propAccess(
-            symRef(this.args.env.extend(bindingEnv), path[0])[0],
+            symRef(this.args.env.extend([ident]), path[0])[0],
             'use',
             ...path.slice(1).map((id) => new Str(id)),
           ),
         ),
-        seq.toAST(this.args.env.extend(bindingEnv)),
+        seq.toAST(this.args.env.extend([ident])),
       ]),
     )
   },
