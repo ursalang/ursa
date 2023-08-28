@@ -6,7 +6,9 @@ import {
   Call, Let, Fn, NativeFexpr, PropertyException,
   evalArk, intrinsics,
 } from '../ark/interp.js'
-import {CompiledArk, symRef, Environment} from '../ark/compiler.js'
+import {
+  CompiledArk, symRef, Environment, setDifference,
+} from '../ark/compiler.js'
 // eslint-disable-next-line import/extensions
 import grammar, {UrsaSemantics} from './ursa.ohm-bundle.js'
 
@@ -280,14 +282,6 @@ semantics.addOperation<AST>('toAST(env)', {
 
 function mergeFreeVars(children: Node[]): Set<string> {
   return new Set<string>(children.flatMap((child) => [...child.freeVars]))
-}
-
-function setDifference<T>(setA: Set<T>, setB: Set<T>) {
-  const difference = new Set(setA)
-  for (const elem of setB) {
-    difference.delete(elem)
-  }
-  return difference
 }
 
 semantics.addAttribute<Set<string>>('freeVars', {

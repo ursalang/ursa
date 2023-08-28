@@ -47,7 +47,7 @@ function paramList(params: any[]): string[] {
   return paramList
 }
 
-function setDifference<T>(setA: Set<T>, setB: Set<T>) {
+export function setDifference<T>(setA: Set<T>, setB: Set<T>) {
   const difference = new Set(setA)
   for (const elem of setB) {
     difference.delete(elem)
