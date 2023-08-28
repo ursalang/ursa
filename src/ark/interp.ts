@@ -521,7 +521,7 @@ export function serialize(val: Val) {
     } else if (val instanceof Dict) {
       const obj: any[] = ['map']
       for (const [k, v] of val.map) {
-        // FIXME: see valueOf.
+        // FIXME: see evalArk.
         const keyJs = k instanceof Val ? doSerialize(k) : k
         obj.push([keyJs, doSerialize(v)])
       }
