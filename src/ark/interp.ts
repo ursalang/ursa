@@ -1,15 +1,15 @@
 import assert from 'assert'
 import {CompiledArk} from './compiler'
 
-// A Binding holds Refs to Vals, so that the Vals can potentially be updated
-// while being be referred to in multiple Bindings, in particular by
-// closures' free variables.
-export type Binding = Map<string, Ref>
+// A Frame holds Refs to Vals, so that the Vals can potentially be updated
+// while being be referred to in multiple Frames, in particular by closures'
+// free variables.
+export type Frame = Map<string, Ref>
 
 export class Stack {
-  public env: Binding[]
+  public env: Frame[]
 
-  constructor(outerEnv: Binding[]) {
+  constructor(outerEnv: Frame[]) {
     this.env = outerEnv
   }
 
@@ -35,8 +35,8 @@ export class Stack {
     return undefined
   }
 
-  extend(binding: Binding): Stack {
-    return new Stack([binding, ...this.env])
+  extend(frame: Frame): Stack {
+    return new Stack([frame, ...this.env])
   }
 }
 
@@ -102,24 +102,24 @@ export class ContinueException extends HakException {}
 
 export class PropertyException extends Error {}
 
-export function bindArgsToParams(params: string[], args: Val[]): Binding {
-  const binding = new Map(params.map((key, index) => [key, new Ref(args[index] ?? new Null())]))
+export function bindArgsToParams(params: string[], args: Val[]): Frame {
+  const frame = new Map(params.map((key, index) => [key, new Ref(args[index] ?? new Null())]))
   if (args.length > params.length) {
-    binding.set('...', new Ref(new List(args.slice(params.length))))
+    frame.set('...', new Ref(new List(args.slice(params.length))))
   }
-  return binding
+  return frame
 }
 
 class FexprClosure extends Val {
-  constructor(protected params: string[], protected freeVars: Binding, protected body: Val) {
+  constructor(protected params: string[], protected freeVars: Frame, protected body: Val) {
     super()
   }
 
-  call(env: Stack, args: Val[]) {
+  call(stack: Stack, args: Val[]) {
     let res: Val = new Null()
     try {
-      const binding = bindArgsToParams(this.params, args)
-      res = evalArk(this.body, env.extend(this.freeVars).extend(binding))
+      const frame = bindArgsToParams(this.params, args)
+      res = evalArk(this.body, stack.extend(this.freeVars).extend(frame))
     } catch (e) {
       if (!(e instanceof ReturnException)) {
         throw e
@@ -142,8 +142,9 @@ export class Fexpr extends Val {
     super()
   }
 
-  bindFreeVars(stack: Stack): Binding {
+  bindFreeVars(stack: Stack): Frame {
     return new Map(
+      // FIXME: Do this binding at compile time.
       [...this.freeVars].map((name): [string, Ref] => [name, stack.get(name)]),
     )
   }
@@ -371,7 +372,7 @@ export const intrinsics: {[key: string]: Val} = {
   '**': new NativeFn('**', (left: Val, right: Val) => new Num(toJs(left) ** toJs(right))),
 }
 
-export const globals: Binding = new Map([
+export const globals: Frame = new Map([
   ['pi', new Ref(new Num(Math.PI))],
   ['e', new Ref(new Num(Math.E))],
   ['print', new Ref(new NativeFn('print', (obj: Val) => {
@@ -428,12 +429,12 @@ export function evalArk(val: Val, stack: Stack): Val {
     val.val = val.val.map((e) => evalArk(e, stack))
     return val
   } else if (val instanceof Let) {
-    const binding = bindArgsToParams(val.boundVars, [])
-    binding.forEach((v) => {
+    const frame = bindArgsToParams(val.boundVars, [])
+    frame.forEach((v) => {
       // First eval the Ref, then eval the value
       v.set(stack, evalArk(evalArk(v, stack), stack))
     })
-    return evalArk(val.body, stack.extend(binding))
+    return evalArk(val.body, stack.extend(frame))
   } else if (val instanceof Call) {
     const fn = evalArk(val.fn, stack) as FexprClosure
     return fn.call(stack, val.args)
@@ -461,7 +462,7 @@ export function runArk(
   stack: Stack = new Stack([]),
 ): Val {
   const envWithGlobals = stack.extend(globals)
-  const envVars = new Set(envWithGlobals.env.flatMap((binding) => [...binding.keys()]))
+  const envVars = new Set(envWithGlobals.env.flatMap((frame) => [...frame.keys()]))
   assert(subsetOf(compiledVal[1], envVars))
   return evalArk(compiledVal[0], envWithGlobals)
 }
