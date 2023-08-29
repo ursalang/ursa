@@ -4,10 +4,10 @@ import {
   debug,
   Val, Null, Bool, Num, Str, Ref, List, Obj, DictLiteral,
   Call, Let, Fn, NativeFexpr, PropertyException,
-  evalArk, intrinsics,
+  evalArk, intrinsics, SymRef,
 } from '../ark/interp.js'
 import {
-  CompiledArk, symRef, Environment, setDifference,
+  CompiledArk, symRef, Environment, FreeVars,
 } from '../ark/compiler.js'
 // eslint-disable-next-line import/extensions
 import grammar, {UrsaSemantics} from './ursa.ohm-bundle.js'
@@ -31,19 +31,21 @@ class KeyValue extends AST {
   }
 }
 
-function maybeValue(env: Environment, exp: IterationNode): Val {
+function maybeVal(env: Environment, exp: IterationNode): Val {
   return exp.children.length > 0 ? exp.children[0].toAST(env) : new Null()
 }
 
-function makeFn(env: Environment, freeVars: Set<string>, params: Node, body: Node): Val {
-  const paramList = params.asIteration().children.map(
-    (value) => value.sourceString,
-  )
-  return new Fn(
-    paramList,
-    freeVars,
-    body.toAST(env.extend(paramList)),
-  )
+function listNodeToStringList(listNode: Node): string[] {
+  return listNode.asIteration().children.map((x) => x.sourceString)
+}
+
+function makeFn(env: Environment, params: Node, body: Node): Val {
+  const paramList = listNodeToStringList(params)
+  const innerEnv = env.pushFrame(paramList)
+  const bodyFreeVars = body.freeVars(innerEnv)
+  const compiledBody = body.toAST(innerEnv)
+  paramList.forEach((p) => bodyFreeVars.delete(p))
+  return new Fn(paramList, bodyFreeVars, compiledBody)
 }
 
 function propAccess(ref: Val, prop: string, ...rest: Val[]): Val {
@@ -68,18 +70,13 @@ semantics.addOperation<AST>('toAST(env)', {
     return new Call(intrinsics.if, args)
   },
   Fn_anon(_fn, _open, params, _close, body) {
-    return makeFn(this.args.env, this.freeVars, params, body)
+    return makeFn(this.args.env, params, body)
   },
   NamedFn(_fn, ident, _open, params, _close, body) {
     return propAccess(
-      new Ref(symRef(this.args.env, ident.sourceString)[0]),
+      new Ref(ident.symref(this.args.env)[0]),
       'set',
-      makeFn(
-        this.args.env.extend([ident.sourceString]),
-        new Set([...this.freeVars, ident.sourceString]),
-        params,
-        body,
-      ),
+      makeFn(this.args.env, params, body),
     )
   },
   CallExp_call(exp, _open, args, _close) {
@@ -98,7 +95,7 @@ semantics.addOperation<AST>('toAST(env)', {
     return propAccess(callExp.toAST(this.args.env), 'set', index.toAST(this.args.env), value.toAST(this.args.env))
   },
   Assignment_ident(ident, _eq, value) {
-    return propAccess(new Ref(symRef(this.args.env, ident.sourceString)[0]), 'set', value.toAST(this.args.env))
+    return propAccess(new Ref(ident.symref(this.args.env)[0]), 'set', value.toAST(this.args.env))
   },
   LogicExp_and(left, _and, right) {
     return new Call(intrinsics.and, [left.toAST(this.args.env), right.toAST(this.args.env)])
@@ -192,10 +189,10 @@ semantics.addOperation<AST>('toAST(env)', {
     return propAccess(object.toAST(this.args.env), property.sourceString)
   },
   PrimaryExp_break(_break, exp) {
-    return new Call(intrinsics.break, [maybeValue(this.args.env, exp)])
+    return new Call(intrinsics.break, [maybeVal(this.args.env, exp)])
   },
   PrimaryExp_return(_return, exp) {
-    return new Call(intrinsics.return, [maybeValue(this.args.env, exp)])
+    return new Call(intrinsics.return, [maybeVal(this.args.env, exp)])
   },
   PrimaryExp_continue(_continue) {
     return new Call(intrinsics.continue, [])
@@ -204,7 +201,7 @@ semantics.addOperation<AST>('toAST(env)', {
     return new Null()
   },
   PrimaryExp_ident(_sym) {
-    return symRef(this.args.env, this.sourceString)[0]
+    return this.symref(this.args.env)[0]
   },
   Sequence(exp) {
     return exp.toAST(this.args.env)
@@ -220,46 +217,46 @@ semantics.addOperation<AST>('toAST(env)', {
     )
   },
   Sequence_let(_let, ident, _eq, value, _sep, seq) {
-    const innerBinding = this.args.env.extend([ident.sourceString])
-    return new Let(
-      [ident.sourceString],
-      new Call(intrinsics.seq, [
-        propAccess(new Ref(symRef(innerBinding, ident.sourceString)[0]), 'set', value.toAST(innerBinding)),
-        seq.toAST(innerBinding),
-      ]),
-    )
+    const innerBinding = this.args.env.push([ident.sourceString])
+    const compiledCall = new Call(intrinsics.seq, [
+      propAccess(new Ref(ident.symref(innerBinding)[0]), 'set', value.toAST(innerBinding)),
+      seq.toAST(innerBinding),
+    ])
+    const compiledLet = new Let([ident.sourceString], compiledCall)
+    this.args.env.pop(1)
+    return compiledLet
   },
   Sequence_letfn(_let, namedFn, _sep, seq) {
     const ident = namedFn.children[1].sourceString
-    const innerEnv = this.args.env.extend([ident])
+    const innerEnv = this.args.env.push([ident])
     const fn = namedFn.toAST(innerEnv)
-    return new Let(
-      [ident],
+    const compiledSeq = seq.toAST(innerEnv)
+    const compiledLet = new Let([ident], new Call(intrinsics.seq, [fn, compiledSeq]))
+    this.args.env.pop(1)
+    return compiledLet
+  },
+  Sequence_use(_use, pathList, _sep, seq) {
+    const path = pathList.asIteration().children
+    const ident = path[path.length - 1]
+    // For path x.y.z, compile `let z = x.use(y.z); …`
+    const innerEnv = this.args.env.push([ident.sourceString])
+    const compiledLet = new Let(
+      [ident.sourceString],
       new Call(intrinsics.seq, [
-        fn,
+        propAccess(
+          new Ref(ident.symref(this.args.env)[0]),
+          'set',
+          propAccess(
+            path[0].symref(innerEnv)[0],
+            'use',
+            ...path.slice(1).map((id) => new Str(id.sourceString)),
+          ),
+        ),
         seq.toAST(innerEnv),
       ]),
     )
-  },
-  Sequence_use(_use, pathList, _sep, seq) {
-    const path = pathList.asIteration().children.map((id) => id.sourceString)
-    const ident = path[path.length - 1]
-    // For path x.y.z, compile `let z = x.use(y.z); …`
-    return new Let(
-      [ident],
-      new Call(intrinsics.seq, [
-        propAccess(
-          new Ref(symRef(this.args.env, ident)[0]),
-          'set',
-          propAccess(
-            symRef(this.args.env.extend([ident]), path[0])[0],
-            'use',
-            ...path.slice(1).map((id) => new Str(id)),
-          ),
-        ),
-        seq.toAST(this.args.env.extend([ident])),
-      ]),
-    )
+    this.args.env.pop(1)
+    return compiledLet
   },
   Sequence_exp(exp, _sc) {
     return exp.toAST(this.args.env)
@@ -280,54 +277,89 @@ semantics.addOperation<AST>('toAST(env)', {
   },
 })
 
-function mergeFreeVars(children: Node[]): Set<string> {
-  return new Set<string>(children.flatMap((child) => [...child.freeVars]))
+function mergeFreeVars(env: Environment, children: Node[]): FreeVars {
+  const freeVars = new FreeVars()
+  children.forEach((child) => freeVars.merge(child.freeVars(env)))
+  return freeVars
 }
 
-semantics.addAttribute<Set<string>>('freeVars', {
+semantics.addOperation<FreeVars>('freeVars(env)', {
   _terminal() {
-    return new Set()
+    return new FreeVars()
   },
   _nonterminal(...children) {
-    return mergeFreeVars(children)
+    return mergeFreeVars(this.args.env, children)
   },
   _iter(...children) {
-    return mergeFreeVars(children)
+    return mergeFreeVars(this.args.env, children)
   },
   Sequence_let(_let, ident, _eq, value, _sep, seq) {
-    return setDifference(
-      new Set([...seq.freeVars, ...value.freeVars]),
-      new Set([ident.sourceString]),
-    )
+    const innerBinding = this.args.env.push([ident.sourceString])
+    const freeVars = new FreeVars().merge(seq.freeVars(innerBinding))
+    freeVars.merge(value.freeVars(innerBinding))
+    freeVars.delete(ident.sourceString)
+    this.args.env.pop(1)
+    return freeVars
   },
   Sequence_letfn(_let, namedFn, _sep, seq) {
-    return setDifference(
-      new Set([...seq.freeVars, ...namedFn.freeVars]),
-      new Set([...namedFn.children[3].freeVars, namedFn.children[1].sourceString]),
+    const ident = namedFn.children[1].sourceString
+    const innerEnv = this.args.env.push([ident])
+    const freeVars = new FreeVars().merge(seq.freeVars(innerEnv))
+    freeVars.merge(namedFn.freeVars(innerEnv))
+    namedFn.children[3].freeVars(innerEnv).map.forEach(
+      (_v: SymRef[], k: string) => freeVars.delete(k),
     )
+    freeVars.delete(namedFn.children[1].sourceString)
+    this.args.env.pop(1)
+    return freeVars
+  },
+  Sequence_use(_use, pathList, _sep, seq) {
+    const path = pathList.asIteration().children
+    const ident = path[path.length - 1]
+    const innerEnv = this.args.env.push([ident.sourceString])
+    const freeVars = new FreeVars().merge(seq.freeVars(innerEnv))
+    this.args.env.pop(1)
+    return freeVars
   },
   Fn_anon(_fn, _open, params, _close, body) {
-    return setDifference(body.freeVars, params.freeVars)
+    const paramStrings = listNodeToStringList(params)
+    const innerEnv = this.args.env.pushFrame(paramStrings)
+    const freeVars = new FreeVars().merge(body.freeVars(innerEnv))
+    paramStrings.forEach((p) => freeVars.delete(p))
+    return freeVars
   },
   NamedFn(_fn, ident, _open, params, _close, body) {
-    return setDifference(
-      setDifference(body.freeVars, new Set([ident.sourceString])),
-      params.freeVars,
-    )
+    const paramStrings = listNodeToStringList(params)
+    const innerEnv = this.args.env.pushFrame(paramStrings)
+    const freeVars = new FreeVars().merge(body.freeVars(innerEnv))
+    freeVars.delete(ident.sourceString)
+    listNodeToStringList(params).forEach((p) => freeVars.delete(p))
+    return freeVars
   },
   PropertyExp_property(propertyExp, _dot, _ident) {
-    return propertyExp.freeVars
+    return propertyExp.freeVars(this.args.env)
   },
   ident(_l, _ns) {
-    return intrinsics[this.sourceString] ? new Set() : new Set([this.sourceString])
+    return this.symref(this.args.env)[1]
   },
 })
 
-export function compile(expr: string, env: Environment = new Environment([])): CompiledArk {
+// Ohm attributes can't take arguments, so memoize an operation.
+const symrefs = new Map<Node, CompiledArk>()
+semantics.addOperation<CompiledArk>('symref(env)', {
+  ident(_l, _ns) {
+    if (!symrefs.has(this)) {
+      symrefs.set(this, symRef(this.args.env, this.sourceString))
+    }
+    return symrefs.get(this)!
+  },
+})
+
+export function compile(expr: string, env: Environment = new Environment()): CompiledArk {
   const matchResult = grammar.match(expr)
   if (matchResult.failed()) {
     throw new Error(matchResult.message)
   }
   const ast = semantics(matchResult)
-  return [ast.toAST(env), ast.freeVars]
+  return [ast.toAST(env), ast.freeVars(env)]
 }

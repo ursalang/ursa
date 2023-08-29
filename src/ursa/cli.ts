@@ -62,9 +62,10 @@ function compile(exp: string) {
 function evaluate(exp: string) {
   // Add command-line arguments.
   return runArk(compile(exp), new Stack([
-    new Map([['argv', new Ref(new List(
+    [['argv', new Ref(new List(
       args.argument.map((s) => new Str(s)),
-    ))]])]))
+    ))]],
+  ]))
 }
 
 async function repl() {

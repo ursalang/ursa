@@ -24,9 +24,12 @@ testGroup('Concrete values', [
 testGroup('Intrinsics', [
   ['3 + 4', 7],
   ['(3 + 4) * 5', 35],
-  ['pi', Math.PI],
   ['3 + 4 == 7', true],
   ['not 2', false],
+])
+
+testGroup('Globals', [
+  ['pi', Math.PI],
 ])
 
 testGroup('Sequences', [

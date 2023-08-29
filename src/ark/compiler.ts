@@ -5,28 +5,64 @@ import {
   Val, intrinsics,
   Null, Bool, Num, Str,
   List, Obj, DictLiteral, SymRef,
-  Fn, Fexpr, Prop, Let, Ref, Call,
+  Fn, Fexpr, Prop, Let, Ref, Call, StackLocation,
 } from './interp.js'
 
-export type Syms = string[]
+// FIXME: This should extend (or just be) Map.
+export class FreeVars {
+  public map: Map<string, SymRef[]> = new Map()
 
+  add(name: string, symref: SymRef): FreeVars {
+    if (!this.map.has(name)) {
+      this.map.set(name, [])
+    }
+    this.map.get(name)!.push(symref)
+    return this
+  }
+
+  delete(name: string): FreeVars {
+    this.map.delete(name)
+    return this
+  }
+
+  merge(moreVars: FreeVars): FreeVars {
+    for (const [name, refs] of moreVars.map) {
+      refs.forEach((ref) => this.add(name, ref))
+    }
+    return this
+  }
+}
+
+// FIXME: Common up with Stack
 export class Environment {
-  public env: Syms[]
+  public env: string[][]
 
-  constructor(outerEnv: Syms[]) {
+  constructor(outerEnv: string[][] = [[]]) {
+    assert(outerEnv.length >= 1)
     this.env = outerEnv
   }
 
-  getIndex(sym: string) {
+  getIndex(sym: string): StackLocation | undefined {
     for (let i = 0; i < this.env.length; i += 1) {
-      if (this.env[i].includes(sym)) {
-        return i
+      const j = this.env[i].indexOf(sym)
+      if (j !== -1) {
+        return [i, j]
       }
     }
     return undefined
   }
 
-  extend(syms: Syms): Environment {
+  push(syms: string[]) {
+    this.env[0].unshift(...syms)
+    return this
+  }
+
+  pop(items: number) {
+    this.env[0].splice(0, items)
+    return this
+  }
+
+  pushFrame(syms: string[]): Environment {
     return new Environment([syms, ...this.env])
   }
 }
@@ -47,44 +83,37 @@ function paramList(params: any[]): string[] {
   return paramList
 }
 
-export function setDifference<T>(setA: Set<T>, setB: Set<T>) {
-  const difference = new Set(setA)
-  for (const elem of setB) {
-    difference.delete(elem)
+function listToVals(env: Environment, l: any[]): [Val[], FreeVars] {
+  const vals = []
+  const freeVars = new FreeVars()
+  for (const v of l) {
+    const [val, fv] = doCompile(v, env)
+    vals.push(val)
+    freeVars.merge(fv)
   }
-  return difference
+  return [vals, freeVars]
 }
 
-function setsUnion<T>(...sets: Set<T>[]): Set<T> {
-  return new Set(sets.flatMap((s) => [...s.values()]))
-}
-
-function listToVals(env: Environment, l: any): [Val[], Set<string>[]] {
-  const compiledList: [Val, Set<string>][] = l.map((v: any) => doCompile(v, env))
-  return [
-    compiledList.map(([a, _fv]) => a), compiledList.map(([_a, fv]) => fv),
-  ]
-}
-
-export function symRef(env: Environment, name: string): [Val, Set<string>] {
+export function symRef(env: Environment, name: string): CompiledArk {
   const val = intrinsics[name]
-  if (val) {
-    return [val, new Set()]
+  if (val !== undefined) {
+    return [val, new FreeVars()]
   }
-  return [new SymRef(name), new Set([name])]
+  const symref = new SymRef(env, name)
+  return [symref, new FreeVars().add(name, symref)]
 }
 
-export type CompiledArk = [value: Val, freeVars: Set<string>]
+export type CompiledArk = [value: Val, freeVars: FreeVars]
 
 function doCompile(value: any, env: Environment): CompiledArk {
   if (value === null) {
-    return [new Null(), new Set()]
+    return [new Null(), new FreeVars()]
   }
   if (typeof value === 'boolean') {
-    return [new Bool(value), new Set()]
+    return [new Bool(value), new FreeVars()]
   }
   if (typeof value === 'number') {
-    return [new Num(value), new Set()]
+    return [new Num(value), new FreeVars()]
   }
   if (typeof value === 'string') {
     return symRef(env, value)
@@ -96,32 +125,34 @@ function doCompile(value: any, env: Environment): CompiledArk {
           if (value.length !== 2 || typeof value[1] !== 'string') {
             throw new Error(`invalid 'str' ${value}`)
           }
-          return [new Str(value[1]), new Set()]
+          return [new Str(value[1]), new FreeVars()]
         case 'let': {
           if (value.length !== 3) {
             throw new Error("invalid 'let'")
           }
           const params = paramList(value[1])
-          const [body, freeVars] = doCompile(value[2], env.extend(params))
-          return [new Let(params, body), setDifference(freeVars, new Set(params))]
+          const [body, freeVars] = doCompile(value[2], env.push(params))
+          env.pop(params.length)
+          params.forEach((p) => freeVars.delete(p))
+          return [new Let(params, body), freeVars]
         }
         case 'fn': {
           if (value.length !== 3) {
             throw new Error("invalid 'fn'")
           }
           const params = paramList(value[1])
-          const [body, freeVars] = doCompile(value[2], env.extend(params))
-          const fnFreeVars = setDifference(freeVars, new Set(params))
-          return [new Fn(params, fnFreeVars, body), fnFreeVars]
+          const [body, freeVars] = doCompile(value[2], env.pushFrame(params))
+          params.forEach((p) => freeVars.delete(p))
+          return [new Fn(params, freeVars, body), freeVars]
         }
         case 'fexpr': {
           if (value.length !== 3) {
             throw new Error("invalid 'fexpr'")
           }
           const params = paramList(value[1])
-          const [body, freeVars] = doCompile(env.extend(params), value[2])
-          const fexprFreeVars = setDifference(freeVars, new Set(params))
-          return [new Fexpr(params, fexprFreeVars, body), fexprFreeVars]
+          const [body, freeVars] = doCompile(value[2], env.pushFrame(params))
+          params.map((p) => freeVars.delete(p))
+          return [new Fexpr(params, freeVars, body), freeVars]
         }
         case 'prop': {
           if (value.length < 3) {
@@ -129,7 +160,7 @@ function doCompile(value: any, env: Environment): CompiledArk {
           }
           const [ref, refFreeVars] = doCompile(value[2], env)
           const [args, argsFreeVars] = listToVals(env, value.slice(3))
-          return [new Prop(value[1], ref, args), setsUnion(refFreeVars, ...argsFreeVars)]
+          return [new Prop(value[1], ref, args), refFreeVars.merge(argsFreeVars)]
         }
         case 'ref': {
           if (value.length !== 2) {
@@ -140,34 +171,34 @@ function doCompile(value: any, env: Environment): CompiledArk {
         }
         case 'list': {
           const [elems, elemsFreeVars] = listToVals(env, value.slice(1))
-          return [new List(elems), setsUnion(...elemsFreeVars)]
+          return [new List(elems), elemsFreeVars]
         }
         case 'map': {
           const inits = new Map<Val, Val>()
-          const initsFreeVars = []
+          const initsFreeVars = new FreeVars()
           for (const pair of value.slice(1)) {
             assert(pair instanceof Array && pair.length === 2)
             const [key, keyFreeVars] = doCompile(pair[0], env)
             const [val, valFreeVars] = doCompile(pair[1], env)
             inits.set(key, val)
-            initsFreeVars.push(keyFreeVars)
-            initsFreeVars.push(valFreeVars)
+            initsFreeVars.merge(keyFreeVars)
+            initsFreeVars.merge(valFreeVars)
           }
-          return [new DictLiteral(inits), setsUnion(...initsFreeVars)]
+          return [new DictLiteral(inits), initsFreeVars]
         }
         case 'seq': {
           if (value.length === 2) {
             return doCompile(value[1], env)
           }
           const [elems, elemsFreeVars] = listToVals(env, value.slice(1))
-          return [new Call(intrinsics.seq, elems), setsUnion(...elemsFreeVars)]
+          return [new Call(intrinsics.seq, elems), elemsFreeVars]
         }
         default: {
           const [fn, fnFreeVars] = symRef(env, value[0])
           const [args, argsFreeVars] = listToVals(env, value.slice(1))
           return [
             new Call(fn, args),
-            setsUnion(fnFreeVars, ...argsFreeVars),
+            fnFreeVars.merge(argsFreeVars),
           ]
         }
       }
@@ -175,19 +206,19 @@ function doCompile(value: any, env: Environment): CompiledArk {
   }
   if (typeof value === 'object') {
     const inits: {[key: string]: any} = {}
-    const initsFreeVars = []
+    const initsFreeVars = new FreeVars()
     for (const key in value) {
       if (Object.hasOwn(value, key)) {
         const [val, freeVars] = doCompile(value[key], env)
         inits[key] = val
-        initsFreeVars.push(freeVars)
+        initsFreeVars.merge(freeVars)
       }
     }
-    return [new Obj(inits), setsUnion(...initsFreeVars)]
+    return [new Obj(inits), initsFreeVars]
   }
   throw new Error(`invalid value ${value}`)
 }
 
-export function compile(expr: string, env: Environment = new Environment([])): CompiledArk {
+export function compile(expr: string, env: Environment = new Environment()): CompiledArk {
   return doCompile(JSON.parse(expr), env)
 }
