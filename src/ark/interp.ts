@@ -430,10 +430,6 @@ export function evalArk(val: Val, stack: Stack): Val {
     return val
   } else if (val instanceof Let) {
     const frame = bindArgsToParams(val.boundVars, [])
-    frame.forEach((v) => {
-      // First eval the Ref, then eval the value
-      v.set(stack, evalArk(evalArk(v, stack), stack))
-    })
     return evalArk(val.body, stack.extend(frame))
   } else if (val instanceof Call) {
     const fn = evalArk(val.fn, stack) as FexprClosure
