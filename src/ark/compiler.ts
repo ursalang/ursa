@@ -8,25 +8,17 @@ import {
   Fn, Fexpr, Prop, Let, Ref, Call, StackLocation,
 } from './interp.js'
 
-// FIXME: This should extend (or just be) Map.
-export class FreeVars {
-  public map: Map<string, SymRef[]> = new Map()
-
+export class FreeVars extends Map<string, SymRef[]> {
   add(name: string, symref: SymRef): FreeVars {
-    if (!this.map.has(name)) {
-      this.map.set(name, [])
+    if (!this.has(name)) {
+      this.set(name, [])
     }
-    this.map.get(name)!.push(symref)
-    return this
-  }
-
-  delete(name: string): FreeVars {
-    this.map.delete(name)
+    this.get(name)!.push(symref)
     return this
   }
 
   merge(moreVars: FreeVars): FreeVars {
-    for (const [name, refs] of moreVars.map) {
+    for (const [name, refs] of moreVars) {
       refs.forEach((ref) => this.add(name, ref))
     }
     return this
@@ -196,10 +188,7 @@ function doCompile(value: any, env: Environment): CompiledArk {
         default: {
           const [fn, fnFreeVars] = symRef(env, value[0])
           const [args, argsFreeVars] = listToVals(env, value.slice(1))
-          return [
-            new Call(fn, args),
-            fnFreeVars.merge(argsFreeVars),
-          ]
+          return [new Call(fn, args), fnFreeVars.merge(argsFreeVars)]
         }
       }
     }

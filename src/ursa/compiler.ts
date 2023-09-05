@@ -306,7 +306,7 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
     const innerEnv = this.args.env.push([ident])
     const freeVars = new FreeVars().merge(seq.freeVars(innerEnv))
     freeVars.merge(namedFn.freeVars(innerEnv))
-    namedFn.children[3].freeVars(innerEnv).map.forEach(
+    namedFn.children[3].freeVars(innerEnv).forEach(
       (_v: SymRef[], k: string) => freeVars.delete(k),
     )
     freeVars.delete(namedFn.children[1].sourceString)

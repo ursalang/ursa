@@ -156,7 +156,7 @@ export class Fexpr extends Val {
 
   captureFreeVars(stack: Stack): Frame {
     const frame: Frame = []
-    for (const [name, symrefs] of this.freeVars.map) {
+    for (const [name, symrefs] of this.freeVars) {
       frame.push([name, new Ref(symrefs[0].get(stack.pushFrame([])))])
       for (const ref of symrefs) {
         assert(ref.index !== undefined && ref.index[0] > 0)
@@ -477,7 +477,7 @@ export function evalArk(val: Val, stack: Stack): Val {
 // FIXME: support partial linking.
 export function link(compiledVal: CompiledArk, stack: Stack): Val {
   const [val, freeVars] = compiledVal
-  for (const [name, symrefs] of freeVars.map) {
+  for (const [name, symrefs] of freeVars) {
     const index = stack.getIndex(name)
     if (index === undefined) {
       throw new Error(`undefined symbol ${name}`)
