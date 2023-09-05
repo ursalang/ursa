@@ -12,17 +12,15 @@ export class Stack {
     this.stack = outerStack
   }
 
-  get(sym: string, index: StackLocation) {
-    assert(index !== undefined, `symbol ${sym} has no index at run-time (get)`)
+  get(index: StackLocation) {
+    assert(index !== undefined, 'symbol has no index at run-time (get)')
     const ref = this.stack[index[0]][index[1]]
-    assert(sym === this.stack[index[0]][index[1]][0], `mismatched symbol at ${index}: looking for ${sym} found ${ref[0]} (set)`)
     return ref[1]
   }
 
-  set(sym: string, val: Val, index?: StackLocation) {
-    assert(index !== undefined, `symbol ${sym} has no index at run-time (set)`)
+  set(val: Val, index?: StackLocation) {
+    assert(index !== undefined, 'symbol has no index at run-time (set)')
     const ref = this.stack[index[0]][index[1]]
-    assert(ref[0] === sym, `mismatched symbol at ${index}: looking for ${sym} found ${ref[0]} (set)`)
     ref[1].set(this, val)
   }
 
@@ -221,20 +219,20 @@ export type StackLocation = [number, number]
 export class SymRef extends Val {
   index: StackLocation | undefined
 
-  constructor(env: Environment, public name: string) {
+  constructor(env: Environment, name: string) {
     super()
     this.index = env.getIndex(name)
+    this._debug.set('name', name)
     this._debug.set('env', JSON.stringify(env))
-    // FIXME: only store `name` in `debug`
   }
 
   get(stack: Stack): Ref {
-    return stack.get(this.name, this.index!)
+    return stack.get(this.index!)
   }
 
   set(stack: Stack, val: Val) {
     const evaluatedVal = evalArk(val, stack)
-    stack.set(this.name, evaluatedVal, this.index)
+    stack.set(evaluatedVal, this.index)
     return evaluatedVal
   }
 }
@@ -430,7 +428,7 @@ export const globals: Frame = [
 
 export function evalArk(val: Val, stack: Stack): Val {
   if (val instanceof SymRef) {
-    const ref = stack.get(val.name, val.index!)
+    const ref = stack.get(val.index!)
     return evalArk(evalArk(ref, stack), stack)
   } else if (val instanceof Ref) {
     return val.val
@@ -530,7 +528,7 @@ export function toJs(val: Val): any {
 export function serialize(val: Val) {
   function doSerialize(val: Val): any {
     if (val instanceof SymRef || val instanceof NativeFexpr) {
-      return val.name
+      return val._debug.get('name')
     } else if (val instanceof Str) {
       return ['str', val.val]
     } else if (val instanceof ConcreteVal) {
