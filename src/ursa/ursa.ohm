@@ -106,10 +106,6 @@ Ursa {
   Map = "{" ListOf<KeyValue, ","> "}"
   KeyValue = Exp ":" Exp
 
-  ExpSeq
-    = Exp "," Exp ","? -- expseq
-    | Exp?             -- exp
-
   ident = letter alnum*
 
   bool = "false" | "true"
