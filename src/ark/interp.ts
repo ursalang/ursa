@@ -219,10 +219,8 @@ export class StackLocation {
   }
 
   set(stack: Stack, val: Val) {
-    // FIXME: Surely should not be calling eval here?
-    const evaluatedVal = evalArk(val, stack)
-    stack.set(evaluatedVal, this)
-    return evaluatedVal
+    stack.set(val, this)
+    return val
   }
 }
 
@@ -238,10 +236,8 @@ export class RefLocation {
   }
 
   set(stack: Stack, val: Val) {
-    // FIXME: Surely should not be calling eval here?
-    const evaluatedVal = evalArk(val, stack)
-    this.ref.set(stack, evaluatedVal)
-    return evaluatedVal
+    this.ref.set(stack, val)
+    return val
   }
 }
 
