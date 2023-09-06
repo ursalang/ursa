@@ -7,7 +7,7 @@ import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
 import assert from 'assert'
 import programVersion from '../version.js'
 import {
-  List, Ref, Stack, Str, runArk, serialize, toJs,
+  List, Ref, Str, globals, runArk, serialize, toJs,
 } from '../ark/interp.js'
 import {compile as arkCompile} from '../ark/compiler.js'
 import {compile as ursaCompile} from './compiler.js'
@@ -61,11 +61,10 @@ function compile(exp: string) {
 
 function evaluate(exp: string) {
   // Add command-line arguments.
-  return runArk(compile(exp), new Stack([
-    [['argv', new Ref(new List(
-      args.argument.map((s) => new Str(s)),
-    ))]],
-  ]))
+  globals.set('argv', new Ref(new List(
+    args.argument.map((s) => new Str(s)),
+  )))
+  return runArk(compile(exp))
 }
 
 async function repl() {

@@ -8,6 +8,8 @@ import {
   Fn, Fexpr, Prop, Let, Ref, Call, StackLocation,
 } from './interp.js'
 
+export type Namespace = Map<string, Val>
+
 export class FreeVars extends Map<string, SymRef[]> {
   add(name: string, symref: SymRef): FreeVars {
     if (!this.has(name)) {
@@ -18,8 +20,8 @@ export class FreeVars extends Map<string, SymRef[]> {
   }
 
   merge(moreVars: FreeVars): FreeVars {
-    for (const [name, refs] of moreVars) {
-      refs.forEach((ref) => this.add(name, ref))
+    for (const [name, symrefs] of moreVars) {
+      symrefs.forEach((symref) => this.add(name, symref))
     }
     return this
   }
@@ -30,7 +32,7 @@ export class Environment {
   public env: string[][]
 
   constructor(outerEnv: string[][] = [[]]) {
-    assert(outerEnv.length >= 1)
+    assert(outerEnv.length > 0)
     this.env = outerEnv
   }
 
@@ -38,7 +40,7 @@ export class Environment {
     for (let i = 0; i < this.env.length; i += 1) {
       const j = this.env[i].indexOf(sym)
       if (j !== -1) {
-        return [i, j]
+        return new StackLocation(i, j)
       }
     }
     return undefined

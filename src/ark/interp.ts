@@ -1,40 +1,31 @@
 import assert from 'assert'
-import {CompiledArk, Environment, FreeVars} from './compiler'
+import {
+  CompiledArk, Environment, FreeVars, Namespace,
+} from './compiler'
 
 // A Frame holds Refs to Vals, so that the Vals can potentially be updated
 // while being be referred to in multiple Frames.
-export type Frame = [string, Ref][]
+export type Frame = Ref[]
 
 export class Stack {
   public stack: Frame[]
 
   constructor(outerStack: Frame[]) {
+    assert(outerStack.length > 0)
     this.stack = outerStack
   }
 
-  get(index: StackLocation) {
-    assert(index !== undefined, 'symbol has no index at run-time (get)')
-    const ref = this.stack[index[0]][index[1]]
-    return ref[1]
+  get(location: StackLocation) {
+    const ref = this.stack[location.level][location.index]
+    return ref
   }
 
-  set(val: Val, index?: StackLocation) {
-    assert(index !== undefined, 'symbol has no index at run-time (set)')
-    const ref = this.stack[index[0]][index[1]]
-    ref[1].set(this, val)
+  set(val: Val, location: StackLocation) {
+    const ref = this.stack[location.level][location.index]
+    ref.set(this, val)
   }
 
-  getIndex(sym: string): StackLocation | undefined {
-    for (let i = 0; i < this.stack.length; i += 1) {
-      const j = this.stack[i].findIndex((elem) => elem[0] === sym)
-      if (j !== undefined) {
-        return [i, j]
-      }
-    }
-    return undefined
-  }
-
-  push(refs: [string, Ref][]) {
+  push(refs: Ref[]) {
     this.stack[0].unshift(...refs)
     return this
   }
@@ -113,11 +104,12 @@ export class ContinueException extends HakException {}
 export class PropertyException extends Error {}
 
 export function bindArgsToParams(params: string[], args: Val[]): Frame {
-  const frame: [string, Ref][] = params.map(
-    (key, index) => [key, new Ref(args[index] ?? new Null())],
+  const frame: Frame = params.map(
+    (_key, index) => new Ref(args[index] ?? new Null()),
   )
   if (args.length > params.length) {
-    frame.push(['...', new Ref(new List(args.slice(params.length)))])
+    // FIXME: Support '...' as an identifier
+    frame.push(new Ref(new List(args.slice(params.length))))
   }
   return frame
 }
@@ -156,11 +148,16 @@ export class Fexpr extends Val {
 
   captureFreeVars(stack: Stack): Frame {
     const frame: Frame = []
-    for (const [name, symrefs] of this.freeVars) {
-      frame.push([name, new Ref(symrefs[0].get(stack.pushFrame([])))])
+    for (const [, symrefs] of this.freeVars) {
+      frame.push(new Ref(symrefs[0].get(stack.pushFrame([]))))
       for (const ref of symrefs) {
-        assert(ref.index !== undefined && ref.index[0] > 0)
-        ref.index = [1, frame.length - 1]
+        const loc = ref.location
+        assert(loc !== undefined)
+        if (loc instanceof StackLocation) {
+          assert(loc.level > 0)
+          loc.level = 1
+          loc.index = frame.length - 1
+        }
       }
     }
     return frame
@@ -214,26 +211,56 @@ export class Ref extends Val {
   }
 }
 
-export type StackLocation = [number, number]
+export class StackLocation {
+  constructor(public level: number, public index: number) {}
+
+  get(stack: Stack): Ref {
+    return stack.get(this)
+  }
+
+  set(stack: Stack, val: Val) {
+    // FIXME: Surely should not be calling eval here?
+    const evaluatedVal = evalArk(val, stack)
+    stack.set(evaluatedVal, this)
+    return evaluatedVal
+  }
+}
+
+export class RefLocation {
+  ref: Ref
+
+  constructor(val: Val) {
+    this.ref = new Ref(val)
+  }
+
+  get(_stack: Stack): Ref {
+    return this.ref
+  }
+
+  set(stack: Stack, val: Val) {
+    // FIXME: Surely should not be calling eval here?
+    const evaluatedVal = evalArk(val, stack)
+    this.ref.set(stack, evaluatedVal)
+    return evaluatedVal
+  }
+}
 
 export class SymRef extends Val {
-  index: StackLocation | undefined
+  location: StackLocation | RefLocation | undefined
 
   constructor(env: Environment, name: string) {
     super()
-    this.index = env.getIndex(name)
+    this.location = env.getIndex(name)
     this._debug.set('name', name)
     this._debug.set('env', JSON.stringify(env))
   }
 
   get(stack: Stack): Ref {
-    return stack.get(this.index!)
+    return this.location!.get(stack)
   }
 
   set(stack: Stack, val: Val) {
-    const evaluatedVal = evalArk(val, stack)
-    stack.set(evaluatedVal, this.index)
-    return evaluatedVal
+    return this.location!.set(stack, val)
   }
 }
 
@@ -400,7 +427,7 @@ export const intrinsics: {[key: string]: Val} = {
   '**': new NativeFn('**', (left: Val, right: Val) => new Num(toJs(left) ** toJs(right))),
 }
 
-export const globals: Frame = [
+export const globals = new Map([
   ['pi', new Ref(new Num(Math.PI))],
   ['e', new Ref(new Num(Math.E))],
   ['print', new Ref(new NativeFn('print', (obj: Val) => {
@@ -424,11 +451,11 @@ export const globals: Frame = [
       return new Obj(wrappedModule)
     },
   }))],
-]
+])
 
 export function evalArk(val: Val, stack: Stack): Val {
   if (val instanceof SymRef) {
-    const ref = stack.get(val.index!)
+    const ref = val.get(stack)
     return evalArk(evalArk(ref, stack), stack)
   } else if (val instanceof Ref) {
     return val.val
@@ -475,27 +502,22 @@ export function evalArk(val: Val, stack: Stack): Val {
 }
 
 // FIXME: support partial linking.
-export function link(compiledVal: CompiledArk, stack: Stack): Val {
+export function link(compiledVal: CompiledArk, env: Namespace): Val {
   const [val, freeVars] = compiledVal
   for (const [name, symrefs] of freeVars) {
-    const index = stack.getIndex(name)
-    if (index === undefined) {
+    if (!env.has(name)) {
       throw new Error(`undefined symbol ${name}`)
     }
     for (const symref of symrefs) {
-      symref.index = index
+      symref.location = new RefLocation(env.get(name)!)
     }
   }
   return val
 }
 
-export function runArk(
-  compiledVal: CompiledArk,
-  stack: Stack = new Stack([]),
-): Val {
-  const stackWithGlobals = stack.pushFrame(globals)
-  const val = link(compiledVal, stackWithGlobals)
-  return evalArk(val, stackWithGlobals)
+export function runArk(compiledVal: CompiledArk, env: Namespace = globals): Val {
+  const val = link(compiledVal, env)
+  return evalArk(val, new Stack([[]]))
 }
 
 export function toJs(val: Val): any {
@@ -512,11 +534,11 @@ export function toJs(val: Val): any {
     return obj
   } else if (val instanceof DictLiteral) {
     // Best effort.
-    return toJs(evalArk(val, new Stack([])))
+    return toJs(evalArk(val, new Stack([[]])))
   } else if (val instanceof Dict) {
     const evaluatedMap = new Map<any, Val>()
     for (const [k, v] of val.map) {
-      evaluatedMap.set(k, toJs(evalArk(v, new Stack([]))))
+      evaluatedMap.set(k, toJs(evalArk(v, new Stack([[]]))))
     }
     return evaluatedMap
   } else if (val instanceof List) {
