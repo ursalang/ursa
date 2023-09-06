@@ -13,6 +13,11 @@ Ursa {
   sc = space* (";" | end)
      | spacesNoNL (lineTerminator | &"}")
 
+  // Optional comma for comma-separated lists.
+  maybe_comma_paren = space* ("," | &")")
+  maybe_comma_bracket = space* ("," | &"]")
+  maybe_comma_brace = space* ("," | &"}")
+
   Exp
     = If
     | Fn
@@ -24,10 +29,10 @@ Ursa {
     = "if" Exp Block ("else" Block)?
 
   Fn
-    = "fn" "(" ListOf<ident, ","> ")" Block        -- anon
+    = "fn" "(" ListOf<ident, ","> #maybe_comma_paren ")" Block        -- anon
     | NamedFn
 
-  NamedFn = "fn" ident "(" ListOf<ident, ","> ")" Block
+  NamedFn = "fn" ident "(" ListOf<ident, ","> #maybe_comma_paren ")" Block
 
   Loop = "loop" Block
 
@@ -74,7 +79,7 @@ Ursa {
   IndexExp = CallExp "[" Exp "]" -- index
 
   CallExp
-    = PropertyExp "(" ListOf<Exp, ","> ")"  -- call
+    = PropertyExp "(" ListOf<Exp, ","> #maybe_comma_paren ")"  -- call
     | PropertyExp
 
   PropertyExp
@@ -98,12 +103,12 @@ Ursa {
 
   Block = "{" Sequence "}"
 
-  List = "[" ListOf<Exp, ","> "]"
+  List = "[" ListOf<Exp, ","> #maybe_comma_bracket "]"
 
-  Object = "{" ListOf<PropertyValue, ","> "}"
+  Object = "{" ListOf<PropertyValue, ","> #maybe_comma_brace "}"
   PropertyValue = ident ":" Exp
 
-  Map = "{" ListOf<KeyValue, ","> "}"
+  Map = "{" ListOf<KeyValue, ","> #maybe_comma_brace "}"
   KeyValue = Exp ":" Exp
 
   ident = letter alnum*

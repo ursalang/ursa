@@ -70,17 +70,17 @@ semantics.addOperation<AST>('toAST(env)', {
     }
     return new Call(intrinsics.if, args)
   },
-  Fn_anon(_fn, _open, params, _close, body) {
+  Fn_anon(_fn, _open, params, _maybe_comma, _close, body) {
     return makeFn(this.args.env, params, body)
   },
-  NamedFn(_fn, ident, _open, params, _close, body) {
+  NamedFn(_fn, ident, _open, params, _maybe_comma, _close, body) {
     return propAccess(
       new Ref(ident.symref(this.args.env)[0]),
       'set',
       makeFn(this.args.env, params, body),
     )
   },
-  CallExp_call(exp, _open, args, _close) {
+  CallExp_call(exp, _open, args, _maybe_comma, _close) {
     return new Call(
       exp.toAST(this.args.env),
       args.asIteration().children.map((value, _i, _arr) => value.toAST(this.args.env)),
@@ -149,12 +149,12 @@ semantics.addOperation<AST>('toAST(env)', {
   Block(_open, seq, _close) {
     return seq.toAST(this.args.env)
   },
-  List(_open, elems, _close) {
+  List(_open, elems, _maybe_comma, _close) {
     return new List(
       elems.asIteration().children.map((value, _i, _arr) => value.toAST(this.args.env)),
     )
   },
-  Object(_open, elems, _close) {
+  Object(_open, elems, _maybe_comma, _close) {
     const inits = {}
     const parsedElems = elems.asIteration().children.map(
       (value, _i, _arr) => value.toAST(this.args.env),
@@ -167,7 +167,7 @@ semantics.addOperation<AST>('toAST(env)', {
   PropertyValue(ident, _colon, value) {
     return new PropertyValue(ident.sourceString, value.toAST(this.args.env))
   },
-  Map(_open, elems, _close) {
+  Map(_open, elems, _maybe_comma, _close) {
     const inits = new Map<Val, Val>()
     const parsedElems = elems.asIteration().children.map(
       (value, _i, _arr) => value.toAST(this.args.env),
@@ -322,7 +322,7 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
     this.args.env.pop(1)
     return freeVars
   },
-  Fn_anon(_fn, _open, params, _close, body) {
+  Fn_anon(_fn, _open, params, _maybe_comma, _close, body) {
     const paramStrings = listNodeToStringList(params)
     const innerEnv = this.args.env.pushFrame(paramStrings)
     const freeVars = new FreeVars().merge(body.freeVars(innerEnv))
@@ -330,7 +330,7 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
     this.args.env.popFrame()
     return freeVars
   },
-  NamedFn(_fn, ident, _open, params, _close, body) {
+  NamedFn(_fn, ident, _open, params, _maybe_comma, _close, body) {
     const paramStrings = listNodeToStringList(params)
     const innerEnv = this.args.env.pushFrame(paramStrings)
     const freeVars = new FreeVars().merge(body.freeVars(innerEnv))
