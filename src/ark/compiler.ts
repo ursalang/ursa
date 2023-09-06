@@ -5,7 +5,7 @@ import {
   Val, intrinsics,
   Null, Bool, Num, Str,
   List, Obj, DictLiteral, SymRef,
-  Fn, Fexpr, Prop, Let, Ref, Call, StackLocation,
+  Fn, Fexpr, Prop, Let, Ref, Call, StackLocation, Stack,
 } from './interp.js'
 
 export type Namespace = Map<string, Val>
@@ -27,37 +27,15 @@ export class FreeVars extends Map<string, SymRef[]> {
   }
 }
 
-// FIXME: Common up with Stack
-export class Environment {
-  public env: string[][]
-
-  constructor(outerEnv: string[][] = [[]]) {
-    assert(outerEnv.length > 0)
-    this.env = outerEnv
-  }
-
+export class Environment extends Stack<string> {
   getIndex(sym: string): StackLocation | undefined {
-    for (let i = 0; i < this.env.length; i += 1) {
-      const j = this.env[i].indexOf(sym)
+    for (let i = 0; i < this.stack.length; i += 1) {
+      const j = this.stack[i].indexOf(sym)
       if (j !== -1) {
         return new StackLocation(i, j)
       }
     }
     return undefined
-  }
-
-  push(syms: string[]) {
-    this.env[0].unshift(...syms)
-    return this
-  }
-
-  pop(items: number) {
-    this.env[0].splice(0, items)
-    return this
-  }
-
-  pushFrame(syms: string[]): Environment {
-    return new Environment([syms, ...this.env])
   }
 }
 
@@ -136,6 +114,7 @@ function doCompile(value: any, env: Environment): CompiledArk {
           }
           const params = paramList(value[1])
           const [body, freeVars] = doCompile(value[2], env.pushFrame(params))
+          env.popFrame()
           params.forEach((p) => freeVars.delete(p))
           return [new Fn(params, freeVars, body), freeVars]
         }
@@ -145,6 +124,7 @@ function doCompile(value: any, env: Environment): CompiledArk {
           }
           const params = paramList(value[1])
           const [body, freeVars] = doCompile(value[2], env.pushFrame(params))
+          env.popFrame()
           params.map((p) => freeVars.delete(p))
           return [new Fexpr(params, freeVars, body), freeVars]
         }

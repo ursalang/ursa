@@ -3,29 +3,15 @@ import {
   CompiledArk, Environment, FreeVars, Namespace,
 } from './compiler'
 
-// A Frame holds Refs to Vals, so that the Vals can potentially be updated
-// while being be referred to in multiple Frames.
-export type Frame = Ref[]
+export class Stack<T> {
+  public stack: T[][]
 
-export class Stack {
-  public stack: Frame[]
-
-  constructor(outerStack: Frame[]) {
+  constructor(outerStack: T[][] = [[]]) {
     assert(outerStack.length > 0)
     this.stack = outerStack
   }
 
-  get(location: StackLocation) {
-    const ref = this.stack[location.level][location.index]
-    return ref
-  }
-
-  set(val: Val, location: StackLocation) {
-    const ref = this.stack[location.level][location.index]
-    ref.set(this, val)
-  }
-
-  push(refs: Ref[]) {
+  push(refs: T[]) {
     this.stack[0].unshift(...refs)
     return this
   }
@@ -35,8 +21,28 @@ export class Stack {
     return this
   }
 
-  pushFrame(frame: Frame): Stack {
-    return new Stack([frame, ...this.stack])
+  pushFrame(frame: T[]) {
+    this.stack.unshift(frame)
+    return this
+  }
+
+  popFrame(): this {
+    this.stack.shift()
+    return this
+  }
+}
+
+// A RuntimeStack holds Refs to Vals, so that the Vals can potentially be updated
+// while being be referred to in multiple Frames.
+export class RuntimeStack extends Stack<Ref> {
+  get(location: StackLocation) {
+    const ref = this.stack[location.level][location.index]
+    return ref
+  }
+
+  set(val: Val, location: StackLocation) {
+    const ref = this.stack[location.level][location.index]
+    ref.set(this, val)
   }
 }
 
@@ -103,8 +109,8 @@ export class ContinueException extends HakException {}
 
 export class PropertyException extends Error {}
 
-export function bindArgsToParams(params: string[], args: Val[]): Frame {
-  const frame: Frame = params.map(
+export function bindArgsToParams(params: string[], args: Val[]): Ref[] {
+  const frame: Ref[] = params.map(
     (_key, index) => new Ref(args[index] ?? new Null()),
   )
   if (args.length > params.length) {
@@ -115,15 +121,17 @@ export function bindArgsToParams(params: string[], args: Val[]): Frame {
 }
 
 class FexprClosure extends Val {
-  constructor(protected params: string[], protected freeVars: Frame, protected body: Val) {
+  constructor(protected params: string[], protected freeVars: Ref[], protected body: Val) {
     super()
   }
 
-  call(stack: Stack, args: Val[]) {
+  call(stack: RuntimeStack, args: Val[]) {
     let res: Val = new Null()
     try {
       const frame = bindArgsToParams(this.params, args)
       res = evalArk(this.body, stack.pushFrame(this.freeVars).pushFrame(frame))
+      stack.popFrame()
+      stack.popFrame()
     } catch (e) {
       if (!(e instanceof ReturnException)) {
         throw e
@@ -135,7 +143,7 @@ class FexprClosure extends Val {
 }
 
 class FnClosure extends FexprClosure {
-  call(stack: Stack, args: Val[]) {
+  call(stack: RuntimeStack, args: Val[]) {
     const evaluatedArgs = evaluateArgs(stack, args)
     return super.call(stack, evaluatedArgs)
   }
@@ -146,10 +154,11 @@ export class Fexpr extends Val {
     super()
   }
 
-  captureFreeVars(stack: Stack): Frame {
-    const frame: Frame = []
+  captureFreeVars(stack: RuntimeStack): Ref[] {
+    const frame: Ref[] = []
     for (const [, symrefs] of this.freeVars) {
       frame.push(new Ref(symrefs[0].get(stack.pushFrame([]))))
+      stack.popFrame()
       for (const ref of symrefs) {
         const loc = ref.location
         assert(loc !== undefined)
@@ -167,17 +176,17 @@ export class Fexpr extends Val {
 export class NativeFexpr extends Val {
   constructor(
     public name: string,
-    protected body: (stack: Stack, ...args: Val[]) => Val,
+    protected body: (stack: RuntimeStack, ...args: Val[]) => Val,
   ) {
     super()
   }
 
-  call(stack: Stack, args: Val[]) {
+  call(stack: RuntimeStack, args: Val[]) {
     return this.body(stack, ...args)
   }
 }
 
-function evaluateArgs(stack: Stack, args: Val[]) {
+function evaluateArgs(stack: RuntimeStack, args: Val[]) {
   const evaluatedArgs: Val[] = []
   for (const arg of args) {
     evaluatedArgs.push(evalArk(arg, stack))
@@ -195,7 +204,7 @@ class NativeFn extends Val {
     super()
   }
 
-  call(stack: Stack, args: Val[]) {
+  call(stack: RuntimeStack, args: Val[]) {
     return this.body(...evaluateArgs(stack, args))
   }
 }
@@ -205,7 +214,7 @@ export class Ref extends Val {
     super()
   }
 
-  set(_stack: Stack, val: Val) {
+  set(_stack: RuntimeStack, val: Val) {
     this.val = val
     return val
   }
@@ -214,11 +223,11 @@ export class Ref extends Val {
 export class StackLocation {
   constructor(public level: number, public index: number) {}
 
-  get(stack: Stack): Ref {
+  get(stack: RuntimeStack): Ref {
     return stack.get(this)
   }
 
-  set(stack: Stack, val: Val) {
+  set(stack: RuntimeStack, val: Val) {
     stack.set(val, this)
     return val
   }
@@ -231,11 +240,11 @@ export class RefLocation {
     this.ref = new Ref(val)
   }
 
-  get(_stack: Stack): Ref {
+  get(_stack: RuntimeStack): Ref {
     return this.ref
   }
 
-  set(stack: Stack, val: Val) {
+  set(stack: RuntimeStack, val: Val) {
     this.ref.set(stack, val)
     return val
   }
@@ -251,11 +260,11 @@ export class SymRef extends Val {
     this._debug.set('env', JSON.stringify(env))
   }
 
-  get(stack: Stack): Ref {
+  get(stack: RuntimeStack): Ref {
     return this.location!.get(stack)
   }
 
-  set(stack: Stack, val: Val) {
+  set(stack: RuntimeStack, val: Val) {
     return this.location!.set(stack, val)
   }
 }
@@ -284,12 +293,12 @@ export class Dict extends Val {
     super()
   }
 
-  set(_stack: Stack, index: Val, val: Val) {
+  set(_stack: RuntimeStack, index: Val, val: Val) {
     this.map.set(toJs(index), val)
     return val
   }
 
-  get(_stack: Stack, index: Val) {
+  get(_stack: RuntimeStack, index: Val) {
     return this.map.get(toJs(index)) ?? new Null()
   }
 }
@@ -299,15 +308,15 @@ export class List extends Val {
     super()
   }
 
-  length(_stack: Stack) {
+  length(_stack: RuntimeStack) {
     return new Num(this.val.length)
   }
 
-  get(_stack: Stack, index: Val) {
+  get(_stack: RuntimeStack, index: Val) {
     return this.val[toJs(index as Num)]
   }
 
-  set(_stack: Stack, index: Val, val: Val) {
+  set(_stack: RuntimeStack, index: Val, val: Val) {
     this.val[toJs(index)] = val
     return val
   }
@@ -358,35 +367,35 @@ export const intrinsics: {[key: string]: Val} = {
   pos: new NativeFn('pos', (val: Val) => new Num(+toJs(val))),
   neg: new NativeFn('neg', (val: Val) => new Num(-toJs(val))),
   not: new NativeFn('not', (val: Val) => new Bool(!toJs(val))),
-  seq: new NativeFexpr('seq', (stack: Stack, ...args: Val[]) => {
+  seq: new NativeFexpr('seq', (stack: RuntimeStack, ...args: Val[]) => {
     let res: Val = new Null()
     for (const exp of args) {
       res = evalArk(exp, stack)
     }
     return res
   }),
-  if: new NativeFexpr('if', (stack: Stack, cond: Val, e_then: Val, e_else: Val) => {
+  if: new NativeFexpr('if', (stack: RuntimeStack, cond: Val, e_then: Val, e_else: Val) => {
     const condVal = evalArk(cond, stack)
     if (toJs(condVal)) {
       return evalArk(e_then, stack)
     }
     return e_else ? evalArk(e_else, stack) : new Null()
   }),
-  and: new NativeFexpr('and', (stack: Stack, left: Val, right: Val) => {
+  and: new NativeFexpr('and', (stack: RuntimeStack, left: Val, right: Val) => {
     const leftVal = evalArk(left, stack)
     if (toJs(leftVal)) {
       return evalArk(right, stack)
     }
     return leftVal
   }),
-  or: new NativeFexpr('or', (stack: Stack, left: Val, right: Val) => {
+  or: new NativeFexpr('or', (stack: RuntimeStack, left: Val, right: Val) => {
     const leftVal = evalArk(left, stack)
     if (toJs(leftVal)) {
       return leftVal
     }
     return evalArk(right, stack)
   }),
-  loop: new NativeFexpr('loop', (stack: Stack, body: Val) => {
+  loop: new NativeFexpr('loop', (stack: RuntimeStack, body: Val) => {
     for (; ;) {
       try {
         evalArk(body, stack)
@@ -435,7 +444,7 @@ export const globals = new Map([
     return new Null()
   }))],
   ['js', new Ref(new Obj({
-    use: (_stack: Stack, ...args: Val[]) => {
+    use: (_stack: RuntimeStack, ...args: Val[]) => {
       const requirePath = (args.map(toJs).join('.'))
       // eslint-disable-next-line import/no-dynamic-require, global-require
       const module = require(requirePath)
@@ -449,7 +458,7 @@ export const globals = new Map([
   }))],
 ])
 
-export function evalArk(val: Val, stack: Stack): Val {
+export function evalArk(val: Val, stack: RuntimeStack): Val {
   if (val instanceof SymRef) {
     const ref = val.get(stack)
     return evalArk(evalArk(ref, stack), stack)
@@ -513,7 +522,7 @@ export function link(compiledVal: CompiledArk, env: Namespace): Val {
 
 export function runArk(compiledVal: CompiledArk, env: Namespace = globals): Val {
   const val = link(compiledVal, env)
-  return evalArk(val, new Stack([[]]))
+  return evalArk(val, new RuntimeStack())
 }
 
 export function toJs(val: Val): any {
@@ -530,11 +539,11 @@ export function toJs(val: Val): any {
     return obj
   } else if (val instanceof DictLiteral) {
     // Best effort.
-    return toJs(evalArk(val, new Stack([[]])))
+    return toJs(evalArk(val, new RuntimeStack()))
   } else if (val instanceof Dict) {
     const evaluatedMap = new Map<any, Val>()
     for (const [k, v] of val.map) {
-      evaluatedMap.set(k, toJs(evalArk(v, new Stack([[]]))))
+      evaluatedMap.set(k, toJs(evalArk(v, new RuntimeStack())))
     }
     return evaluatedMap
   } else if (val instanceof List) {

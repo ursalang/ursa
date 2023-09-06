@@ -45,6 +45,7 @@ function makeFn(env: Environment, params: Node, body: Node): Val {
   const bodyFreeVars = body.freeVars(innerEnv)
   const compiledBody = body.toAST(innerEnv)
   paramList.forEach((p) => bodyFreeVars.delete(p))
+  env.popFrame()
   return new Fn(paramList, bodyFreeVars, compiledBody)
 }
 
@@ -326,6 +327,7 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
     const innerEnv = this.args.env.pushFrame(paramStrings)
     const freeVars = new FreeVars().merge(body.freeVars(innerEnv))
     paramStrings.forEach((p) => freeVars.delete(p))
+    this.args.env.popFrame()
     return freeVars
   },
   NamedFn(_fn, ident, _open, params, _close, body) {
@@ -333,6 +335,7 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
     const innerEnv = this.args.env.pushFrame(paramStrings)
     const freeVars = new FreeVars().merge(body.freeVars(innerEnv))
     freeVars.delete(ident.sourceString)
+    this.args.env.popFrame()
     listNodeToStringList(params).forEach((p) => freeVars.delete(p))
     return freeVars
   },
