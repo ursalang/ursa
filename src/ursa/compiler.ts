@@ -3,8 +3,7 @@ import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
   Val, Null, Bool, Num, Str, Ref, List, Obj, DictLiteral,
-  Call, Let, Fn, NativeFexpr, PropertyException,
-  evalArk, intrinsics, SymRef,
+  Call, Let, Fn, intrinsics, SymRef, Prop,
 } from '../ark/interp.js'
 import {
   CompiledArk, symRef, Environment, FreeVars,
@@ -31,6 +30,12 @@ class KeyValue extends AST {
   }
 }
 
+class Arguments extends AST {
+  constructor(public args: Val[]) {
+    super()
+  }
+}
+
 function maybeVal(env: Environment, exp: IterationNode): Val {
   return exp.children.length > 0 ? exp.children[0].toAST(env) : new Null()
 }
@@ -49,17 +54,13 @@ function makeFn(env: Environment, params: Node, body: Node): Val {
   return new Fn(paramList, bodyFreeVars, compiledBody)
 }
 
-function propAccess(ref: Val, prop: string, ...rest: Val[]): Val {
-  return new Call(
-    new NativeFexpr(`prop_${prop}`, (env, ...args) => {
-      const obj: any = evalArk(ref, env)
-      if (!(prop in obj)) {
-        throw new PropertyException(`no property '${prop}'`)
-      }
-      return obj[prop](env, ...args.map((e) => evalArk(e, env)))
-    }),
-    rest,
-  )
+function setAccess(lvalue: Val, value: Val): Val {
+  if (lvalue instanceof Prop && lvalue.prop === 'get') {
+    return new Prop('set', lvalue.ref, [...lvalue.args, value])
+  } else if (lvalue instanceof SymRef) {
+    return new Prop('set', new Ref(lvalue), [value])
+  }
+  return new Prop('set', lvalue, [value])
 }
 
 semantics.addOperation<AST>('toAST(env)', {
@@ -74,29 +75,37 @@ semantics.addOperation<AST>('toAST(env)', {
     return makeFn(this.args.env, params, body)
   },
   NamedFn(_fn, ident, _open, params, _maybe_comma, _close, body) {
-    return propAccess(
-      new Ref(ident.symref(this.args.env)[0]),
+    return new Prop(
       'set',
-      makeFn(this.args.env, params, body),
+      new Ref(ident.symref(this.args.env)[0]),
+      [makeFn(this.args.env, params, body)],
     )
   },
-  CallExp_call(exp, _open, args, _maybe_comma, _close) {
-    return new Call(
-      exp.toAST(this.args.env),
+  CallExp_call(exp, args) {
+    return new Call(exp.toAST(this.args.env), args.toAST(this.args.env).args)
+  },
+  CallExp_propcall(exp, args) {
+    return new Call(exp.toAST(this.args.env), args.toAST(this.args.env).args)
+  },
+  CallExp_prop(exp, _dot, ident) {
+    return new Prop(ident.sourceString, exp.toAST(this.args.env), [])
+  },
+  Arguments(_open, args, _maybe_comma, _close) {
+    return new Arguments(
       args.asIteration().children.map((value, _i, _arr) => value.toAST(this.args.env)),
     )
   },
-  IndexExp_index(object, _open, index, _close) {
-    return propAccess(object.toAST(this.args.env), 'get', index.toAST(this.args.env))
+  PropertyExp_index(object, _open, index, _close) {
+    return new Prop('get', object.toAST(this.args.env), [index.toAST(this.args.env)])
+  },
+  CallExp_index(object, _open, index, _close) {
+    return new Prop('get', object.toAST(this.args.env), [index.toAST(this.args.env)])
   },
   Loop(_loop, e_body) {
     return new Call(intrinsics.loop, [e_body.toAST(this.args.env)])
   },
-  Assignment_index(callExp, _open, index, _close, _eq, value) {
-    return propAccess(callExp.toAST(this.args.env), 'set', index.toAST(this.args.env), value.toAST(this.args.env))
-  },
-  Assignment_ident(ident, _eq, value) {
-    return propAccess(new Ref(ident.symref(this.args.env)[0]), 'set', value.toAST(this.args.env))
+  AssignmentExp_ass(lvalue, _eq, value) {
+    return setAccess(lvalue.toAST(this.args.env), value.toAST(this.args.env))
   },
   LogicExp_and(left, _and, right) {
     return new Call(intrinsics.and, [left.toAST(this.args.env), right.toAST(this.args.env)])
@@ -104,7 +113,7 @@ semantics.addOperation<AST>('toAST(env)', {
   LogicExp_or(left, _or, right) {
     return new Call(intrinsics.or, [left.toAST(this.args.env), right.toAST(this.args.env)])
   },
-  LogicExp_not(_not, exp) {
+  UnaryExp_not(_not, exp) {
     return new Call(intrinsics.not, [exp.toAST(this.args.env)])
   },
   CompareExp_eq(left, _eq, right) {
@@ -187,12 +196,12 @@ semantics.addOperation<AST>('toAST(env)', {
     return new Call(intrinsics.neg, [exp.toAST(this.args.env)])
   },
   PropertyExp_property(object, _dot, property) {
-    return propAccess(object.toAST(this.args.env), property.sourceString)
+    return new Prop(property.sourceString, object.toAST(this.args.env), [])
   },
-  PrimaryExp_break(_break, exp) {
+  UnaryExp_break(_break, exp) {
     return new Call(intrinsics.break, [maybeVal(this.args.env, exp)])
   },
-  PrimaryExp_return(_return, exp) {
+  UnaryExp_return(_return, exp) {
     return new Call(intrinsics.return, [maybeVal(this.args.env, exp)])
   },
   PrimaryExp_continue(_continue) {
@@ -220,7 +229,7 @@ semantics.addOperation<AST>('toAST(env)', {
   Sequence_let(_let, ident, _eq, value, _sep, seq) {
     const innerBinding = this.args.env.push([ident.sourceString])
     const compiledCall = new Call(intrinsics.seq, [
-      propAccess(new Ref(ident.symref(innerBinding)[0]), 'set', value.toAST(innerBinding)),
+      new Prop('set', new Ref(ident.symref(innerBinding)[0]), [value.toAST(innerBinding)]),
       seq.toAST(innerBinding),
     ])
     const compiledLet = new Let([ident.sourceString], compiledCall)
@@ -244,14 +253,14 @@ semantics.addOperation<AST>('toAST(env)', {
     const compiledLet = new Let(
       [ident.sourceString],
       new Call(intrinsics.seq, [
-        propAccess(
-          new Ref(ident.symref(this.args.env)[0]),
+        new Prop(
           'set',
-          propAccess(
-            path[0].symref(innerEnv)[0],
+          new Ref(ident.symref(this.args.env)[0]),
+          [new Prop(
             'use',
-            ...path.slice(1).map((id) => new Str(id.sourceString)),
-          ),
+            path[0].symref(innerEnv)[0],
+            path.slice(1).map((id) => new Str(id.sourceString)),
+          )],
         ),
         seq.toAST(innerEnv),
       ]),

@@ -18,12 +18,44 @@ Ursa {
   maybe_comma_bracket = space* ("," | &"]")
   maybe_comma_brace = space* ("," | &"}")
 
-  Exp
-    = If
+  PrimaryExp
+    = "null"            -- null
+    | bool
+    | string
+    | number
+    | "continue"        -- continue
+    | ident             -- ident
+    | List
+    | Object
+    | Map
+    | Block
+    | "(" Exp ")"       -- paren
+
+  List = "[" ListOf<AssignmentExp, ","> #maybe_comma_bracket "]"
+
+  Object = "{" ListOf<PropertyValue, ","> #maybe_comma_brace "}"
+  PropertyValue = ident ":" Exp
+
+  Map = "{" ListOf<KeyValue, ","> #maybe_comma_brace "}"
+  KeyValue = Exp ":" Exp
+
+  PropertyExp
+    = PropertyExp "[" Exp "]"           -- index
+    | PropertyExp #"." #ident           -- property
     | Fn
-    | Loop
-    | Assignment
-    | LogicExp
+    | PrimaryExp
+
+  CallExp
+    = CallExp "[" Exp "]" -- index
+  	| CallExp #"." #ident -- prop
+    | PropertyExp Arguments -- propcall
+    | CallExp Arguments -- call
+
+  Arguments = "(" ListOf<Exp, ","> #maybe_comma_paren ")"
+
+  LvalueExp
+    = CallExp
+    | PropertyExp
 
   If
     = "if" Exp Block ("else" Block)?
@@ -36,15 +68,28 @@ Ursa {
 
   Loop = "loop" Block
 
-  Assignment
-    = CallExp "[" Exp "]" "=" Exp  -- index
-    | ident "=" Exp                -- ident
+  UnaryExp
+    = "break" Exp?      -- break
+    | "return" Exp?     -- return
+    | "not" Exp            -- not
+    | "+" Exp           -- pos
+    | "-" Exp           -- neg
+    | LvalueExp
 
-  LogicExp
-    = LogicExp "and" CompareExp -- and
-    | LogicExp "or" CompareExp  -- or
-    | "not" LogicExp            -- not
-    | CompareExp
+  ExponentExp
+    = UnaryExp "**" ExponentExp  -- power
+    | UnaryExp
+
+  ProductExp
+    = ProductExp "*" ExponentExp  -- times
+    | ProductExp "/" ExponentExp  -- divide
+    | ProductExp "%" ExponentExp  -- mod
+    | ExponentExp
+
+  ArithmeticExp
+    = ArithmeticExp "+" ProductExp  -- plus
+    | ArithmeticExp "-" ProductExp  -- minus
+    | ProductExp
 
   CompareExp
     = CompareExp "==" ArithmeticExp -- eq
@@ -55,61 +100,23 @@ Ursa {
     | CompareExp ">=" ArithmeticExp -- geq
     | ArithmeticExp
 
-  ArithmeticExp
-    = ArithmeticExp "+" ProductExp  -- plus
-    | ArithmeticExp "-" ProductExp  -- minus
-    | ProductExp
+// FIXME: Bitwise expressions come here
 
-  ProductExp
-    = ProductExp "*" ExponentExp  -- times
-    | ProductExp "/" ExponentExp  -- divide
-    | ProductExp "%" ExponentExp  -- mod
-    | ExponentExp
+  LogicExp
+    = LogicExp "and" CompareExp -- and
+    | LogicExp "or" CompareExp  -- or
+    | CompareExp
 
-  ExponentExp
-    = UnaryExp "**" ExponentExp  -- power
-    | UnaryExp
+  AssignmentExp
+    = LvalueExp "=" AssignmentExp -- ass
+    | LogicExp
 
-  UnaryExp
-    = "+" Exp           -- pos
-    | "-" Exp           -- neg
-    | IndexExp
-    | CallExp
-
-  IndexExp = CallExp "[" Exp "]" -- index
-
-  CallExp
-    = PropertyExp "(" ListOf<Exp, ","> #maybe_comma_paren ")"  -- call
-    | PropertyExp
-
-  PropertyExp
-    = PropertyExp #"." #ident           -- property
-    | PrimaryExp
-
-  PrimaryExp
-    = "(" Exp ")"       -- paren
-    | Object
-    | Block
-    | List
-    | Map
-    | "break" Exp?      -- break
-    | "return" Exp?     -- return
-    | "continue"        -- continue
-    | "null"            -- null
-    | bool
-    | string
-    | ident             -- ident
-    | number
+  Exp
+    = If
+    | Loop
+    | AssignmentExp
 
   Block = "{" Sequence "}"
-
-  List = "[" ListOf<Exp, ","> #maybe_comma_bracket "]"
-
-  Object = "{" ListOf<PropertyValue, ","> #maybe_comma_brace "}"
-  PropertyValue = ident ":" Exp
-
-  Map = "{" ListOf<KeyValue, ","> #maybe_comma_brace "}"
-  KeyValue = Exp ":" Exp
 
   ident = letter alnum*
 
