@@ -36,8 +36,7 @@ export class Stack<T> {
 // while being be referred to in multiple Frames.
 export class RuntimeStack extends Stack<Ref> {
   get(location: StackLocation) {
-    const ref = this.stack[location.level][location.index]
-    return ref
+    return this.stack[location.level][location.index]
   }
 
   set(val: Val, location: StackLocation) {
@@ -49,14 +48,14 @@ export class RuntimeStack extends Stack<Ref> {
 // Base class for compiled code.
 export class Val {
   // Uncomment the following for debug.
-  // static counter = 0
+  static counter = 0
 
-  // _uid: number
+  _uid: number
 
-  // constructor() {
-  //   this._uid = Val.counter
-  //   Val.counter += 1
-  // }
+  constructor() {
+    this._uid = Val.counter
+    Val.counter += 1
+  }
 
   _debug: Map<string, any> = new Map()
 }
@@ -157,15 +156,16 @@ export class Fexpr extends Val {
   captureFreeVars(stack: RuntimeStack): Ref[] {
     const frame: Ref[] = []
     for (const [, symrefs] of this.freeVars) {
-      frame.push(new Ref(symrefs[0].get(stack.pushFrame([]))))
+      const ref = new Ref(symrefs[0].get(stack.pushFrame([])))
       stack.popFrame()
-      for (const ref of symrefs) {
-        const loc = ref.location
+      frame.push(ref)
+      for (const symref of symrefs) {
+        const loc = symref.location
         assert(loc !== undefined)
         if (loc instanceof StackLocation) {
           assert(loc.level > 0)
-          loc.level = 1
-          loc.index = frame.length - 1
+          // FIXME: we shouldn't be rewriting code!
+          symref.location = new StackRefLocation(1, frame.length - 1)
         }
       }
     }
@@ -229,6 +229,19 @@ export class StackLocation {
 
   set(stack: RuntimeStack, val: Val) {
     stack.set(val, this)
+    return val
+  }
+}
+
+export class StackRefLocation {
+  constructor(public level: number, public index: number) {}
+
+  get(stack: RuntimeStack): Ref {
+    return stack.get(this).val as Ref
+  }
+
+  set(stack: RuntimeStack, val: Val) {
+    this.get(stack).val = val
     return val
   }
 }

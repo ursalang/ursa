@@ -12,6 +12,7 @@ import {cliTest} from './testutil.js'
   ['Double list', 'test/double-list'],
   ['Repeated closure', 'test/repeated-closure'],
   ['Two closures', 'test/two-closures'],
+  ['Two double closures', 'test/two-double-closures'],
 ].map(([title, file]) => cliTest('ursa', title, file))
 
 cliTest('ursa', 'Test I/O', 'test/print', 'Hello, world!')
