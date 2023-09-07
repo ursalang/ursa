@@ -1,7 +1,7 @@
 // Ursa front-end
 
 import path from 'path'
-import fs from 'fs'
+import fs, {PathOrFileDescriptor} from 'fs'
 import * as readline from 'node:readline'
 import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
 import assert from 'assert'
@@ -27,7 +27,7 @@ parser.add_argument('--syntax', {
   default: 'ursa', choices: ['ursa', 'json'], help: 'syntax to use [default: ursa]',
 })
 parser.add_argument('--compile', '-c', {action: 'store_true', help: 'compile input to JSON file'})
-parser.add_argument('--output', '-o', {metavar: 'FILE', help: 'JSON output file [default: INPUT-FILE.json]'})
+parser.add_argument('--output', '-o', {metavar: 'FILE', help: "JSON output file [`-' for standard output]"})
 parser.add_argument('--interactive', '-i', {action: 'store_true', help: 'enter interactive mode after running given code'})
 
 parser.add_argument('--version', {
@@ -93,10 +93,9 @@ async function repl() {
 }
 
 // Get output filename, if any
-let jsonFile = args.output
-if (jsonFile === undefined && args.module !== undefined) {
-  const parsedFilename = path.parse(args.module)
-  jsonFile = path.join(parsedFilename.dir, `${parsedFilename.name}.json`)
+let jsonFile: PathOrFileDescriptor | undefined = args.output
+if (jsonFile === '-' && args.module !== undefined) {
+  jsonFile = process.stdout.fd
 }
 
 async function main() {
