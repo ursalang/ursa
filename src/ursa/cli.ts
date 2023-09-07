@@ -125,11 +125,11 @@ async function main() {
       if (source === undefined || args.interactive) {
         result = await repl()
       }
-      assert(result !== undefined)
     }
     if (args.output) {
+      const json = serialize(result) ?? 'null'
       assert(jsonFile)
-      fs.writeFileSync(jsonFile, serialize(result))
+      fs.writeFileSync(jsonFile, json)
     }
   } catch (error) {
     if (process.env.DEBUG) {
