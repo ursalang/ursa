@@ -19,8 +19,8 @@ const parser = new ArgumentParser({
 })
 const inputGroup = parser.add_mutually_exclusive_group()
 
-inputGroup.add_argument('module', {metavar: 'FILE', help: 'Ursa module to run', nargs: '?'})
-parser.add_argument('argument', {metavar: 'ARGUMENT', help: 'arguments to the Ursa module', nargs: '*'})
+inputGroup.add_argument('module', {metavar: 'FILE', help: 'Ursa program to run', nargs: '?'})
+parser.add_argument('argument', {metavar: 'ARGUMENT', help: 'arguments to the Ursa program', nargs: '*'})
 inputGroup.add_argument('--eval', '-e', {metavar: 'EXPRESSION', help: 'execute the given expression'})
 
 parser.add_argument('--syntax', {
