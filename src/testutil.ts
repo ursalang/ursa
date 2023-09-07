@@ -19,7 +19,8 @@ function doTestGroup(
 ) {
   test(title, (t) => {
     for (const [source, expected] of tests) {
-      t.deepEqual(toJs(runArk(compile(source))), expected)
+      const compiled = compile(source)
+      t.deepEqual(toJs(runArk(compiled)), expected)
     }
   })
 }
