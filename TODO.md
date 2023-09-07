@@ -1,9 +1,5 @@
 # Ursa to-do
 
-* Compile-time environment should just be names (and later, types) mapped to
-  continuation location.
-* Compiled form of Ark has only "addresses" for bound variables.
-
 ## Ursa MVP
 
 * Tail recursion elimination
@@ -29,7 +25,7 @@
 * Study vau, fexprs, first-class environments (objects), and delimited
   continuations: https://github.com/catseye/Robin ; also see
   https://github.com/nukata/little-scheme-in-typescript
-* Add debug information: symbol names and source locations.
+* Add debug information: source locations.
 
 ## Ursa v1
 
