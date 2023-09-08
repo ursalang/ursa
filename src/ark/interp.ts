@@ -48,14 +48,15 @@ export class RuntimeStack extends Stack<Ref> {
 // Base class for compiled code.
 export class Val {
   // Uncomment the following for debug.
-  static counter = 0
+  // FIXME: make this a run-time (or build-time?) option.
+  // static counter = 0
 
-  _uid: number
+  // _uid: number
 
-  constructor() {
-    this._uid = Val.counter
-    Val.counter += 1
-  }
+  // constructor() {
+  //   this._uid = Val.counter
+  //   Val.counter += 1
+  // }
 
   _debug: Map<string, any> = new Map()
 }
