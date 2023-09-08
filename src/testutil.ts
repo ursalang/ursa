@@ -37,11 +37,11 @@ export async function cliTest(syntax: string, title: string, file: string, outpu
   const tempFile = tmp.tmpNameSync()
   test(title, async (t) => {
     const {stdout} = await run([`${file}.${syntax}`, `--syntax=${syntax}`, `--output=${tempFile}`])
-    const result = fs.readFileSync(tempFile, {encoding: 'utf-8'})
-    const expected = fs.readFileSync(`${file}.result.json`, {encoding: 'utf-8'})
+    const result = JSON.parse(fs.readFileSync(tempFile, {encoding: 'utf-8'}))
+    const expected = JSON.parse(fs.readFileSync(`${file}.result.json`, {encoding: 'utf-8'}))
+    t.deepEqual(result, expected)
     if (output !== undefined) {
       t.is(output, stdout)
     }
-    t.is(result, expected)
   })
 }
