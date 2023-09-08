@@ -16,6 +16,7 @@ import {compile as ursaCompile} from './compiler.js'
 const parser = new ArgumentParser({
   description: 'The Ursa language.',
   formatter_class: RawDescriptionHelpFormatter,
+  epilog: "`-' given as a file name means standard input or output.",
 })
 const inputGroup = parser.add_mutually_exclusive_group()
 
@@ -27,7 +28,7 @@ parser.add_argument('--syntax', {
   default: 'ursa', choices: ['ursa', 'json'], help: 'syntax to use [default: ursa]',
 })
 parser.add_argument('--compile', '-c', {action: 'store_true', help: 'compile input to JSON file'})
-parser.add_argument('--output', '-o', {metavar: 'FILE', help: "JSON output file [`-' for standard output]"})
+parser.add_argument('--output', '-o', {metavar: 'FILE', help: 'JSON output file [default: standard output]'})
 parser.add_argument('--interactive', '-i', {action: 'store_true', help: 'enter interactive mode after running given code'})
 
 parser.add_argument('--version', {
@@ -94,8 +95,14 @@ async function repl() {
 
 // Get output filename, if any
 let jsonFile: PathOrFileDescriptor | undefined = args.output
-if (jsonFile === '-' && args.module !== undefined) {
+if ((jsonFile === '-' || args.compile) && args.module !== undefined) {
   jsonFile = process.stdout.fd
+}
+
+// Use standard input if requested
+let inputFile: PathOrFileDescriptor = args.module
+if (args.module === '-') {
+  inputFile = process.stdin.fd
 }
 
 async function main() {
@@ -106,8 +113,8 @@ async function main() {
     let result
     if (args.eval !== undefined) {
       source = args.eval
-    } else if (args.module !== undefined) {
-      source = fs.readFileSync(args.module, {encoding: 'utf-8'})
+    } else if (inputFile !== undefined) {
+      source = fs.readFileSync(inputFile, {encoding: 'utf-8'})
     }
     if (args.compile) {
       if (source === undefined) {
@@ -126,7 +133,7 @@ async function main() {
         result = await repl()
       }
     }
-    if (args.output) {
+    if (jsonFile !== undefined) {
       const json = serialize(result) ?? 'null'
       assert(jsonFile)
       fs.writeFileSync(jsonFile, json)
