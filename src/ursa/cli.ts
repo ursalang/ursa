@@ -123,7 +123,8 @@ async function main() {
       if (jsonFile === undefined) {
         throw new Error('--compile given with no input or output filename')
       }
-      result = compile(source)
+      // FIXME: Handle freevars in compiled output
+      result = compile(source)[0]
     } else {
       // Run the program
       if (source !== undefined) {
