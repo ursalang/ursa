@@ -568,8 +568,10 @@ export function toJs(val: Val): any {
 
 export function serialize(val: Val) {
   function doSerialize(val: Val): any {
-    if (val instanceof SymRef || val instanceof NativeFexpr) {
+    if (val instanceof SymRef) {
       return val._debug.get('name')
+    } else if (val instanceof NativeFexpr) {
+      return val.name
     } else if (val instanceof Str) {
       return ['str', val.val]
     } else if (val instanceof ConcreteVal) {
@@ -584,7 +586,9 @@ export function serialize(val: Val) {
       const obj = {}
       // eslint-disable-next-line guard-for-in
       for (const key in val) {
-        (obj as any)[key] = doSerialize((val as any)[key] as Val)
+        if (!key.startsWith('_')) {
+          (obj as any)[key] = doSerialize((val as any)[key] as Val)
+        }
       }
       return obj
     } else if (val instanceof DictLiteral) {
