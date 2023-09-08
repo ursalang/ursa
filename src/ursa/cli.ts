@@ -7,10 +7,16 @@ import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
 import assert from 'assert'
 import programVersion from '../version.js'
 import {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  debug,
   List, Ref, Str, globals, runArk, serialize, toJs,
 } from '../ark/interp.js'
 import {compile as arkCompile} from '../ark/compiler.js'
 import {compile as ursaCompile} from './compiler.js'
+
+if (process.env.DEBUG) {
+  Error.stackTraceLimit = Infinity
+}
 
 // Read and process arguments
 const parser = new ArgumentParser({
@@ -65,7 +71,8 @@ function evaluate(exp: string) {
   globals.set('argv', new Ref(new List(
     args.argument.map((s) => new Str(s)),
   )))
-  return runArk(compile(exp))
+  const compiled = compile(exp)
+  return runArk(compiled)
 }
 
 async function repl() {
