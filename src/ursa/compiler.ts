@@ -3,7 +3,7 @@ import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
   Val, Null, Bool, Num, Str, Ref, List, Obj, DictLiteral,
-  Call, Let, Fn, intrinsics, SymRef, Prop,
+  Call, Let, Fn, intrinsics, SymRef, Prop, Ass,
 } from '../ark/interp.js'
 import {
   CompiledArk, symRef, Environment, FreeVars,
@@ -54,15 +54,6 @@ function makeFn(env: Environment, params: Node, body: Node): Val {
   return new Fn(paramList, bodyFreeVars, compiledBody)
 }
 
-function setAccess(lvalue: Val, value: Val): Val {
-  if (lvalue instanceof Prop && lvalue.prop === 'get') {
-    return new Prop('set', lvalue.ref, [...lvalue.args, value])
-  } else if (lvalue instanceof SymRef) {
-    return new Prop('set', new Ref(lvalue), [value])
-  }
-  return new Prop('set', lvalue, [value])
-}
-
 semantics.addOperation<AST>('toAST(env)', {
   If(_if, e_cond, e_then, _else, e_else) {
     const args: Val[] = [e_cond.toAST(this.args.env), e_then.toAST(this.args.env)]
@@ -75,10 +66,9 @@ semantics.addOperation<AST>('toAST(env)', {
     return makeFn(this.args.env, params, body)
   },
   NamedFn(_fn, ident, _open, params, _maybe_comma, _close, body) {
-    return new Prop(
-      'set',
+    return new Ass(
       new Ref(ident.symref(this.args.env)[0]),
-      [makeFn(this.args.env, params, body)],
+      makeFn(this.args.env, params, body),
     )
   },
   CallExp_call(exp, args) {
@@ -105,7 +95,14 @@ semantics.addOperation<AST>('toAST(env)', {
     return new Call(intrinsics.loop, [e_body.toAST(this.args.env)])
   },
   AssignmentExp_ass(lvalue, _eq, value) {
-    return setAccess(lvalue.toAST(this.args.env), value.toAST(this.args.env))
+    const compiledLvalue = lvalue.toAST(this.args.env)
+    const compiledValue = value.toAST(this.args.env)
+    if (compiledLvalue instanceof Prop && compiledLvalue.prop === 'get') {
+      return new Prop('set', compiledLvalue.ref, [...compiledLvalue.args, compiledValue])
+    } else if (compiledLvalue instanceof SymRef) {
+      return new Ass(new Ref(compiledLvalue), compiledValue)
+    }
+    return new Ass(compiledLvalue, compiledValue)
   },
   LogicExp_and(left, _and, right) {
     return new Call(intrinsics.and, [left.toAST(this.args.env), right.toAST(this.args.env)])
@@ -229,7 +226,7 @@ semantics.addOperation<AST>('toAST(env)', {
   Sequence_let(_let, ident, _eq, value, _sep, seq) {
     const innerBinding = this.args.env.push([ident.sourceString])
     const compiledCall = new Call(intrinsics.seq, [
-      new Prop('set', new Ref(ident.symref(innerBinding)[0]), [value.toAST(innerBinding)]),
+      new Ass(new Ref(ident.symref(innerBinding)[0]), value.toAST(innerBinding)),
       seq.toAST(innerBinding),
     ])
     const compiledLet = new Let([ident.sourceString], compiledCall)
@@ -253,14 +250,13 @@ semantics.addOperation<AST>('toAST(env)', {
     const compiledLet = new Let(
       [ident.sourceString],
       new Call(intrinsics.seq, [
-        new Prop(
-          'set',
+        new Ass(
           new Ref(ident.symref(this.args.env)[0]),
-          [new Prop(
+          new Prop(
             'use',
             path[0].symref(innerEnv)[0],
             path.slice(1).map((id) => new Str(id.sourceString)),
-          )],
+          ),
         ),
         seq.toAST(innerEnv),
       ]),

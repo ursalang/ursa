@@ -91,7 +91,7 @@ export class Str extends ConcreteVal {
   }
 }
 
-export class HakException extends Error {
+export class NonLocalReturn extends Error {
   constructor(protected val: Val = new Null()) {
     super()
   }
@@ -101,13 +101,15 @@ export class HakException extends Error {
   }
 }
 
-export class BreakException extends HakException {}
+export class BreakException extends NonLocalReturn {}
 
-export class ReturnException extends HakException {}
+export class ReturnException extends NonLocalReturn {}
 
-export class ContinueException extends HakException {}
+export class ContinueException extends NonLocalReturn {}
 
 export class PropertyException extends Error {}
+
+export class AssException extends Error {}
 
 export function bindArgsToParams(params: string[], args: Val[]): Ref[] {
   const frame: Ref[] = params.map(
@@ -218,6 +220,12 @@ export class Ref extends Val {
   set(_stack: RuntimeStack, val: Val) {
     this.val = val
     return val
+  }
+}
+
+export class Ass extends Val {
+  constructor(public ref: Val, public val: Val) {
+    super()
   }
 }
 
@@ -478,6 +486,14 @@ export function evalArk(val: Val, stack: RuntimeStack): Val {
     return evalArk(evalArk(ref, stack), stack)
   } else if (val instanceof Ref) {
     return val.val
+  } else if (val instanceof Ass) {
+    const ref = evalArk(val.ref, stack)
+    const res = evalArk(val.val, stack)
+    if (!(ref instanceof Ref || ref instanceof SymRef)) {
+      throw new AssException('assignment to non-Ref/SymRef')
+    }
+    ref.set(stack, res)
+    return res
   } else if (val instanceof Fn) {
     return new FnClosure(val.params, val.captureFreeVars(stack), val.body)
   } else if (val instanceof Fexpr) {
@@ -508,6 +524,8 @@ export function evalArk(val: Val, stack: RuntimeStack): Val {
     stack.pop(frame.length)
     return res
   } else if (val instanceof Call) {
+    // FIXME: Use an ArkCallable trait, not FexprClosure—can also be
+    // Native{Fexpr,Fn}.
     const fn = evalArk(val.fn, stack) as FexprClosure
     return fn.call(stack, val.args)
   } else if (val instanceof Prop) {

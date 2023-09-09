@@ -49,7 +49,7 @@ testGroup('loop and break', [
 ])
 
 testGroup('let', [
-  ['["let",["params","a"],["seq",["prop","set",["ref","a"],3],"a"]]', 3],
+  ['["let",["params","a"],["seq",["set",["ref","a"],3],"a"]]', 3],
 ])
 
 testGroup('Lists', [

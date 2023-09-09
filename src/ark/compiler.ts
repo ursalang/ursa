@@ -3,13 +3,14 @@ import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
   Val, intrinsics,
-  Null, Bool, Num, Str,
+  Null, Bool, Num, Str, Ref, Ass,
   List, Obj, DictLiteral, SymRef,
-  Fn, Fexpr, Prop, Let, Ref, Call, StackLocation, Stack,
+  Fn, Fexpr, Prop, Let, Call, StackLocation, Stack,
 } from './interp.js'
 
 export type Namespace = Map<string, Val>
 
+// FIXME: make this immutable
 export class FreeVars extends Map<string, SymRef[]> {
   add(name: string, symref: SymRef): FreeVars {
     if (!this.has(name)) {
@@ -134,7 +135,8 @@ function doCompile(value: any, env: Environment): CompiledArk {
           }
           const [ref, refFreeVars] = doCompile(value[2], env)
           const [args, argsFreeVars] = listToVals(env, value.slice(3))
-          return [new Prop(value[1], ref, args), refFreeVars.merge(argsFreeVars)]
+          const freeVars = new FreeVars().merge(argsFreeVars).merge(refFreeVars)
+          return [new Prop(value[1], ref, args), freeVars]
         }
         case 'ref': {
           if (value.length !== 2) {
@@ -142,6 +144,15 @@ function doCompile(value: any, env: Environment): CompiledArk {
           }
           const [val, freeVars] = doCompile(value[1], env)
           return [new Ref(val), freeVars]
+        }
+        case 'set': {
+          if (value.length !== 3) {
+            throw new Error("invalid 'set'")
+          }
+          const [ref, refFreeVars] = doCompile(value[1], env)
+          const [val, valFreeVars] = doCompile(value[2], env)
+          const freeVars = new FreeVars().merge(valFreeVars).merge(refFreeVars)
+          return [new Ass(ref, val), freeVars]
         }
         case 'list': {
           const [elems, elemsFreeVars] = listToVals(env, value.slice(1))
@@ -170,7 +181,8 @@ function doCompile(value: any, env: Environment): CompiledArk {
         default: {
           const [fn, fnFreeVars] = symRef(env, value[0])
           const [args, argsFreeVars] = listToVals(env, value.slice(1))
-          return [new Call(fn, args), fnFreeVars.merge(argsFreeVars)]
+          const freeVars = new FreeVars().merge(argsFreeVars).merge(fnFreeVars)
+          return [new Call(fn, args), freeVars]
         }
       }
     }
