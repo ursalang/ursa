@@ -78,7 +78,7 @@ semantics.addOperation<AST>('toAST(env)', {
     return new Call(exp.toAST(this.args.env), args.toAST(this.args.env).args)
   },
   CallExp_prop(exp, _dot, ident) {
-    return new Prop(ident.sourceString, exp.toAST(this.args.env), [])
+    return new Call(new Prop(ident.sourceString, exp.toAST(this.args.env)), [])
   },
   Arguments(_open, args, _maybe_comma, _close) {
     return new Arguments(
@@ -86,19 +86,21 @@ semantics.addOperation<AST>('toAST(env)', {
     )
   },
   PropertyExp_index(object, _open, index, _close) {
-    return new Prop('get', object.toAST(this.args.env), [index.toAST(this.args.env)])
+    return new Call(new Prop('get', object.toAST(this.args.env)), [index.toAST(this.args.env)])
   },
   CallExp_index(object, _open, index, _close) {
-    return new Prop('get', object.toAST(this.args.env), [index.toAST(this.args.env)])
+    return new Call(new Prop('get', object.toAST(this.args.env)), [index.toAST(this.args.env)])
   },
   Loop(_loop, e_body) {
     return new Call(intrinsics.loop, [e_body.toAST(this.args.env)])
   },
+  // FIXME: rather than rewrite compiledLvalue, use a parameter to LvalueExp
+  // to compile it differently.
   AssignmentExp_ass(lvalue, _eq, value) {
     const compiledLvalue = lvalue.toAST(this.args.env)
     const compiledValue = value.toAST(this.args.env)
-    if (compiledLvalue instanceof Prop && compiledLvalue.prop === 'get') {
-      return new Prop('set', compiledLvalue.ref, [...compiledLvalue.args, compiledValue])
+    if (compiledLvalue instanceof Call && compiledLvalue.fn instanceof Prop && compiledLvalue.fn.prop === 'get') {
+      return new Call(new Prop('set', compiledLvalue.fn.ref), [...compiledLvalue.args, compiledValue])
     } else if (compiledLvalue instanceof SymRef) {
       return new Ass(new Ref(compiledLvalue), compiledValue)
     }
@@ -193,7 +195,7 @@ semantics.addOperation<AST>('toAST(env)', {
     return new Call(intrinsics.neg, [exp.toAST(this.args.env)])
   },
   PropertyExp_property(object, _dot, property) {
-    return new Prop(property.sourceString, object.toAST(this.args.env), [])
+    return new Prop(property.sourceString, object.toAST(this.args.env))
   },
   UnaryExp_break(_break, exp) {
     return new Call(intrinsics.break, [maybeVal(this.args.env, exp)])
@@ -252,9 +254,8 @@ semantics.addOperation<AST>('toAST(env)', {
       new Call(intrinsics.seq, [
         new Ass(
           new Ref(ident.symref(this.args.env)[0]),
-          new Prop(
-            'use',
-            path[0].symref(innerEnv)[0],
+          new Call(
+            new Prop('use', path[0].symref(innerEnv)[0]),
             path.slice(1).map((id) => new Str(id.sourceString)),
           ),
         ),

@@ -130,13 +130,12 @@ function doCompile(value: any, env: Environment): CompiledArk {
           return [new Fexpr(params, freeVars, body), freeVars]
         }
         case 'prop': {
-          if (value.length < 3) {
+          if (value.length !== 3) {
             throw new Error("invalid 'prop'")
           }
           const [ref, refFreeVars] = doCompile(value[2], env)
-          const [args, argsFreeVars] = listToVals(env, value.slice(3))
-          const freeVars = new FreeVars().merge(argsFreeVars).merge(refFreeVars)
-          return [new Prop(value[1], ref, args), freeVars]
+          const freeVars = new FreeVars().merge(refFreeVars)
+          return [new Prop(value[1], ref), freeVars]
         }
         case 'ref': {
           if (value.length !== 2) {

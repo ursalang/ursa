@@ -4,7 +4,6 @@
     [
         "seq",
         [
-            "prop",
             "set",
             ["ref", "fac"],
             [

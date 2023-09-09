@@ -1,31 +1,29 @@
 [
-    "let",
-    ["params", "tot"],
+  "let",
+  [ "params", "tot" ],
+  [
+    "seq",
+    [ "set", [ "ref", "tot" ], 0 ],
     [
+      "let",
+      [ "params", "accum" ],
+      [
         "seq",
-        [ "prop", "set", ["ref", "tot"], 0 ],
         [
-            "let",
-            ["params", "accum"],
+          "set",
+          [ "ref", "accum" ],
+          [
+            "fn",
+            [ "params", "x" ],
             [
-                "seq",
-                [
-                    "prop",
-                    "set",
-                    ["ref", "accum"],
-                    [
-                        "fn",
-                        ["params", "x"],
-                        [
-                            "prop",
-                            "set",
-                            ["ref", "tot"],
-                            ["+", "tot", "x"]
-                        ]
-                    ]
-                ],
-                [ "list", ["accum", 1], ["accum", 1] ]
+              "set",
+              [ "ref", "tot" ],
+              [ "+", "tot", "x" ]
             ]
-        ]
+          ]
+        ],
+        [ "list", [ "accum", 1 ], [ "accum", 1 ] ]
+      ]
     ]
+  ]
 ]

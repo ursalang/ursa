@@ -55,7 +55,8 @@ testGroup('let', [
 testGroup('Lists', [
   ['["list",1,2,3]', [1, 2, 3]],
   ['["prop","length",["list",1,2,3]]', 3],
-  ['["prop","get",["list",4,5,6],1]', 5],
+  ['[["prop","get",["list",4,5,6]],1]', 5],
+  ['[["prop","set",["list",4,5,6]],1,2]', 2],
 ])
 
 testGroup('Maps', [

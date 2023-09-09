@@ -1,44 +1,42 @@
 [
-    "let",
-    ["params", "sum"],
+  "let",
+  [ "params", "sum" ],
+  [
+    "seq",
     [
-        "seq",
+      "set",
+      [ "ref", "sum" ],
+      [
+        "fn",
+        [ "params", "l" ],
         [
-            "prop",
-            "set",
-            ["ref", "sum"],
+          "let",
+          [ "params", "tot", "i" ],
+          [
+            "seq",
+            [ "set", [ "ref", "tot" ], 0 ],
+            [ "set", [ "ref", "i" ], 0 ],
             [
-                "fn",
-                ["params", "l"],
+              "loop",
+              [
+                "seq",
                 [
-                    "let",
-                    ["params", "tot", "i"],
-                    [
-                        "seq",
-                        [ "prop", "set", ["ref", "tot"], 0 ],
-                        [ "prop", "set", ["ref", "i"], 0 ],
-                        [
-                            "loop",
-                            [
-                                "seq",
-                                [
-                                    "if",
-                                    [ "=", "i", ["prop", "length", "l"] ],
-                                    ["return", "tot"]
-                                ],
-                                [
-                                    "prop",
-                                    "set",
-                                    ["ref", "tot"],
-                                    [ "+", "tot", ["prop", "get", "l", "i"] ]
-                                ],
-                                [ "prop", "set", ["ref", "i"], ["+", "i", 1] ]
-                            ]
-                        ]
-                    ]
-                ]
+                  "if",
+                  [ "=", "i", [ "prop", "length", "l" ] ],
+                  [ "return", "tot" ]
+                ],
+                [
+                  "set",
+                  [ "ref", "tot" ],
+                  [ "+", "tot", [ [ "prop", "get", "l" ], "i" ] ]
+                ],
+                [ "set", [ "ref", "i" ], [ "+", "i", 1 ] ]
+              ]
             ]
-        ],
-        [ "sum", ["list", 10, 30, 50, 5, 5] ]
-    ]
+          ]
+        ]
+      ]
+    ],
+    [ "sum", [ "list", 10, 30, 50, 5, 5 ] ]
+  ]
 ]

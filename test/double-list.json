@@ -1,43 +1,41 @@
 [
-    "let",
-    ["params", "double"],
+  "let",
+  [ "params", "double" ],
+  [
+    "seq",
     [
-        "seq",
+      "set",
+      [ "ref", "double" ],
+      [
+        "fn",
+        [ "params", "l" ],
         [
-            "set",
-            ["ref", "double"],
+          "let",
+          [ "params", "i" ],
+          [
+            "seq",
+            [ "set", [ "ref", "i" ], 0 ],
             [
-                "fn",
-                ["params", "l"],
+              "loop",
+              [
+                "seq",
                 [
-                    "let",
-                    ["params", "i"],
-                    [
-                        "seq",
-                        [ "set", ["ref", "i"], 0 ],
-                        [
-                            "loop",
-                            [
-                                "seq",
-                                [
-                                    "if",
-                                    [ "=", "i", ["prop", "length", "l"] ],
-                                    ["return", "l"]
-                                ],
-                                [
-                                    "prop",
-                                    "set",
-                                    "l",
-                                    "i",
-                                    [ "*", ["prop", "get", "l", "i"], 2 ]
-                                ],
-                                [ "set", ["ref", "i"], ["+", "i", 1] ]
-                            ]
-                        ]
-                    ]
-                ]
+                  "if",
+                  [ "=", "i", [ "prop", "length", "l" ] ],
+                  [ "return", "l" ]
+                ],
+                [
+                  [ "prop", "set", "l" ],
+                  "i",
+                  [ "*", [ [ "prop", "get", "l" ], "i" ], 2 ]
+                ],
+                [ "set", [ "ref", "i" ], [ "+", "i", 1 ] ]
+              ]
             ]
-        ],
-        [ "double", ["list", 1, 2, 3] ]
-    ]
+          ]
+        ]
+      ]
+    ],
+    [ "double", [ "list", 1, 2, 3 ] ]
+  ]
 ]

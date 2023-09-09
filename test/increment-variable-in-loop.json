@@ -1,16 +1,16 @@
 [
-    "let",
-    ["params", "a"],
+  "let",
+  [ "params", "a" ],
+  [
+    "seq",
+    [ "set", [ "ref", "a" ], 0 ],
     [
+      "loop",
+      [
         "seq",
-        [ "prop", "set", ["ref", "a"], 0 ],
-        [
-            "loop",
-            [
-                "seq",
-                [ "prop", "set", ["ref", "a"], ["+", "a", 1] ],
-                [ "if", ["=", "a", 3], ["break", "a"] ]
-            ]
-        ]
+        [ "set", [ "ref", "a" ], [ "+", "a", 1 ] ],
+        [ "if", [ "=", "a", 3 ], [ "break", "a" ] ]
+      ]
     ]
+  ]
 ]

@@ -41,7 +41,7 @@ export class RuntimeStack extends Stack<Ref> {
 
   set(val: Val, location: StackLocation) {
     const ref = this.stack[location.level][location.index]
-    ref.set(this, val)
+    ref.set.call(this, val)
   }
 }
 
@@ -127,7 +127,7 @@ class FexprClosure extends Val {
     super()
   }
 
-  call(stack: RuntimeStack, args: Val[]) {
+  call(stack: RuntimeStack, ...args: Val[]) {
     let res: Val = new Null()
     try {
       const frame = bindArgsToParams(this.params, args)
@@ -145,9 +145,9 @@ class FexprClosure extends Val {
 }
 
 class FnClosure extends FexprClosure {
-  call(stack: RuntimeStack, args: Val[]) {
-    const evaluatedArgs = evaluateArgs(stack, args)
-    return super.call(stack, evaluatedArgs)
+  call(stack: RuntimeStack, ...args: Val[]) {
+    const evaluatedArgs = evaluateArgs(stack, ...args)
+    return super.call(stack, ...evaluatedArgs)
   }
 }
 
@@ -159,7 +159,7 @@ export class Fexpr extends Val {
   captureFreeVars(stack: RuntimeStack): Ref[] {
     const frame: Ref[] = []
     for (const [, symrefs] of this.freeVars) {
-      const ref = new Ref(symrefs[0].get(stack.pushFrame([])))
+      const ref = new Ref(symrefs[0].get.call(stack.pushFrame([])))
       stack.popFrame()
       frame.push(ref)
       for (const symref of symrefs) {
@@ -184,12 +184,12 @@ export class NativeFexpr extends Val {
     super()
   }
 
-  call(stack: RuntimeStack, args: Val[]) {
+  call(stack: RuntimeStack, ...args: Val[]) {
     return this.body(stack, ...args)
   }
 }
 
-function evaluateArgs(stack: RuntimeStack, args: Val[]) {
+function evaluateArgs(stack: RuntimeStack, ...args: Val[]) {
   const evaluatedArgs: Val[] = []
   for (const arg of args) {
     evaluatedArgs.push(evalArk(arg, stack))
@@ -207,8 +207,8 @@ class NativeFn extends Val {
     super()
   }
 
-  call(stack: RuntimeStack, args: Val[]) {
-    return this.body(...evaluateArgs(stack, args))
+  call(stack: RuntimeStack, ...args: Val[]) {
+    return this.body(...evaluateArgs(stack, ...args))
   }
 }
 
@@ -217,10 +217,13 @@ export class Ref extends Val {
     super()
   }
 
-  set(_stack: RuntimeStack, val: Val) {
-    this.val = val
-    return val
-  }
+  set = new NativeFn(
+    'Ref.set',
+    (val: Val) => {
+      this.val = val
+      return val
+    },
+  )
 }
 
 export class Ass extends Val {
@@ -267,7 +270,7 @@ export class RefLocation {
   }
 
   set(stack: RuntimeStack, val: Val) {
-    this.ref.set(stack, val)
+    this.ref.set.call(stack, val)
     return val
   }
 }
@@ -282,13 +285,15 @@ export class SymRef extends Val {
     this._debug.set('env', JSON.stringify(env))
   }
 
-  get(stack: RuntimeStack): Ref {
-    return this.location!.get(stack)
-  }
+  get = new NativeFexpr(
+    'SymRef.get',
+    (stack: RuntimeStack): Ref => this.location!.get(stack),
+  )
 
-  set(stack: RuntimeStack, val: Val) {
-    return this.location!.set(stack, val)
-  }
+  set = new NativeFexpr(
+    'SymRef.set',
+    (stack: RuntimeStack, val: Val) => this.location!.set(stack, evalArk(val, stack)),
+  )
 }
 
 export class Obj extends Val {
@@ -315,33 +320,40 @@ export class Dict extends Val {
     super()
   }
 
-  set(_stack: RuntimeStack, index: Val, val: Val) {
-    this.map.set(toJs(index), val)
-    return val
-  }
+  set = new NativeFn(
+    'Dict.set',
+    (index: Val, val: Val) => {
+      this.map.set(toJs(index), val)
+      return val
+    },
+  )
 
-  get(_stack: RuntimeStack, index: Val) {
-    return this.map.get(toJs(index)) ?? new Null()
-  }
+  get = new NativeFn(
+    'Dict.get',
+    (index: Val) => this.map.get(toJs(index)) ?? new Null(),
+  )
 }
 
 export class List extends Val {
   constructor(public val: Val[]) {
     super()
+    this.length = new Num(this.val.length)
   }
 
-  length(_stack: RuntimeStack) {
-    return new Num(this.val.length)
-  }
+  length: Num
 
-  get(_stack: RuntimeStack, index: Val) {
-    return this.val[toJs(index as Num)]
-  }
+  get = new NativeFn(
+    'List.get',
+    (index: Val) => this.val[toJs(index)],
+  )
 
-  set(_stack: RuntimeStack, index: Val, val: Val) {
-    this.val[toJs(index)] = val
-    return val
-  }
+  set = new NativeFn(
+    'List.set',
+    (index: Val, val: Val) => {
+      this.val[toJs(index)] = val
+      return val
+    },
+  )
 }
 
 export class Let extends Val {
@@ -357,7 +369,7 @@ export class Call extends Val {
 }
 
 export class Prop extends Val {
-  constructor(public prop: string, public ref: Val, public args: Val[]) {
+  constructor(public prop: string, public ref: Val) {
     super()
   }
 }
@@ -482,7 +494,7 @@ export const globals = new Map([
 
 export function evalArk(val: Val, stack: RuntimeStack): Val {
   if (val instanceof SymRef) {
-    const ref = val.get(stack)
+    const ref = val.get.call(stack)
     return evalArk(evalArk(ref, stack), stack)
   } else if (val instanceof Ref) {
     return val.val
@@ -492,7 +504,7 @@ export function evalArk(val: Val, stack: RuntimeStack): Val {
     if (!(ref instanceof Ref || ref instanceof SymRef)) {
       throw new AssException('assignment to non-Ref/SymRef')
     }
-    ref.set(stack, res)
+    ref.set.call(stack, res)
     return res
   } else if (val instanceof Fn) {
     return new FnClosure(val.params, val.captureFreeVars(stack), val.body)
@@ -527,13 +539,13 @@ export function evalArk(val: Val, stack: RuntimeStack): Val {
     // FIXME: Use an ArkCallable trait, not FexprClosure—can also be
     // Native{Fexpr,Fn}.
     const fn = evalArk(val.fn, stack) as FexprClosure
-    return fn.call(stack, val.args)
+    return fn.call(stack, ...val.args)
   } else if (val instanceof Prop) {
     const obj = evalArk(val.ref, stack)
     if (!(val.prop in obj)) {
       throw new PropertyException(`no property '${val.prop}'`)
     }
-    return (obj as any)[val.prop](stack, ...val.args.map((e) => evalArk(e, stack)))
+    return (obj as any)[val.prop]
   }
   return val
 }
@@ -630,7 +642,7 @@ export function serialize(val: Val) {
     } else if (val instanceof Call) {
       return [doSerialize(val.fn), ...val.args.map(doSerialize)]
     } else if (val instanceof Prop) {
-      return ['prop', val.prop, doSerialize(val.ref), ...val.args.map(doSerialize)]
+      return ['prop', val.prop, doSerialize(val.ref)]
     }
     return val
   }

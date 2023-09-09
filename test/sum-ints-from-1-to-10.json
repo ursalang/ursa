@@ -3,15 +3,14 @@
     ["params", "total", "i"],
     [
         "seq",
-        [ "prop", "set", ["ref", "total"], 0 ],
-        [ "prop", "set", ["ref", "i"], 0 ],
+        [ "set", ["ref", "total"], 0 ],
+        [ "set", ["ref", "i"], 0 ],
         [
             "loop",
             [
                 "seq",
-                [ "prop", "set", ["ref", "i"], ["+", "i", 1] ],
+                [ "set", ["ref", "i"], ["+", "i", 1] ],
                 [
-                    "prop",
                     "set",
                     ["ref", "total"],
                     ["+", "total", "i"]
