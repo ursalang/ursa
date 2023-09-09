@@ -179,7 +179,7 @@ function doCompile(value: any, env: Environment): CompiledArk {
           return [new Call(intrinsics.seq, elems), elemsFreeVars]
         }
         default: {
-          const [fn, fnFreeVars] = symRef(env, value[0])
+          const [fn, fnFreeVars] = doCompile(value[0], env)
           const [args, argsFreeVars] = listToVals(env, value.slice(1))
           const freeVars = new FreeVars().merge(argsFreeVars).merge(fnFreeVars)
           return [new Call(fn, args), freeVars]
