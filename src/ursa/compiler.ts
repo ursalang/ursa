@@ -253,7 +253,7 @@ semantics.addOperation<AST>('toAST(env)', {
       [ident.sourceString],
       new Call(intrinsics.seq, [
         new Ass(
-          new Ref(ident.symref(this.args.env)[0]),
+          new Ref(ident.symref(innerEnv)[0]),
           new Call(
             new Prop('use', path[0].symref(innerEnv)[0]),
             path.slice(1).map((id) => new Str(id.sourceString)),
@@ -327,6 +327,7 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
     const freeVars = new FreeVars()
       .merge(seq.freeVars(innerEnv))
       .merge(path[0].symref(this.args.env)[1])
+    freeVars.delete(ident.sourceString)
     this.args.env.pop(1)
     return freeVars
   },

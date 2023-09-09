@@ -11,8 +11,8 @@ export class Stack<T> {
     this.stack = outerStack
   }
 
-  push(refs: T[]) {
-    this.stack[0].unshift(...refs)
+  push(items: T[]) {
+    this.stack[0].unshift(...items)
     return this
   }
 
@@ -178,7 +178,7 @@ export class Fexpr extends Val {
 
 export class NativeFexpr extends Val {
   constructor(
-    public name: string,
+    public name: string, // FIXME: remove name, use debug info.
     protected body: (stack: RuntimeStack, ...args: Val[]) => Val,
   ) {
     super()
@@ -478,17 +478,21 @@ export const globals = new Map([
     return new Null()
   }))],
   ['js', new Ref(new Obj({
-    use: (_stack: RuntimeStack, ...args: Val[]) => {
+    use: new NativeFn('js', (...args: Val[]) => {
       const requirePath = (args.map(toJs).join('.'))
       // eslint-disable-next-line import/no-dynamic-require, global-require
       const module = require(requirePath)
       const wrappedModule = {}
       // eslint-disable-next-line guard-for-in
       for (const key in module) {
-        (wrappedModule as any)[key] = () => jsToVal(module[key])
+        (wrappedModule as any)[key] = jsToVal(module[key])
       }
       return new Obj(wrappedModule)
-    },
+    }),
+  }))],
+  ['JSON', new Ref(new Obj({
+    parse: new NativeFn('JSON.parse', (str: Val) => jsToVal(JSON.parse(toJs(str)))),
+    stringify: new NativeFn('JSON.stringify', (val: Val) => new Str(JSON.stringify(toJs(val)))),
   }))],
 ])
 
@@ -644,9 +648,8 @@ export function serialize(val: Val) {
     } else if (val instanceof Prop) {
       return ['prop', val.prop, doSerialize(val.ref)]
     }
-    return val
+    return val.toString()
   }
-
   return JSON.stringify(doSerialize(val))
 }
 

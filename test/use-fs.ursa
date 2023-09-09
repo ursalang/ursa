@@ -1,0 +1,2 @@
+use js.fs
+fs.writeSync(1, "foo") // 1 is stdout

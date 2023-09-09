@@ -13,6 +13,9 @@ import {cliTest} from './testutil.js'
   ['Repeated closure', 'test/repeated-closure'],
   ['Two closures', 'test/two-closures'],
   ['Two double closures', 'test/two-double-closures'],
+  ['Test JSON', 'test/json'],
 ].map(([title, file]) => cliTest('ursa', title, file))
 
 cliTest('ursa', 'Test I/O', 'test/print', 'Hello, world!')
+
+cliTest('ursa', 'use fs', 'test/use-fs', 'foo')

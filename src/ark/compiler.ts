@@ -5,7 +5,7 @@ import {
   Val, intrinsics,
   Null, Bool, Num, Str, Ref, Ass,
   List, Obj, DictLiteral, SymRef,
-  Fn, Fexpr, Prop, Let, Call, StackLocation, Stack,
+  Fn, Fexpr, Prop, Let, Call, StackLocation,
 } from './interp.js'
 
 export type Namespace = Map<string, Val>
@@ -28,7 +28,32 @@ export class FreeVars extends Map<string, SymRef[]> {
   }
 }
 
-export class Environment extends Stack<string> {
+export class Environment {
+  public stack: string[][]
+
+  constructor(outerStack: string[][] = [[]]) {
+    assert(outerStack.length > 0)
+    this.stack = outerStack
+  }
+
+  push(items: string[]) {
+    return new Environment([[...items, ...this.stack[0].slice()], ...this.stack.slice(1)])
+  }
+
+  pop(_items: number) {
+    return this
+  }
+
+  pushFrame(frame: string[]) {
+    this.stack.unshift(frame)
+    return this
+  }
+
+  popFrame(): this {
+    this.stack.shift()
+    return this
+  }
+
   getIndex(sym: string): StackLocation | undefined {
     for (let i = 0; i < this.stack.length; i += 1) {
       const j = this.stack[i].indexOf(sym)
