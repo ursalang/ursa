@@ -2,7 +2,7 @@ import fs from 'fs'
 import test from 'ava'
 import tmp from 'tmp'
 import execa from 'execa'
-import {runArk, toJs} from './ark/interp'
+import {runArk, toJs, debug} from './ark/interp'
 import {compile as arkCompile, CompiledArk} from './ark/compiler'
 import {compile as ursaCompile} from './ursa/compiler'
 
@@ -20,6 +20,9 @@ function doTestGroup(
   test(title, (t) => {
     for (const [source, expected] of tests) {
       const compiled = compile(source)
+      if (process.env.DEBUG) {
+        debug(compiled, null)
+      }
       t.deepEqual(toJs(runArk(compiled)), expected)
     }
   })
