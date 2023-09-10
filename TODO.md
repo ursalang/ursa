@@ -1,20 +1,23 @@
 # Ursa to-do
 
+* Run in browser with DOM access.
+
 ## Ursa MVP
 
+* 100% test coverage.
 * Tail recursion elimination
 * Method invocation
 * Co-routines (copy Python?)
 * Lists: iteration (with yield)
-* Vectors
+* Vectors (this is really current List, for List we need `push`/`pop` etc.).
 * Maps: iteration (with yield), symbol keys
 * `self`
-* Run in browser.
 * Long strings.
 * Streams, and use as interface to files.
 * Map interface to file system and internet.
 * Bitwise operations: & | ~ >> >>> <<.
 * Code formatting: `ursa fmt`.
+* Shebang support.
 
 ## Ark improvements
 
@@ -47,3 +50,4 @@
 * Long Unicode escapes
 * Namespaces
 * Macros: use for syntactic sugar to get e.g. `fn a () { }`, and for `+=`
+* Module system. Mimic Rust: https://doc.rust-lang.org/rust-by-example/mod/split.html
