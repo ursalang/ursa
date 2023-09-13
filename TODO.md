@@ -29,6 +29,8 @@
   continuations: https://github.com/catseye/Robin ; also see
   https://github.com/nukata/little-scheme-in-typescript
 * Add debug information: source locations.
+* Make code `readonly` (except `Ref` and `SymRef`). Start with `FreeVars`.
+  See https://github.com/immutable-js/immutable-js/
 
 ## Ursa v1
 
