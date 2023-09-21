@@ -199,7 +199,7 @@ function evaluateArgs(stack: RuntimeStack, ...args: Val[]) {
 
 export class Fn extends Fexpr {}
 
-class NativeFn extends Val {
+export class NativeFn extends Val {
   constructor(
     public name: string,
     protected body: (...args: Val[]) => Val,
