@@ -29,7 +29,7 @@ export class FreeVars extends Map<string, SymRef[]> {
 }
 
 export class Environment {
-  public stack: string[][]
+  private readonly stack: string[][]
 
   constructor(outerStack: string[][] = [[]]) {
     assert(outerStack.length > 0)
@@ -41,13 +41,7 @@ export class Environment {
   }
 
   pushFrame(frame: string[]) {
-    this.stack.unshift(frame)
-    return this
-  }
-
-  popFrame(): this {
-    this.stack.shift()
-    return this
+    return new Environment([frame, ...this.stack.slice()])
   }
 
   getIndex(sym: string): StackLocation | undefined {
@@ -135,7 +129,6 @@ function doCompile(value: any, env: Environment): CompiledArk {
           }
           const params = paramList(value[1])
           const [body, freeVars] = doCompile(value[2], env.pushFrame(params))
-          env.popFrame()
           params.forEach((p) => freeVars.delete(p))
           return [new Fn(params, freeVars, body), freeVars]
         }
@@ -145,7 +138,6 @@ function doCompile(value: any, env: Environment): CompiledArk {
           }
           const params = paramList(value[1])
           const [body, freeVars] = doCompile(value[2], env.pushFrame(params))
-          env.popFrame()
           params.map((p) => freeVars.delete(p))
           return [new Fexpr(params, freeVars, body), freeVars]
         }
