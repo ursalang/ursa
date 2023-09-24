@@ -3,38 +3,24 @@ import {
   CompiledArk, Environment, FreeVars, Namespace,
 } from './compiler.js'
 
-export class Stack<T> {
-  public stack: T[][]
+// A RuntimeStack holds Refs to Vals, so that the Vals can potentially be updated
+// while being be referred to in multiple Frames.
+export class RuntimeStack {
+  private readonly stack: Ref[][]
 
-  constructor(outerStack: T[][] = [[]]) {
+  constructor(outerStack: Ref[][] = [[]]) {
     assert(outerStack.length > 0)
     this.stack = outerStack
   }
 
-  push(items: T[]) {
-    this.stack[0].unshift(...items)
-    return this
+  push(items: Ref[]) {
+    return new RuntimeStack([[...items, ...this.stack[0].slice()], ...this.stack.slice(1)])
   }
 
-  pop(items: number) {
-    this.stack[0].splice(0, items)
-    return this
+  pushFrame(frame: Ref[]) {
+    return new RuntimeStack([frame, ...this.stack.slice()])
   }
 
-  pushFrame(frame: T[]) {
-    this.stack.unshift(frame)
-    return this
-  }
-
-  popFrame(): this {
-    this.stack.shift()
-    return this
-  }
-}
-
-// A RuntimeStack holds Refs to Vals, so that the Vals can potentially be updated
-// while being be referred to in multiple Frames.
-export class RuntimeStack extends Stack<Ref> {
   get(location: StackLocation) {
     return this.stack[location.level][location.index]
   }
@@ -132,8 +118,6 @@ class FexprClosure extends Val {
     try {
       const frame = bindArgsToParams(this.params, args)
       res = evalArk(this.body, stack.pushFrame(this.freeVars).pushFrame(frame))
-      stack.popFrame()
-      stack.popFrame()
     } catch (e) {
       if (!(e instanceof ReturnException)) {
         throw e
@@ -160,7 +144,6 @@ export class Fexpr extends Val {
     const frame: Ref[] = []
     for (const [, symrefs] of this.freeVars) {
       const ref = new Ref(symrefs[0].get.call(stack.pushFrame([])))
-      stack.popFrame()
       frame.push(ref)
       for (const symref of symrefs) {
         const loc = symref.location
@@ -538,7 +521,6 @@ export function evalArk(val: Val, stack: RuntimeStack): Val {
   } else if (val instanceof Let) {
     const frame = bindArgsToParams(val.boundVars, [])
     const res = evalArk(val.body, stack.push(frame))
-    stack.pop(frame.length)
     return res
   } else if (val instanceof Call) {
     // FIXME: Use an ArkCallable trait, not FexprClosure—can also be
