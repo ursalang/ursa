@@ -1,6 +1,0 @@
-{
-  "extension": [
-    "ts"
-  ],
-  "loader": "ts-node"
-}
