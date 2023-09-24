@@ -10,19 +10,13 @@ import {
 
 export type Namespace = Map<string, Val>
 
-// FIXME: make this immutable
 export class FreeVars extends Map<string, SymRef[]> {
-  add(name: string, symref: SymRef): FreeVars {
-    if (!this.has(name)) {
-      this.set(name, [])
-    }
-    this.get(name)!.push(symref)
-    return this
-  }
-
   merge(moreVars: FreeVars): FreeVars {
     for (const [name, symrefs] of moreVars) {
-      symrefs.forEach((symref) => this.add(name, symref))
+      if (!this.has(name)) {
+        this.set(name, [])
+      }
+      this.get(name)!.push(...symrefs)
     }
     return this
   }
@@ -88,7 +82,7 @@ export function symRef(env: Environment, name: string): CompiledArk {
     return [val, new FreeVars()]
   }
   const symref = new SymRef(env, name)
-  return [symref, new FreeVars().add(name, symref)]
+  return [symref, new FreeVars([[name, [symref]]])]
 }
 
 export type CompiledArk = [value: Val, freeVars: FreeVars]
