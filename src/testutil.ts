@@ -1,10 +1,10 @@
 import fs from 'fs'
 import test from 'ava'
 import tmp from 'tmp'
-import execa from 'execa'
-import {runArk, toJs, debug} from './ark/interp'
-import {compile as arkCompile, CompiledArk} from './ark/compiler'
-import {compile as ursaCompile} from './ursa/compiler'
+import {execa} from 'execa'
+import {runArk, toJs, debug} from './ark/interp.js'
+import {compile as arkCompile, CompiledArk} from './ark/compiler.js'
+import {compile as ursaCompile} from './ursa/compiler.js'
 
 const command = process.env.NODE_ENV === 'coverage' ? './bin/test-run.sh' : './bin/run.js'
 

@@ -1,7 +1,7 @@
 import assert from 'assert'
 import {
   CompiledArk, Environment, FreeVars, Namespace,
-} from './compiler'
+} from './compiler.js'
 
 export class Stack<T> {
   public stack: T[][]
@@ -477,19 +477,20 @@ export const globals = new Map([
     debug(obj)
     return new Null()
   }))],
-  ['js', new Ref(new Obj({
-    use: new NativeFn('js', (...args: Val[]) => {
-      const requirePath = (args.map(toJs).join('.'))
-      // eslint-disable-next-line import/no-dynamic-require, global-require
-      const module = require(requirePath)
-      const wrappedModule = {}
-      // eslint-disable-next-line guard-for-in
-      for (const key in module) {
-        (wrappedModule as any)[key] = jsToVal(module[key])
-      }
-      return new Obj(wrappedModule)
-    }),
-  }))],
+  // FIXME: make this work again!
+  // ['js', new Ref(new Obj({
+  //   use: new NativeFn('js', (...args: Val[]) => {
+  //     const requirePath = (args.map(toJs).join('.'))
+  //     // eslint-disable-next-line import/no-dynamic-require, global-require
+  //     const module = require(requirePath)
+  //     const wrappedModule = {}
+  //     // eslint-disable-next-line guard-for-in
+  //     for (const key in module) {
+  //       (wrappedModule as any)[key] = jsToVal(module[key])
+  //     }
+  //     return new Obj(wrappedModule)
+  //   }),
+  // }))],
   ['JSON', new Ref(new Obj({
     parse: new NativeFn('JSON.parse', (str: Val) => jsToVal(JSON.parse(toJs(str)))),
     stringify: new NativeFn('JSON.stringify', (val: Val) => new Str(JSON.stringify(toJs(val)))),
