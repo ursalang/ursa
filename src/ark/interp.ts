@@ -3,24 +3,28 @@ import {
   CompiledArk, Environment, FreeVars, Namespace,
 } from './compiler.js'
 
-// A RuntimeStack holds Refs to Vals, so that the Vals can potentially be updated
-// while being be referred to in multiple Frames.
-export class RuntimeStack {
-  private readonly stack: Ref[][]
+export class Stack<T> {
+  public stack: T[][]
 
-  constructor(outerStack: Ref[][] = [[]]) {
+  constructor(outerStack: T[][] = [[]]) {
     assert(outerStack.length > 0)
     this.stack = outerStack
   }
 
-  push(items: Ref[]) {
-    return new RuntimeStack([[...items, ...this.stack[0].slice()], ...this.stack.slice(1)])
+  push(items: T[]) {
+    return new (this.constructor as any)(
+      [[...items, ...this.stack[0].slice()], ...this.stack.slice(1)],
+    )
   }
 
-  pushFrame(frame: Ref[]) {
-    return new RuntimeStack([frame, ...this.stack.slice()])
+  pushFrame(frame: T[]) {
+    return new (this.constructor as any)([frame, ...this.stack.slice()])
   }
+}
 
+// A RuntimeStack holds Refs to Vals, so that the Vals can potentially be updated
+// while being be referred to in multiple Frames.
+export class RuntimeStack extends Stack<Ref> {
   get(location: StackLocation) {
     return this.stack[location.level][location.index]
   }
