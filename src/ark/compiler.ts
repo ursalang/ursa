@@ -40,10 +40,6 @@ export class Environment {
     return new Environment([[...items, ...this.stack[0].slice()], ...this.stack.slice(1)])
   }
 
-  pop(_items: number) {
-    return this
-  }
-
   pushFrame(frame: string[]) {
     this.stack.unshift(frame)
     return this
@@ -130,7 +126,6 @@ function doCompile(value: any, env: Environment): CompiledArk {
           }
           const params = paramList(value[1])
           const [body, freeVars] = doCompile(value[2], env.push(params))
-          env.pop(params.length)
           params.forEach((p) => freeVars.delete(p))
           return [new Let(params, body), freeVars]
         }

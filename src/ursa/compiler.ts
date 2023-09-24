@@ -232,7 +232,6 @@ semantics.addOperation<AST>('toAST(env)', {
       seq.toAST(innerBinding),
     ])
     const compiledLet = new Let([ident.sourceString], compiledCall)
-    this.args.env.pop(1)
     return compiledLet
   },
   Sequence_letfn(_let, namedFn, _sep, seq) {
@@ -241,7 +240,6 @@ semantics.addOperation<AST>('toAST(env)', {
     const fn = namedFn.toAST(innerEnv)
     const compiledSeq = seq.toAST(innerEnv)
     const compiledLet = new Let([ident], new Call(intrinsics.seq, [fn, compiledSeq]))
-    this.args.env.pop(1)
     return compiledLet
   },
   Sequence_use(_use, pathList, _sep, seq) {
@@ -262,7 +260,6 @@ semantics.addOperation<AST>('toAST(env)', {
         seq.toAST(innerEnv),
       ]),
     )
-    this.args.env.pop(1)
     return compiledLet
   },
   Sequence_exp(exp, _sc) {
@@ -305,7 +302,6 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
     const freeVars = new FreeVars().merge(seq.freeVars(innerBinding))
     freeVars.merge(value.freeVars(innerBinding))
     freeVars.delete(ident.sourceString)
-    this.args.env.pop(1)
     return freeVars
   },
   Sequence_letfn(_let, namedFn, _sep, seq) {
@@ -317,7 +313,6 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
       (_v: SymRef[], k: string) => freeVars.delete(k),
     )
     freeVars.delete(namedFn.children[1].sourceString)
-    this.args.env.pop(1)
     return freeVars
   },
   Sequence_use(_use, pathList, _sep, seq) {
@@ -328,7 +323,6 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
       .merge(seq.freeVars(innerEnv))
       .merge(path[0].symref(this.args.env)[1])
     freeVars.delete(ident.sourceString)
-    this.args.env.pop(1)
     return freeVars
   },
   Fn_anon(_fn, _open, params, _maybe_comma, _close, body) {
