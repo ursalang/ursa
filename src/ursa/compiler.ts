@@ -2,7 +2,7 @@ import {Node, IterationNode} from 'ohm-js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  Val, Null, Bool, Num, Str, Ref, List, Obj, DictLiteral,
+  Val, Null, Bool, Num, Str, Ref, ListLiteral, Obj, DictLiteral,
   Call, Let, Fn, intrinsics, SymRef, Prop, Ass,
 } from '../ark/interp.js'
 import {
@@ -157,7 +157,7 @@ semantics.addOperation<AST>('toAST(env)', {
     return seq.toAST(this.args.env)
   },
   List(_open, elems, _maybe_comma, _close) {
-    return new List(
+    return new ListLiteral(
       elems.asIteration().children.map((value, _i, _arr) => value.toAST(this.args.env)),
     )
   },

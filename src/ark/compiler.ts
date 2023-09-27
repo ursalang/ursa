@@ -4,7 +4,7 @@ import {
   debug,
   Val, intrinsics,
   Null, Bool, Num, Str, Ref, Ass,
-  List, Obj, DictLiteral, SymRef,
+  ListLiteral, Obj, DictLiteral, SymRef,
   Fn, Fexpr, Prop, Let, Call, StackLocation, Stack,
 } from './interp.js'
 
@@ -146,7 +146,7 @@ function doCompile(value: any, env: Environment): CompiledArk {
         }
         case 'list': {
           const [elems, elemsFreeVars] = listToVals(env, value.slice(1))
-          return [new List(elems), elemsFreeVars]
+          return [new ListLiteral(elems), elemsFreeVars]
         }
         case 'map': {
           const inits = new Map<Val, Val>()

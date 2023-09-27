@@ -24,16 +24,8 @@ export class Stack<T> {
 
 // A RuntimeStack holds Refs to Vals, so that the Vals can potentially be updated
 // while being be referred to in multiple Frames.
-export class RuntimeStack extends Stack<Ref> {
-  get(location: StackLocation) {
-    return this.stack[location.level][location.index]
-  }
-
-  set(val: Val, location: StackLocation) {
-    const ref = this.stack[location.level][location.index]
-    ref.set.call(this, val)
-  }
-}
+// FIXME: Make the stack of type [Val[], Ref[]][]: pairs of frame and upvars
+export class RuntimeStack extends Stack<Ref> {}
 
 // Base class for compiled code.
 export class Val {
@@ -140,24 +132,35 @@ class FnClosure extends FexprClosure {
 }
 
 export class Fexpr extends Val {
+  private boundFreeVars: [StackLocation, SymRef[]][] = []
+
   constructor(public params: string[], protected freeVars: FreeVars, public body: Val) {
     super()
-  }
-
-  captureFreeVars(stack: RuntimeStack): Ref[] {
-    const frame: Ref[] = []
+    let numStackFreeVars = 0
     for (const [, symrefs] of this.freeVars) {
-      const ref = new Ref(symrefs[0].get.call(stack.pushFrame([])))
-      frame.push(ref)
+      let isStackFreeVar = false
       for (const symref of symrefs) {
         const loc = symref.location
         assert(loc !== undefined)
         if (loc instanceof StackLocation) {
+          assert(!(loc instanceof StackRefLocation))
           assert(loc.level > 0)
-          // FIXME: we shouldn't be rewriting code!
-          symref.location = new StackRefLocation(1, frame.length - 1)
+          if (!isStackFreeVar) {
+            isStackFreeVar = true
+            this.boundFreeVars.push([loc, symrefs])
+            numStackFreeVars += 1
+          }
+          symref.location = new StackRefLocation(1, numStackFreeVars - 1)
         }
       }
+    }
+  }
+
+  captureFreeVars(stack: RuntimeStack): Ref[] {
+    const frame: Ref[] = []
+    for (const [loc] of this.boundFreeVars) {
+      const ref = new Ref(stack.pushFrame([]).stack[loc.level][loc.index])
+      frame.push(ref)
     }
     return frame
   }
@@ -223,24 +226,24 @@ export class StackLocation {
   constructor(public level: number, public index: number) {}
 
   get(stack: RuntimeStack): Ref {
-    return stack.get(this)
+    return stack.stack[this.level][this.index]
   }
 
   set(stack: RuntimeStack, val: Val) {
-    stack.set(val, this)
+    const ref = stack.stack[this.level][this.index]
+    ref.set.call(stack, val)
     return val
   }
 }
 
-export class StackRefLocation {
-  constructor(public level: number, public index: number) {}
-
+export class StackRefLocation extends StackLocation {
   get(stack: RuntimeStack): Ref {
-    return stack.get(this).val as Ref
+    return stack.stack[this.level][this.index].val as Ref
   }
 
   set(stack: RuntimeStack, val: Val) {
-    this.get(stack).val = val
+    const ref = stack.stack[this.level][this.index];
+    (ref.val as Ref).set.call(stack, val)
     return val
   }
 }
@@ -263,7 +266,7 @@ export class RefLocation {
 }
 
 export class SymRef extends Val {
-  location: StackLocation | RefLocation | undefined
+  location: StackLocation | StackRefLocation | RefLocation | undefined
 
   constructor(env: Environment, name: string) {
     super()
@@ -279,6 +282,7 @@ export class SymRef extends Val {
 
   set = new NativeFexpr(
     'SymRef.set',
+    // FIXME: Should not need evalArk call in next line
     (stack: RuntimeStack, val: Val) => this.location!.set(stack, evalArk(val, stack)),
   )
 }
@@ -342,6 +346,8 @@ export class List extends Val {
     },
   )
 }
+
+export class ListLiteral extends List {}
 
 export class Let extends Val {
   constructor(public boundVars: string[], public body: Val) {
@@ -484,6 +490,7 @@ export const globals = new Map([
   }))],
 ])
 
+// FIXME: Add rule for Obj, and a test.
 export function evalArk(val: Val, stack: RuntimeStack): Val {
   if (val instanceof SymRef) {
     const ref = val.get.call(stack)
@@ -502,6 +509,8 @@ export function evalArk(val: Val, stack: RuntimeStack): Val {
     return new FnClosure(val.params, val.captureFreeVars(stack), val.body)
   } else if (val instanceof Fexpr) {
     return new FexprClosure(val.params, val.captureFreeVars(stack), val.body)
+  } else if (val instanceof ListLiteral) {
+    return new List(val.val.map((e) => evalArk(e, stack)))
   } else if (val instanceof DictLiteral) {
     const evaluatedMap = new Map<any, Val>()
     for (const [k, v] of val.map) {
