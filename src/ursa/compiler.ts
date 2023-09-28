@@ -30,6 +30,8 @@ class KeyValue extends AST {
   }
 }
 
+class Empty extends Null {}
+
 class Arguments extends AST {
   constructor(public args: Val[]) {
     super()
@@ -211,18 +213,19 @@ semantics.addOperation<AST>('toAST(env)', {
   PrimaryExp_ident(_sym) {
     return this.symref(this.args.env)[0]
   },
-  Sequence(exp) {
-    return exp.toAST(this.args.env)
-  },
-  Sequence_seq(seq, _sep) {
-    const children = seq.asIteration().children
-    if (children.length === 1) {
-      return children[0].toAST(this.args.env)
+  Sequence_seq(exp, _sep, seq) {
+    // FIXME: Add a Seq constructor, don't use an intrinsic
+    const exps = [exp.toAST(this.args.env)]
+    const compiledSeq = seq.toAST(this.args.env)
+    if (compiledSeq instanceof Call && compiledSeq.fn === intrinsics.seq) {
+      exps.push(...compiledSeq.args)
+    } else {
+      exps.push(compiledSeq)
     }
-    return new Call(
-      intrinsics.seq,
-      seq.asIteration().children.map((exp) => exp.toAST(this.args.env)),
-    )
+    if (exps.length > 0 && exps[exps.length - 1] instanceof Empty) {
+      exps.pop()
+    }
+    return new Call(intrinsics.seq, exps)
   },
   Sequence_let(_let, ident, _eq, value, _sep, seq) {
     const innerBinding = this.args.env.push([ident.sourceString])
@@ -261,8 +264,8 @@ semantics.addOperation<AST>('toAST(env)', {
     )
     return compiledLet
   },
-  Sequence_exp(exp, _sc) {
-    return exp.toAST(this.args.env)
+  Sequence_empty() {
+    return new Empty()
   },
   ident(_l, _ns) {
     return new Str(this.sourceString)
