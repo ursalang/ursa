@@ -113,7 +113,7 @@ class FexprClosure extends Val {
     let res: Val = new Null()
     try {
       const frame = bindArgsToParams(this.params, args)
-      res = evalArk(this.body, stack.pushFrame(this.freeVars).pushFrame(frame))
+      res = interpret(this.body, stack.pushFrame(this.freeVars).pushFrame(frame))
     } catch (e) {
       if (!(e instanceof ReturnException)) {
         throw e
@@ -182,7 +182,7 @@ export class NativeFexpr extends Val {
 function evaluateArgs(stack: RuntimeStack, ...args: Val[]) {
   const evaluatedArgs: Val[] = []
   for (const arg of args) {
-    evaluatedArgs.push(evalArk(arg, stack))
+    evaluatedArgs.push(interpret(arg, stack))
   }
   return evaluatedArgs
 }
@@ -396,35 +396,35 @@ export const intrinsics: {[key: string]: Val} = {
   seq: new NativeFexpr('seq', (stack: RuntimeStack, ...args: Val[]) => {
     let res: Val = new Null()
     for (const exp of args) {
-      res = evalArk(exp, stack)
+      res = interpret(exp, stack)
     }
     return res
   }),
   if: new NativeFexpr('if', (stack: RuntimeStack, cond: Val, e_then: Val, e_else: Val) => {
-    const condVal = evalArk(cond, stack)
+    const condVal = interpret(cond, stack)
     if (toJs(condVal)) {
-      return evalArk(e_then, stack)
+      return interpret(e_then, stack)
     }
-    return e_else ? evalArk(e_else, stack) : new Null()
+    return e_else ? interpret(e_else, stack) : new Null()
   }),
   and: new NativeFexpr('and', (stack: RuntimeStack, left: Val, right: Val) => {
-    const leftVal = evalArk(left, stack)
+    const leftVal = interpret(left, stack)
     if (toJs(leftVal)) {
-      return evalArk(right, stack)
+      return interpret(right, stack)
     }
     return leftVal
   }),
   or: new NativeFexpr('or', (stack: RuntimeStack, left: Val, right: Val) => {
-    const leftVal = evalArk(left, stack)
+    const leftVal = interpret(left, stack)
     if (toJs(leftVal)) {
       return leftVal
     }
-    return evalArk(right, stack)
+    return interpret(right, stack)
   }),
   loop: new NativeFexpr('loop', (stack: RuntimeStack, body: Val) => {
     for (; ;) {
       try {
-        evalArk(body, stack)
+        interpret(body, stack)
       } catch (e) {
         if (e instanceof BreakException) {
           return e.value()
@@ -490,15 +490,15 @@ export const globals = new Map([
 ])
 
 // FIXME: Add rule for Obj, and a test.
-export function evalArk(val: Val, stack: RuntimeStack): Val {
+function interpret(val: Val, stack: RuntimeStack): Val {
   if (val instanceof SymRef) {
     const ref = val.get.call(stack)
-    return evalArk(evalArk(ref, stack), stack)
+    return interpret(interpret(ref, stack), stack)
   } else if (val instanceof Ref) {
     return val.val
   } else if (val instanceof Ass) {
-    const ref = evalArk(val.ref, stack)
-    const res = evalArk(val.val, stack)
+    const ref = interpret(val.ref, stack)
+    const res = interpret(val.val, stack)
     if (!(ref instanceof Ref || ref instanceof SymRef)) {
       throw new AssException('assignment to non-Ref/SymRef')
     }
@@ -509,17 +509,17 @@ export function evalArk(val: Val, stack: RuntimeStack): Val {
   } else if (val instanceof Fexpr) {
     return new FexprClosure(val.params, val.captureFreeVars(stack), val.body)
   } else if (val instanceof ListLiteral) {
-    return new List(val.val.map((e) => evalArk(e, stack)))
+    return new List(val.val.map((e) => interpret(e, stack)))
   } else if (val instanceof DictLiteral) {
     const evaluatedMap = new Map<any, Val>()
     for (const [k, v] of val.map) {
-      evaluatedMap.set(toJs(evalArk(k, stack)), evalArk(v, stack))
+      evaluatedMap.set(toJs(interpret(k, stack)), interpret(v, stack))
     }
     return new Dict(evaluatedMap)
   } else if (val instanceof Dict) {
     const evaluatedMap = new Map<any, Val>()
     for (const [k, v] of val.map) {
-      evaluatedMap.set(k, evalArk(v, stack) as Val)
+      evaluatedMap.set(k, interpret(v, stack) as Val)
     }
     // FIXME: Don't do this: need to be able to use ConcreteVal values as
     // keys by their underlying value.
@@ -528,19 +528,19 @@ export function evalArk(val: Val, stack: RuntimeStack): Val {
     return val
   } else if (val instanceof List) {
     // eslint-disable-next-line no-param-reassign
-    val.val = val.val.map((e) => evalArk(e, stack))
+    val.val = val.val.map((e) => interpret(e, stack))
     return val
   } else if (val instanceof Let) {
     const frame = bindArgsToParams(val.boundVars, [])
-    const res = evalArk(val.body, stack.push(frame))
+    const res = interpret(val.body, stack.push(frame))
     return res
   } else if (val instanceof Call) {
     // FIXME: Use an ArkCallable trait, not FexprClosure—can also be
     // Native{Fexpr,Fn}.
-    const fn = evalArk(val.fn, stack) as FexprClosure
+    const fn = interpret(val.fn, stack) as FexprClosure
     return fn.call(stack, ...val.args)
   } else if (val instanceof Prop) {
-    const obj = evalArk(val.ref, stack)
+    const obj = interpret(val.ref, stack)
     if (!(val.prop in obj)) {
       throw new PropertyException(`no property '${val.prop}'`)
     }
@@ -565,7 +565,7 @@ export function link(compiledVal: CompiledArk, env: Namespace): Val {
 
 export function runArk(compiledVal: CompiledArk, env: Namespace = globals): Val {
   const val = link(compiledVal, env)
-  return evalArk(val, new RuntimeStack())
+  return interpret(val, new RuntimeStack())
 }
 
 export function toJs(val: Val): any {
@@ -582,11 +582,11 @@ export function toJs(val: Val): any {
     return obj
   } else if (val instanceof DictLiteral) {
     // Best effort.
-    return toJs(evalArk(val, new RuntimeStack()))
+    return toJs(interpret(val, new RuntimeStack()))
   } else if (val instanceof Dict) {
     const evaluatedMap = new Map<any, Val>()
     for (const [k, v] of val.map) {
-      evaluatedMap.set(k, toJs(evalArk(v, new RuntimeStack())))
+      evaluatedMap.set(k, toJs(interpret(v, new RuntimeStack())))
     }
     return evaluatedMap
   } else if (val instanceof List) {
@@ -629,7 +629,7 @@ export function serialize(val: Val) {
     } else if (val instanceof Dict) {
       const obj: any[] = ['map']
       for (const [k, v] of val.map) {
-        // FIXME: see evalArk.
+        // FIXME: see interpret.
         const keyJs = k instanceof Val ? doSerialize(k) : k
         obj.push([keyJs, doSerialize(v)])
       }
