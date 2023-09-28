@@ -282,8 +282,7 @@ export class SymRef extends Val {
 
   set = new NativeFexpr(
     'SymRef.set',
-    // FIXME: Should not need evalArk call in next line
-    (stack: RuntimeStack, val: Val) => this.location!.set(stack, evalArk(val, stack)),
+    (stack: RuntimeStack, val: Val) => this.location!.set(stack, val),
   )
 }
 
