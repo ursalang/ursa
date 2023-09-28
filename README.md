@@ -17,9 +17,6 @@ change or evolve further.
 Ursa is free software, licensed under the GNU GPL version 3 (or, at your
 option, any later version), and written in TypeScript.
 
-The image of Ursula the mascot is from <a href="https://www.vectorportal.com">Vectorportal.com</a>,
-and is licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.
-
 Please [ask questions, make comments](https://ursalang.github.io/discussions.html);
 you can [open bug reports](https://github.com/ursalang/ursa/issues) on our GitHub issue tracker.
 If none of the other methods work for you, do email the author; see above for address.
