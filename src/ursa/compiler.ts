@@ -214,7 +214,6 @@ semantics.addOperation<AST>('toAST(env)', {
     return this.symref(this.args.env)[0]
   },
   Sequence_seq(exp, _sep, seq) {
-    // FIXME: Add a Seq constructor, don't use an intrinsic
     const exps = [exp.toAST(this.args.env)]
     const compiledSeq = seq.toAST(this.args.env)
     if (compiledSeq instanceof Call && compiledSeq.fn === intrinsics.seq) {
