@@ -1,7 +1,7 @@
 {
   "name": "@ursalang/ursa",
   "description": "A simple, comfortable, general-purpose language",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "author": "Reuben Thomas",
   "bin": {
     "ursa": "./bin/run.js"
