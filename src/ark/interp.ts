@@ -616,7 +616,8 @@ export function serialize(val: Val) {
       // eslint-disable-next-line guard-for-in
       for (const key in val) {
         if (!key.startsWith('_')) {
-          (obj as any)[key] = doSerialize((val as any)[key] as Val)
+          const v = (val as any)[key];
+          (obj as any)[key] = v instanceof Val ? doSerialize(v) : v
         }
       }
       return obj
@@ -642,6 +643,8 @@ export function serialize(val: Val) {
       return [doSerialize(val.fn), ...val.args.map(doSerialize)]
     } else if (val instanceof Prop) {
       return ['prop', val.prop, doSerialize(val.ref)]
+    } else if (val === undefined || val === null) {
+      return null
     }
     return val.toString()
   }
