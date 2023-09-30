@@ -251,8 +251,8 @@ export class StackRefLocation extends StackLocation {
 export class RefLocation {
   ref: Ref
 
-  constructor(val: Val) {
-    this.ref = new Ref(val)
+  constructor(ref: Ref) {
+    this.ref = ref
   }
 
   get(_stack: RuntimeStack): Ref {
@@ -492,8 +492,7 @@ export const globals = new Map([
 // FIXME: Add rule for Obj, and a test.
 function interpret(val: Val, stack: RuntimeStack): Val {
   if (val instanceof SymRef) {
-    const ref = val.get.call(stack)
-    return interpret(interpret(ref, stack), stack)
+    return (val.get.call(stack) as Ref).val
   } else if (val instanceof Ref) {
     return val.val
   } else if (val instanceof Ass) {

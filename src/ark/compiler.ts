@@ -8,7 +8,7 @@ import {
   Fn, Fexpr, Prop, Let, Call, StackLocation, Stack,
 } from './interp.js'
 
-export type Namespace = Map<string, Val>
+export type Namespace = Map<string, Ref>
 
 export class FreeVars extends Map<string, SymRef[]> {
   merge(moreVars: FreeVars): FreeVars {
