@@ -641,6 +641,8 @@ export function serialize(val: Val) {
       return ['let', ['params', ...val.boundVars], doSerialize(val.body)]
     } else if (val instanceof Call) {
       return [doSerialize(val.fn), ...val.args.map(doSerialize)]
+    } else if (val instanceof Ass) {
+      return ['set', doSerialize(val.ref), doSerialize(val.val)]
     } else if (val instanceof Prop) {
       return ['prop', val.prop, doSerialize(val.ref)]
     } else if (val === undefined || val === null) {
