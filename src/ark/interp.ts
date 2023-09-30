@@ -598,7 +598,7 @@ export function serialize(val: Val) {
   function doSerialize(val: Val): any {
     if (val instanceof SymRef) {
       return val._debug.get('name')
-    } else if (val instanceof NativeFexpr) {
+    } else if (val instanceof NativeFexpr || val instanceof NativeFn) {
       return val.name
     } else if (val instanceof Str) {
       return ['str', val.val]
