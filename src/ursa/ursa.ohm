@@ -14,9 +14,9 @@ Ursa {
      | spacesNoNL (lineTerminator | &"}")
 
   // Optional comma for comma-separated lists.
-  maybe_comma_paren = space* ("," | &")")
-  maybe_comma_bracket = space* ("," | &"]")
-  maybe_comma_brace = space* ("," | &"}")
+  maybeCommaParen = space* ("," | &")")
+  maybeCommaBracket = space* ("," | &"]")
+  maybeCommaBrace = space* ("," | &"}")
 
   PrimaryExp
     = "null"            -- null
@@ -31,12 +31,12 @@ Ursa {
     | Block
     | "(" Exp ")"       -- paren
 
-  List = "[" ListOf<AssignmentExp, ","> #maybe_comma_bracket "]"
+  List = "[" ListOf<AssignmentExp, ","> #maybeCommaBracket "]"
 
-  Object = "{" ListOf<PropertyValue, ","> #maybe_comma_brace "}"
+  Object = "{" ListOf<PropertyValue, ","> #maybeCommaBrace "}"
   PropertyValue = ident ":" Exp
 
-  Map = "{" ListOf<KeyValue, ","> #maybe_comma_brace "}"
+  Map = "{" ListOf<KeyValue, ","> #maybeCommaBrace "}"
   KeyValue = Exp ":" Exp
 
   PropertyExp
@@ -51,7 +51,7 @@ Ursa {
     | PropertyExp Arguments -- propcall
     | CallExp Arguments     -- call
 
-  Arguments = "(" ListOf<Exp, ","> #maybe_comma_paren ")"
+  Arguments = "(" ListOf<Exp, ","> #maybeCommaParen ")"
 
   LvalueExp
     = CallExp
@@ -61,10 +61,10 @@ Ursa {
     = "if" Exp Block ("else" Block)?
 
   Fn
-    = "fn" "(" ListOf<ident, ","> #maybe_comma_paren ")" Block        -- anon
+    = "fn" "(" ListOf<ident, ","> #maybeCommaParen ")" Block        -- anon
     | NamedFn
 
-  NamedFn = "fn" ident "(" ListOf<ident, ","> #maybe_comma_paren ")" Block
+  NamedFn = "fn" ident "(" ListOf<ident, ","> #maybeCommaParen ")" Block
 
   Loop = "loop" Block
 
