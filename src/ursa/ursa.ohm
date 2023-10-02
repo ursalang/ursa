@@ -46,10 +46,10 @@ Ursa {
     | PrimaryExp
 
   CallExp
-    = CallExp "[" Exp "]" -- index
-  	| CallExp #"." #ident -- prop
+    = CallExp "[" Exp "]"   -- index
+  	| CallExp #"." #ident   -- prop
     | PropertyExp Arguments -- propcall
-    | CallExp Arguments -- call
+    | CallExp Arguments     -- call
 
   Arguments = "(" ListOf<Exp, ","> #maybe_comma_paren ")"
 
@@ -71,7 +71,7 @@ Ursa {
   UnaryExp
     = "break" Exp?      -- break
     | "return" Exp?     -- return
-    | "not" Exp            -- not
+    | "not" Exp         -- not
     | "+" Exp           -- pos
     | "-" Exp           -- neg
     | LvalueExp
