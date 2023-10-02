@@ -19,8 +19,8 @@ testGroup('Concrete values', [
 testGroup('Intrinsics', [
   ['["+",3,4]', 7],
   ['["*",["+",3,4],5]', 35],
-  ['"pi"', Math.PI],
-  ['["seq","pi",["+",3,5]]', 8],
+  ['["get","pi"]', Math.PI],
+  ['["seq",["get","pi"],["+",3,5]]', 8],
   ['["=",["+",3,4],7]', true],
   ['["not",2]', false],
 ])
@@ -49,7 +49,7 @@ testGroup('loop and break', [
 ])
 
 testGroup('let', [
-  ['["let",["params","a"],["seq",["set",["ref","a"],3],"a"]]', 3],
+  ['["let",["params","a"],["seq",["set","a",3],["get","a"]]]', 3],
 ])
 
 testGroup('Lists', [

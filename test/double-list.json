@@ -5,7 +5,7 @@
     "seq",
     [
       "set",
-      [ "ref", "double" ],
+      "double",
       [
         "fn",
         [ "params", "l" ],
@@ -14,28 +14,28 @@
           [ "params", "i" ],
           [
             "seq",
-            [ "set", [ "ref", "i" ], 0 ],
+            [ "set", "i", 0 ],
             [
               "loop",
               [
                 "seq",
                 [
                   "if",
-                  [ "=", "i", [ "prop", "length", "l" ] ],
-                  [ "return", "l" ]
+                  [ "=", [ "get", "i" ], [ "prop", "length", [ "get", "l" ] ] ],
+                  [ "return", [ "get", "l" ] ]
                 ],
                 [
-                  [ "prop", "set", "l" ],
-                  "i",
-                  [ "*", [ [ "prop", "get", "l" ], "i" ], 2 ]
+                  [ "prop", "set", [ "get", "l" ] ],
+                  [ "get", "i" ],
+                  [ "*", [ [ "prop", "get", [ "get", "l" ] ], [ "get", "i" ] ], 2 ]
                 ],
-                [ "set", [ "ref", "i" ], [ "+", "i", 1 ] ]
+                [ "set", "i", [ "+", [ "get", "i" ], 1 ] ]
               ]
             ]
           ]
         ]
       ]
     ],
-    [ "double", [ "list", 1, 2, 3 ] ]
+    [ [ "get", "double" ], [ "list", 1, 2, 3 ] ]
   ]
 ]

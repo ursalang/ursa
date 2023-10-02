@@ -216,6 +216,12 @@ export class Ref extends Val {
   )
 }
 
+export class Get extends Val {
+  constructor(public val: Val) {
+    super()
+  }
+}
+
 export class Ass extends Val {
   constructor(public ref: Val, public val: Val) {
     super()
@@ -492,9 +498,11 @@ export const globals = new Map([
 // FIXME: Add rule for Obj, and a test.
 function interpret(val: Val, stack: RuntimeStack): Val {
   if (val instanceof SymRef) {
-    return (val.get.call(stack) as Ref).val
+    return val.get.call(stack)
   } else if (val instanceof Ref) {
-    return val.val
+    return val
+  } else if (val instanceof Get) {
+    return (interpret(val.val, stack) as Ref).val
   } else if (val instanceof Ass) {
     const ref = interpret(val.ref, stack)
     const res = interpret(val.val, stack)
@@ -606,6 +614,8 @@ export function serialize(val: Val) {
       return val.val
     } else if (val instanceof Ref) {
       return ['ref', doSerialize(val.val)]
+    } else if (val instanceof Get) {
+      return ['get', doSerialize(val.val)]
     } else if (val instanceof Fn) {
       return ['fn', ['params', ...val.params], doSerialize(val.body)]
     } else if (val instanceof Fexpr) {

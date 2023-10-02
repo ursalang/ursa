@@ -3,7 +3,7 @@ import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
   Val, intrinsics,
-  Null, Bool, Num, Str, Ref, Ass,
+  Null, Bool, Num, Str, Ref, Ass, Get,
   ListLiteral, Obj, DictLiteral, SymRef,
   Fn, Fexpr, Prop, Let, Call, StackLocation, Stack,
 } from './interp.js'
@@ -134,6 +134,13 @@ function doCompile(value: any, env: Environment): CompiledArk {
           }
           const [val, freeVars] = doCompile(value[1], env)
           return [new Ref(val), freeVars]
+        }
+        case 'get': {
+          if (value.length !== 2) {
+            throw new Error("invalid 'get'")
+          }
+          const [ref, refFreeVars] = doCompile(value[1], env)
+          return [new Get(ref), refFreeVars]
         }
         case 'set': {
           if (value.length !== 3) {

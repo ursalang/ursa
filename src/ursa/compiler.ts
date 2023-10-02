@@ -2,8 +2,8 @@ import {Node, IterationNode} from 'ohm-js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  Val, Null, Bool, Num, Str, Ref, ListLiteral, Obj, DictLiteral,
-  Call, Let, Fn, intrinsics, SymRef, Prop, Ass,
+  Val, Null, Bool, Num, Str, ListLiteral, Obj, DictLiteral,
+  Call, Let, Fn, intrinsics, SymRef, Prop, Ass, Get,
 } from '../ark/interp.js'
 import {
   CompiledArk, symRef, Environment, FreeVars,
@@ -68,7 +68,7 @@ semantics.addOperation<AST>('toAST(env)', {
   },
   NamedFn(_fn, ident, _open, params, _maybe_comma, _close, body) {
     return new Ass(
-      new Ref(ident.symref(this.args.env)[0]),
+      ident.symref(this.args.env)[0],
       makeFn(this.args.env, params, body),
     )
   },
@@ -100,10 +100,12 @@ semantics.addOperation<AST>('toAST(env)', {
   AssignmentExp_ass(lvalue, _eq, value) {
     const compiledLvalue = lvalue.toAST(this.args.env)
     const compiledValue = value.toAST(this.args.env)
-    if (compiledLvalue instanceof Call && compiledLvalue.fn instanceof Prop && compiledLvalue.fn.prop === 'get') {
+    if (compiledLvalue instanceof Get) {
+      return new Ass(compiledLvalue.val, compiledValue)
+    } else if (compiledLvalue instanceof Call && compiledLvalue.fn instanceof Prop && compiledLvalue.fn.prop === 'get') {
       return new Call(new Prop('set', compiledLvalue.fn.ref), [...compiledLvalue.args, compiledValue])
     } else if (compiledLvalue instanceof SymRef) {
-      return new Ass(new Ref(compiledLvalue), compiledValue)
+      return new Ass(compiledLvalue, compiledValue)
     }
     return new Ass(compiledLvalue, compiledValue)
   },
@@ -211,7 +213,7 @@ semantics.addOperation<AST>('toAST(env)', {
     return new Null()
   },
   PrimaryExp_ident(_sym) {
-    return this.symref(this.args.env)[0]
+    return new Get(this.symref(this.args.env)[0])
   },
   Sequence_seq(exp, _sep, seq) {
     const exps = [exp.toAST(this.args.env)]
@@ -229,7 +231,7 @@ semantics.addOperation<AST>('toAST(env)', {
   Sequence_let(_let, ident, _eq, value, _sep, seq) {
     const innerBinding = this.args.env.push([ident.sourceString])
     const compiledCall = new Call(intrinsics.seq, [
-      new Ass(new Ref(ident.symref(innerBinding)[0]), value.toAST(innerBinding)),
+      new Ass(ident.symref(innerBinding)[0], value.toAST(innerBinding)),
       seq.toAST(innerBinding),
     ])
     const compiledLet = new Let([ident.sourceString], compiledCall)
@@ -252,7 +254,7 @@ semantics.addOperation<AST>('toAST(env)', {
       [ident.sourceString],
       new Call(intrinsics.seq, [
         new Ass(
-          new Ref(ident.symref(innerEnv)[0]),
+          ident.symref(innerEnv)[0],
           new Call(
             new Prop('use', path[0].symref(innerEnv)[0]),
             path.slice(1).map((id) => new Str(id.sourceString)),

@@ -3,7 +3,7 @@
   [ "params", "tot" ],
   [
     "seq",
-    [ "set", [ "ref", "tot" ], 0 ],
+    [ "set", "tot", 0 ],
     [
       "let",
       [ "params", "accum" ],
@@ -11,18 +11,16 @@
         "seq",
         [
           "set",
-          [ "ref", "accum" ],
+          "accum",
           [
             "fn",
             [ "params", "x" ],
             [
-              "set",
-              [ "ref", "tot" ],
-              [ "+", "tot", "x" ]
+              "set", "tot", [ "+", [ "get", "tot" ], [ "get", "x" ] ]
             ]
           ]
         ],
-        [ "list", [ "accum", 1 ], [ "accum", 1 ] ]
+        [ "list", [ [ "get", "accum" ], 1 ], [ [ "get", "accum" ], 1 ] ]
       ]
     ]
   ]

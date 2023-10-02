@@ -5,7 +5,7 @@
     "seq",
     [
       "set",
-      [ "ref", "sum" ],
+      "sum",
       [
         "fn",
         [ "params", "l" ],
@@ -14,29 +14,29 @@
           [ "params", "tot", "i" ],
           [
             "seq",
-            [ "set", [ "ref", "tot" ], 0 ],
-            [ "set", [ "ref", "i" ], 0 ],
+            [ "set", "tot", 0 ],
+            [ "set", "i", 0 ],
             [
               "loop",
               [
                 "seq",
                 [
                   "if",
-                  [ "=", "i", [ "prop", "length", "l" ] ],
-                  [ "break", "tot" ]
+                  [ "=", [ "get", "i" ], [ "prop", "length", [ "get", "l" ] ] ],
+                  [ "break", [ "get", "tot" ] ]
                 ],
                 [
                   "set",
-                  [ "ref", "tot" ],
-                  [ "+", "tot", [ [ "prop", "get", "l" ], "i" ] ]
+                  "tot",
+                  [ "+", [ "get", "tot" ], [ [ "prop", "get", [ "get", "l" ] ], [ "get", "i" ] ] ]
                 ],
-                [ "set", [ "ref", "i" ], [ "+", "i", 1 ] ]
+                [ "set", "i", [ "+", [ "get", "i" ], 1 ] ]
               ]
             ]
           ]
         ]
       ]
     ],
-    [ "sum", [ "list", 10, 30, 50, 5, 5 ] ]
+    [ [ "get", "sum" ], [ "list", 10, 30, 50, 5, 5 ] ]
   ]
 ]
