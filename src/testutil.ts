@@ -44,7 +44,7 @@ export async function cliTest(syntax: string, title: string, file: string, outpu
     const expected = JSON.parse(fs.readFileSync(`${file}.result.json`, {encoding: 'utf-8'}))
     t.deepEqual(result, expected)
     if (output !== undefined) {
-      t.is(output, stdout)
+      t.is(stdout, output)
     }
   })
 }
