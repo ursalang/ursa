@@ -9,7 +9,7 @@ import programVersion from '../version.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  List, Ref, Str, globals, runArk, serialize, toJs,
+  List, ValRef, Str, globals, runArk, serialize, toJs,
 } from '../ark/interp.js'
 import {compile as arkCompile} from '../ark/compiler.js'
 import {compile as ursaCompile} from './compiler.js'
@@ -68,7 +68,7 @@ function compile(exp: string) {
 
 function evaluate(exp: string) {
   // Add command-line arguments.
-  globals.set('argv', new Ref(new List(
+  globals.set('argv', new ValRef(new List(
     args.argument.map((s) => new Str(s)),
   )))
   const compiled = compile(exp)

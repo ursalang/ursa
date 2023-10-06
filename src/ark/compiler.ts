@@ -3,12 +3,12 @@ import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
   Val, intrinsics,
-  Null, Bool, Num, Str, Ref, Ass, Get,
+  Null, Bool, Num, Str, ValRef, StackRef, Ass, Get,
   ListLiteral, Obj, DictLiteral, SymRef,
-  Fn, Fexpr, Prop, Let, Call, StackLocation, Stack,
+  Fn, Fexpr, Prop, Let, Call, Stack,
 } from './interp.js'
 
-export type Namespace = Map<string, Ref>
+export type Namespace = Map<string, ValRef>
 
 export class FreeVars extends Map<string, SymRef[]> {
   merge(moreVars: FreeVars): FreeVars {
@@ -23,11 +23,11 @@ export class FreeVars extends Map<string, SymRef[]> {
 }
 
 export class Environment extends Stack<string> {
-  getIndex(sym: string): StackLocation | undefined {
+  getIndex(sym: string): StackRef | undefined {
     for (let i = 0; i < this.stack.length; i += 1) {
       const j = this.stack[i].indexOf(sym)
       if (j !== -1) {
-        return new StackLocation(i, j)
+        return new StackRef(i, j)
       }
     }
     return undefined
@@ -133,7 +133,7 @@ function doCompile(value: any, env: Environment): CompiledArk {
             throw new Error("invalid 'ref'")
           }
           const [val, freeVars] = doCompile(value[1], env)
-          return [new Ref(val), freeVars]
+          return [new ValRef(val), freeVars]
         }
         case 'get': {
           if (value.length !== 2) {

@@ -22,10 +22,8 @@ export class Stack<T> {
   }
 }
 
-// A RuntimeStack holds Refs to Vals, so that the Vals can potentially be updated
-// while being be referred to in multiple Frames.
 // FIXME: Make the stack of type [Val[], Ref[]][]: pairs of frame and upvars
-export class RuntimeStack extends Stack<Ref> {}
+export class RuntimeStack extends Stack<Val> {}
 
 // Base class for compiled code.
 export class Val {
@@ -94,18 +92,18 @@ export class PropertyException extends Error {}
 export class AssException extends Error {}
 
 export function bindArgsToParams(params: string[], args: Val[]): Ref[] {
-  const frame: Ref[] = params.map(
-    (_key, index) => new Ref(args[index] ?? new Null()),
+  const frame: ValRef[] = params.map(
+    (_key, index) => new ValRef(args[index] ?? new Null()),
   )
   if (args.length > params.length) {
     // FIXME: Support '...' as an identifier
-    frame.push(new Ref(new List(args.slice(params.length))))
+    frame.push(new ValRef(new List(args.slice(params.length))))
   }
   return frame
 }
 
 class FexprClosure extends Val {
-  constructor(protected params: string[], protected freeVars: Ref[], protected body: Val) {
+  constructor(protected params: string[], protected freeVars: Val[], protected body: Val) {
     super()
   }
 
@@ -132,7 +130,7 @@ class FnClosure extends FexprClosure {
 }
 
 export class Fexpr extends Val {
-  private boundFreeVars: [StackLocation, SymRef[]][] = []
+  private boundFreeVars: [StackRef, SymRef[]][] = []
 
   constructor(public params: string[], protected freeVars: FreeVars, public body: Val) {
     super()
@@ -140,32 +138,33 @@ export class Fexpr extends Val {
     for (const [, symrefs] of this.freeVars) {
       let isStackFreeVar = false
       for (const symref of symrefs) {
-        const loc = symref.location
+        const loc = symref.ref
         assert(loc !== undefined)
-        if (loc instanceof StackLocation) {
-          assert(!(loc instanceof StackRefLocation))
+        if (loc instanceof StackRef) {
+          assert(!(loc instanceof StackRefRef))
           assert(loc.level > 0)
           if (!isStackFreeVar) {
             isStackFreeVar = true
             this.boundFreeVars.push([loc, symrefs])
             numStackFreeVars += 1
           }
-          symref.location = new StackRefLocation(1, numStackFreeVars - 1)
+          symref.ref = new StackRefRef(1, numStackFreeVars - 1)
         }
       }
     }
   }
 
-  captureFreeVars(stack: RuntimeStack): Ref[] {
-    const frame: Ref[] = []
+  captureFreeVars(stack: RuntimeStack): Val[] {
+    const frame: Val[] = []
     for (const [loc] of this.boundFreeVars) {
-      const ref = new Ref(stack.pushFrame([]).stack[loc.level][loc.index])
+      const ref = new ValRef(stack.pushFrame([]).stack[loc.level][loc.index])
       frame.push(ref)
     }
     return frame
   }
 }
 
+export class Fn extends Fexpr {}
 export class NativeFexpr extends Val {
   constructor(
     public name: string, // FIXME: remove name, use debug info.
@@ -187,8 +186,6 @@ function evaluateArgs(stack: RuntimeStack, ...args: Val[]) {
   return evaluatedArgs
 }
 
-export class Fn extends Fexpr {}
-
 export class NativeFn extends Val {
   constructor(
     public name: string,
@@ -202,18 +199,25 @@ export class NativeFn extends Val {
   }
 }
 
-export class Ref extends Val {
+export abstract class Ref extends Val {
+  abstract get(stack: RuntimeStack): Val
+
+  abstract set(stack: RuntimeStack, val: Val): Val
+}
+
+export class ValRef extends Ref {
   constructor(public val: Val = new Null()) {
     super()
   }
 
-  set = new NativeFn(
-    'Ref.set',
-    (val: Val) => {
-      this.val = val
-      return val
-    },
-  )
+  get(_stack: RuntimeStack): Val {
+    return this.val
+  }
+
+  set(_stack: RuntimeStack, val: Val): Val {
+    this.val = val
+    return val
+  }
 }
 
 export class Get extends Val {
@@ -228,68 +232,67 @@ export class Ass extends Val {
   }
 }
 
-export class StackLocation {
-  constructor(public level: number, public index: number) {}
+export class StackRef extends Ref {
+  constructor(public level: number, public index: number) {
+    super()
+  }
 
-  get(stack: RuntimeStack): Ref {
+  get(stack: RuntimeStack): Val {
     return stack.stack[this.level][this.index]
   }
 
   set(stack: RuntimeStack, val: Val) {
-    const ref = stack.stack[this.level][this.index]
-    ref.set.call(stack, val)
+    stack.stack[this.level][this.index] = val
     return val
   }
 }
 
-export class StackRefLocation extends StackLocation {
-  get(stack: RuntimeStack): Ref {
-    return stack.stack[this.level][this.index].val as Ref
+export class StackRefRef extends StackRef {
+  get(stack: RuntimeStack): Val {
+    return (stack.stack[this.level][this.index] as Ref).get(stack)
   }
 
   set(stack: RuntimeStack, val: Val) {
-    const ref = stack.stack[this.level][this.index];
-    (ref.val as Ref).set.call(stack, val)
+    const ref = stack.stack[this.level][this.index] as Ref;
+    ref.set(stack, val)
     return val
   }
 }
 
-export class RefLocation {
+export class RefRef {
   ref: Ref
 
   constructor(ref: Ref) {
     this.ref = ref
   }
 
-  get(_stack: RuntimeStack): Ref {
-    return this.ref
+  get(stack: RuntimeStack): Val {
+    return this.ref.get(stack)
   }
 
   set(stack: RuntimeStack, val: Val) {
-    this.ref.set.call(stack, val)
+    this.ref.set(stack, val)
     return val
   }
 }
 
 export class SymRef extends Val {
-  location: StackLocation | StackRefLocation | RefLocation | undefined
+  ref: Ref | undefined
 
   constructor(env: Environment, name: string) {
     super()
-    this.location = env.getIndex(name)
+    this.ref = env.getIndex(name)
     this._debug.set('name', name)
     this._debug.set('env', JSON.stringify(env))
   }
 
-  get = new NativeFexpr(
-    'SymRef.get',
-    (stack: RuntimeStack): Ref => this.location!.get(stack),
-  )
+  get(stack: RuntimeStack): Val {
+    return this.ref!.get(stack)
+  }
 
-  set = new NativeFexpr(
-    'SymRef.set',
-    (stack: RuntimeStack, val: Val) => this.location!.set(stack, val),
-  )
+  set(stack: RuntimeStack, val: Val) {
+    return this.ref!.set(stack, val)
+  }
 }
 
 export class Obj extends Val {
@@ -395,7 +398,6 @@ function jsToVal(x: any): Val {
 }
 
 export const intrinsics: {[key: string]: Val} = {
-  new: new NativeFn('new', (val: Val) => new Ref(val)),
   pos: new NativeFn('pos', (val: Val) => new Num(+toJs(val))),
   neg: new NativeFn('neg', (val: Val) => new Num(-toJs(val))),
   not: new NativeFn('not', (val: Val) => new Bool(!toJs(val))),
@@ -465,13 +467,13 @@ export const intrinsics: {[key: string]: Val} = {
 }
 
 export const globals = new Map([
-  ['pi', new Ref(new Num(Math.PI))],
-  ['e', new Ref(new Num(Math.E))],
-  ['print', new Ref(new NativeFn('print', (obj: Val) => {
+  ['pi', new ValRef(new Num(Math.PI))],
+  ['e', new ValRef(new Num(Math.E))],
+  ['print', new ValRef(new NativeFn('print', (obj: Val) => {
     console.log(toJs(obj))
     return new Null()
   }))],
-  ['debug', new Ref(new NativeFn('debug', (obj: Val) => {
+  ['debug', new ValRef(new NativeFn('debug', (obj: Val) => {
     debug(obj)
     return new Null()
   }))],
@@ -489,7 +491,7 @@ export const globals = new Map([
   //     return new Obj(wrappedModule)
   //   }),
   // }))],
-  ['JSON', new Ref(new Obj({
+  ['JSON', new ValRef(new Obj({
     parse: new NativeFn('JSON.parse', (str: Val) => jsToVal(JSON.parse(toJs(str)))),
     stringify: new NativeFn('JSON.stringify', (val: Val) => new Str(JSON.stringify(toJs(val)))),
   }))],
@@ -498,18 +500,18 @@ export const globals = new Map([
 // FIXME: Add rule for Obj, and a test.
 function interpret(val: Val, stack: RuntimeStack): Val {
   if (val instanceof SymRef) {
-    return val.get.call(stack)
-  } else if (val instanceof Ref) {
+    return val.get(stack)
+  } else if (val instanceof ValRef) {
     return val
   } else if (val instanceof Get) {
-    return (interpret(val.val, stack) as Ref).val
+    return (interpret(val.val, stack) as Ref).get(stack)
   } else if (val instanceof Ass) {
     const ref = interpret(val.ref, stack)
     const res = interpret(val.val, stack)
-    if (!(ref instanceof Ref || ref instanceof SymRef)) {
+    if (!(ref instanceof ValRef || ref instanceof SymRef)) {
       throw new AssException('assignment to non-Ref/SymRef')
     }
-    ref.set.call(stack, res)
+    ref.set(stack, res)
     return res
   } else if (val instanceof Fn) {
     return new FnClosure(val.params, val.captureFreeVars(stack), val.body)
@@ -564,7 +566,7 @@ export function link(compiledVal: CompiledArk, env: Namespace): Val {
       throw new Error(`undefined symbol ${name}`)
     }
     for (const symref of symrefs) {
-      symref.location = new RefLocation(env.get(name)!)
+      symref.ref = new ValRef(env.get(name)!)
     }
   }
   return val
@@ -612,7 +614,7 @@ export function serialize(val: Val) {
       return ['str', val.val]
     } else if (val instanceof ConcreteVal) {
       return val.val
-    } else if (val instanceof Ref) {
+    } else if (val instanceof ValRef) {
       return ['ref', doSerialize(val.val)]
     } else if (val instanceof Get) {
       return ['get', doSerialize(val.val)]
