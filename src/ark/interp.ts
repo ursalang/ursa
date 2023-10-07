@@ -306,19 +306,13 @@ export class Obj extends Val {
   }
 }
 
-// Until we can evaluate a dict literal, we don't know the values of its
-// keys.
 export class DictLiteral extends Val {
   constructor(public map: Map<Val, Val>) {
     super()
   }
 }
 
-export class Dict extends Val {
-  constructor(public map: Map<Val, Val>) {
-    super()
-  }
-
+export class Dict extends DictLiteral {
   set = new NativeFn(
     'Dict.set',
     (index: Val, val: Val) => {
@@ -333,14 +327,16 @@ export class Dict extends Val {
   )
 }
 
-export class List extends Val {
+export class ListLiteral extends Val {
   constructor(public val: Val[]) {
     super()
     this.length = new Num(this.val.length)
   }
 
   length: Num
+}
 
+export class List extends ListLiteral {
   get = new NativeFn(
     'List.get',
     (index: Val) => this.val[toJs(index)],
@@ -354,8 +350,6 @@ export class List extends Val {
     },
   )
 }
-
-export class ListLiteral extends List {}
 
 export class Let extends Val {
   constructor(public boundVars: string[], public body: Val) {
@@ -519,12 +513,6 @@ function interpret(val: Val, stack: RuntimeStack): Val {
     return new FexprClosure(val.params, val.captureFreeVars(stack), val.body)
   } else if (val instanceof ListLiteral) {
     return new List(val.val.map((e) => interpret(e, stack)))
-  } else if (val instanceof DictLiteral) {
-    const evaluatedMap = new Map<any, Val>()
-    for (const [k, v] of val.map) {
-      evaluatedMap.set(toJs(interpret(k, stack)), interpret(v, stack))
-    }
-    return new Dict(evaluatedMap)
   } else if (val instanceof Dict) {
     const evaluatedMap = new Map<any, Val>()
     for (const [k, v] of val.map) {
@@ -535,6 +523,12 @@ function interpret(val: Val, stack: RuntimeStack): Val {
     // eslint-disable-next-line no-param-reassign
     val.map = evaluatedMap
     return val
+  } else if (val instanceof DictLiteral) {
+    const evaluatedMap = new Map<any, Val>()
+    for (const [k, v] of val.map) {
+      evaluatedMap.set(toJs(interpret(k, stack)), interpret(v, stack))
+    }
+    return new Dict(evaluatedMap)
   } else if (val instanceof List) {
     // eslint-disable-next-line no-param-reassign
     val.val = val.val.map((e) => interpret(e, stack))
@@ -589,15 +583,15 @@ export function toJs(val: Val): any {
       }
     }
     return obj
-  } else if (val instanceof DictLiteral) {
-    // Best effort.
-    return toJs(interpret(val, new RuntimeStack()))
   } else if (val instanceof Dict) {
     const evaluatedMap = new Map<any, Val>()
     for (const [k, v] of val.map) {
       evaluatedMap.set(k, toJs(interpret(v, new RuntimeStack())))
     }
     return evaluatedMap
+  } else if (val instanceof DictLiteral) {
+    // Best effort.
+    return toJs(interpret(val, new RuntimeStack()))
   } else if (val instanceof List) {
     return val.val.map(toJs)
   }
@@ -632,18 +626,18 @@ export function serialize(val: Val) {
         }
       }
       return obj
-    } else if (val instanceof DictLiteral) {
-      const obj: any[] = ['map']
-      for (const [k, v] of val.map) {
-        obj.push([doSerialize(k), doSerialize(v)])
-      }
-      return obj
     } else if (val instanceof Dict) {
       const obj: any[] = ['map']
       for (const [k, v] of val.map) {
         // FIXME: see interpret.
         const keyJs = k instanceof Val ? doSerialize(k) : k
         obj.push([keyJs, doSerialize(v)])
+      }
+      return obj
+    } else if (val instanceof DictLiteral) {
+      const obj: any[] = ['map']
+      for (const [k, v] of val.map) {
+        obj.push([doSerialize(k), doSerialize(v)])
       }
       return obj
     } else if (val instanceof List) {
