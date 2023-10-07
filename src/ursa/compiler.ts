@@ -30,6 +30,12 @@ class KeyValue extends AST {
   }
 }
 
+class IndexExp extends AST {
+  constructor(public obj: Val, public index: Val) {
+    super()
+  }
+}
+
 class Empty extends Null {}
 
 class Arguments extends AST {
@@ -39,7 +45,7 @@ class Arguments extends AST {
 }
 
 function maybeVal(env: Environment, exp: IterationNode): Val {
-  return exp.children.length > 0 ? exp.children[0].toAST(env) : new Null()
+  return exp.children.length > 0 ? exp.children[0].toAST(env, false) : new Null()
 }
 
 function listNodeToStringList(listNode: Node): string[] {
@@ -50,16 +56,22 @@ function makeFn(env: Environment, params: Node, body: Node): Val {
   const paramList = listNodeToStringList(params)
   const innerEnv = env.pushFrame(paramList)
   const bodyFreeVars = body.freeVars(innerEnv)
-  const compiledBody = body.toAST(innerEnv)
+  const compiledBody = body.toAST(innerEnv, false)
   paramList.forEach((p) => bodyFreeVars.delete(p))
   return new Fn(paramList, bodyFreeVars, compiledBody)
 }
 
-semantics.addOperation<AST>('toAST(env)', {
+function indexExp(env: Environment, lval: boolean, object: Node, index: Node): AST {
+  const compiledObj = object.toAST(env, false)
+  const compiledIndex = index.toAST(env, false)
+  return lval ? new IndexExp(compiledObj, compiledIndex) : new Call(new Prop('get', compiledObj), [compiledIndex])
+}
+
+semantics.addOperation<AST>('toAST(env,lval)', {
   If(_if, e_cond, e_then, _else, e_else) {
-    const args: Val[] = [e_cond.toAST(this.args.env), e_then.toAST(this.args.env)]
+    const args: Val[] = [e_cond.toAST(this.args.env, false), e_then.toAST(this.args.env, false)]
     if (e_else.children.length > 0) {
-      args.push(e_else.children[0].toAST(this.args.env))
+      args.push(e_else.children[0].toAST(this.args.env, false))
     }
     return new Call(intrinsics.if, args)
   },
@@ -73,102 +85,102 @@ semantics.addOperation<AST>('toAST(env)', {
     )
   },
   CallExp_call(exp, args) {
-    return new Call(exp.toAST(this.args.env), args.toAST(this.args.env).args)
+    return new Call(exp.toAST(this.args.env, false), args.toAST(this.args.env, false).args)
   },
   CallExp_propcall(exp, args) {
-    return new Call(exp.toAST(this.args.env), args.toAST(this.args.env).args)
+    return new Call(exp.toAST(this.args.env, false), args.toAST(this.args.env, false).args)
   },
   CallExp_prop(exp, _dot, ident) {
-    return new Call(new Prop(ident.sourceString, exp.toAST(this.args.env)), [])
+    return new Call(new Prop(ident.sourceString, exp.toAST(this.args.env, false)), [])
   },
   Arguments(_open, args, _maybe_comma, _close) {
     return new Arguments(
-      args.asIteration().children.map((value, _i, _arr) => value.toAST(this.args.env)),
+      args.asIteration().children.map((value, _i, _arr) => value.toAST(this.args.env, false)),
     )
   },
   PropertyExp_index(object, _open, index, _close) {
-    return new Call(new Prop('get', object.toAST(this.args.env)), [index.toAST(this.args.env)])
+    return indexExp(this.args.env, this.args.lval, object, index)
   },
   CallExp_index(object, _open, index, _close) {
-    return new Call(new Prop('get', object.toAST(this.args.env)), [index.toAST(this.args.env)])
+    return indexExp(this.args.env, this.args.lval, object, index)
   },
   Loop(_loop, e_body) {
-    return new Call(intrinsics.loop, [e_body.toAST(this.args.env)])
+    return new Call(intrinsics.loop, [e_body.toAST(this.args.env, false)])
   },
-  // FIXME: rather than rewrite compiledLvalue, use a parameter to LvalueExp
-  // to compile it differently.
   AssignmentExp_ass(lvalue, _eq, value) {
-    const compiledLvalue = lvalue.toAST(this.args.env)
-    const compiledValue = value.toAST(this.args.env)
-    if (compiledLvalue instanceof Get) {
-      return new Ass(compiledLvalue.val, compiledValue)
-    } else if (compiledLvalue instanceof Call && compiledLvalue.fn instanceof Prop && compiledLvalue.fn.prop === 'get') {
-      return new Call(new Prop('set', compiledLvalue.fn.ref), [...compiledLvalue.args, compiledValue])
-    } else if (compiledLvalue instanceof SymRef) {
-      return new Ass(compiledLvalue, compiledValue)
+    const compiledLvalue = lvalue.toAST(this.args.env, true)
+    const compiledValue = value.toAST(this.args.env, false)
+    if (compiledLvalue instanceof IndexExp) {
+      return new Call(new Prop('set', compiledLvalue.obj), [compiledLvalue.index, compiledValue])
     }
     return new Ass(compiledLvalue, compiledValue)
   },
   LogicExp_and(left, _and, right) {
-    return new Call(intrinsics.and, [left.toAST(this.args.env), right.toAST(this.args.env)])
+    return new Call(
+      intrinsics.and,
+      [left.toAST(this.args.env, false), right.toAST(this.args.env, false)],
+    )
   },
   LogicExp_or(left, _or, right) {
-    return new Call(intrinsics.or, [left.toAST(this.args.env), right.toAST(this.args.env)])
+    return new Call(
+      intrinsics.or,
+      [left.toAST(this.args.env, false), right.toAST(this.args.env, false)],
+    )
   },
   UnaryExp_not(_not, exp) {
-    return new Call(intrinsics.not, [exp.toAST(this.args.env)])
+    return new Call(intrinsics.not, [exp.toAST(this.args.env, false)])
   },
   CompareExp_eq(left, _eq, right) {
-    return new Call(intrinsics['='], [left.toAST(this.args.env), right.toAST(this.args.env)])
+    return new Call(intrinsics['='], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
   CompareExp_neq(left, _neq, right) {
-    return new Call(intrinsics['!='], [left.toAST(this.args.env), right.toAST(this.args.env)])
+    return new Call(intrinsics['!='], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
   CompareExp_lt(left, _le, right) {
-    return new Call(intrinsics['<'], [left.toAST(this.args.env), right.toAST(this.args.env)])
+    return new Call(intrinsics['<'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
   CompareExp_leq(left, _leq, right) {
-    return new Call(intrinsics['<='], [left.toAST(this.args.env), right.toAST(this.args.env)])
+    return new Call(intrinsics['<='], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
   CompareExp_gt(left, _gt, right) {
-    return new Call(intrinsics['>'], [left.toAST(this.args.env), right.toAST(this.args.env)])
+    return new Call(intrinsics['>'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
   CompareExp_geq(left, _geq, right) {
-    return new Call(intrinsics['>='], [left.toAST(this.args.env), right.toAST(this.args.env)])
+    return new Call(intrinsics['>='], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
   ArithmeticExp_plus(left, _plus, right) {
-    return new Call(intrinsics['+'], [left.toAST(this.args.env), right.toAST(this.args.env)])
+    return new Call(intrinsics['+'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
   ArithmeticExp_minus(left, _minus, right) {
-    return new Call(intrinsics['-'], [left.toAST(this.args.env), right.toAST(this.args.env)])
+    return new Call(intrinsics['-'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
   ProductExp_times(left, _times, right) {
-    return new Call(intrinsics['*'], [left.toAST(this.args.env), right.toAST(this.args.env)])
+    return new Call(intrinsics['*'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
   ProductExp_divide(left, _divide, right) {
-    return new Call(intrinsics['/'], [left.toAST(this.args.env), right.toAST(this.args.env)])
+    return new Call(intrinsics['/'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
   ProductExp_mod(left, _mod, right) {
-    return new Call(intrinsics['%'], [left.toAST(this.args.env), right.toAST(this.args.env)])
+    return new Call(intrinsics['%'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
   ExponentExp_power(left, _power, right) {
-    return new Call(intrinsics['**'], [left.toAST(this.args.env), right.toAST(this.args.env)])
+    return new Call(intrinsics['**'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
   PrimaryExp_paren(_open, exp, _close) {
-    return exp.toAST(this.args.env)
+    return exp.toAST(this.args.env, false)
   },
   Block(_open, seq, _close) {
-    return seq.toAST(this.args.env)
+    return seq.toAST(this.args.env, false)
   },
   List(_open, elems, _maybe_comma, _close) {
     return new ListLiteral(
-      elems.asIteration().children.map((value, _i, _arr) => value.toAST(this.args.env)),
+      elems.asIteration().children.map((value, _i, _arr) => value.toAST(this.args.env, false)),
     )
   },
   Object(_open, elems, _maybe_comma, _close) {
     const inits = {}
     const parsedElems = elems.asIteration().children.map(
-      (value, _i, _arr) => value.toAST(this.args.env),
+      (value, _i, _arr) => value.toAST(this.args.env, false),
     )
     for (const elem of parsedElems) {
       (inits as any)[(elem as PropertyValue).key] = (elem as PropertyValue).val
@@ -176,12 +188,12 @@ semantics.addOperation<AST>('toAST(env)', {
     return new Obj(inits)
   },
   PropertyValue(ident, _colon, value) {
-    return new PropertyValue(ident.sourceString, value.toAST(this.args.env))
+    return new PropertyValue(ident.sourceString, value.toAST(this.args.env, false))
   },
   Map(_open, elems, _maybe_comma, _close) {
     const inits = new Map<Val, Val>()
     const parsedElems = elems.asIteration().children.map(
-      (value, _i, _arr) => value.toAST(this.args.env),
+      (value, _i, _arr) => value.toAST(this.args.env, false),
     )
     for (const elem of parsedElems) {
       inits.set((elem as KeyValue).key, (elem as KeyValue).val)
@@ -189,16 +201,16 @@ semantics.addOperation<AST>('toAST(env)', {
     return new DictLiteral(inits)
   },
   KeyValue(key, _colon, value) {
-    return new KeyValue(key.toAST(this.args.env), value.toAST(this.args.env))
+    return new KeyValue(key.toAST(this.args.env, false), value.toAST(this.args.env, false))
   },
   UnaryExp_pos(_plus, exp) {
-    return new Call(intrinsics.pos, [exp.toAST(this.args.env)])
+    return new Call(intrinsics.pos, [exp.toAST(this.args.env, false)])
   },
   UnaryExp_neg(_minus, exp) {
-    return new Call(intrinsics.neg, [exp.toAST(this.args.env)])
+    return new Call(intrinsics.neg, [exp.toAST(this.args.env, false)])
   },
   PropertyExp_property(object, _dot, property) {
-    return new Prop(property.sourceString, object.toAST(this.args.env))
+    return new Prop(property.sourceString, object.toAST(this.args.env, false))
   },
   UnaryExp_break(_break, exp) {
     return new Call(intrinsics.break, [maybeVal(this.args.env, exp)])
@@ -213,11 +225,12 @@ semantics.addOperation<AST>('toAST(env)', {
     return new Null()
   },
   PrimaryExp_ident(_sym) {
-    return new Get(this.symref(this.args.env)[0])
+    const symref = this.symref(this.args.env)[0]
+    return this.args.lval ? symref : new Get(symref)
   },
   Sequence_seq(exp, _sep, seq) {
-    const exps = [exp.toAST(this.args.env)]
-    const compiledSeq = seq.toAST(this.args.env)
+    const exps = [exp.toAST(this.args.env, false)]
+    const compiledSeq = seq.toAST(this.args.env, false)
     if (compiledSeq instanceof Call && compiledSeq.fn === intrinsics.seq) {
       exps.push(...compiledSeq.args)
     } else {
@@ -231,8 +244,8 @@ semantics.addOperation<AST>('toAST(env)', {
   Sequence_let(_let, ident, _eq, value, _sep, seq) {
     const innerBinding = this.args.env.push([ident.sourceString])
     const compiledCall = new Call(intrinsics.seq, [
-      new Ass(ident.symref(innerBinding)[0], value.toAST(innerBinding)),
-      seq.toAST(innerBinding),
+      new Ass(ident.symref(innerBinding)[0], value.toAST(innerBinding, false)),
+      seq.toAST(innerBinding, false),
     ])
     const compiledLet = new Let([ident.sourceString], compiledCall)
     return compiledLet
@@ -240,8 +253,8 @@ semantics.addOperation<AST>('toAST(env)', {
   Sequence_letfn(_let, namedFn, _sep, seq) {
     const ident = namedFn.children[1].sourceString
     const innerEnv = this.args.env.push([ident])
-    const fn = namedFn.toAST(innerEnv)
-    const compiledSeq = seq.toAST(innerEnv)
+    const fn = namedFn.toAST(innerEnv, false)
+    const compiledSeq = seq.toAST(innerEnv, false)
     const compiledLet = new Let([ident], new Call(intrinsics.seq, [fn, compiledSeq]))
     return compiledLet
   },
@@ -260,7 +273,7 @@ semantics.addOperation<AST>('toAST(env)', {
             path.slice(1).map((id) => new Str(id.sourceString)),
           ),
         ),
-        seq.toAST(innerEnv),
+        seq.toAST(innerEnv, false),
       ]),
     )
     return compiledLet
@@ -368,5 +381,5 @@ export function compile(expr: string, env: Environment = new Environment()): Com
     throw new Error(matchResult.message)
   }
   const ast = semantics(matchResult)
-  return [ast.toAST(env), ast.freeVars(env)]
+  return [ast.toAST(env, false), ast.freeVars(env)]
 }
