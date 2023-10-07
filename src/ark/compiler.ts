@@ -4,7 +4,7 @@ import {
   debug,
   Val, intrinsics,
   Null, Bool, Num, Str, ValRef, StackRef, Ass, Get,
-  ListLiteral, Obj, DictLiteral, SymRef,
+  ListLiteral, ObjLiteral, DictLiteral, SymRef,
   Fn, Fexpr, Prop, Let, Call, Stack,
 } from './interp.js'
 
@@ -194,7 +194,7 @@ function doCompile(value: any, env: Environment): CompiledArk {
         initsFreeVars.merge(freeVars)
       }
     }
-    return [new Obj(inits), initsFreeVars]
+    return [new ObjLiteral(inits), initsFreeVars]
   }
   throw new Error(`invalid value ${value}`)
 }

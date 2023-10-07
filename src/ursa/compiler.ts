@@ -2,7 +2,7 @@ import {Node, IterationNode} from 'ohm-js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  Val, Null, Bool, Num, Str, ListLiteral, Obj, DictLiteral,
+  Val, Null, Bool, Num, Str, ObjLiteral, ListLiteral, DictLiteral,
   Call, Let, Fn, intrinsics, SymRef, Prop, Ass, Get,
 } from '../ark/interp.js'
 import {
@@ -185,7 +185,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     for (const elem of parsedElems) {
       (inits as any)[(elem as PropertyValue).key] = (elem as PropertyValue).val
     }
-    return new Obj(inits)
+    return new ObjLiteral(inits)
   },
   PropertyValue(ident, _colon, value) {
     return new PropertyValue(ident.sourceString, value.toAST(this.args.env, false))
@@ -358,6 +358,9 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
     freeVars.delete(ident.sourceString)
     listNodeToStringList(params).forEach((p) => freeVars.delete(p))
     return freeVars
+  },
+  PropertyValue(_ident, _colon, value) {
+    return value.freeVars(this.args.env)
   },
   PropertyExp_property(propertyExp, _dot, _ident) {
     return propertyExp.freeVars(this.args.env)

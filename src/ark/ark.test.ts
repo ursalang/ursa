@@ -52,6 +52,10 @@ testGroup('let', [
   ['["let",["params","a"],["seq",["set","a",3],["get","a"]]]', 3],
 ])
 
+testGroup('Objects', [
+  ['{"a":1,"b":2,"c":3}', {a: 1, b: 2, c: 3}],
+])
+
 testGroup('Lists', [
   ['["list",1,2,3]', [1, 2, 3]],
   ['["prop","length",["list",1,2,3]]', 3],

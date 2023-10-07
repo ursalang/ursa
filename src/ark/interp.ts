@@ -295,7 +295,7 @@ export class SymRef extends Val {
   }
 }
 
-export class Obj extends Val {
+export class ObjLiteral extends Val {
   constructor(jsObj: Object) {
     super()
     for (const key in jsObj) {
@@ -305,6 +305,8 @@ export class Obj extends Val {
     }
   }
 }
+
+export class Obj extends ObjLiteral {}
 
 export class DictLiteral extends Val {
   constructor(public map: Map<Val, Val>) {
@@ -387,7 +389,13 @@ function jsToVal(x: any): Val {
     return new NativeFn(x.name, (...args: Val[]) => jsToVal(x(...args.map(toJs))))
   }
   if (typeof x === 'object') {
-    return new Obj(x)
+    return new ObjLiteral(x)
+  }
+  if (x instanceof Array) {
+    return new ListLiteral(x)
+  }
+  if (x instanceof Map) {
+    return new DictLiteral(x)
   }
   throw new Error(`cannot convert JavaScript value ${x}`)
 }
@@ -492,7 +500,6 @@ export const globals = new Map([
   }))],
 ])
 
-// FIXME: Add rule for Obj, and a test.
 function interpret(val: Val, stack: RuntimeStack): Val {
   if (val instanceof SymRef) {
     return val.get(stack)
@@ -512,27 +519,17 @@ function interpret(val: Val, stack: RuntimeStack): Val {
     return new FnClosure(val.params, val.captureFreeVars(stack), val.body)
   } else if (val instanceof Fexpr) {
     return new FexprClosure(val.params, val.captureFreeVars(stack), val.body)
+  } else if (val instanceof ObjLiteral) {
+    return new Obj(val)
   } else if (val instanceof ListLiteral) {
     return new List(val.val.map((e) => interpret(e, stack)))
-  } else if (val instanceof Dict) {
-    const evaluatedMap = new Map<any, Val>()
-    for (const [k, v] of val.map) {
-      evaluatedMap.set(k, interpret(v, stack) as Val)
-    }
-    // FIXME: Don't do this: need to be able to use ConcreteVal values as
-    // keys by their underlying value.
-    // eslint-disable-next-line no-param-reassign
-    val.map = evaluatedMap
-    return val
   } else if (val instanceof DictLiteral) {
     const evaluatedMap = new Map<any, Val>()
     for (const [k, v] of val.map) {
       evaluatedMap.set(toJs(interpret(k, stack)), interpret(v, stack))
     }
     return new Dict(evaluatedMap)
-  } else if (val instanceof List) {
-    // eslint-disable-next-line no-param-reassign
-    val.val = val.val.map((e) => interpret(e, stack))
+  } else if (val instanceof Obj || val instanceof List || val instanceof Dict) {
     return val
   } else if (val instanceof Let) {
     const frame = bindArgsToParams(val.boundVars, [])
