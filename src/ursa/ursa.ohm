@@ -13,7 +13,7 @@ Ursa {
   sc = space* (";" | end)
      | spacesNoNL (lineTerminator | &"}")
 
-  // Optional comma for comma-separated lists.
+  // Optional final comma for comma-separated lists.
   maybeCommaParen = space* ("," | &")")
   maybeCommaBracket = space* ("," | &"]")
   maybeCommaBrace = space* ("," | &"}")
