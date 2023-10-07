@@ -61,7 +61,8 @@
     "loc": "cloc --exclude-ext=js --force-lang='JavaScript,ohm' --not-match-f='\\.test\\.ts|^version.ts$|\\.ohm-bundle\\.d\\.ts' src",
     "diff-check": "git diff --exit-code",
     "prepublishOnly": "npm run diff-check && git push --all",
-    "postpublish": "git push --tags --no-verify && gh release create $(git describe) -t \"Release $(git describe)\""
+    "postpublish": "git push --tags --no-verify && gh release create $(git describe) -t \"Release $(git describe)\"",
+    "no-diff": "git diff --exit-code"
   },
   "ava": {
     "typescript": {
@@ -71,6 +72,7 @@
       "compile": "tsc"
     }
   },
+  "pre-push": [ "no-diff", "test" ],
   "type": "module",
   "types": "lib/index.d.ts"
 }
