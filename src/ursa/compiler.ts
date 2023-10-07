@@ -239,6 +239,9 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     if (exps.length > 0 && exps[exps.length - 1] instanceof Empty) {
       exps.pop()
     }
+    if (exps.length === 1) {
+      return exps[0]
+    }
     return new Call(intrinsics.seq, exps)
   },
   Sequence_let(_let, ident, _eq, value, _sep, seq) {
