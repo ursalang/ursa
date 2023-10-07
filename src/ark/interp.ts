@@ -76,6 +76,7 @@ export class NonLocalReturn extends Error {
     super()
   }
 
+  // FIXME: remove this pointless method!
   value(): Val {
     return this.val
   }
@@ -308,6 +309,21 @@ export class ObjLiteral extends Val {
 
 export class Obj extends ObjLiteral {}
 
+export class PropRef extends Ref {
+  constructor(public obj: any, public prop: string) {
+    super()
+  }
+
+  get(_stack: RuntimeStack) {
+    return (this.obj as any)[this.prop] ?? new Null()
+  }
+
+  set(_stack: RuntimeStack, val: Val) {
+    (this.obj as any)[this.prop] = val
+    return val
+  }
+}
+
 export class DictLiteral extends Val {
   constructor(public map: Map<Val, Val>) {
     super()
@@ -503,14 +519,12 @@ export const globals = new Map([
 function interpret(val: Val, stack: RuntimeStack): Val {
   if (val instanceof SymRef) {
     return val.get(stack)
-  } else if (val instanceof ValRef) {
-    return val
   } else if (val instanceof Get) {
     return (interpret(val.val, stack) as Ref).get(stack)
   } else if (val instanceof Ass) {
     const ref = interpret(val.ref, stack)
     const res = interpret(val.val, stack)
-    if (!(ref instanceof ValRef || ref instanceof SymRef)) {
+    if (!(ref instanceof Ref || ref instanceof SymRef)) {
       throw new AssException('assignment to non-Ref/SymRef')
     }
     ref.set(stack, res)
@@ -529,8 +543,6 @@ function interpret(val: Val, stack: RuntimeStack): Val {
       evaluatedMap.set(toJs(interpret(k, stack)), interpret(v, stack))
     }
     return new Dict(evaluatedMap)
-  } else if (val instanceof Obj || val instanceof List || val instanceof Dict) {
-    return val
   } else if (val instanceof Let) {
     const frame = bindArgsToParams(val.boundVars, [])
     const res = interpret(val.body, stack.push(frame))
@@ -542,10 +554,7 @@ function interpret(val: Val, stack: RuntimeStack): Val {
     return fn.call(stack, ...val.args)
   } else if (val instanceof Prop) {
     const obj = interpret(val.ref, stack)
-    if (!(val.prop in obj)) {
-      throw new PropertyException(`no property '${val.prop}'`)
-    }
-    return (obj as any)[val.prop]
+    return new PropRef(obj, val.prop)
   }
   return val
 }
@@ -606,6 +615,8 @@ export function serialize(val: Val) {
       return ['str', val.val]
     } else if (val instanceof ConcreteVal) {
       return val.val
+    } else if (val instanceof PropRef) {
+      return ['ref', ['prop', doSerialize(val.obj), val.prop]]
     } else if (val instanceof ValRef) {
       return ['ref', doSerialize(val.val)]
     } else if (val instanceof Get) {

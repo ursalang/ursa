@@ -73,6 +73,8 @@ testGroup('Lists', [
 testGroup('Objects', [
   ['{}', {}],
   ['{a: 1, b: 2, c:3}', {a: 1, b: 2, c: 3}],
+  ['let o = {a: 1, b: 2}; o.b = "abc"; o', {a: 1, b: 'abc'}],
+  ['let o = {a: 1, b: 2}; o.b = "abc"; o.c = 3; o', {a: 1, b: 'abc', c: 3}],
 ])
 
 testGroup('Maps', [

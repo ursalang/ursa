@@ -3,7 +3,7 @@ import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
   Val, Null, Bool, Num, Str, ObjLiteral, ListLiteral, DictLiteral,
-  Call, Let, Fn, intrinsics, SymRef, Prop, Ass, Get,
+  Call, Let, Fn, intrinsics, SymRef, Prop, Ass, Get, Ref,
 } from '../ark/interp.js'
 import {
   CompiledArk, symRef, Environment, FreeVars,
@@ -64,7 +64,9 @@ function makeFn(env: Environment, params: Node, body: Node): Val {
 function indexExp(env: Environment, lval: boolean, object: Node, index: Node): AST {
   const compiledObj = object.toAST(env, false)
   const compiledIndex = index.toAST(env, false)
-  return lval ? new IndexExp(compiledObj, compiledIndex) : new Call(new Prop('get', compiledObj), [compiledIndex])
+  return lval
+    ? new IndexExp(compiledObj, compiledIndex)
+    : new Call(new Get(new Prop('get', compiledObj)), [compiledIndex])
 }
 
 semantics.addOperation<AST>('toAST(env,lval)', {
@@ -91,12 +93,16 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     return new Call(exp.toAST(this.args.env, false), args.toAST(this.args.env, false).args)
   },
   CallExp_prop(exp, _dot, ident) {
-    return new Call(new Prop(ident.sourceString, exp.toAST(this.args.env, false)), [])
+    return new Call(new Get(new Prop(ident.sourceString, exp.toAST(this.args.env, false))), [])
   },
   Arguments(_open, args, _maybe_comma, _close) {
     return new Arguments(
       args.asIteration().children.map((value, _i, _arr) => value.toAST(this.args.env, false)),
     )
+  },
+  PropertyExp_property(object, _dot, property) {
+    const compiledProp = new Prop(property.sourceString, object.toAST(this.args.env, false))
+    return this.args.lval ? compiledProp : new Get(compiledProp)
   },
   PropertyExp_index(object, _open, index, _close) {
     return indexExp(this.args.env, this.args.lval, object, index)
@@ -111,7 +117,10 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     const compiledLvalue = lvalue.toAST(this.args.env, true)
     const compiledValue = value.toAST(this.args.env, false)
     if (compiledLvalue instanceof IndexExp) {
-      return new Call(new Prop('set', compiledLvalue.obj), [compiledLvalue.index, compiledValue])
+      return new Call(
+        new Get(new Prop('set', compiledLvalue.obj)),
+        [compiledLvalue.index, compiledValue],
+      )
     }
     return new Ass(compiledLvalue, compiledValue)
   },
@@ -209,9 +218,6 @@ semantics.addOperation<AST>('toAST(env,lval)', {
   UnaryExp_neg(_minus, exp) {
     return new Call(intrinsics.neg, [exp.toAST(this.args.env, false)])
   },
-  PropertyExp_property(object, _dot, property) {
-    return new Prop(property.sourceString, object.toAST(this.args.env, false))
-  },
   UnaryExp_break(_break, exp) {
     return new Call(intrinsics.break, [maybeVal(this.args.env, exp)])
   },
@@ -272,7 +278,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
         new Ass(
           ident.symref(innerEnv)[0],
           new Call(
-            new Prop('use', path[0].symref(innerEnv)[0]),
+            new Get(new Prop('use', path[0].symref(innerEnv)[0])),
             path.slice(1).map((id) => new Str(id.sourceString)),
           ),
         ),

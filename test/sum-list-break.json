@@ -22,13 +22,13 @@
                 "seq",
                 [
                   "if",
-                  [ "=", [ "get", "i" ], [ "prop", "length", [ "get", "l" ] ] ],
+                  [ "=", [ "get", "i" ], [ "get", [ "prop", "length", [ "get", "l" ] ] ] ],
                   [ "break", [ "get", "tot" ] ]
                 ],
                 [
                   "set",
                   "tot",
-                  [ "+", [ "get", "tot" ], [ [ "prop", "get", [ "get", "l" ] ], [ "get", "i" ] ] ]
+                  [ "+", [ "get", "tot" ], [ [ "get", [ "prop", "get", [ "get", "l" ] ] ], [ "get", "i" ] ] ]
                 ],
                 [ "set", "i", [ "+", [ "get", "i" ], 1 ] ]
               ]

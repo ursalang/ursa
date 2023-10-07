@@ -58,9 +58,9 @@ testGroup('Objects', [
 
 testGroup('Lists', [
   ['["list",1,2,3]', [1, 2, 3]],
-  ['["prop","length",["list",1,2,3]]', 3],
-  ['[["prop","get",["list",4,5,6]],1]', 5],
-  ['[["prop","set",["list",4,5,6]],1,2]', 2],
+  ['["get",["prop","length",["list",1,2,3]]]', 3],
+  ['[["get",["prop","get",["list",4,5,6]]],1]', 5],
+  ['[["get",["prop","set",["list",4,5,6]]],1,2]', 2],
 ])
 
 testGroup('Maps', [
