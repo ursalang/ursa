@@ -49,7 +49,7 @@ testGroup('Conditionals', [
 test('loop and break', (t) => {
   const error = t.throws(() => runArk(compile('break')), {instanceOf: BreakException})
   if (error !== undefined) {
-    t.is(toJs(error.value()), null)
+    t.is(toJs(error.val), null)
   }
   t.is(toJs(runArk(compile('loop { break 3 }'))), 3)
 })

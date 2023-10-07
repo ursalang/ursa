@@ -72,13 +72,8 @@ export class Str extends ConcreteVal {
 }
 
 export class NonLocalReturn extends Error {
-  constructor(protected val: Val = new Null()) {
+  constructor(public readonly val: Val = new Null()) {
     super()
-  }
-
-  // FIXME: remove this pointless method!
-  value(): Val {
-    return this.val
   }
 }
 
@@ -117,7 +112,7 @@ class FexprClosure extends Val {
       if (!(e instanceof ReturnException)) {
         throw e
       }
-      res = e.value()
+      res = e.val
     }
     return res
   }
@@ -454,7 +449,7 @@ export const intrinsics: {[key: string]: Val} = {
         interpret(body, stack)
       } catch (e) {
         if (e instanceof BreakException) {
-          return e.value()
+          return e.val
         }
         if (!(e instanceof ContinueException)) {
           throw e

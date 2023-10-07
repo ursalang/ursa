@@ -40,7 +40,7 @@ testGroup('Conditionals', [
 test('Bare break', (t) => {
   const error = t.throws(() => runArk(compile('["break"]')), {instanceOf: BreakException})
   if (error !== undefined) {
-    t.is(toJs(error.value()), null)
+    t.is(toJs(error.val), null)
   }
 })
 
