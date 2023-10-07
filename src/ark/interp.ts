@@ -364,6 +364,7 @@ export class Call extends Val {
 }
 
 export class Prop extends Val {
+  // ref must compute a Ref
   constructor(public prop: string, public ref: Val) {
     super()
   }
