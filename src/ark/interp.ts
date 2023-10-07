@@ -581,7 +581,7 @@ export function runArk(compiledVal: CompiledArk, env: Namespace = globals): Val 
 export function toJs(val: Val): any {
   if (val instanceof ConcreteVal) {
     return val.val
-  } else if (val instanceof Obj) {
+  } else if (val instanceof ObjLiteral) {
     const obj = {}
     // eslint-disable-next-line guard-for-in
     for (const key in val) {
@@ -599,7 +599,7 @@ export function toJs(val: Val): any {
   } else if (val instanceof DictLiteral) {
     // Best effort.
     return toJs(interpret(val, new RuntimeStack()))
-  } else if (val instanceof List) {
+  } else if (val instanceof ListLiteral) {
     return val.val.map(toJs)
   }
   return val
