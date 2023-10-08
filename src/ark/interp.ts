@@ -289,7 +289,7 @@ export class SymRef extends Val {
   }
 }
 
-export class ObjLiteral extends Val {
+export class Class extends Val {
   public val: Map<string, Val>
 
   constructor(obj: Map<string, Val>) {
@@ -298,6 +298,7 @@ export class ObjLiteral extends Val {
   }
 }
 
+export class ObjLiteral extends Class {}
 export class Obj extends ObjLiteral {}
 
 export class PropRef extends Ref {
@@ -315,50 +316,46 @@ export class PropRef extends Ref {
   }
 }
 
-export class DictLiteral extends Val {
+export class DictLiteral extends Class {
   constructor(public map: Map<Val, Val>) {
-    super()
+    super(new Map<string, Val>([
+      ['set', new NativeFn(
+        'Dict.set',
+        (index: Val, val: Val) => {
+          this.map.set(index, val)
+          return val
+        },
+      )],
+      ['get', new NativeFn(
+        'Dict.get',
+        (index: Val) => this.map.get(index) ?? Null(),
+      )],
+    ]))
   }
 }
 
-export class Dict extends DictLiteral {
-  public val = new Map<string, Val>([
-    ['set', new NativeFn(
-      'Dict.set',
-      (index: Val, val: Val) => {
-        this.map.set(index, val)
-        return val
-      },
-    )],
-    ['get', new NativeFn(
-      'Dict.get',
-      (index: Val) => this.map.get(index) ?? Null(),
-    )],
-  ])
-}
+export class Dict extends DictLiteral {}
 
-export class ListLiteral extends Val {
+export class ListLiteral extends Class {
   constructor(public list: Val[]) {
-    super()
+    super(new Map<string, Val>([
+      ['get', new NativeFn(
+        'List.get',
+        (index: Val) => this.list[toJs(index)],
+      )],
+      ['set', new NativeFn(
+        'List.set',
+        (index: Val, val: Val) => {
+          this.list[toJs(index)] = val
+          return val
+        },
+      )],
+    ]))
+    this.val.set('length', Num(this.list.length))
   }
 }
 
-export class List extends ListLiteral {
-  public val = new Map<string, Val>([
-    ['length', Num(this.list.length)],
-    ['get', new NativeFn(
-      'List.get',
-      (index: Val) => this.list[toJs(index)],
-    )],
-    ['set', new NativeFn(
-      'List.set',
-      (index: Val, val: Val) => {
-        this.list[toJs(index)] = val
-        return val
-      },
-    )],
-  ])
-}
+export class List extends ListLiteral {}
 
 export class Let extends Val {
   constructor(public boundVars: string[], public body: Val) {
