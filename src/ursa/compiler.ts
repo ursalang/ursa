@@ -185,12 +185,12 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     )
   },
   Object(_open, elems, _maybe_comma, _close) {
-    const inits = {}
+    const inits = new Map()
     const parsedElems = elems.asIteration().children.map(
       (value, _i, _arr) => value.toAST(this.args.env, false),
     )
     for (const elem of parsedElems) {
-      (inits as any)[(elem as PropertyValue).key] = (elem as PropertyValue).val
+      inits.set((elem as PropertyValue).key, (elem as PropertyValue).val)
     }
     return new ObjLiteral(inits)
   },

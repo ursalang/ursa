@@ -185,12 +185,12 @@ function doCompile(value: any, env: Environment): CompiledArk {
     }
   }
   if (typeof value === 'object') {
-    const inits: {[key: string]: any} = {}
+    const inits = new Map()
     const initsFreeVars = new FreeVars()
     for (const key in value) {
       if (Object.hasOwn(value, key)) {
         const [val, freeVars] = doCompile(value[key], env)
-        inits[key] = val
+        inits.set(key, val)
         initsFreeVars.merge(freeVars)
       }
     }

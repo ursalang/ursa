@@ -290,29 +290,27 @@ export class SymRef extends Val {
 }
 
 export class ObjLiteral extends Val {
-  constructor(jsObj: Object) {
+  public val: Map<string, Val>
+
+  constructor(obj: Map<string, Val>) {
     super()
-    for (const key in jsObj) {
-      if (Object.hasOwn(jsObj, key)) {
-        (this as any)[key] = (jsObj as any)[key]
-      }
-    }
+    this.val = obj
   }
 }
 
 export class Obj extends ObjLiteral {}
 
 export class PropRef extends Ref {
-  constructor(public obj: any, public prop: string) {
+  constructor(public obj: Obj, public prop: string) {
     super()
   }
 
   get(_stack: RuntimeStack) {
-    return (this.obj as any)[this.prop] ?? Null()
+    return this.obj.val.get(this.prop) ?? Null()
   }
 
   set(_stack: RuntimeStack, val: Val) {
-    (this.obj as any)[this.prop] = val
+    this.obj.val.set(this.prop, val)
     return val
   }
 }
@@ -324,42 +322,42 @@ export class DictLiteral extends Val {
 }
 
 export class Dict extends DictLiteral {
-  set = new NativeFn(
-    'Dict.set',
-    (index: Val, val: Val) => {
-      this.map.set(index, val)
-      return val
-    },
-  )
-
-  get = new NativeFn(
-    'Dict.get',
-    (index: Val) => this.map.get(index) ?? Null(),
-  )
+  public val = new Map<string, Val>([
+    ['set', new NativeFn(
+      'Dict.set',
+      (index: Val, val: Val) => {
+        this.map.set(index, val)
+        return val
+      },
+    )],
+    ['get', new NativeFn(
+      'Dict.get',
+      (index: Val) => this.map.get(index) ?? Null(),
+    )],
+  ])
 }
 
 export class ListLiteral extends Val {
-  constructor(public val: Val[]) {
+  constructor(public list: Val[]) {
     super()
-    this.length = Num(this.val.length)
   }
-
-  length: ConcreteVal<number>
 }
 
 export class List extends ListLiteral {
-  get = new NativeFn(
-    'List.get',
-    (index: Val) => this.val[toJs(index)],
-  )
-
-  set = new NativeFn(
-    'List.set',
-    (index: Val, val: Val) => {
-      this.val[toJs(index)] = val
-      return val
-    },
-  )
+  public val = new Map<string, Val>([
+    ['length', Num(this.list.length)],
+    ['get', new NativeFn(
+      'List.get',
+      (index: Val) => this.list[toJs(index)],
+    )],
+    ['set', new NativeFn(
+      'List.set',
+      (index: Val, val: Val) => {
+        this.list[toJs(index)] = val
+        return val
+      },
+    )],
+  ])
 }
 
 export class Let extends Val {
@@ -495,18 +493,18 @@ export const globals = new Map([
   //     const requirePath = (args.map(toJs).join('.'))
   //     // eslint-disable-next-line import/no-dynamic-require, global-require
   //     const module = require(requirePath)
-  //     const wrappedModule = {}
+  //     const wrappedModule = new Map()
   //     // eslint-disable-next-line guard-for-in
   //     for (const key in module) {
-  //       (wrappedModule as any)[key] = jsToVal(module[key])
+  //       wrappedModule.set(key, jsToVal(module[key]))
   //     }
   //     return new Obj(wrappedModule)
   //   }),
   // }))],
-  ['JSON', new ValRef(new Obj({
-    parse: new NativeFn('JSON.parse', (str: Val) => jsToVal(JSON.parse(toJs(str)))),
-    stringify: new NativeFn('JSON.stringify', (val: Val) => Str(JSON.stringify(toJs(val)))),
-  }))],
+  ['JSON', new ValRef(new Obj(new Map([
+    ['parse', new NativeFn('JSON.parse', (str: Val) => jsToVal(JSON.parse(toJs(str))))],
+    ['stringify', new NativeFn('JSON.stringify', (val: Val) => Str(JSON.stringify(toJs(val))))],
+  ])))],
 ])
 
 function interpret(val: Val, stack: RuntimeStack): Val {
@@ -527,9 +525,9 @@ function interpret(val: Val, stack: RuntimeStack): Val {
   } else if (val instanceof Fexpr) {
     return new FexprClosure(val.params, val.captureFreeVars(stack), val.body)
   } else if (val instanceof ObjLiteral) {
-    return new Obj(val)
+    return new Obj(val.val)
   } else if (val instanceof ListLiteral) {
-    return new List(val.val.map((e) => interpret(e, stack)))
+    return new List(val.list.map((e) => interpret(e, stack)))
   } else if (val instanceof DictLiteral) {
     const evaluatedMap = new Map<any, Val>()
     for (const [k, v] of val.map) {
@@ -547,7 +545,7 @@ function interpret(val: Val, stack: RuntimeStack): Val {
     return fn.call(stack, ...val.args)
   } else if (val instanceof Prop) {
     const obj = interpret(val.ref, stack)
-    return new PropRef(obj, val.prop)
+    return new PropRef(obj as Obj, val.prop)
   }
   return val
 }
@@ -576,11 +574,8 @@ export function toJs(val: Val): any {
     return val.val
   } else if (val instanceof ObjLiteral) {
     const obj = {}
-    // eslint-disable-next-line guard-for-in
-    for (const key in val) {
-      if (!key.startsWith('_')) {
-        (obj as any)[key] = toJs((val as any)[key] as Val)
-      }
+    for (const [k, v] of val.val) {
+      (obj as any)[k] = toJs(v)
     }
     return obj
   } else if (val instanceof DictLiteral) {
@@ -590,7 +585,7 @@ export function toJs(val: Val): any {
     }
     return jsMap
   } else if (val instanceof ListLiteral) {
-    return val.val.map(toJs)
+    return val.list.map(toJs)
   }
   return val
 }
@@ -619,12 +614,8 @@ export function serialize(val: Val) {
       return ['fexpr', ['params', ...val.params], doSerialize(val.body)]
     } else if (val instanceof ObjLiteral) {
       const obj = {}
-      // eslint-disable-next-line guard-for-in
-      for (const key in val) {
-        if (!key.startsWith('_')) {
-          const v = (val as any)[key];
-          (obj as any)[key] = v instanceof Val ? doSerialize(v) : v
-        }
+      for (const [k, v] of val.val) {
+        (obj as any)[k] = doSerialize(v)
       }
       return obj
     } else if (val instanceof DictLiteral) {
@@ -634,7 +625,7 @@ export function serialize(val: Val) {
       }
       return obj
     } else if (val instanceof ListLiteral) {
-      return ['list', ...val.val.map(doSerialize)]
+      return ['list', ...val.list.map(doSerialize)]
     } else if (val instanceof Let) {
       return ['let', ['params', ...val.boundVars], doSerialize(val.body)]
     } else if (val instanceof Call) {
