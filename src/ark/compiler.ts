@@ -74,13 +74,13 @@ export type CompiledArk = [value: Val, freeVars: FreeVars]
 
 function doCompile(value: any, env: Environment): CompiledArk {
   if (value === null) {
-    return [new Null(), new FreeVars()]
+    return [Null(), new FreeVars()]
   }
   if (typeof value === 'boolean') {
-    return [new Bool(value), new FreeVars()]
+    return [Bool(value), new FreeVars()]
   }
   if (typeof value === 'number') {
-    return [new Num(value), new FreeVars()]
+    return [Num(value), new FreeVars()]
   }
   if (typeof value === 'string') {
     return symRef(env, value)
@@ -92,7 +92,7 @@ function doCompile(value: any, env: Environment): CompiledArk {
           if (value.length !== 2 || typeof value[1] !== 'string') {
             throw new Error(`invalid 'str' ${value}`)
           }
-          return [new Str(value[1]), new FreeVars()]
+          return [Str(value[1]), new FreeVars()]
         case 'let': {
           if (value.length !== 3) {
             throw new Error("invalid 'let'")

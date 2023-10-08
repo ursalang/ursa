@@ -69,7 +69,7 @@ function compile(exp: string) {
 function evaluate(exp: string) {
   // Add command-line arguments.
   globals.set('argv', new ValRef(new List(
-    args.argument.map((s) => new Str(s)),
+    args.argument.map((s) => Str(s)),
   )))
   const compiled = compile(exp)
   return runArk(compiled)

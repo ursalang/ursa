@@ -3,7 +3,7 @@ import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
   Val, Null, Bool, Num, Str, ObjLiteral, ListLiteral, DictLiteral,
-  Call, Let, Fn, intrinsics, SymRef, Prop, Ass, Get, Ref,
+  Call, Let, Fn, intrinsics, SymRef, Prop, Ass, Get,
 } from '../ark/interp.js'
 import {
   CompiledArk, symRef, Environment, FreeVars,
@@ -36,8 +36,6 @@ class IndexExp extends AST {
   }
 }
 
-class Empty extends Null {}
-
 class Arguments extends AST {
   constructor(public args: Val[]) {
     super()
@@ -45,7 +43,7 @@ class Arguments extends AST {
 }
 
 function maybeVal(env: Environment, exp: IterationNode): Val {
-  return exp.children.length > 0 ? exp.children[0].toAST(env, false) : new Null()
+  return exp.children.length > 0 ? exp.children[0].toAST(env, false) : Null()
 }
 
 function listNodeToStringList(listNode: Node): string[] {
@@ -228,7 +226,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     return new Call(intrinsics.continue, [])
   },
   PrimaryExp_null(_null) {
-    return new Null()
+    return Null()
   },
   PrimaryExp_ident(_sym) {
     const symref = this.symref(this.args.env)[0]
@@ -242,7 +240,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     } else {
       exps.push(compiledSeq)
     }
-    if (exps.length > 0 && exps[exps.length - 1] instanceof Empty) {
+    while (exps.length > 0 && exps[exps.length - 1] === Null()) {
       exps.pop()
     }
     if (exps.length === 1) {
@@ -279,7 +277,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
           ident.symref(innerEnv)[0],
           new Call(
             new Get(new Prop('use', path[0].symref(innerEnv)[0])),
-            path.slice(1).map((id) => new Str(id.sourceString)),
+            path.slice(1).map((id) => Str(id.sourceString)),
           ),
         ),
         seq.toAST(innerEnv, false),
@@ -288,21 +286,21 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     return compiledLet
   },
   Sequence_empty() {
-    return new Empty()
+    return Null()
   },
   ident(_l, _ns) {
-    return new Str(this.sourceString)
+    return Str(this.sourceString)
   },
   bool(flag) {
-    return new Bool(flag.sourceString === 'true')
+    return Bool(flag.sourceString === 'true')
   },
   number(_) {
-    return new Num(parseFloat(this.sourceString))
+    return Num(parseFloat(this.sourceString))
   },
   string(_open, _str, _close) {
     // FIXME: Parse string properly
     // eslint-disable-next-line no-eval
-    return new Str(eval(this.sourceString))
+    return Str(eval(this.sourceString))
   },
 })
 

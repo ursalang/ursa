@@ -41,38 +41,36 @@ export class Val {
   _debug: Map<string, any> = new Map()
 }
 
-class ConcreteVal extends Val {
-  constructor(public val: any = null) {
+class ConcreteVal<T> extends Val {
+  constructor(public val: T) {
     super()
   }
 }
 
-export class Null extends ConcreteVal {
+class ConcreteInterned {
   constructor() {
-    super(null)
+    throw new Error('use ConcreteInterned.create, not constructor')
+  }
+
+  private static intern: Map<any, ConcreteVal<any>> = new Map()
+
+  static value<T>(rawVal: T): ConcreteVal<T> {
+    let val = ConcreteInterned.intern.get(rawVal)
+    if (val === undefined) {
+      val = new ConcreteVal(rawVal)
+      ConcreteInterned.intern.set(rawVal, val)
+    }
+    return val
   }
 }
 
-export class Bool extends ConcreteVal {
-  constructor(public val: boolean) {
-    super(val)
-  }
-}
-
-export class Num extends ConcreteVal {
-  constructor(public val: number) {
-    super(val)
-  }
-}
-
-export class Str extends ConcreteVal {
-  constructor(public val: string) {
-    super(val)
-  }
-}
+export const Null = () => ConcreteInterned.value(null)
+export const Bool = (b: boolean) => ConcreteInterned.value(b)
+export const Num = (n: number) => ConcreteInterned.value(n)
+export const Str = (s: string) => ConcreteInterned.value(s)
 
 export class NonLocalReturn extends Error {
-  constructor(public readonly val: Val = new Null()) {
+  constructor(public readonly val: Val = Null()) {
     super()
   }
 }
@@ -89,7 +87,7 @@ export class AssException extends Error {}
 
 export function bindArgsToParams(params: string[], args: Val[]): Ref[] {
   const frame: ValRef[] = params.map(
-    (_key, index) => new ValRef(args[index] ?? new Null()),
+    (_key, index) => new ValRef(args[index] ?? Null()),
   )
   if (args.length > params.length) {
     // FIXME: Support '...' as an identifier
@@ -104,7 +102,7 @@ class FexprClosure extends Val {
   }
 
   call(stack: RuntimeStack, ...args: Val[]) {
-    let res: Val = new Null()
+    let res: Val = Null()
     try {
       const frame = bindArgsToParams(this.params, args)
       res = interpret(this.body, stack.pushFrame(this.freeVars).pushFrame(frame))
@@ -202,7 +200,7 @@ export abstract class Ref extends Val {
 }
 
 export class ValRef extends Ref {
-  constructor(public val: Val = new Null()) {
+  constructor(public val: Val = Null()) {
     super()
   }
 
@@ -310,7 +308,7 @@ export class PropRef extends Ref {
   }
 
   get(_stack: RuntimeStack) {
-    return (this.obj as any)[this.prop] ?? new Null()
+    return (this.obj as any)[this.prop] ?? Null()
   }
 
   set(_stack: RuntimeStack, val: Val) {
@@ -329,24 +327,24 @@ export class Dict extends DictLiteral {
   set = new NativeFn(
     'Dict.set',
     (index: Val, val: Val) => {
-      this.map.set(toJs(index), val)
+      this.map.set(index, val)
       return val
     },
   )
 
   get = new NativeFn(
     'Dict.get',
-    (index: Val) => this.map.get(toJs(index)) ?? new Null(),
+    (index: Val) => this.map.get(index) ?? Null(),
   )
 }
 
 export class ListLiteral extends Val {
   constructor(public val: Val[]) {
     super()
-    this.length = new Num(this.val.length)
+    this.length = Num(this.val.length)
   }
 
-  length: Num
+  length: ConcreteVal<number>
 }
 
 export class List extends ListLiteral {
@@ -385,16 +383,16 @@ export class Prop extends Val {
 
 function jsToVal(x: any): Val {
   if (x === null || x === undefined) {
-    return new Null()
+    return Null()
   }
   if (typeof x === 'boolean') {
-    return new Bool(x)
+    return Bool(x)
   }
   if (typeof x === 'number') {
-    return new Num(x)
+    return Num(x)
   }
   if (typeof x === 'string') {
-    return new Str(x)
+    return Str(x)
   }
   if (typeof x === 'function') {
     return new NativeFn(x.name, (...args: Val[]) => jsToVal(x(...args.map(toJs))))
@@ -412,11 +410,11 @@ function jsToVal(x: any): Val {
 }
 
 export const intrinsics: {[key: string]: Val} = {
-  pos: new NativeFn('pos', (val: Val) => new Num(+toJs(val))),
-  neg: new NativeFn('neg', (val: Val) => new Num(-toJs(val))),
-  not: new NativeFn('not', (val: Val) => new Bool(!toJs(val))),
+  pos: new NativeFn('pos', (val: Val) => Num(+toJs(val))),
+  neg: new NativeFn('neg', (val: Val) => Num(-toJs(val))),
+  not: new NativeFn('not', (val: Val) => Bool(!toJs(val))),
   seq: new NativeFexpr('seq', (stack: RuntimeStack, ...args: Val[]) => {
-    let res: Val = new Null()
+    let res: Val = Null()
     for (const exp of args) {
       res = interpret(exp, stack)
     }
@@ -427,7 +425,7 @@ export const intrinsics: {[key: string]: Val} = {
     if (toJs(condVal)) {
       return interpret(e_then, stack)
     }
-    return e_else ? interpret(e_else, stack) : new Null()
+    return e_else ? interpret(e_else, stack) : Null()
   }),
   and: new NativeFexpr('and', (stack: RuntimeStack, left: Val, right: Val) => {
     const leftVal = interpret(left, stack)
@@ -466,30 +464,30 @@ export const intrinsics: {[key: string]: Val} = {
   return: new NativeFn('return', (val: Val) => {
     throw new ReturnException(val)
   }),
-  '=': new NativeFn('=', (left: Val, right: Val) => new Bool(toJs(left) === toJs(right))),
-  '!=': new NativeFn('!=', (left: Val, right: Val) => new Bool(toJs(left) !== toJs(right))),
-  '<': new NativeFn('<', (left: Val, right: Val) => new Bool(toJs(left) < toJs(right))),
-  '<=': new NativeFn('<=', (left: Val, right: Val) => new Bool(toJs(left) <= toJs(right))),
-  '>': new NativeFn('>', (left: Val, right: Val) => new Bool(toJs(left) > toJs(right))),
-  '>=': new NativeFn('>=', (left: Val, right: Val) => new Bool(toJs(left) >= toJs(right))),
-  '+': new NativeFn('+', (left: Val, right: Val) => new Num(toJs(left) + toJs(right))),
-  '-': new NativeFn('-', (left: Val, right: Val) => new Num(toJs(left) - toJs(right))),
-  '*': new NativeFn('*', (left: Val, right: Val) => new Num(toJs(left) * toJs(right))),
-  '/': new NativeFn('/', (left: Val, right: Val) => new Num(toJs(left) / toJs(right))),
-  '%': new NativeFn('%', (left: Val, right: Val) => new Num(toJs(left) % toJs(right))),
-  '**': new NativeFn('**', (left: Val, right: Val) => new Num(toJs(left) ** toJs(right))),
+  '=': new NativeFn('=', (left: Val, right: Val) => Bool(toJs(left) === toJs(right))),
+  '!=': new NativeFn('!=', (left: Val, right: Val) => Bool(toJs(left) !== toJs(right))),
+  '<': new NativeFn('<', (left: Val, right: Val) => Bool(toJs(left) < toJs(right))),
+  '<=': new NativeFn('<=', (left: Val, right: Val) => Bool(toJs(left) <= toJs(right))),
+  '>': new NativeFn('>', (left: Val, right: Val) => Bool(toJs(left) > toJs(right))),
+  '>=': new NativeFn('>=', (left: Val, right: Val) => Bool(toJs(left) >= toJs(right))),
+  '+': new NativeFn('+', (left: Val, right: Val) => Num(toJs(left) + toJs(right))),
+  '-': new NativeFn('-', (left: Val, right: Val) => Num(toJs(left) - toJs(right))),
+  '*': new NativeFn('*', (left: Val, right: Val) => Num(toJs(left) * toJs(right))),
+  '/': new NativeFn('/', (left: Val, right: Val) => Num(toJs(left) / toJs(right))),
+  '%': new NativeFn('%', (left: Val, right: Val) => Num(toJs(left) % toJs(right))),
+  '**': new NativeFn('**', (left: Val, right: Val) => Num(toJs(left) ** toJs(right))),
 }
 
 export const globals = new Map([
-  ['pi', new ValRef(new Num(Math.PI))],
-  ['e', new ValRef(new Num(Math.E))],
+  ['pi', new ValRef(Num(Math.PI))],
+  ['e', new ValRef(Num(Math.E))],
   ['print', new ValRef(new NativeFn('print', (obj: Val) => {
     console.log(toJs(obj))
-    return new Null()
+    return Null()
   }))],
   ['debug', new ValRef(new NativeFn('debug', (obj: Val) => {
     debug(obj)
-    return new Null()
+    return Null()
   }))],
   // FIXME: make this work again!
   // ['js', new Ref(new Obj({
@@ -507,7 +505,7 @@ export const globals = new Map([
   // }))],
   ['JSON', new ValRef(new Obj({
     parse: new NativeFn('JSON.parse', (str: Val) => jsToVal(JSON.parse(toJs(str)))),
-    stringify: new NativeFn('JSON.stringify', (val: Val) => new Str(JSON.stringify(toJs(val)))),
+    stringify: new NativeFn('JSON.stringify', (val: Val) => Str(JSON.stringify(toJs(val)))),
   }))],
 ])
 
@@ -535,7 +533,7 @@ function interpret(val: Val, stack: RuntimeStack): Val {
   } else if (val instanceof DictLiteral) {
     const evaluatedMap = new Map<any, Val>()
     for (const [k, v] of val.map) {
-      evaluatedMap.set(toJs(interpret(k, stack)), interpret(v, stack))
+      evaluatedMap.set(interpret(k, stack), interpret(v, stack))
     }
     return new Dict(evaluatedMap)
   } else if (val instanceof Let) {
@@ -585,15 +583,12 @@ export function toJs(val: Val): any {
       }
     }
     return obj
-  } else if (val instanceof Dict) {
-    const evaluatedMap = new Map<any, Val>()
-    for (const [k, v] of val.map) {
-      evaluatedMap.set(k, toJs(interpret(v, new RuntimeStack())))
-    }
-    return evaluatedMap
   } else if (val instanceof DictLiteral) {
-    // Best effort.
-    return toJs(interpret(val, new RuntimeStack()))
+    const jsMap = new Map<any, Val>()
+    for (const [k, v] of val.map) {
+      jsMap.set(toJs(k), toJs(v))
+    }
+    return jsMap
   } else if (val instanceof ListLiteral) {
     return val.val.map(toJs)
   }
@@ -606,9 +601,11 @@ export function serialize(val: Val) {
       return val._debug.get('name')
     } else if (val instanceof NativeFexpr || val instanceof NativeFn) {
       return val.name
-    } else if (val instanceof Str) {
-      return ['str', val.val]
     } else if (val instanceof ConcreteVal) {
+      const rawVal = val.val
+      if (typeof rawVal === 'string') {
+        return ['str', val.val]
+      }
       return val.val
     } else if (val instanceof PropRef) {
       return ['ref', ['prop', doSerialize(val.obj), val.prop]]
@@ -620,7 +617,7 @@ export function serialize(val: Val) {
       return ['fn', ['params', ...val.params], doSerialize(val.body)]
     } else if (val instanceof Fexpr) {
       return ['fexpr', ['params', ...val.params], doSerialize(val.body)]
-    } else if (val instanceof Obj) {
+    } else if (val instanceof ObjLiteral) {
       const obj = {}
       // eslint-disable-next-line guard-for-in
       for (const key in val) {
@@ -630,21 +627,13 @@ export function serialize(val: Val) {
         }
       }
       return obj
-    } else if (val instanceof Dict) {
-      const obj: any[] = ['map']
-      for (const [k, v] of val.map) {
-        // FIXME: see interpret.
-        const keyJs = k instanceof Val ? doSerialize(k) : k
-        obj.push([keyJs, doSerialize(v)])
-      }
-      return obj
     } else if (val instanceof DictLiteral) {
       const obj: any[] = ['map']
       for (const [k, v] of val.map) {
         obj.push([doSerialize(k), doSerialize(v)])
       }
       return obj
-    } else if (val instanceof List) {
+    } else if (val instanceof ListLiteral) {
       return ['list', ...val.val.map(doSerialize)]
     } else if (val instanceof Let) {
       return ['let', ['params', ...val.boundVars], doSerialize(val.body)]
@@ -655,7 +644,7 @@ export function serialize(val: Val) {
     } else if (val instanceof Prop) {
       return ['prop', val.prop, doSerialize(val.ref)]
     } else if (val === undefined || val === null) {
-      return null
+      return Null()
     }
     return val.toString()
   }
