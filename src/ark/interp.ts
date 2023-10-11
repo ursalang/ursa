@@ -374,14 +374,17 @@ export class Class extends Val {
 }
 
 // FIXME: non-Literal classes should use default "eval" method
-// FIXME: ObjLiteral's should evaluate their RHS
-export class ObjLiteral extends Class {
-  eval(_ark: ArkState): Val {
-    return new Obj(this.val)
+export class Obj extends Class {}
+
+export class ObjLiteral extends Obj {
+  eval(ark: ArkState): Val {
+    const inits = new Map<string, Val>()
+    for (const [k, v] of this.val) {
+      inits.set(k, v.eval(ark))
+    }
+    return new Obj(inits)
   }
 }
-
-export class Obj extends ObjLiteral {}
 
 export class PropRef extends Ref {
   constructor(public obj: Obj, public prop: string) {
@@ -589,7 +592,7 @@ export function link(compiledVal: CompiledArk, env: Namespace): Val {
 export function toJs(val: Val): any {
   if (val instanceof ConcreteVal) {
     return val.val
-  } else if (val instanceof ObjLiteral) {
+  } else if (val instanceof Obj) {
     const obj = {}
     for (const [k, v] of val.val) {
       (obj as any)[k] = toJs(v)
@@ -629,7 +632,7 @@ export function serialize(val: Val) {
       return ['fn', ['params', ...val.params], doSerialize(val.body)]
     } else if (val instanceof Fexpr) {
       return ['fexpr', ['params', ...val.params], doSerialize(val.body)]
-    } else if (val instanceof ObjLiteral) {
+    } else if (val instanceof Obj) {
       const obj = {}
       for (const [k, v] of val.val) {
         (obj as any)[k] = doSerialize(v)
