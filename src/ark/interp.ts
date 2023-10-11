@@ -40,82 +40,15 @@ export class ArkState {
   evaluateArgs(...args: Val[]) {
     const evaluatedArgs: Val[] = []
     for (const arg of args) {
-      evaluatedArgs.push(this.interpret(arg))
+      evaluatedArgs.push(arg.eval(this))
     }
     return evaluatedArgs
-  }
-
-  interpret(val: Val): Val {
-    if (val instanceof SymRef) {
-      return val.get(this.stack)
-    } else if (val instanceof Get) {
-      return (this.interpret(val.val) as Ref).get(this.stack)
-    } else if (val instanceof Ass) {
-      const ref = this.interpret(val.ref)
-      const res = this.interpret(val.val)
-      if (!(ref instanceof Ref || ref instanceof SymRef)) {
-        throw new AssException('assignment to non-Ref/SymRef')
-      }
-      ref.set(this.stack, res)
-      return res
-    } else if (val instanceof Fn) {
-      return new FnClosure(val.params, this.captureFreeVars(val), val.body)
-    } else if (val instanceof Fexpr) {
-      return new FexprClosure(val.params, this.captureFreeVars(val), val.body)
-    } else if (val instanceof ObjLiteral) {
-      return new Obj(val.val)
-    } else if (val instanceof ListLiteral) {
-      return new List(val.list.map((e) => this.interpret(e)))
-    } else if (val instanceof DictLiteral) {
-      const evaluatedMap = new Map<any, Val>()
-      for (const [k, v] of val.map) {
-        evaluatedMap.set(this.interpret(k), this.interpret(v))
-      }
-      return new Dict(evaluatedMap)
-    } else if (val instanceof Let) {
-      const frame = bindArgsToParams(val.boundVars, [])
-      const oldStack = this.stack
-      this.stack = this.stack.push(frame)
-      const res = this.interpret(val.body)
-      this.stack = oldStack
-      return res
-    } else if (val instanceof Call) {
-      const fn = this.interpret(val.fn)
-      let args = val.args
-      if (fn instanceof FnClosure) {
-        args = this.evaluateArgs(...val.args)
-      }
-      if (fn instanceof FexprClosure) {
-        let res: Val = Null()
-        try {
-          const frame = bindArgsToParams(fn.params, args)
-          const oldStack = this.stack
-          this.stack = this.stack.pushFrame(fn.freeVars).pushFrame(frame)
-          res = this.interpret(fn.body)
-          this.stack = oldStack
-        } catch (e) {
-          if (!(e instanceof ReturnException)) {
-            throw e
-          }
-          res = e.val
-        }
-        return res
-      } else if (fn instanceof NativeFn) {
-        return fn.body(this, ...this.evaluateArgs(...args))
-      } else if (fn instanceof NativeFexpr) {
-        return fn.body(this, ...args)
-      }
-    } else if (val instanceof Prop) {
-      const obj = this.interpret(val.ref)
-      return new PropRef(obj as Obj, val.prop)
-    }
-    return val
   }
 
   run(compiledVal: CompiledArk, env: Namespace = globals): Val {
     const val = link(compiledVal, env)
     this.stack = new RuntimeStack()
-    return this.interpret(val)
+    return val.eval(this)
   }
 }
 
@@ -133,6 +66,10 @@ export class Val {
   // }
 
   debug: Map<string, any> = new Map()
+
+  eval(_ark: ArkState): Val {
+    return this
+  }
 }
 
 class ConcreteVal<T> extends Val {
@@ -222,9 +159,18 @@ export class Fexpr extends Val {
       }
     }
   }
+
+  eval(ark: ArkState): Val {
+    return new FexprClosure(this.params, ark.captureFreeVars(this), this.body)
+  }
 }
 
-export class Fn extends Fexpr {}
+export class Fn extends Fexpr {
+  eval(ark: ArkState): Val {
+    return new FnClosure(this.params, ark.captureFreeVars(this), this.body)
+  }
+}
+
 export class NativeFexpr extends Val {
   constructor(
     public name: string, // FIXME: remove name, use debug info.
@@ -261,11 +207,25 @@ export class Get extends Val {
   constructor(public val: Val) {
     super()
   }
+
+  eval(ark: ArkState): Val {
+    return (this.val.eval(ark) as Ref).get(ark.stack)
+  }
 }
 
 export class Ass extends Val {
   constructor(public ref: Val, public val: Val) {
     super()
+  }
+
+  eval(ark: ArkState): Val {
+    const ref = this.ref.eval(ark)
+    const res = this.val.eval(ark)
+    if (!(ref instanceof Ref || ref instanceof SymRef)) {
+      throw new AssException('assignment to non-Ref/SymRef')
+    }
+    ref.set(ark.stack, res)
+    return res
   }
 }
 
@@ -330,6 +290,10 @@ export class SymRef extends Val {
   set(stack: RuntimeStack, val: Val) {
     return this.ref!.set(stack, val)
   }
+
+  eval(ark: ArkState): Val {
+    return this.get(ark.stack)
+  }
 }
 
 export const intrinsics: {[key: string]: Val} = {
@@ -339,35 +303,35 @@ export const intrinsics: {[key: string]: Val} = {
   seq: new NativeFexpr('seq', (ark: ArkState, ...args: Val[]) => {
     let res: Val = Null()
     for (const exp of args) {
-      res = ark.interpret(exp)
+      res = exp.eval(ark)
     }
     return res
   }),
   if: new NativeFexpr('if', (ark: ArkState, cond: Val, e_then: Val, e_else: Val) => {
-    const condVal = ark.interpret(cond)
+    const condVal = cond.eval(ark)
     if (toJs(condVal)) {
-      return ark.interpret(e_then)
+      return e_then.eval(ark)
     }
-    return e_else ? ark.interpret(e_else) : Null()
+    return e_else ? e_else.eval(ark) : Null()
   }),
   and: new NativeFexpr('and', (ark: ArkState, left: Val, right: Val) => {
-    const leftVal = ark.interpret(left)
+    const leftVal = left.eval(ark)
     if (toJs(leftVal)) {
-      return ark.interpret(right)
+      return right.eval(ark)
     }
     return leftVal
   }),
   or: new NativeFexpr('or', (ark: ArkState, left: Val, right: Val) => {
-    const leftVal = ark.interpret(left)
+    const leftVal = left.eval(ark)
     if (toJs(leftVal)) {
       return leftVal
     }
-    return ark.interpret(right)
+    return right.eval(ark)
   }),
   loop: new NativeFexpr('loop', (ark: ArkState, body: Val) => {
     for (; ;) {
       try {
-        ark.interpret(body)
+        body.eval(ark)
       } catch (e) {
         if (e instanceof BreakException) {
           return e.val
@@ -409,7 +373,14 @@ export class Class extends Val {
   }
 }
 
-export class ObjLiteral extends Class {}
+// FIXME: non-Literal classes should use default "eval" method
+// FIXME: ObjLiteral's should evaluate their RHS
+export class ObjLiteral extends Class {
+  eval(_ark: ArkState): Val {
+    return new Obj(this.val)
+  }
+}
+
 export class Obj extends ObjLiteral {}
 
 export class PropRef extends Ref {
@@ -443,6 +414,14 @@ export class DictLiteral extends Class {
       )],
     ]))
   }
+
+  eval(ark: ArkState): Val {
+    const evaluatedMap = new Map<any, Val>()
+    for (const [k, v] of this.map) {
+      evaluatedMap.set(k.eval(ark), v.eval(ark))
+    }
+    return new Dict(evaluatedMap)
+  }
 }
 
 export class Dict extends DictLiteral {}
@@ -464,6 +443,10 @@ export class ListLiteral extends Class {
     ]))
     this.val.set('length', Num(this.list.length))
   }
+
+  eval(ark: ArkState): Val {
+    return new List(this.list.map((e) => e.eval(ark)))
+  }
 }
 
 export class List extends ListLiteral {}
@@ -472,11 +455,49 @@ export class Let extends Val {
   constructor(public boundVars: string[], public body: Val) {
     super()
   }
+
+  eval(ark: ArkState): Val {
+    const frame = bindArgsToParams(this.boundVars, [])
+    const oldStack = ark.stack
+    ark.stack = ark.stack.push(frame)
+    const res = this.body.eval(ark)
+    ark.stack = oldStack
+    return res
+  }
 }
 
 export class Call extends Val {
   constructor(public fn: Val, public args: Val[]) {
     super()
+  }
+
+  eval(ark: ArkState): Val {
+    const fn = this.fn.eval(ark)
+    let args = this.args
+    if (fn instanceof FnClosure) {
+      args = ark.evaluateArgs(...this.args)
+    }
+    if (fn instanceof FexprClosure) {
+      let res: Val = Null()
+      try {
+        const frame = bindArgsToParams(fn.params, args)
+        const oldStack = ark.stack
+        ark.stack = ark.stack.pushFrame(fn.freeVars).pushFrame(frame)
+        res = fn.body.eval(ark)
+        ark.stack = oldStack
+      } catch (e) {
+        if (!(e instanceof ReturnException)) {
+          throw e
+        }
+        res = e.val
+      }
+      return res
+    } else if (fn instanceof NativeFn) {
+      return fn.body(ark, ...ark.evaluateArgs(...args))
+    } else if (fn instanceof NativeFexpr) {
+      return fn.body(ark, ...args)
+    }
+    throw new Error('invalid Call')
   }
 }
 
@@ -484,6 +505,11 @@ export class Prop extends Val {
   // ref must compute a Ref
   constructor(public prop: string, public ref: Val) {
     super()
+  }
+
+  eval(ark: ArkState): Val {
+    const obj = this.ref.eval(ark)
+    return new PropRef(obj as Obj, this.prop)
   }
 }
 
