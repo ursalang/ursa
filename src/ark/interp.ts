@@ -125,14 +125,14 @@ export class Val {
   // FIXME: make this a run-time (or build-time?) option.
   // static counter = 0
 
-  // _uid: number
+  // uid: number
 
   // constructor() {
-  //   this._uid = Val.counter
+  //   this.uid = Val.counter
   //   Val.counter += 1
   // }
 
-  _debug: Map<string, any> = new Map()
+  debug: Map<string, any> = new Map()
 }
 
 class ConcreteVal<T> extends Val {
@@ -319,8 +319,8 @@ export class SymRef extends Val {
   constructor(env: Environment, name: string) {
     super()
     this.ref = env.getIndex(name)
-    this._debug.set('name', name)
-    this._debug.set('env', JSON.stringify(env))
+    this.debug.set('name', name)
+    this.debug.set('env', JSON.stringify(env))
   }
 
   get(stack: RuntimeStack): Val {
@@ -584,7 +584,7 @@ export function toJs(val: Val): any {
 export function serialize(val: Val) {
   function doSerialize(val: Val): any {
     if (val instanceof SymRef) {
-      return val._debug.get('name')
+      return val.debug.get('name')
     } else if (val instanceof NativeFexpr) {
       return val.name
     } else if (val instanceof ConcreteVal) {
