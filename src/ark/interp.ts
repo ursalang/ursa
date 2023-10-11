@@ -373,7 +373,6 @@ export class Class extends Val {
   }
 }
 
-// FIXME: non-Literal classes should use default "eval" method
 export class Obj extends Class {}
 
 export class ObjLiteral extends Obj {
@@ -401,7 +400,7 @@ export class PropRef extends Ref {
   }
 }
 
-export class DictLiteral extends Class {
+export class Dict extends Class {
   constructor(public map: Map<Val, Val>) {
     super(new Map<string, Val>([
       ['set', new NativeFn(
@@ -417,7 +416,9 @@ export class DictLiteral extends Class {
       )],
     ]))
   }
+}
 
+export class DictLiteral extends Dict {
   eval(ark: ArkState): Val {
     const evaluatedMap = new Map<any, Val>()
     for (const [k, v] of this.map) {
@@ -427,9 +428,7 @@ export class DictLiteral extends Class {
   }
 }
 
-export class Dict extends DictLiteral {}
-
-export class ListLiteral extends Class {
+export class List extends Class {
   constructor(public list: Val[]) {
     super(new Map<string, Val>([
       ['get', new NativeFn(
@@ -446,13 +445,13 @@ export class ListLiteral extends Class {
     ]))
     this.val.set('length', Num(this.list.length))
   }
+}
 
+export class ListLiteral extends List {
   eval(ark: ArkState): Val {
     return new List(this.list.map((e) => e.eval(ark)))
   }
 }
-
-export class List extends ListLiteral {}
 
 export class Let extends Val {
   constructor(public boundVars: string[], public body: Val) {
@@ -598,13 +597,13 @@ export function toJs(val: Val): any {
       (obj as any)[k] = toJs(v)
     }
     return obj
-  } else if (val instanceof DictLiteral) {
+  } else if (val instanceof Dict) {
     const jsMap = new Map<any, Val>()
     for (const [k, v] of val.map) {
       jsMap.set(toJs(k), toJs(v))
     }
     return jsMap
-  } else if (val instanceof ListLiteral) {
+  } else if (val instanceof List) {
     return val.list.map(toJs)
   }
   return val
@@ -638,13 +637,13 @@ export function serialize(val: Val) {
         (obj as any)[k] = doSerialize(v)
       }
       return obj
-    } else if (val instanceof DictLiteral) {
+    } else if (val instanceof Dict) {
       const obj: any[] = ['map']
       for (const [k, v] of val.map) {
         obj.push([doSerialize(k), doSerialize(v)])
       }
       return obj
-    } else if (val instanceof ListLiteral) {
+    } else if (val instanceof List) {
       return ['list', ...val.list.map(doSerialize)]
     } else if (val instanceof Let) {
       return ['let', ['params', ...val.boundVars], doSerialize(val.body)]
