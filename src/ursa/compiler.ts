@@ -3,7 +3,7 @@ import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
   Val, Null, Bool, Num, Str, ObjLiteral, ListLiteral, DictLiteral,
-  Call, Let, Fn, intrinsics, SymRef, Prop, Ass, Get,
+  Call, Let, Fn, SymRef, Prop, Ass, Get, intrinsics,
 } from '../ark/interp.js'
 import {
   CompiledArk, symRef, Environment, FreeVars,

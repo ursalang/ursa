@@ -25,7 +25,99 @@ export class Stack<T> {
 // FIXME: Make the stack of type [Val[], Ref[]][]: pairs of frame and upvars
 export class RuntimeStack extends Stack<Val> {}
 
-let stack = new RuntimeStack()
+export class ArkState {
+  stack = new RuntimeStack()
+
+  captureFreeVars(cl: Fexpr): Val[] {
+    const frame: Val[] = []
+    for (const [loc] of cl.boundFreeVars) {
+      const ref = new ValRef(this.stack.pushFrame([]).stack[loc.level][loc.index])
+      frame.push(ref)
+    }
+    return frame
+  }
+
+  evaluateArgs(...args: Val[]) {
+    const evaluatedArgs: Val[] = []
+    for (const arg of args) {
+      evaluatedArgs.push(this.interpret(arg))
+    }
+    return evaluatedArgs
+  }
+
+  interpret(val: Val): Val {
+    if (val instanceof SymRef) {
+      return val.get(this.stack)
+    } else if (val instanceof Get) {
+      return (this.interpret(val.val) as Ref).get(this.stack)
+    } else if (val instanceof Ass) {
+      const ref = this.interpret(val.ref)
+      const res = this.interpret(val.val)
+      if (!(ref instanceof Ref || ref instanceof SymRef)) {
+        throw new AssException('assignment to non-Ref/SymRef')
+      }
+      ref.set(this.stack, res)
+      return res
+    } else if (val instanceof Fn) {
+      return new FnClosure(val.params, this.captureFreeVars(val), val.body)
+    } else if (val instanceof Fexpr) {
+      return new FexprClosure(val.params, this.captureFreeVars(val), val.body)
+    } else if (val instanceof ObjLiteral) {
+      return new Obj(val.val)
+    } else if (val instanceof ListLiteral) {
+      return new List(val.list.map((e) => this.interpret(e)))
+    } else if (val instanceof DictLiteral) {
+      const evaluatedMap = new Map<any, Val>()
+      for (const [k, v] of val.map) {
+        evaluatedMap.set(this.interpret(k), this.interpret(v))
+      }
+      return new Dict(evaluatedMap)
+    } else if (val instanceof Let) {
+      const frame = bindArgsToParams(val.boundVars, [])
+      const oldStack = this.stack
+      this.stack = this.stack.push(frame)
+      const res = this.interpret(val.body)
+      this.stack = oldStack
+      return res
+    } else if (val instanceof Call) {
+      const fn = this.interpret(val.fn)
+      let args = val.args
+      if (fn instanceof FnClosure) {
+        args = this.evaluateArgs(...val.args)
+      }
+      if (fn instanceof FexprClosure) {
+        let res: Val = Null()
+        try {
+          const frame = bindArgsToParams(fn.params, args)
+          const oldStack = this.stack
+          this.stack = this.stack.pushFrame(fn.freeVars).pushFrame(frame)
+          res = this.interpret(fn.body)
+          this.stack = oldStack
+        } catch (e) {
+          if (!(e instanceof ReturnException)) {
+            throw e
+          }
+          res = e.val
+        }
+        return res
+      } else if (fn instanceof NativeFn) {
+        return fn.body(this, ...this.evaluateArgs(...args))
+      } else if (fn instanceof NativeFexpr) {
+        return fn.body(this, ...args)
+      }
+    } else if (val instanceof Prop) {
+      const obj = this.interpret(val.ref)
+      return new PropRef(obj as Obj, val.prop)
+    }
+    return val
+  }
+
+  run(compiledVal: CompiledArk, env: Namespace = globals): Val {
+    const val = link(compiledVal, env)
+    this.stack = new RuntimeStack()
+    return this.interpret(val)
+  }
+}
 
 // Base class for compiled code.
 export class Val {
@@ -99,37 +191,15 @@ export function bindArgsToParams(params: string[], args: Val[]): Ref[] {
 }
 
 class FexprClosure extends Val {
-  constructor(protected params: string[], protected freeVars: Val[], protected body: Val) {
+  constructor(public params: string[], public freeVars: Val[], public body: Val) {
     super()
   }
-
-  call(...args: Val[]) {
-    let res: Val = Null()
-    try {
-      const frame = bindArgsToParams(this.params, args)
-      const oldStack = stack
-      stack = stack.pushFrame(this.freeVars).pushFrame(frame)
-      res = interpret(this.body)
-      stack = oldStack
-    } catch (e) {
-      if (!(e instanceof ReturnException)) {
-        throw e
-      }
-      res = e.val
-    }
-    return res
-  }
 }
 
-class FnClosure extends FexprClosure {
-  call(...args: Val[]) {
-    const evaluatedArgs = evaluateArgs(...args)
-    return super.call(...evaluatedArgs)
-  }
-}
+class FnClosure extends FexprClosure {}
 
 export class Fexpr extends Val {
-  private boundFreeVars: [StackRef, SymRef[]][] = []
+  boundFreeVars: [StackRef, SymRef[]][] = []
 
   constructor(public params: string[], protected freeVars: FreeVars, public body: Val) {
     super()
@@ -152,56 +222,24 @@ export class Fexpr extends Val {
       }
     }
   }
-
-  captureFreeVars(): Val[] {
-    const frame: Val[] = []
-    for (const [loc] of this.boundFreeVars) {
-      const ref = new ValRef(stack.pushFrame([]).stack[loc.level][loc.index])
-      frame.push(ref)
-    }
-    return frame
-  }
 }
 
 export class Fn extends Fexpr {}
 export class NativeFexpr extends Val {
   constructor(
     public name: string, // FIXME: remove name, use debug info.
-    protected body: (...args: Val[]) => Val,
+    public body: (ark: ArkState, ...args: Val[]) => Val,
   ) {
     super()
   }
-
-  call(...args: Val[]) {
-    return this.body(...args)
-  }
 }
 
-function evaluateArgs(...args: Val[]) {
-  const evaluatedArgs: Val[] = []
-  for (const arg of args) {
-    evaluatedArgs.push(interpret(arg))
-  }
-  return evaluatedArgs
-}
-
-export class NativeFn extends Val {
-  constructor(
-    public name: string,
-    protected body: (...args: Val[]) => Val,
-  ) {
-    super()
-  }
-
-  call(...args: Val[]) {
-    return this.body(...evaluateArgs(...args))
-  }
-}
+export class NativeFn extends NativeFexpr {}
 
 export abstract class Ref extends Val {
-  abstract get(): Val
+  abstract get(stack: RuntimeStack): Val
 
-  abstract set(val: Val): Val
+  abstract set(stack: RuntimeStack, val: Val): Val
 }
 
 export class ValRef extends Ref {
@@ -209,11 +247,11 @@ export class ValRef extends Ref {
     super()
   }
 
-  get(): Val {
+  get(_stack: RuntimeStack): Val {
     return this.val
   }
 
-  set(val: Val): Val {
+  set(stack: RuntimeStack, val: Val): Val {
     this.val = val
     return val
   }
@@ -236,24 +274,24 @@ export class StackRef extends Ref {
     super()
   }
 
-  get(): Val {
+  get(stack: RuntimeStack): Val {
     return stack.stack[this.level][this.index]
   }
 
-  set(val: Val) {
+  set(stack: RuntimeStack, val: Val) {
     stack.stack[this.level][this.index] = val
     return val
   }
 }
 
 export class StackRefRef extends StackRef {
-  get(): Val {
-    return (stack.stack[this.level][this.index] as Ref).get()
+  get(stack: RuntimeStack): Val {
+    return (stack.stack[this.level][this.index] as Ref).get(stack)
   }
 
-  set(val: Val) {
+  set(stack: RuntimeStack, val: Val) {
     const ref = stack.stack[this.level][this.index] as Ref;
-    ref.set(val)
+    ref.set(stack, val)
     return val
   }
 }
@@ -265,12 +303,12 @@ export class RefRef {
     this.ref = ref
   }
 
-  get(): Val {
-    return this.ref.get()
+  get(stack: RuntimeStack): Val {
+    return this.ref.get(stack)
   }
 
-  set(val: Val) {
-    this.ref.set(val)
+  set(stack: RuntimeStack, val: Val) {
+    this.ref.set(stack, val)
     return val
   }
 }
@@ -285,15 +323,83 @@ export class SymRef extends Val {
     this._debug.set('env', JSON.stringify(env))
   }
 
-  get(): Val {
-    return this.ref!.get()
+  get(stack: RuntimeStack): Val {
+    return this.ref!.get(stack)
   }
 
-  set(val: Val) {
-    return this.ref!.set(val)
+  set(stack: RuntimeStack, val: Val) {
+    return this.ref!.set(stack, val)
   }
 }
 
+export const intrinsics: {[key: string]: Val} = {
+  pos: new NativeFn('pos', (_ark: ArkState, val: Val) => Num(+toJs(val))),
+  neg: new NativeFn('neg', (_ark: ArkState, val: Val) => Num(-toJs(val))),
+  not: new NativeFn('not', (_ark: ArkState, val: Val) => Bool(!toJs(val))),
+  seq: new NativeFexpr('seq', (ark: ArkState, ...args: Val[]) => {
+    let res: Val = Null()
+    for (const exp of args) {
+      res = ark.interpret(exp)
+    }
+    return res
+  }),
+  if: new NativeFexpr('if', (ark: ArkState, cond: Val, e_then: Val, e_else: Val) => {
+    const condVal = ark.interpret(cond)
+    if (toJs(condVal)) {
+      return ark.interpret(e_then)
+    }
+    return e_else ? ark.interpret(e_else) : Null()
+  }),
+  and: new NativeFexpr('and', (ark: ArkState, left: Val, right: Val) => {
+    const leftVal = ark.interpret(left)
+    if (toJs(leftVal)) {
+      return ark.interpret(right)
+    }
+    return leftVal
+  }),
+  or: new NativeFexpr('or', (ark: ArkState, left: Val, right: Val) => {
+    const leftVal = ark.interpret(left)
+    if (toJs(leftVal)) {
+      return leftVal
+    }
+    return ark.interpret(right)
+  }),
+  loop: new NativeFexpr('loop', (ark: ArkState, body: Val) => {
+    for (; ;) {
+      try {
+        ark.interpret(body)
+      } catch (e) {
+        if (e instanceof BreakException) {
+          return e.val
+        }
+        if (!(e instanceof ContinueException)) {
+          throw e
+        }
+      }
+    }
+  }),
+  break: new NativeFn('break', (_ark: ArkState, val: Val) => {
+    throw new BreakException(val)
+  }),
+  continue: new NativeFn('continue', () => {
+    throw new ContinueException()
+  }),
+  return: new NativeFn('return', (_ark: ArkState, val: Val) => {
+    throw new ReturnException(val)
+  }),
+  '=': new NativeFn('=', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) === toJs(right))),
+  '!=': new NativeFn('!=', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) !== toJs(right))),
+  '<': new NativeFn('<', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) < toJs(right))),
+  '<=': new NativeFn('<=', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) <= toJs(right))),
+  '>': new NativeFn('>', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) > toJs(right))),
+  '>=': new NativeFn('>=', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) >= toJs(right))),
+  '+': new NativeFn('+', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) + toJs(right))),
+  '-': new NativeFn('-', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) - toJs(right))),
+  '*': new NativeFn('*', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) * toJs(right))),
+  '/': new NativeFn('/', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) / toJs(right))),
+  '%': new NativeFn('%', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) % toJs(right))),
+  '**': new NativeFn('**', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) ** toJs(right))),
+}
 export class Class extends Val {
   public val: Map<string, Val>
 
@@ -311,11 +417,11 @@ export class PropRef extends Ref {
     super()
   }
 
-  get() {
+  get(_stack: RuntimeStack) {
     return this.obj.val.get(this.prop) ?? Null()
   }
 
-  set(val: Val) {
+  set(_stack: RuntimeStack, val: Val) {
     this.obj.val.set(this.prop, val)
     return val
   }
@@ -326,14 +432,14 @@ export class DictLiteral extends Class {
     super(new Map<string, Val>([
       ['set', new NativeFn(
         'Dict.set',
-        (index: Val, val: Val) => {
+        (_ark: ArkState, index: Val, val: Val) => {
           this.map.set(index, val)
           return val
         },
       )],
       ['get', new NativeFn(
         'Dict.get',
-        (index: Val) => this.map.get(index) ?? Null(),
+        (_ark: ArkState, index: Val) => this.map.get(index) ?? Null(),
       )],
     ]))
   }
@@ -346,11 +452,11 @@ export class ListLiteral extends Class {
     super(new Map<string, Val>([
       ['get', new NativeFn(
         'List.get',
-        (index: Val) => this.list[toJs(index)],
+        (_ark: ArkState, index: Val) => this.list[toJs(index)],
       )],
       ['set', new NativeFn(
         'List.set',
-        (index: Val, val: Val) => {
+        (_ark: ArkState, index: Val, val: Val) => {
           this.list[toJs(index)] = val
           return val
         },
@@ -395,7 +501,7 @@ function jsToVal(x: any): Val {
     return Str(x)
   }
   if (typeof x === 'function') {
-    return new NativeFn(x.name, (...args: Val[]) => jsToVal(x(...args.map(toJs))))
+    return new NativeFn(x.name, (_ark: ArkState, ...args: Val[]) => jsToVal(x(...args.map(toJs))))
   }
   if (typeof x === 'object') {
     return new ObjLiteral(x)
@@ -409,83 +515,14 @@ function jsToVal(x: any): Val {
   throw new Error(`cannot convert JavaScript value ${x}`)
 }
 
-export const intrinsics: {[key: string]: Val} = {
-  pos: new NativeFn('pos', (val: Val) => Num(+toJs(val))),
-  neg: new NativeFn('neg', (val: Val) => Num(-toJs(val))),
-  not: new NativeFn('not', (val: Val) => Bool(!toJs(val))),
-  seq: new NativeFexpr('seq', (...args: Val[]) => {
-    let res: Val = Null()
-    for (const exp of args) {
-      res = interpret(exp)
-    }
-    return res
-  }),
-  if: new NativeFexpr('if', (cond: Val, e_then: Val, e_else: Val) => {
-    const condVal = interpret(cond)
-    if (toJs(condVal)) {
-      return interpret(e_then)
-    }
-    return e_else ? interpret(e_else) : Null()
-  }),
-  and: new NativeFexpr('and', (left: Val, right: Val) => {
-    const leftVal = interpret(left)
-    if (toJs(leftVal)) {
-      return interpret(right)
-    }
-    return leftVal
-  }),
-  or: new NativeFexpr('or', (left: Val, right: Val) => {
-    const leftVal = interpret(left)
-    if (toJs(leftVal)) {
-      return leftVal
-    }
-    return interpret(right)
-  }),
-  loop: new NativeFexpr('loop', (body: Val) => {
-    for (; ;) {
-      try {
-        interpret(body)
-      } catch (e) {
-        if (e instanceof BreakException) {
-          return e.val
-        }
-        if (!(e instanceof ContinueException)) {
-          throw e
-        }
-      }
-    }
-  }),
-  break: new NativeFn('break', (val: Val) => {
-    throw new BreakException(val)
-  }),
-  continue: new NativeFn('continue', () => {
-    throw new ContinueException()
-  }),
-  return: new NativeFn('return', (val: Val) => {
-    throw new ReturnException(val)
-  }),
-  '=': new NativeFn('=', (left: Val, right: Val) => Bool(toJs(left) === toJs(right))),
-  '!=': new NativeFn('!=', (left: Val, right: Val) => Bool(toJs(left) !== toJs(right))),
-  '<': new NativeFn('<', (left: Val, right: Val) => Bool(toJs(left) < toJs(right))),
-  '<=': new NativeFn('<=', (left: Val, right: Val) => Bool(toJs(left) <= toJs(right))),
-  '>': new NativeFn('>', (left: Val, right: Val) => Bool(toJs(left) > toJs(right))),
-  '>=': new NativeFn('>=', (left: Val, right: Val) => Bool(toJs(left) >= toJs(right))),
-  '+': new NativeFn('+', (left: Val, right: Val) => Num(toJs(left) + toJs(right))),
-  '-': new NativeFn('-', (left: Val, right: Val) => Num(toJs(left) - toJs(right))),
-  '*': new NativeFn('*', (left: Val, right: Val) => Num(toJs(left) * toJs(right))),
-  '/': new NativeFn('/', (left: Val, right: Val) => Num(toJs(left) / toJs(right))),
-  '%': new NativeFn('%', (left: Val, right: Val) => Num(toJs(left) % toJs(right))),
-  '**': new NativeFn('**', (left: Val, right: Val) => Num(toJs(left) ** toJs(right))),
-}
-
 export const globals = new Map([
   ['pi', new ValRef(Num(Math.PI))],
   ['e', new ValRef(Num(Math.E))],
-  ['print', new ValRef(new NativeFn('print', (obj: Val) => {
+  ['print', new ValRef(new NativeFn('print', (_ark: ArkState, obj: Val) => {
     console.log(toJs(obj))
     return Null()
   }))],
-  ['debug', new ValRef(new NativeFn('debug', (obj: Val) => {
+  ['debug', new ValRef(new NativeFn('debug', (_ark: ArkState, obj: Val) => {
     debug(obj)
     return Null()
   }))],
@@ -504,56 +541,10 @@ export const globals = new Map([
   //   }),
   // }))],
   ['JSON', new ValRef(new Obj(new Map([
-    ['parse', new NativeFn('JSON.parse', (str: Val) => jsToVal(JSON.parse(toJs(str))))],
-    ['stringify', new NativeFn('JSON.stringify', (val: Val) => Str(JSON.stringify(toJs(val))))],
+    ['parse', new NativeFn('JSON.parse', (_ark: ArkState, str: Val) => jsToVal(JSON.parse(toJs(str))))],
+    ['stringify', new NativeFn('JSON.stringify', (_ark: ArkState, val: Val) => Str(JSON.stringify(toJs(val))))],
   ])))],
 ])
-
-function interpret(val: Val): Val {
-  if (val instanceof SymRef) {
-    return val.get()
-  } else if (val instanceof Get) {
-    return (interpret(val.val) as Ref).get()
-  } else if (val instanceof Ass) {
-    const ref = interpret(val.ref)
-    const res = interpret(val.val)
-    if (!(ref instanceof Ref || ref instanceof SymRef)) {
-      throw new AssException('assignment to non-Ref/SymRef')
-    }
-    ref.set(res)
-    return res
-  } else if (val instanceof Fn) {
-    return new FnClosure(val.params, val.captureFreeVars(), val.body)
-  } else if (val instanceof Fexpr) {
-    return new FexprClosure(val.params, val.captureFreeVars(), val.body)
-  } else if (val instanceof ObjLiteral) {
-    return new Obj(val.val)
-  } else if (val instanceof ListLiteral) {
-    return new List(val.list.map((e) => interpret(e)))
-  } else if (val instanceof DictLiteral) {
-    const evaluatedMap = new Map<any, Val>()
-    for (const [k, v] of val.map) {
-      evaluatedMap.set(interpret(k), interpret(v))
-    }
-    return new Dict(evaluatedMap)
-  } else if (val instanceof Let) {
-    const frame = bindArgsToParams(val.boundVars, [])
-    const oldStack = stack
-    stack = stack.push(frame)
-    const res = interpret(val.body)
-    stack = oldStack
-    return res
-  } else if (val instanceof Call) {
-    // FIXME: Use an ArkCallable trait, not FexprClosure—can also be
-    // Native{Fexpr,Fn}.
-    const fn = interpret(val.fn) as FexprClosure
-    return fn.call(...val.args)
-  } else if (val instanceof Prop) {
-    const obj = interpret(val.ref)
-    return new PropRef(obj as Obj, val.prop)
-  }
-  return val
-}
 
 // FIXME: support partial linking.
 export function link(compiledVal: CompiledArk, env: Namespace): Val {
@@ -567,12 +558,6 @@ export function link(compiledVal: CompiledArk, env: Namespace): Val {
     }
   }
   return val
-}
-
-export function runArk(compiledVal: CompiledArk, env: Namespace = globals): Val {
-  const val = link(compiledVal, env)
-  stack = new RuntimeStack()
-  return interpret(val)
 }
 
 export function toJs(val: Val): any {
@@ -600,7 +585,7 @@ export function serialize(val: Val) {
   function doSerialize(val: Val): any {
     if (val instanceof SymRef) {
       return val._debug.get('name')
-    } else if (val instanceof NativeFexpr || val instanceof NativeFn) {
+    } else if (val instanceof NativeFexpr) {
       return val.name
     } else if (val instanceof ConcreteVal) {
       const rawVal = val.val

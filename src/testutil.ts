@@ -2,7 +2,7 @@ import fs from 'fs'
 import test from 'ava'
 import tmp from 'tmp'
 import {execa} from 'execa'
-import {runArk, toJs, debug} from './ark/interp.js'
+import {ArkState, toJs, debug} from './ark/interp.js'
 import {compile as arkCompile, CompiledArk} from './ark/compiler.js'
 import {compile as ursaCompile} from './ursa/compiler.js'
 
@@ -23,7 +23,7 @@ function doTestGroup(
       if (process.env.DEBUG) {
         debug(compiled, null)
       }
-      t.deepEqual(toJs(runArk(compiled)), expected)
+      t.deepEqual(toJs(new ArkState().run(compiled)), expected)
     }
   })
 }

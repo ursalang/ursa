@@ -9,7 +9,7 @@ import programVersion from '../version.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  List, ValRef, Str, globals, runArk, serialize, toJs,
+  List, ValRef, Str, globals, ArkState, serialize, toJs,
 } from '../ark/interp.js'
 import {compile as arkCompile} from '../ark/compiler.js'
 import {compile as ursaCompile} from './compiler.js'
@@ -72,7 +72,7 @@ function evaluate(exp: string) {
     args.argument.map((s) => Str(s)),
   )))
   const compiled = compile(exp)
-  return runArk(compiled)
+  return new ArkState().run(compiled)
 }
 
 async function repl() {
