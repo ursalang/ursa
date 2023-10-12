@@ -83,13 +83,22 @@ class ConcreteInterned {
     throw new Error('use ConcreteInterned.create, not constructor')
   }
 
-  private static intern: Map<any, ConcreteVal<any>> = new Map()
+  private static intern: Map<any, WeakRef<ConcreteVal<any>>> = new Map()
+
+  private static registry: FinalizationRegistry<any> = new FinalizationRegistry(
+    (key) => this.intern.delete(key),
+  )
 
   static value<T>(rawVal: T): ConcreteVal<T> {
-    let val = ConcreteInterned.intern.get(rawVal)
-    if (val === undefined) {
+    let ref = ConcreteInterned.intern.get(rawVal)
+    let val: ConcreteVal<T>
+    if (ref === undefined || ref.deref() === undefined) {
       val = new ConcreteVal(rawVal)
-      ConcreteInterned.intern.set(rawVal, val)
+      ref = new WeakRef(val)
+      ConcreteInterned.intern.set(rawVal, ref)
+      ConcreteInterned.registry.register(val, rawVal, val)
+    } else {
+      val = ref.deref()!
     }
     return val
   }
