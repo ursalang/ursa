@@ -404,6 +404,21 @@ export class ObjLiteral extends Obj {
   }
 }
 
+export class NativeObj extends Val {
+  constructor(public obj: Object) {
+    super()
+  }
+
+  get(prop: string): Val | undefined {
+    return jsToVal((this.obj as any)[prop], this.obj)
+  }
+
+  set(prop: string, val: Val) {
+    (this.obj as any)[prop] = toJs(val)
+    return val
+  }
+}
+
 export class PropRef extends Ref {
   constructor(public obj: Obj, public prop: string) {
     super()
@@ -534,7 +549,7 @@ export class Prop extends Val {
   }
 }
 
-function jsToVal(x: any): Val {
+function jsToVal(x: any, thisObj?: Object): Val {
   if (x === null || x === undefined) {
     return Null()
   }
@@ -548,16 +563,20 @@ function jsToVal(x: any): Val {
     return Str(x)
   }
   if (typeof x === 'function') {
-    return new NativeFn(x.name, (_ark: ArkState, ...args: Val[]) => jsToVal(x(...args.map(toJs))))
-  }
-  if (typeof x === 'object') {
-    return new ObjLiteral(x)
+    const fn = thisObj ? x.bind(thisObj) : x
+    return new NativeFn(
+      x.name,
+      (_ark: ArkState, ...args: Val[]) => jsToVal(fn(...args.map(toJs))),
+    )
   }
   if (x instanceof Array) {
     return new ListLiteral(x)
   }
   if (x instanceof Map) {
     return new DictLiteral(x)
+  }
+  if (typeof x === 'object') {
+    return new NativeObj(x)
   }
   throw new Error(`cannot convert JavaScript value ${x}`)
 }
@@ -587,10 +606,7 @@ export const globals = new Map([
   //     return new Obj(wrappedModule)
   //   }),
   // }))],
-  ['JSON', new ValRef(new Obj(new Map([
-    ['parse', new NativeFn('JSON.parse', (_ark: ArkState, str: Val) => jsToVal(JSON.parse(toJs(str))))],
-    ['stringify', new NativeFn('JSON.stringify', (_ark: ArkState, val: Val) => Str(JSON.stringify(toJs(val))))],
-  ])))],
+  ['JSON', new ValRef(new NativeObj(JSON))],
 ])
 
 // FIXME: support partial linking.
@@ -654,6 +670,14 @@ export function serialize(val: Val) {
       const obj = {}
       for (const [k, v] of val.val) {
         (obj as any)[k] = doSerialize(v)
+      }
+      return obj
+    } else if (val instanceof NativeObj) {
+      const obj = {}
+      for (const k in val.obj) {
+        if (Object.hasOwn(val.obj, k)) {
+          (obj as any)[k] = doSerialize((val.obj as any)[k])
+        }
       }
       return obj
     } else if (val instanceof Dict) {
