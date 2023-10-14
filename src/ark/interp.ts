@@ -381,6 +381,15 @@ export class Class extends Val {
     super()
     this.val = obj
   }
+
+  get(prop: string): Val | undefined {
+    return this.val.get(prop)
+  }
+
+  set(prop: string, val: Val) {
+    this.val.set(prop, val)
+    return val
+  }
 }
 
 export class Obj extends Class {}
@@ -401,11 +410,11 @@ export class PropRef extends Ref {
   }
 
   get(_stack: RuntimeStack) {
-    return this.obj.val.get(this.prop) ?? Null()
+    return this.obj.get(this.prop) ?? Null()
   }
 
   set(_stack: RuntimeStack, val: Val) {
-    this.obj.val.set(this.prop, val)
+    this.obj.set(this.prop, val)
     return val
   }
 }
