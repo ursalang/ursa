@@ -373,6 +373,7 @@ export const intrinsics: {[key: string]: Val} = {
   '%': new NativeFn('%', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) % toJs(right))),
   '**': new NativeFn('**', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) ** toJs(right))),
 }
+
 export class Class extends Val {
   public val: Map<string, Val>
 
