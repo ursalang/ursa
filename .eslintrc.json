@@ -30,6 +30,7 @@
       }
     ],
     "import/prefer-default-export": "off",
+    "no-bitwise": "off",
     "no-else-return": "off",
     "no-param-reassign": "off",
     "no-restricted-syntax": "off",

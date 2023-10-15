@@ -15,7 +15,6 @@
 * Long strings.
 * Streams, and use as interface to files.
 * Map interface to file system and internet.
-* Bitwise operations: & | ~ >> >>> <<.
 * Code formatting: `ursa fmt`.
 * Shebang support.
 

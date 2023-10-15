@@ -137,6 +137,27 @@ semantics.addOperation<AST>('toAST(env,lval)', {
   UnaryExp_not(_not, exp) {
     return new Call(intrinsics.not, [exp.toAST(this.args.env, false)])
   },
+  UnaryExp_bitwise_not(_not, exp) {
+    return new Call(intrinsics['~'], [exp.toAST(this.args.env, false)])
+  },
+  BitwiseExp_and(left, _and, right) {
+    return new Call(intrinsics['&'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+  },
+  BitwiseExp_or(left, _or, right) {
+    return new Call(intrinsics['|'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+  },
+  BitwiseExp_xor(left, _xor, right) {
+    return new Call(intrinsics['^'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+  },
+  BitwiseExp_lshift(left, _lshift, right) {
+    return new Call(intrinsics['<<'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+  },
+  BitwiseExp_arshift(left, _rshift, right) {
+    return new Call(intrinsics['>>'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+  },
+  BitwiseExp_lrshift(left, _arshift, right) {
+    return new Call(intrinsics['>>>'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+  },
   CompareExp_eq(left, _eq, right) {
     return new Call(intrinsics['='], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },

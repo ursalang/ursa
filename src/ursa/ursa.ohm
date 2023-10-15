@@ -72,8 +72,9 @@ Ursa {
     = "break" Exp?      -- break
     | "return" Exp?     -- return
     | "not" Exp         -- not
-    | "+" Exp           -- pos
-    | "-" Exp           -- neg
+    | "~" UnaryExp      -- bitwise_not
+    | "+" UnaryExp      -- pos
+    | "-" UnaryExp      -- neg
     | LvalueExp
 
   ExponentExp
@@ -100,12 +101,19 @@ Ursa {
     | CompareExp ">=" ArithmeticExp -- geq
     | ArithmeticExp
 
-// FIXME: Bitwise expressions come here
+  BitwiseExp
+    = BitwiseExp "&" CompareExp   -- and
+    | BitwiseExp "^" CompareExp   -- xor
+    | BitwiseExp "|" CompareExp   -- or
+    | BitwiseExp "<<" CompareExp  -- lshift
+    | BitwiseExp ">>" CompareExp  -- arshift
+    | BitwiseExp ">>>" CompareExp -- lrshift
+    | CompareExp
 
   LogicExp
-    = LogicExp "and" CompareExp -- and
-    | LogicExp "or" CompareExp  -- or
-    | CompareExp
+    = LogicExp "and" BitwiseExp -- and
+    | LogicExp "or" BitwiseExp  -- or
+    | BitwiseExp
 
   AssignmentExp
     = LvalueExp "=" AssignmentExp -- ass

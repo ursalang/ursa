@@ -309,6 +309,7 @@ export const intrinsics: {[key: string]: Val} = {
   pos: new NativeFn('pos', (_ark: ArkState, val: Val) => Num(+toJs(val))),
   neg: new NativeFn('neg', (_ark: ArkState, val: Val) => Num(-toJs(val))),
   not: new NativeFn('not', (_ark: ArkState, val: Val) => Bool(!toJs(val))),
+  '~': new NativeFn('bitwise_not', (_ark: ArkState, val: Val) => Num(~toJs(val))),
   seq: new NativeFexpr('seq', (ark: ArkState, ...args: Val[]) => {
     let res: Val = Null()
     for (const exp of args) {
@@ -372,6 +373,12 @@ export const intrinsics: {[key: string]: Val} = {
   '/': new NativeFn('/', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) / toJs(right))),
   '%': new NativeFn('%', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) % toJs(right))),
   '**': new NativeFn('**', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) ** toJs(right))),
+  '&': new NativeFn('&', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) & toJs(right))),
+  '|': new NativeFn('|', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) | toJs(right))),
+  '^': new NativeFn('^', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) ^ toJs(right))),
+  '<<': new NativeFn('<<', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) << toJs(right))),
+  '>>': new NativeFn('>>', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) >> toJs(right))),
+  '>>>': new NativeFn('>>>', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) >>> toJs(right))),
 }
 
 export class Class extends Val {
