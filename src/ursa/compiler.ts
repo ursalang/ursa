@@ -87,10 +87,10 @@ semantics.addOperation<AST>('toAST(env,lval)', {
   CallExp_call(exp, args) {
     return new Call(exp.toAST(this.args.env, false), args.toAST(this.args.env, false).args)
   },
-  CallExp_propcall(exp, args) {
+  CallExp_property_call(exp, args) {
     return new Call(exp.toAST(this.args.env, false), args.toAST(this.args.env, false).args)
   },
-  CallExp_prop(exp, _dot, ident) {
+  CallExp_property(exp, _dot, ident) {
     return new Call(new Get(new Prop(ident.sourceString, exp.toAST(this.args.env, false))), [])
   },
   Arguments(_open, args, _maybe_comma, _close) {
@@ -388,6 +388,9 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
     return value.freeVars(this.args.env)
   },
   PropertyExp_property(propertyExp, _dot, _ident) {
+    return propertyExp.freeVars(this.args.env)
+  },
+  CallExp_property(propertyExp, _dot, _ident) {
     return propertyExp.freeVars(this.args.env)
   },
   ident(_l, _ns) {
