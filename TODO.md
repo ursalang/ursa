@@ -1,7 +1,5 @@
 # Ursa to-do
 
-* Run in browser with DOM access.
-
 ## Ursa MVP
 
 * 100% test coverage.
