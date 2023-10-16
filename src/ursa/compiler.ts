@@ -91,7 +91,8 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     return new Call(exp.toAST(this.args.env, false), args.toAST(this.args.env, false).args)
   },
   CallExp_property(exp, _dot, ident) {
-    return new Get(new Prop(ident.sourceString, exp.toAST(this.args.env, false)))
+    const compiledProp = new Prop(ident.sourceString, exp.toAST(this.args.env, false))
+    return this.args.lval ? compiledProp : new Get(compiledProp)
   },
   Arguments(_open, args, _maybe_comma, _close) {
     return new Arguments(
