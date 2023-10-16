@@ -41,15 +41,15 @@ Ursa {
 
   PropertyExp
     = PropertyExp "[" Exp "]"           -- index
-    | PropertyExp #"." #ident           -- property
+    | PropertyExp "." ident             -- property
     | Fn
     | PrimaryExp
 
   CallExp
     = CallExp "[" Exp "]"   -- index
-  	| CallExp #"." #ident   -- prop
-    | PropertyExp Arguments -- propcall
+    | CallExp "." ident     -- prop
     | CallExp Arguments     -- call
+    | PropertyExp Arguments -- propcall
 
   Arguments = "(" ListOf<Exp, ","> #maybeCommaParen ")"
 
