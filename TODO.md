@@ -11,6 +11,7 @@
 * Maps: iteration (with yield), symbol keys
 * `self`
 * Long strings.
+* Long comments.
 * Streams, and use as interface to files.
 * Map interface to file system and internet.
 * Code formatting: `ursa fmt`.
