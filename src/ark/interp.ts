@@ -615,6 +615,9 @@ export const globals = new Map([
   // }))],
   ['JSON', new ValRef(new NativeObj(JSON))],
 ])
+if (globalThis.document !== undefined) {
+  globals.set('document', new ValRef(new NativeObj(globalThis.document)))
+}
 
 // FIXME: support partial linking.
 export function link(compiledVal: CompiledArk, env: Namespace): Val {
