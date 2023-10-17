@@ -14,7 +14,6 @@
 * Streams, and use as interface to files.
 * Map interface to file system and internet.
 * Code formatting: `ursa fmt`.
-* Shebang support.
 
 ## Ark improvements
 

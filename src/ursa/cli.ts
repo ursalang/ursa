@@ -122,6 +122,9 @@ async function main() {
       source = args.eval
     } else if (inputFile !== undefined) {
       source = fs.readFileSync(inputFile, {encoding: 'utf-8'})
+      if (source.startsWith('#!')) {
+        source = source.substring(source.indexOf('\n'))
+      }
     }
     if (args.compile) {
       if (source === undefined) {
