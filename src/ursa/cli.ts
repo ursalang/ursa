@@ -72,6 +72,10 @@ function evaluate(exp: string) {
     args.argument.map((s) => Str(s)),
   )))
   const compiled = compile(exp)
+  if (process.env.DEBUG) {
+    console.log('Compiled Ark')
+    debug(compiled, null)
+  }
   return new ArkState().run(compiled)
 }
 
