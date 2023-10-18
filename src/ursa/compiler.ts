@@ -298,7 +298,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
         new Ass(
           ident.symref(innerEnv)[0],
           new Call(
-            new Get(new Prop('use', path[0].symref(innerEnv)[0])),
+            new Get(new Prop('use', new Get(path[0].symref(innerEnv)[0]))),
             path.slice(1).map((id) => Str(id.sourceString)),
           ),
         ),
