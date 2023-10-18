@@ -599,12 +599,10 @@ export const globals = new Map([
     debug(obj)
     return Null()
   }))],
-  // FIXME: make this work again!
-  // ['js', new Ref(new Obj({
-  //   use: new NativeFn('js', (...args: Val[]) => {
+  // ['js', new ValRef(new Obj(new Map([[
+  //   'use', new NativeFn('js', async (_ark: ArkState, ...args: Val[]) => {
   //     const requirePath = (args.map(toJs).join('.'))
-  //     // eslint-disable-next-line import/no-dynamic-require, global-require
-  //     const module = require(requirePath)
+  //     const module = await import(requirePath)
   //     const wrappedModule = new Map()
   //     // eslint-disable-next-line guard-for-in
   //     for (const key in module) {
@@ -612,7 +610,7 @@ export const globals = new Map([
   //     }
   //     return new Obj(wrappedModule)
   //   }),
-  // }))],
+  // ]])))],
   ['JSON', new ValRef(new NativeObj(JSON))],
 ])
 if (globalThis.document !== undefined) {
