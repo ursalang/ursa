@@ -151,11 +151,13 @@ export class Fexpr extends Val {
   constructor(public params: string[], protected freeVars: FreeVars, public body: Val) {
     super()
     let numStackFreeVars = 0
-    for (const [, symrefs] of this.freeVars) {
+    for (const [name, symrefs] of this.freeVars) {
       let isStackFreeVar = false
       for (const symref of symrefs) {
         const loc = symref.ref
-        assert(loc !== undefined)
+        if (loc === undefined) {
+          throw new Error(`undefined symbol ${name}`)
+        }
         if (loc instanceof StackRef) {
           assert(!(loc instanceof StackRefRef))
           assert(loc.level > 0)
