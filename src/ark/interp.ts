@@ -1,3 +1,4 @@
+import fs from 'fs'
 import assert from 'assert'
 import {
   CompiledArk, Environment, FreeVars, Namespace,
@@ -599,9 +600,10 @@ export const globals = new Map([
     debug(obj)
     return Null()
   }))],
+  ['fs', new ValRef(new NativeObj(fs))],
   // ['js', new ValRef(new Obj(new Map([[
   //   'use', new NativeFn('js', async (_ark: ArkState, ...args: Val[]) => {
-  //     const requirePath = (args.map(toJs).join('.'))
+  //     const importPath = (args.map(toJs).join('.'))
   //     const module = await import(requirePath)
   //     const wrappedModule = new Map()
   //     // eslint-disable-next-line guard-for-in
