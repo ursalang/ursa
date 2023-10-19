@@ -36,10 +36,16 @@ export function testUrsaGroup(title: string, tests: [string, any][]) {
   return doTestGroup(title, ursaCompile, tests)
 }
 
-export async function cliTest(syntax: string, title: string, file: string, output?: string) {
+export async function cliTest(
+  syntax: string,
+  title: string,
+  file: string,
+  output?: string,
+  args?: string[],
+) {
   const tempFile = tmp.tmpNameSync()
   test(title, async (t) => {
-    const {stdout} = await run([`${file}.${syntax}`, `--syntax=${syntax}`, `--output=${tempFile}`])
+    const {stdout} = await run([`--syntax=${syntax}`, `--output=${tempFile}`, `${file}.${syntax}`, ...args ?? []])
     const result = JSON.parse(fs.readFileSync(tempFile, {encoding: 'utf-8'}))
     const expected = JSON.parse(fs.readFileSync(`${file}.result.json`, {encoding: 'utf-8'}))
     t.deepEqual(result, expected)

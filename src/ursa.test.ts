@@ -23,3 +23,5 @@ cliTest('ursa', "'fs' module", 'test/fs', 'foo')
 
 // FIXME: make this work again
 // cliTest('ursa', 'use fs', 'test/use-fs', 'foo')
+
+cliTest('ursa', 'Find symbols in input', 'test/syms', 'fs\nwriteSync\nfoo\nis\nstdout', ['./test/fs.ursa'])
