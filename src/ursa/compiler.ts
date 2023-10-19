@@ -3,7 +3,7 @@ import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
   Val, Null, Bool, Num, Str, ObjLiteral, ListLiteral, DictLiteral,
-  Call, Let, Fn, SymRef, Prop, Ass, Get, intrinsics,
+  Call, Let, Fn, Prop, Ass, Get, intrinsics,
 } from '../ark/interp.js'
 import {
   CompiledArk, symRef, Environment, FreeVars,
@@ -75,14 +75,8 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     }
     return new Call(intrinsics.if, args)
   },
-  Fn_anon(_fn, _open, params, _maybe_comma, _close, body) {
+  Fn(_fn, _open, params, _maybe_comma, _close, body) {
     return makeFn(this.args.env, params, body)
-  },
-  NamedFn(_fn, ident, _open, params, _maybe_comma, _close, body) {
-    return new Ass(
-      ident.symref(this.args.env)[0],
-      makeFn(this.args.env, params, body),
-    )
   },
   CallExp_call(exp, args) {
     return new Call(exp.toAST(this.args.env, false), args.toAST(this.args.env, false).args)
@@ -279,14 +273,6 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     const compiledLet = new Let([ident.sourceString], compiledCall)
     return compiledLet
   },
-  Sequence_letfn(_let, namedFn, _sep, seq) {
-    const ident = namedFn.children[1].sourceString
-    const innerEnv = this.args.env.push([ident])
-    const fn = namedFn.toAST(innerEnv, false)
-    const compiledSeq = seq.toAST(innerEnv, false)
-    const compiledLet = new Let([ident], new Call(intrinsics.seq, [fn, compiledSeq]))
-    return compiledLet
-  },
   Sequence_use(_use, pathList, _sep, seq) {
     const path = pathList.asIteration().children
     const ident = path[path.length - 1]
@@ -349,17 +335,6 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
     freeVars.delete(ident.sourceString)
     return freeVars
   },
-  Sequence_letfn(_let, namedFn, _sep, seq) {
-    const ident = namedFn.children[1].sourceString
-    const innerEnv = this.args.env.push([ident])
-    const freeVars = new FreeVars().merge(seq.freeVars(innerEnv))
-    freeVars.merge(namedFn.freeVars(innerEnv))
-    namedFn.children[3].freeVars(innerEnv).forEach(
-      (_v: SymRef[], k: string) => freeVars.delete(k),
-    )
-    freeVars.delete(namedFn.children[1].sourceString)
-    return freeVars
-  },
   Sequence_use(_use, pathList, _sep, seq) {
     const path = pathList.asIteration().children
     const ident = path[path.length - 1]
@@ -370,19 +345,11 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
     freeVars.delete(ident.sourceString)
     return freeVars
   },
-  Fn_anon(_fn, _open, params, _maybe_comma, _close, body) {
+  Fn(_fn, _open, params, _maybe_comma, _close, body) {
     const paramStrings = listNodeToStringList(params)
     const innerEnv = this.args.env.pushFrame(paramStrings)
     const freeVars = new FreeVars().merge(body.freeVars(innerEnv))
     paramStrings.forEach((p) => freeVars.delete(p))
-    return freeVars
-  },
-  NamedFn(_fn, ident, _open, params, _maybe_comma, _close, body) {
-    const paramStrings = listNodeToStringList(params)
-    const innerEnv = this.args.env.pushFrame(paramStrings)
-    const freeVars = new FreeVars().merge(body.freeVars(innerEnv))
-    freeVars.delete(ident.sourceString)
-    listNodeToStringList(params).forEach((p) => freeVars.delete(p))
     return freeVars
   },
   PropertyValue(_ident, _colon, value) {

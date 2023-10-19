@@ -1,5 +1,5 @@
 let fac = null
-fn fac(x) {
+fac = fn(x) {
   if x == 0 {1} else {x * fac(x - 1)}
 }
 fac(6)

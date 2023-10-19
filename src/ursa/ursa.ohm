@@ -1,7 +1,6 @@
 Ursa {
   Sequence
     = "let" ident "=" Exp #sc Sequence        -- let
-    | "let" NamedFn #sc Sequence              -- letfn
     | "use" ListOf<ident, #"."> #sc Sequence  -- use
     | Exp #sc Sequence                        -- seq
     | /* nothing */                           -- empty
@@ -61,10 +60,7 @@ Ursa {
     = "if" Exp Block ("else" Block)?
 
   Fn
-    = "fn" "(" ListOf<ident, ","> #maybeCommaParen ")" Block        -- anon
-    | NamedFn
-
-  NamedFn = "fn" ident "(" ListOf<ident, ","> #maybeCommaParen ")" Block
+    = "fn" "(" ListOf<ident, ","> #maybeCommaParen ")" Block
 
   Loop = "loop" Block
 
