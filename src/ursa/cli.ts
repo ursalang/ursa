@@ -67,10 +67,6 @@ function compile(exp: string) {
 }
 
 function evaluate(exp: string) {
-  // Add command-line arguments.
-  globals.set('argv', new ValRef(new List(
-    args.argument.map((s) => Str(s)),
-  )))
   const compiled = compile(exp)
   if (process.env.DEBUG) {
     console.log('Compiled Ark')
@@ -110,10 +106,16 @@ if ((jsonFile === '-' || args.compile) && (args.module !== undefined || args.eva
   jsonFile = process.stdout.fd
 }
 
+// Program name for argv[0]
+let prog: string
+
 // Use standard input if requested
 let inputFile: PathOrFileDescriptor = args.module
 if (args.module === '-') {
   inputFile = process.stdin.fd
+  prog = '(stdin)'
+} else {
+  prog = inputFile
 }
 
 async function main() {
@@ -123,6 +125,7 @@ async function main() {
     let source: string | undefined
     let result
     if (args.eval !== undefined) {
+      prog = '(eval)'
       source = args.eval
     } else if (inputFile !== undefined) {
       source = fs.readFileSync(inputFile, {encoding: 'utf-8'})
@@ -140,6 +143,10 @@ async function main() {
       // FIXME: Handle freevars in compiled output
       result = compile(source)[0]
     } else {
+      // Add command-line arguments.
+      globals.set('argv', new ValRef(new List(
+        [Str(prog ?? process.argv[0]), ...args.argument.map((s) => Str(s))],
+      )))
       // Run the program
       if (source !== undefined) {
         result = evaluate(source)
