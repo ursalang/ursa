@@ -62,7 +62,7 @@
     "diff-check": "git diff --exit-code",
     "prepublishOnly": "npm run diff-check && git push --all",
     "postpublish": "git push --tags --no-verify && gh release create $(git describe) -t \"Release $(git describe)\"",
-    "no-diff": "git diff --exit-code"
+    "no-diff-or-untracked": "git diff --exit-code && git ls-files --other --directory --exclude-standard | sed q1"
   },
   "ava": {
     "typescript": {
@@ -73,7 +73,7 @@
     }
   },
   "pre-push": [
-    "no-diff",
+    "no-diff-or-untracked",
     "test"
   ],
   "type": "module",
