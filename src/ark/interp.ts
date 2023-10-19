@@ -614,6 +614,12 @@ export const globals = new Map([
   //   }),
   // ]])))],
   ['JSON', new ValRef(new NativeObj(JSON))],
+  ['process', new ValRef(new NativeObj(process))],
+  ['RegExp', new ValRef(new NativeFn('RegExp', (_ark: ArkState, regex: Val, options: Val) => new NativeObj(new RegExp(
+    (regex as ConcreteVal<string>).val,
+    ((options ?? Str('')) as ConcreteVal<string>).val,
+  )))),
+  ],
 ])
 if (globalThis.document !== undefined) {
   globals.set('document', new ValRef(new NativeObj(globalThis.document)))
