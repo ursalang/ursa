@@ -23,16 +23,33 @@ export class Stack<T> {
   }
 }
 
-// FIXME: Make the stack of type [Val[], Ref[]][]: pairs of frame and upvars
-export class RuntimeStack extends Stack<Val> {}
+export class RuntimeStack {
+  // Each stack frame consists of a pair of local vars and captures
+  public stack: [Val[], Ref[]][]
+
+  constructor(outerStack: [Val[], Ref[]][] = [[[], []]]) {
+    assert(outerStack.length > 0)
+    this.stack = outerStack
+  }
+
+  push(items: Val[]) {
+    return new (this.constructor as any)(
+      [[[...items, ...this.stack[0][0].slice()], this.stack[0][1]], ...this.stack.slice(1)],
+    )
+  }
+
+  pushFrame(frame: [Val[], Ref[]]) {
+    return new (this.constructor as any)([frame, ...this.stack.slice()])
+  }
+}
 
 export class ArkState {
   stack = new RuntimeStack()
 
-  captureFreeVars(cl: Fexpr): Val[] {
-    const frame: Val[] = []
+  captureFreeVars(cl: Fexpr): Ref[] {
+    const frame: Ref[] = []
     for (const [loc] of cl.boundFreeVars) {
-      const ref = new ValRef(this.stack.pushFrame([]).stack[loc.level][loc.index])
+      const ref = new ValRef(this.stack.pushFrame([[], []]).stack[loc.level][0][loc.index])
       frame.push(ref)
     }
     return frame
@@ -138,7 +155,7 @@ export function bindArgsToParams(params: string[], args: Val[]): Ref[] {
 }
 
 class FexprClosure extends Val {
-  constructor(public params: string[], public freeVars: Val[], public body: Val) {
+  constructor(public params: string[], public freeVars: Ref[], public body: Val) {
     super()
   }
 }
@@ -159,14 +176,14 @@ export class Fexpr extends Val {
           throw new Error(`undefined symbol ${name}`)
         }
         if (loc instanceof StackRef) {
-          assert(!(loc instanceof StackRefRef))
+          assert(!(loc instanceof CaptureRef))
           assert(loc.level > 0)
           if (!isStackFreeVar) {
             isStackFreeVar = true
             this.boundFreeVars.push([loc, symrefs])
             numStackFreeVars += 1
           }
-          symref.ref = new StackRefRef(1, numStackFreeVars - 1)
+          symref.ref = new CaptureRef(numStackFreeVars - 1)
         }
       }
     }
@@ -247,22 +264,26 @@ export class StackRef extends Ref {
   }
 
   get(stack: RuntimeStack): Val {
-    return stack.stack[this.level][this.index]
+    return stack.stack[this.level][0][this.index]
   }
 
   set(stack: RuntimeStack, val: Val) {
-    stack.stack[this.level][this.index] = val
+    stack.stack[this.level][0][this.index] = val
     return val
   }
 }
 
-export class StackRefRef extends StackRef {
+export class CaptureRef extends Ref {
+  constructor(public index: number) {
+    super()
+  }
+
   get(stack: RuntimeStack): Val {
-    return (stack.stack[this.level][this.index] as Ref).get(stack)
+    return stack.stack[0][1][this.index].get(stack)
   }
 
   set(stack: RuntimeStack, val: Val) {
-    const ref = stack.stack[this.level][this.index] as Ref;
+    const ref = stack.stack[0][1][this.index];
     ref.set(stack, val)
     return val
   }
@@ -528,7 +549,7 @@ export class Call extends Val {
       try {
         const frame = bindArgsToParams(fn.params, args)
         const oldStack = ark.stack
-        ark.stack = ark.stack.pushFrame(fn.freeVars).pushFrame(frame)
+        ark.stack = ark.stack.pushFrame([frame, fn.freeVars])
         res = fn.body.eval(ark)
         ark.stack = oldStack
       } catch (e) {
