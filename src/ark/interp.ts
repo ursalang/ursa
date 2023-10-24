@@ -202,10 +202,11 @@ export class Fn extends Fexpr {
 
 export class NativeFexpr extends Val {
   constructor(
-    public name: string, // FIXME: remove name, use debug info.
+    name: string,
     public body: (ark: ArkState, ...args: Val[]) => Val,
   ) {
     super()
+    this.debug.set('name', name)
   }
 }
 
@@ -685,10 +686,8 @@ export function toJs(val: Val): any {
 
 export function serialize(val: Val) {
   function doSerialize(val: Val): any {
-    if (val instanceof SymRef) {
+    if (val instanceof SymRef || val instanceof NativeFexpr) {
       return val.debug.get('name')
-    } else if (val instanceof NativeFexpr) {
-      return val.name
     } else if (val instanceof ConcreteVal) {
       const rawVal = val.val
       if (typeof rawVal === 'string') {
