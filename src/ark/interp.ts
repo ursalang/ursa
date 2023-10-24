@@ -194,6 +194,41 @@ export class NativeFexpr extends Val {
 
 export class NativeFn extends NativeFexpr {}
 
+export class Call extends Val {
+  constructor(public fn: Val, public args: Val[]) {
+    super()
+  }
+
+  eval(ark: ArkState): Val {
+    const fn = this.fn.eval(ark)
+    let args = this.args
+    if (fn instanceof FnClosure) {
+      args = ark.evaluateArgs(...this.args)
+    }
+    if (fn instanceof FexprClosure) {
+      let res: Val = Null()
+      try {
+        const frame = bindArgsToParams(fn.params, args)
+        const oldStack = ark.stack
+        ark.stack = ark.stack.pushFrame([frame, fn.freeVars])
+        res = fn.body.eval(ark)
+        ark.stack = oldStack
+      } catch (e) {
+        if (!(e instanceof ReturnException)) {
+          throw e
+        }
+        res = e.val
+      }
+      return res
+    } else if (fn instanceof NativeFn) {
+      return fn.body(ark, ...ark.evaluateArgs(...args))
+    } else if (fn instanceof NativeFexpr) {
+      return fn.body(ark, ...args)
+    }
+    throw new Error('invalid Call')
+  }
+}
+
 export abstract class Ref extends Val {
   abstract get(stack: RuntimeStack): Val
 
@@ -212,32 +247,6 @@ export class ValRef extends Ref {
   set(_stack: RuntimeStack, val: Val): Val {
     this.val = val
     return val
-  }
-}
-
-export class Get extends Val {
-  constructor(public val: Val) {
-    super()
-  }
-
-  eval(ark: ArkState): Val {
-    return (this.val.eval(ark) as Ref).get(ark.stack)
-  }
-}
-
-export class Ass extends Val {
-  constructor(public ref: Val, public val: Val) {
-    super()
-  }
-
-  eval(ark: ArkState): Val {
-    const ref = this.ref.eval(ark)
-    const res = this.val.eval(ark)
-    if (!(ref instanceof Ref || ref instanceof SymRef)) {
-      throw new AssException('assignment to non-Ref/SymRef')
-    }
-    ref.set(ark.stack, res)
-    return res
   }
 }
 
@@ -312,80 +321,30 @@ export class SymRef extends Val {
   }
 }
 
-export const intrinsics: {[key: string]: Val} = {
-  pos: new NativeFn('pos', (_ark: ArkState, val: Val) => Num(+toJs(val))),
-  neg: new NativeFn('neg', (_ark: ArkState, val: Val) => Num(-toJs(val))),
-  not: new NativeFn('not', (_ark: ArkState, val: Val) => Bool(!toJs(val))),
-  '~': new NativeFn('bitwise_not', (_ark: ArkState, val: Val) => Num(~toJs(val))),
-  seq: new NativeFexpr('seq', (ark: ArkState, ...args: Val[]) => {
-    let res: Val = Null()
-    for (const exp of args) {
-      res = exp.eval(ark)
+export class Get extends Val {
+  constructor(public val: Val) {
+    super()
+  }
+
+  eval(ark: ArkState): Val {
+    return (this.val.eval(ark) as Ref).get(ark.stack)
+  }
+}
+
+export class Ass extends Val {
+  constructor(public ref: Val, public val: Val) {
+    super()
+  }
+
+  eval(ark: ArkState): Val {
+    const ref = this.ref.eval(ark)
+    const res = this.val.eval(ark)
+    if (!(ref instanceof Ref || ref instanceof SymRef)) {
+      throw new AssException('assignment to non-Ref/SymRef')
     }
+    ref.set(ark.stack, res)
     return res
-  }),
-  if: new NativeFexpr('if', (ark: ArkState, cond: Val, e_then: Val, e_else: Val) => {
-    const condVal = cond.eval(ark)
-    if (toJs(condVal)) {
-      return e_then.eval(ark)
-    }
-    return e_else ? e_else.eval(ark) : Null()
-  }),
-  and: new NativeFexpr('and', (ark: ArkState, left: Val, right: Val) => {
-    const leftVal = left.eval(ark)
-    if (toJs(leftVal)) {
-      return right.eval(ark)
-    }
-    return leftVal
-  }),
-  or: new NativeFexpr('or', (ark: ArkState, left: Val, right: Val) => {
-    const leftVal = left.eval(ark)
-    if (toJs(leftVal)) {
-      return leftVal
-    }
-    return right.eval(ark)
-  }),
-  loop: new NativeFexpr('loop', (ark: ArkState, body: Val) => {
-    for (; ;) {
-      try {
-        body.eval(ark)
-      } catch (e) {
-        if (e instanceof BreakException) {
-          return e.val
-        }
-        if (!(e instanceof ContinueException)) {
-          throw e
-        }
-      }
-    }
-  }),
-  break: new NativeFn('break', (_ark: ArkState, val: Val) => {
-    throw new BreakException(val)
-  }),
-  continue: new NativeFn('continue', () => {
-    throw new ContinueException()
-  }),
-  return: new NativeFn('return', (_ark: ArkState, val: Val) => {
-    throw new ReturnException(val)
-  }),
-  '=': new NativeFn('=', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) === toJs(right))),
-  '!=': new NativeFn('!=', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) !== toJs(right))),
-  '<': new NativeFn('<', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) < toJs(right))),
-  '<=': new NativeFn('<=', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) <= toJs(right))),
-  '>': new NativeFn('>', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) > toJs(right))),
-  '>=': new NativeFn('>=', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) >= toJs(right))),
-  '+': new NativeFn('+', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) + toJs(right))),
-  '-': new NativeFn('-', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) - toJs(right))),
-  '*': new NativeFn('*', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) * toJs(right))),
-  '/': new NativeFn('/', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) / toJs(right))),
-  '%': new NativeFn('%', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) % toJs(right))),
-  '**': new NativeFn('**', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) ** toJs(right))),
-  '&': new NativeFn('&', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) & toJs(right))),
-  '|': new NativeFn('|', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) | toJs(right))),
-  '^': new NativeFn('^', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) ^ toJs(right))),
-  '<<': new NativeFn('<<', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) << toJs(right))),
-  '>>': new NativeFn('>>', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) >> toJs(right))),
-  '>>>': new NativeFn('>>>', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) >>> toJs(right))),
+  }
 }
 
 export class Class extends Val {
@@ -430,6 +389,18 @@ export class NativeObj extends Val {
   set(prop: string, val: Val) {
     (this.obj as any)[prop] = toJs(val)
     return val
+  }
+}
+
+export class Prop extends Val {
+  // ref must compute a Ref
+  constructor(public prop: string, public ref: Val) {
+    super()
+  }
+
+  eval(ark: ArkState): Val {
+    const obj = this.ref.eval(ark)
+    return new PropRef(obj as Obj, this.prop)
   }
 }
 
@@ -516,51 +487,80 @@ export class Let extends Val {
   }
 }
 
-export class Call extends Val {
-  constructor(public fn: Val, public args: Val[]) {
-    super()
-  }
-
-  eval(ark: ArkState): Val {
-    const fn = this.fn.eval(ark)
-    let args = this.args
-    if (fn instanceof FnClosure) {
-      args = ark.evaluateArgs(...this.args)
+export const intrinsics: {[key: string]: Val} = {
+  pos: new NativeFn('pos', (_ark: ArkState, val: Val) => Num(+toJs(val))),
+  neg: new NativeFn('neg', (_ark: ArkState, val: Val) => Num(-toJs(val))),
+  not: new NativeFn('not', (_ark: ArkState, val: Val) => Bool(!toJs(val))),
+  '~': new NativeFn('bitwise_not', (_ark: ArkState, val: Val) => Num(~toJs(val))),
+  seq: new NativeFexpr('seq', (ark: ArkState, ...args: Val[]) => {
+    let res: Val = Null()
+    for (const exp of args) {
+      res = exp.eval(ark)
     }
-    if (fn instanceof FexprClosure) {
-      let res: Val = Null()
+    return res
+  }),
+  if: new NativeFexpr('if', (ark: ArkState, cond: Val, e_then: Val, e_else: Val) => {
+    const condVal = cond.eval(ark)
+    if (toJs(condVal)) {
+      return e_then.eval(ark)
+    }
+    return e_else ? e_else.eval(ark) : Null()
+  }),
+  and: new NativeFexpr('and', (ark: ArkState, left: Val, right: Val) => {
+    const leftVal = left.eval(ark)
+    if (toJs(leftVal)) {
+      return right.eval(ark)
+    }
+    return leftVal
+  }),
+  or: new NativeFexpr('or', (ark: ArkState, left: Val, right: Val) => {
+    const leftVal = left.eval(ark)
+    if (toJs(leftVal)) {
+      return leftVal
+    }
+    return right.eval(ark)
+  }),
+  loop: new NativeFexpr('loop', (ark: ArkState, body: Val) => {
+    for (; ;) {
       try {
-        const frame = bindArgsToParams(fn.params, args)
-        const oldStack = ark.stack
-        ark.stack = ark.stack.pushFrame([frame, fn.freeVars])
-        res = fn.body.eval(ark)
-        ark.stack = oldStack
+        body.eval(ark)
       } catch (e) {
-        if (!(e instanceof ReturnException)) {
+        if (e instanceof BreakException) {
+          return e.val
+        }
+        if (!(e instanceof ContinueException)) {
           throw e
         }
-        res = e.val
       }
-      return res
-    } else if (fn instanceof NativeFn) {
-      return fn.body(ark, ...ark.evaluateArgs(...args))
-    } else if (fn instanceof NativeFexpr) {
-      return fn.body(ark, ...args)
     }
-    throw new Error('invalid Call')
-  }
-}
-
-export class Prop extends Val {
-  // ref must compute a Ref
-  constructor(public prop: string, public ref: Val) {
-    super()
-  }
-
-  eval(ark: ArkState): Val {
-    const obj = this.ref.eval(ark)
-    return new PropRef(obj as Obj, this.prop)
-  }
+  }),
+  break: new NativeFn('break', (_ark: ArkState, val: Val) => {
+    throw new BreakException(val)
+  }),
+  continue: new NativeFn('continue', () => {
+    throw new ContinueException()
+  }),
+  return: new NativeFn('return', (_ark: ArkState, val: Val) => {
+    throw new ReturnException(val)
+  }),
+  '=': new NativeFn('=', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) === toJs(right))),
+  '!=': new NativeFn('!=', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) !== toJs(right))),
+  '<': new NativeFn('<', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) < toJs(right))),
+  '<=': new NativeFn('<=', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) <= toJs(right))),
+  '>': new NativeFn('>', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) > toJs(right))),
+  '>=': new NativeFn('>=', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) >= toJs(right))),
+  '+': new NativeFn('+', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) + toJs(right))),
+  '-': new NativeFn('-', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) - toJs(right))),
+  '*': new NativeFn('*', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) * toJs(right))),
+  '/': new NativeFn('/', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) / toJs(right))),
+  '%': new NativeFn('%', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) % toJs(right))),
+  '**': new NativeFn('**', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) ** toJs(right))),
+  '&': new NativeFn('&', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) & toJs(right))),
+  '|': new NativeFn('|', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) | toJs(right))),
+  '^': new NativeFn('^', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) ^ toJs(right))),
+  '<<': new NativeFn('<<', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) << toJs(right))),
+  '>>': new NativeFn('>>', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) >> toJs(right))),
+  '>>>': new NativeFn('>>>', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) >>> toJs(right))),
 }
 
 export const globals = new Map([
