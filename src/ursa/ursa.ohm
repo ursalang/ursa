@@ -18,11 +18,11 @@ Ursa {
   maybeCommaBrace = space* ("," | &"}")
 
   PrimaryExp
-    = "null"            -- null
+    = null              -- null
     | bool
     | string
     | number
-    | "continue"        -- continue
+    | continue          -- continue
     | ident             -- ident
     | List
     | Object
@@ -57,20 +57,20 @@ Ursa {
     | PropertyExp
 
   If
-    = "if" Exp Block ("else" Block)?
+    = if Exp Block (else Block)?
 
   Fn
-    = "fn" "(" ListOf<ident, ","> #maybeCommaParen ")" Block
+    = fn "(" ListOf<ident, ","> #maybeCommaParen ")" Block
 
-  Loop = "loop" Block
+  Loop = loop Block
 
   UnaryExp
-    = "break" Exp?      -- break
-    | "return" Exp?     -- return
-    | "not" Exp         -- not
-    | "~" UnaryExp      -- bitwise_not
-    | "+" UnaryExp      -- pos
-    | "-" UnaryExp      -- neg
+    = break Exp?      -- break
+    | return Exp?     -- return
+    | not Exp         -- not
+    | "~" UnaryExp    -- bitwise_not
+    | "+" UnaryExp    -- pos
+    | "-" UnaryExp    -- neg
     | LvalueExp
 
   ExponentExp
@@ -107,8 +107,8 @@ Ursa {
     | CompareExp
 
   LogicExp
-    = LogicExp "and" BitwiseExp -- and
-    | LogicExp "or" BitwiseExp  -- or
+    = LogicExp and BitwiseExp -- and
+    | LogicExp or BitwiseExp  -- or
     | BitwiseExp
 
   AssignmentExp
@@ -122,9 +122,31 @@ Ursa {
 
   Block = "{" Sequence "}"
 
-  ident = letter alnum*
+  // Convenience rules for parsing keyword tokens.
+  and = "and" ~identifierPart
+  break = "break" ~identifierPart
+  continue = "continue" ~identifierPart
+  else = "else" ~identifierPart
+  fn = "fn" ~identifierPart
+  if = "if" ~identifierPart
+  let = "let" ~identifierPart
+  loop = "loop" ~identifierPart
+  or = "or" ~identifierPart
+  not = "not" ~identifierPart
+  return = "return" ~identifierPart
+  use = "use" ~identifierPart
 
-  bool = "false" | "true"
+  keyword = and | break | continue | else | fn | if | let | loop | or | not | return | use
+
+  reservedWord = bool | null | keyword
+
+  ident = ~reservedWord identifierStart identifierPart*
+  identifierStart = letter | "_"
+  identifierPart = identifierStart | digit
+
+  null = "null" ~identifierPart
+
+  bool = ("false" | "true") ~identifierPart
 
   number
     = digit* "." digit+  -- fract
