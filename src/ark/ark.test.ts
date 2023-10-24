@@ -3,8 +3,9 @@ import test from 'ava'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  BreakException, ArkState, toJs,
+  BreakException, ArkState,
 } from './interp.js'
+import {toJs} from './ffi.js'
 import {compile} from './compiler.js'
 
 import {testArkGroup as testGroup} from '../testutil.js'

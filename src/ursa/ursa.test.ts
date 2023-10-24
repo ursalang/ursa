@@ -4,8 +4,9 @@ import {compile} from './compiler.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  BreakException, toJs, ArkState,
+  BreakException, ArkState,
 } from '../ark/interp.js'
+import {toJs} from '../ark/ffi.js'
 
 import {testUrsaGroup as testGroup} from '../testutil.js'
 

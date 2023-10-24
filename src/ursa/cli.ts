@@ -7,10 +7,10 @@ import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
 import assert from 'assert'
 import programVersion from '../version.js'
 import {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  debug,
-  List, ValRef, Str, globals, ArkState, serialize, toJs,
+  debug, List, ValRef, Str, globals, ArkState,
 } from '../ark/interp.js'
+import {toJs} from '../ark/ffi.js'
+import {serialize} from '../ark/serialize.js'
 import {compile as arkCompile} from '../ark/compiler.js'
 import {compile as ursaCompile} from './compiler.js'
 

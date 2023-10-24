@@ -3,6 +3,7 @@ import assert from 'assert'
 import {
   CompiledArk, Environment, FreeVars, Namespace,
 } from './compiler.js'
+import {fromJs, toJs} from './ffi.js'
 
 export class Stack<T> {
   public stack: T[][]
@@ -90,7 +91,7 @@ export class Val {
   }
 }
 
-class ConcreteVal<T> extends Val {
+export class ConcreteVal<T> extends Val {
   constructor(public val: T) {
     super()
   }
@@ -442,7 +443,7 @@ export class NativeObj extends Val {
   }
 
   get(prop: string): Val | undefined {
-    return jsToVal((this.obj as any)[prop], this.obj)
+    return fromJs((this.obj as any)[prop], this.obj)
   }
 
   set(prop: string, val: Val) {
@@ -581,38 +582,6 @@ export class Prop extends Val {
   }
 }
 
-function jsToVal(x: any, thisObj?: Object): Val {
-  if (x === null || x === undefined) {
-    return Null()
-  }
-  if (typeof x === 'boolean') {
-    return Bool(x)
-  }
-  if (typeof x === 'number') {
-    return Num(x)
-  }
-  if (typeof x === 'string') {
-    return Str(x)
-  }
-  if (typeof x === 'function') {
-    const fn = thisObj ? x.bind(thisObj) : x
-    return new NativeFn(
-      x.name,
-      (_ark: ArkState, ...args: Val[]) => jsToVal(fn(...args.map(toJs))),
-    )
-  }
-  if (x instanceof Array) {
-    return new ListLiteral(x)
-  }
-  if (x instanceof Map) {
-    return new DictLiteral(x)
-  }
-  if (typeof x === 'object') {
-    return new NativeObj(x)
-  }
-  throw new Error(`cannot convert JavaScript value ${x}`)
-}
-
 export const globals = new Map([
   ['pi', new ValRef(Num(Math.PI))],
   ['e', new ValRef(Num(Math.E))],
@@ -661,85 +630,6 @@ export function link(compiledVal: CompiledArk, env: Namespace): Val {
     }
   }
   return val
-}
-
-export function toJs(val: Val): any {
-  if (val instanceof ConcreteVal) {
-    return val.val
-  } else if (val instanceof Obj) {
-    const obj = {}
-    for (const [k, v] of val.val) {
-      (obj as any)[k] = toJs(v)
-    }
-    return obj
-  } else if (val instanceof Dict) {
-    const jsMap = new Map<any, Val>()
-    for (const [k, v] of val.map) {
-      jsMap.set(toJs(k), toJs(v))
-    }
-    return jsMap
-  } else if (val instanceof List) {
-    return val.list.map(toJs)
-  }
-  return val
-}
-
-export function serialize(val: Val) {
-  function doSerialize(val: Val): any {
-    if (val instanceof SymRef || val instanceof NativeFexpr) {
-      return val.debug.get('name')
-    } else if (val instanceof ConcreteVal) {
-      const rawVal = val.val
-      if (typeof rawVal === 'string') {
-        return ['str', val.val]
-      }
-      return val.val
-    } else if (val instanceof PropRef) {
-      return ['ref', ['prop', doSerialize(val.obj), val.prop]]
-    } else if (val instanceof ValRef) {
-      return ['ref', doSerialize(val.val)]
-    } else if (val instanceof Get) {
-      return ['get', doSerialize(val.val)]
-    } else if (val instanceof Fn) {
-      return ['fn', ['params', ...val.params], doSerialize(val.body)]
-    } else if (val instanceof Fexpr) {
-      return ['fexpr', ['params', ...val.params], doSerialize(val.body)]
-    } else if (val instanceof Obj) {
-      const obj = {}
-      for (const [k, v] of val.val) {
-        (obj as any)[k] = doSerialize(v)
-      }
-      return obj
-    } else if (val instanceof NativeObj) {
-      const obj = {}
-      for (const k in val.obj) {
-        if (Object.hasOwn(val.obj, k)) {
-          (obj as any)[k] = doSerialize((val.obj as any)[k])
-        }
-      }
-      return obj
-    } else if (val instanceof Dict) {
-      const obj: any[] = ['map']
-      for (const [k, v] of val.map) {
-        obj.push([doSerialize(k), doSerialize(v)])
-      }
-      return obj
-    } else if (val instanceof List) {
-      return ['list', ...val.list.map(doSerialize)]
-    } else if (val instanceof Let) {
-      return ['let', ['params', ...val.boundVars], doSerialize(val.body)]
-    } else if (val instanceof Call) {
-      return [doSerialize(val.fn), ...val.args.map(doSerialize)]
-    } else if (val instanceof Ass) {
-      return ['set', doSerialize(val.ref), doSerialize(val.val)]
-    } else if (val instanceof Prop) {
-      return ['prop', val.prop, doSerialize(val.ref)]
-    } else if (val === undefined || val === null) {
-      return Null()
-    }
-    return val.toString()
-  }
-  return JSON.stringify(doSerialize(val))
 }
 
 export function debug(x: any, depth: number | null = 1) {
