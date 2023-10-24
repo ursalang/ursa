@@ -5,25 +5,6 @@ import {
 } from './compiler.js'
 import {fromJs, toJs} from './ffi.js'
 
-export class Stack<T> {
-  public stack: T[][]
-
-  constructor(outerStack: T[][] = [[]]) {
-    assert(outerStack.length > 0)
-    this.stack = outerStack
-  }
-
-  push(items: T[]) {
-    return new (this.constructor as any)(
-      [[...items, ...this.stack[0].slice()], ...this.stack.slice(1)],
-    )
-  }
-
-  pushFrame(frame: T[]) {
-    return new (this.constructor as any)([frame, ...this.stack.slice()])
-  }
-}
-
 export class RuntimeStack {
   // Each stack frame consists of a pair of local vars and captures
   public stack: [Val[], Ref[]][]
