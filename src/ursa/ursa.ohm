@@ -1,9 +1,11 @@
 Ursa {
   Sequence
-    = "let" ident "=" Exp #sc Sequence        -- let
-    | "use" ListOf<ident, #"."> #sc Sequence  -- use
-    | Exp #sc Sequence                        -- seq
-    | /* nothing */                           -- empty
+    = ListOf<Let, and> #sc Sequence         -- let
+    | use ListOf<ident, #"."> #sc Sequence  -- use
+    | Exp #sc Sequence                      -- seq
+    | /* nothing */                         -- empty
+
+  Let = let ident "=" Exp
 
   // A semicolon is "automatically inserted" if a newline or the end of the input stream is
   // reached, or the offending token is "}".

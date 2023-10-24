@@ -14,6 +14,7 @@ import {cliTest} from './testutil.js'
   ['Two double closures', 'test/two-double-closures'],
   ['Test JSON', 'test/json'],
   ['Test mixed lets and exps', 'test/mixed-lets-and-exps'],
+  ['Mutual recursion', 'test/mutual-recursion'],
 ].map(([title, file]) => cliTest('ursa', title, file))
 
 cliTest('ursa', 'Test I/O', 'test/print', 'Hello, world!')

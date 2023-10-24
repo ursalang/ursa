@@ -1,0 +1,15 @@
+let is_even = fn(n) {
+  if n == 0 {
+    true
+  } else {
+    is_odd(n - 1)
+  }
+} and
+let is_odd = fn(n) {
+  if (n == 0) {
+    false
+  } else {
+    is_even(n - 1)
+  }
+}
+[is_even(0), is_even(1), is_odd(5), is_odd(12)]

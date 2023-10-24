@@ -36,6 +36,12 @@ class IndexExp extends AST {
   }
 }
 
+class SingleLet extends AST {
+  constructor(public id: Node, public node: Node) {
+    super()
+  }
+}
+
 class Arguments extends AST {
   constructor(public args: Val[]) {
     super()
@@ -264,14 +270,28 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     }
     return new Call(intrinsics.seq, exps)
   },
-  Sequence_let(_let, ident, _eq, value, _sep, seq) {
-    const innerBinding = this.args.env.push([ident.sourceString])
-    const compiledCall = new Call(intrinsics.seq, [
-      new Ass(ident.symref(innerBinding)[0], value.toAST(innerBinding, false)),
-      seq.toAST(innerBinding, false),
-    ])
-    const compiledLet = new Let([ident.sourceString], compiledCall)
-    return compiledLet
+  Sequence_let(lets, _sep, seq) {
+    const parsedLets = []
+    const letIds: string[] = []
+    for (const l of lets.asIteration().children) {
+      const parsedLet: SingleLet = l.toAST(this.args.env, false)
+      parsedLets.push(parsedLet)
+      if (letIds.includes(parsedLet.id.sourceString)) {
+        throw new Error(`duplicate identifier in let: ${parsedLet.id}`)
+      }
+      letIds.push(parsedLet.id.sourceString)
+    }
+    const innerBinding = this.args.env.push(letIds)
+    const assignments = parsedLets.map(
+      (l) => new Ass(l.id.symref(innerBinding)[0], l.node.toAST(innerBinding, false)),
+    )
+    return new Let(
+      letIds,
+      new Call(intrinsics.seq, [...assignments, seq.toAST(innerBinding, false)]),
+    )
+  },
+  Let(_let, ident, _eq, val) {
+    return new SingleLet(ident, val)
   },
   Sequence_use(_use, pathList, _sep, seq) {
     const path = pathList.asIteration().children
@@ -328,11 +348,16 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
   _iter(...children) {
     return mergeFreeVars(this.args.env, children)
   },
-  Sequence_let(_let, ident, _eq, value, _sep, seq) {
-    const innerBinding = this.args.env.push([ident.sourceString])
+  Sequence_let(lets, _sep, seq) {
+    const letIds = lets.asIteration().children.map((x) => x.children[1].sourceString)
+    const innerBinding = this.args.env.push(letIds)
     const freeVars = new FreeVars().merge(seq.freeVars(innerBinding))
-    freeVars.merge(value.freeVars(innerBinding))
-    freeVars.delete(ident.sourceString)
+    for (const l of lets.asIteration().children) {
+      freeVars.merge(l.children[3].freeVars(innerBinding))
+    }
+    for (const id of letIds) {
+      freeVars.delete(id)
+    }
     return freeVars
   },
   Sequence_use(_use, pathList, _sep, seq) {
