@@ -1,6 +1,6 @@
 import {
   Ass, Call, ConcreteVal, Dict, Fexpr, Fn, Get, Let, List,
-  NativeFexpr, NativeObj, Null, Obj, Prop, PropRef, SymRef, Val, ValRef,
+  NativeFexpr, NativeObj, Null, Obj, Prop, PropRef, SymRef, Undefined, Val, ValRef,
 } from './interp.js'
 
 export function serialize(val: Val) {
@@ -53,8 +53,10 @@ export function serialize(val: Val) {
       return ['set', doSerialize(val.ref), doSerialize(val.val)]
     } else if (val instanceof Prop) {
       return ['prop', val.prop, doSerialize(val.ref)]
-    } else if (val === undefined || val === null) {
-      return Null()
+    } else if (val === Null()) {
+      return null
+    } else if (val === Undefined) {
+      return undefined
     }
     return val.toString()
   }

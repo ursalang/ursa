@@ -104,6 +104,7 @@ class ConcreteInterned {
   }
 }
 
+export const Undefined = new Val()
 export const Null = () => ConcreteInterned.value(null)
 export const Bool = (b: boolean) => ConcreteInterned.value(b)
 export const Num = (n: number) => ConcreteInterned.value(n)
@@ -127,7 +128,7 @@ export class AssException extends Error {}
 
 export function bindArgsToParams(params: string[], args: Val[]): Ref[] {
   const frame: ValRef[] = params.map(
-    (_key, index) => new ValRef(args[index] ?? Null()),
+    (_key, index) => new ValRef(args[index] ?? Undefined),
   )
   if (args.length > params.length) {
     // FIXME: Support '...' as an identifier
@@ -327,7 +328,12 @@ export class Get extends Val {
   }
 
   eval(ark: ArkState): Val {
-    return (this.val.eval(ark) as Ref).get(ark.stack)
+    const ref = (this.val.eval(ark) as Ref)
+    const val = ref.get(ark.stack)
+    if (val === Undefined) {
+      throw new Error(`uninitialized symbol ${this.val.debug.get('name')}`)
+    }
+    return val
   }
 }
 
