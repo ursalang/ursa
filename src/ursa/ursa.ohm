@@ -112,7 +112,7 @@ Ursa {
     | BitwiseExp
 
   AssignmentExp
-    = LvalueExp "=" AssignmentExp -- ass
+    = LvalueExp ":=" AssignmentExp -- ass
     | LogicExp
 
   Exp

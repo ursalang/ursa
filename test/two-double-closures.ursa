@@ -2,10 +2,10 @@ let newAccums = fn() {
   let tot = 0
   [
     fn(x) {
-      tot = tot + x
+      tot := tot + x
     },
     fn(x) {
-      tot = tot + x
+      tot := tot + x
     },
   ]
 }

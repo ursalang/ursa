@@ -3,8 +3,8 @@ let sum = fn(l) {
   let i = 0
   loop {
     if i == l.length { return tot }
-    tot = tot + l[i]
-    i = i + 1
+    tot := tot + l[i]
+    i := i + 1
   }
 }
 sum([10, 30, 50, 5, 5])

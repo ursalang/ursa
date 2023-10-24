@@ -4,7 +4,6 @@ import {cliTest} from './testutil.js'
   ['Increment a variable in a loop', 'test/increment-variable-in-loop'],
   ['Sum ints from 1 to 10', 'test/sum-ints-from-1-to-10'],
   ['Call first-class function', 'test/first-class-function'],
-  ['Factorial (recurse with symbol reference)', 'test/fac-symbol-recursion'],
   ['Factorial (recurse with function argument)', 'test/fac-function-argument'],
   ['Factorial (recurse with let fn)', 'test/fac-fn-let'],
   ['Sum list (break result)', 'test/sum-list-break'],

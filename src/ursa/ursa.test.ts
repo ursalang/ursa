@@ -64,7 +64,7 @@ test('loop and break', (t) => {
 
 testGroup('let', [
   ['let a = 3; a', 3],
-  ['let b = 5; b = 7; b', 7],
+  ['let b = 5; b := 7; b', 7],
 ])
 
 testGroup('fn', [
@@ -75,17 +75,17 @@ testGroup('Lists', [
   ['[1, 2, 3]', [1, 2, 3]],
   ['[1, 2, 3].length', 3],
   ['[1, 2, 3][1]', 2],
-  ['let l = [1, 2, 3]; l[1] = 4; l', [1, 4, 3]],
+  ['let l = [1, 2, 3]; l[1] := 4; l', [1, 4, 3]],
 ])
 
 testGroup('Objects', [
   ['{}', {}],
   ['{a: 1, b: 2, c:3}', {a: 1, b: 2, c: 3}],
-  ['let o = {a: 1, b: 2}; o.b = "abc"; o', {a: 1, b: 'abc'}],
-  ['let o = {a: 1, b: 2}; o.b = "abc"; o.c = 3; o', {a: 1, b: 'abc', c: 3}],
+  ['let o = {a: 1, b: 2}; o.b := "abc"; o', {a: 1, b: 'abc'}],
+  ['let o = {a: 1, b: 2}; o.b := "abc"; o.c := 3; o', {a: 1, b: 'abc', c: 3}],
 ])
 
 testGroup('Maps', [
   ['{"a": 1, "b": 2 + 0, 3: 4}', new Map<any, any>([['a', 1], ['b', 2], [3, 4]])],
-  ['let t = {"a": 1, "b": 2 + 0, 3: 4}; t["b"] = 1; t', new Map<any, any>([['a', 1], ['b', 1], [3, 4]])],
+  ['let t = {"a": 1, "b": 2 + 0, 3: 4}; t["b"] := 1; t', new Map<any, any>([['a', 1], ['b', 1], [3, 4]])],
 ])
