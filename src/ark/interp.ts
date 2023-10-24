@@ -226,7 +226,7 @@ export class ValRef extends Ref {
     return this.val
   }
 
-  set(stack: RuntimeStack, val: Val): Val {
+  set(_stack: RuntimeStack, val: Val): Val {
     this.val = val
     return val
   }
