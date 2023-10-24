@@ -6,7 +6,7 @@ import {cliTest} from './testutil.js'
   ['Call first-class function', 'test/first-class-function'],
   ['Factorial (recurse with symbol reference)', 'test/fac-symbol-recursion'],
   ['Factorial (recurse with function argument)', 'test/fac-function-argument'],
-  ['Factorial (recurse with fn sugar)', 'test/fac-fn-sugar'],
+  ['Factorial (recurse with let fn)', 'test/fac-fn-let'],
   ['Sum list (break result)', 'test/sum-list-break'],
   ['Sum list (return result)', 'test/sum-list-return'],
   ['Double list', 'test/double-list'],
