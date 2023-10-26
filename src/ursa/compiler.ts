@@ -73,12 +73,23 @@ function indexExp(env: Environment, lval: boolean, object: Node, index: Node): A
     : new Call(new Get(new Prop('get', compiledObj)), [compiledIndex])
 }
 
+function makeIfChain(ifs: Call[]): Call {
+  if (ifs.length > 1) {
+    ifs[0].args.push(makeIfChain(ifs.slice(1)))
+  }
+  return ifs[0]
+}
+
 semantics.addOperation<AST>('toAST(env,lval)', {
-  If(_if, e_cond, e_then, _else, e_else) {
-    const args: Val[] = [e_cond.toAST(this.args.env, false), e_then.toAST(this.args.env, false)]
+  Ifs(ifs, _else, e_else) {
+    const compiledIfs = ifs.asIteration().children.map((x) => x.toAST(this.args.env, false))
     if (e_else.children.length > 0) {
-      args.push(e_else.children[0].toAST(this.args.env, false))
+      compiledIfs.push(e_else.children[0].toAST(this.args.env, false))
     }
+    return makeIfChain(compiledIfs)
+  },
+  If(_if, e_cond, e_then) {
+    const args: Val[] = [e_cond.toAST(this.args.env, false), e_then.toAST(this.args.env, false)]
     return new Call(intrinsics.if, args)
   },
   Fn(_fn, _open, params, _maybe_comma, _close, body) {
@@ -95,9 +106,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     return this.args.lval ? compiledProp : new Get(compiledProp)
   },
   Arguments(_open, args, _maybe_comma, _close) {
-    return new Arguments(
-      args.asIteration().children.map((value, _i, _arr) => value.toAST(this.args.env, false)),
-    )
+    return new Arguments(args.asIteration().children.map((x) => x.toAST(this.args.env, false)))
   },
   PropertyExp_property(object, _dot, property) {
     const compiledProp = new Prop(property.sourceString, object.toAST(this.args.env, false))
@@ -202,14 +211,12 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     return seq.toAST(this.args.env, false)
   },
   List(_open, elems, _maybe_comma, _close) {
-    return new ListLiteral(
-      elems.asIteration().children.map((value, _i, _arr) => value.toAST(this.args.env, false)),
-    )
+    return new ListLiteral(elems.asIteration().children.map((x) => x.toAST(this.args.env, false)))
   },
   Object(_open, elems, _maybe_comma, _close) {
     const inits = new Map()
     const parsedElems = elems.asIteration().children.map(
-      (value, _i, _arr) => value.toAST(this.args.env, false),
+      (value) => value.toAST(this.args.env, false),
     )
     for (const elem of parsedElems) {
       inits.set((elem as PropertyValue).key, (elem as PropertyValue).val)
@@ -222,7 +229,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
   Map(_open, elems, _maybe_comma, _close) {
     const inits = new Map<Val, Val>()
     const parsedElems = elems.asIteration().children.map(
-      (value, _i, _arr) => value.toAST(this.args.env, false),
+      (value) => value.toAST(this.args.env, false),
     )
     for (const elem of parsedElems) {
       inits.set((elem as KeyValue).key, (elem as KeyValue).val)

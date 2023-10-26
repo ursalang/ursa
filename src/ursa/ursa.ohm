@@ -58,8 +58,9 @@ Ursa {
     = CallExp
     | PropertyExp
 
-  If
-    = if Exp Block (else Block)?
+  Ifs
+    = NonemptyListOf<If, else> (else Block)?
+  If = if Exp Block
 
   Fn
     = fn "(" ListOf<ident, ","> #maybeCommaParen ")" Block
@@ -118,7 +119,7 @@ Ursa {
     | LogicExp
 
   Exp
-    = If
+    = Ifs
     | Loop
     | AssignmentExp
 
