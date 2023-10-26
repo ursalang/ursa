@@ -1,5 +1,7 @@
 import {cliTest} from './testutil.js'
 
+const test = cliTest.bind(null, 'ursa');
+
 [
   ['Increment a variable in a loop', 'test/increment-variable-in-loop'],
   ['Sum ints from 1 to 10', 'test/sum-ints-from-1-to-10'],
@@ -17,11 +19,19 @@ import {cliTest} from './testutil.js'
   ['Mutual recursion', 'test/mutual-recursion'],
 ].map(([title, file]) => cliTest('ursa', title, file))
 
-cliTest('ursa', 'Test I/O', 'test/print', 'Hello, world!')
+test('Test I/O', 'test/print', 'Hello, world!')
 
-cliTest('ursa', "'fs' module", 'test/fs', 'foo')
+test("'fs' module", 'test/fs', 'foo')
 
 // FIXME: make this work again
-// cliTest('ursa', 'use fs', 'test/use-fs', 'foo')
+// test('use fs', 'test/use-fs', 'foo')
 
-cliTest('ursa', 'Find symbols in input', 'test/syms', 'fs\nwriteSync\nfoo\nis\nstdout', ['./test/fs.ursa'])
+test('Find symbols in input', 'test/syms', 'fs\nwriteSync\nfoo\nis\nstdout', ['./test/fs.ursa'])
+
+// Rosetta code examples
+test('Hello world-Text', 'rosettacode/Hello world-Text', 'hello woods!')
+// Not run, as the program has an unbound variable
+// test('Conditional structures', 'rosettacode/Conditional structures.ursa')
+// Not run, as this program does not terminate
+// test('Integer sequence', 'Integer sequence.ursa'),
+test('Ackermann function', 'rosettacode/Ackermann function', '1\n125\n13')
