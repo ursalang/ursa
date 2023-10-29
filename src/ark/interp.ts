@@ -65,6 +65,8 @@ export class Val {
   //   Val.counter += 1
   // }
 
+  public children: Val[] = []
+
   debug: Map<string, any> = new Map()
 
   eval(_ark: ArkState): Val {
@@ -138,8 +140,9 @@ export function bindArgsToParams(params: string[], args: Val[]): Ref[] {
 }
 
 class FexprClosure extends Val {
-  constructor(public params: string[], public freeVars: Ref[], public body: Val) {
+  constructor(public params: string[], public freeVars: Ref[], body: Val) {
     super()
+    this.children.push(body)
   }
 }
 
@@ -148,8 +151,9 @@ class FnClosure extends FexprClosure {}
 export class Fexpr extends Val {
   boundFreeVars: StackRef[] = []
 
-  constructor(public params: string[], protected freeVars: FreeVars, public body: Val) {
+  constructor(public params: string[], protected freeVars: FreeVars, body: Val) {
     super()
+    this.children.push(body)
     let numStackFreeVars = 0
     for (const [name, symrefs] of this.freeVars) {
       let isStackFreeVar = false
@@ -173,13 +177,13 @@ export class Fexpr extends Val {
   }
 
   eval(ark: ArkState): Val {
-    return new FexprClosure(this.params, ark.captureFreeVars(this), this.body)
+    return new FexprClosure(this.params, ark.captureFreeVars(this), this.children[0])
   }
 }
 
 export class Fn extends Fexpr {
   eval(ark: ArkState): Val {
-    return new FnClosure(this.params, ark.captureFreeVars(this), this.body)
+    return new FnClosure(this.params, ark.captureFreeVars(this), this.children[0])
   }
 }
 
@@ -196,15 +200,16 @@ export class NativeFexpr extends Val {
 export class NativeFn extends NativeFexpr {}
 
 export class Call extends Val {
-  constructor(public fn: Val, public args: Val[]) {
+  constructor(fn: Val, args: Val[]) {
     super()
+    this.children.push(fn, ...args)
   }
 
   eval(ark: ArkState): Val {
-    const fn = this.fn.eval(ark)
-    let args = this.args
+    const fn = this.children[0].eval(ark)
+    let args = this.children.slice(1)
     if (fn instanceof FnClosure) {
-      args = ark.evaluateArgs(...this.args)
+      args = ark.evaluateArgs(...this.children.slice(1))
     }
     if (fn instanceof FexprClosure) {
       let res: Val = Null()
@@ -212,7 +217,7 @@ export class Call extends Val {
         const frame = bindArgsToParams(fn.params, args)
         const oldStack = ark.stack
         ark.stack = ark.stack.pushFrame([frame, fn.freeVars])
-        res = fn.body.eval(ark)
+        res = fn.children[0].eval(ark)
         ark.stack = oldStack
       } catch (e) {
         if (!(e instanceof ReturnException)) {
@@ -237,16 +242,17 @@ export abstract class Ref extends Val {
 }
 
 export class ValRef extends Ref {
-  constructor(public val: Val = Null()) {
+  constructor(val: Val = Null()) {
     super()
+    this.children.push(val)
   }
 
   get(_stack: RuntimeStack): Val {
-    return this.val
+    return this.children[0]
   }
 
   set(_stack: RuntimeStack, val: Val): Val {
-    this.val = val
+    this.children[0] = val
     return val
   }
 }
@@ -306,28 +312,30 @@ export class SymRef extends Ref {
 }
 
 export class Get extends Val {
-  constructor(public val: Val) {
+  constructor(val: Val) {
     super()
+    this.children.push(val)
   }
 
   eval(ark: ArkState): Val {
-    const ref = (this.val.eval(ark) as Ref)
+    const ref = (this.children[0].eval(ark) as Ref)
     const val = ref.get(ark.stack)
     if (val === Undefined) {
-      throw new Error(`uninitialized symbol ${this.val.debug.get('name')}`)
+      throw new Error(`uninitialized symbol ${this.children[0].debug.get('name')}`)
     }
     return val
   }
 }
 
 export class Ass extends Val {
-  constructor(public ref: Val, public val: Val) {
+  constructor(ref: Val, val: Val) {
     super()
+    this.children.push(ref, val)
   }
 
   eval(ark: ArkState): Val {
-    const ref = this.ref.eval(ark)
-    const res = this.val.eval(ark)
+    const ref = this.children[0].eval(ark)
+    const res = this.children[1].eval(ark)
     if (!(ref instanceof Ref)) {
       throw new AssException('assignment to non-Ref')
     }
@@ -383,27 +391,29 @@ export class NativeObj extends Val {
 
 export class Prop extends Val {
   // ref must compute a Ref
-  constructor(public prop: string, public ref: Val) {
+  constructor(public prop: string, ref: Val) {
     super()
+    this.children.push(ref)
   }
 
   eval(ark: ArkState): Val {
-    const obj = this.ref.eval(ark)
+    const obj = this.children[0].eval(ark)
     return new PropRef(obj as Obj, this.prop)
   }
 }
 
 export class PropRef extends Ref {
-  constructor(public obj: Obj, public prop: string) {
+  constructor(obj: Obj, public prop: string) {
     super()
+    this.children.push(obj)
   }
 
   get(_stack: RuntimeStack) {
-    return this.obj.get(this.prop) ?? Null()
+    return (this.children[0] as Obj).get(this.prop) ?? Null()
   }
 
   set(_stack: RuntimeStack, val: Val) {
-    this.obj.set(this.prop, val)
+    (this.children[0] as Obj).set(this.prop, val)
     return val
   }
 }

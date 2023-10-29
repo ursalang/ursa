@@ -14,15 +14,15 @@ export function serialize(val: Val) {
       }
       return val.val
     } else if (val instanceof PropRef) {
-      return ['ref', ['prop', doSerialize(val.obj), val.prop]]
+      return ['ref', ['prop', doSerialize(val.children[0]), val.prop]]
     } else if (val instanceof ValRef) {
-      return ['ref', doSerialize(val.val)]
+      return ['ref', doSerialize(val.children[0])]
     } else if (val instanceof Get) {
-      return ['get', doSerialize(val.val)]
+      return ['get', doSerialize(val.children[0])]
     } else if (val instanceof Fn) {
-      return ['fn', ['params', ...val.params], doSerialize(val.body)]
+      return ['fn', ['params', ...val.params], doSerialize(val.children[0])]
     } else if (val instanceof Fexpr) {
-      return ['fexpr', ['params', ...val.params], doSerialize(val.body)]
+      return ['fexpr', ['params', ...val.params], doSerialize(val.children[0])]
     } else if (val instanceof Obj) {
       const obj = {}
       for (const [k, v] of val.val) {
@@ -48,11 +48,11 @@ export function serialize(val: Val) {
     } else if (val instanceof Let) {
       return ['let', ['params', ...val.boundVars], doSerialize(val.body)]
     } else if (val instanceof Call) {
-      return [doSerialize(val.fn), ...val.args.map(doSerialize)]
+      return [doSerialize(val.children[0]), ...val.children.slice(1).map(doSerialize)]
     } else if (val instanceof Ass) {
-      return ['set', doSerialize(val.ref), doSerialize(val.val)]
+      return ['set', doSerialize(val.children[0]), doSerialize(val.children[1])]
     } else if (val instanceof Prop) {
-      return ['prop', val.prop, doSerialize(val.ref)]
+      return ['prop', val.prop, doSerialize(val.children[0])]
     } else if (val === Null()) {
       return null
     } else if (val === Undefined) {

@@ -75,7 +75,7 @@ function indexExp(env: Environment, lval: boolean, object: Node, index: Node): A
 
 function makeIfChain(ifs: Call[]): Call {
   if (ifs.length > 1) {
-    ifs[0].args.push(makeIfChain(ifs.slice(1)))
+    ifs[0].children.push(makeIfChain(ifs.slice(1)))
   }
   return ifs[0]
 }
@@ -264,8 +264,8 @@ semantics.addOperation<AST>('toAST(env,lval)', {
   Sequence_seq(exp, _sep, seq) {
     const exps = [exp.toAST(this.args.env, false)]
     const compiledSeq = seq.toAST(this.args.env, false)
-    if (compiledSeq instanceof Call && compiledSeq.fn === intrinsics.seq) {
-      exps.push(...compiledSeq.args)
+    if (compiledSeq instanceof Call && compiledSeq.children[0] === intrinsics.seq) {
+      exps.push(...compiledSeq.children.slice(1))
     } else {
       exps.push(compiledSeq)
     }
