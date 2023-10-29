@@ -1,11 +1,11 @@
 import {
   Ass, Call, ConcreteVal, Dict, Fexpr, Fn, Get, Let, List,
-  NativeFexpr, NativeObj, Null, Obj, Prop, PropRef, SymRef, Undefined, Val, ValRef,
+  NativeFexpr, NativeObj, Null, Obj, Prop, PropRef, Ref, Undefined, Val, ValRef,
 } from './interp.js'
 
 export function serialize(val: Val) {
   function doSerialize(val: Val): any {
-    if (val instanceof SymRef || val instanceof NativeFexpr) {
+    if (val instanceof Ref || val instanceof NativeFexpr) {
       return val.debug.get('name')
     } else if (val instanceof ConcreteVal) {
       const rawVal = val.val

@@ -282,7 +282,7 @@ export class CaptureRef extends Ref {
   }
 }
 
-export class SymRef extends Val {
+export class SymRef extends Ref {
   ref: Ref | undefined
 
   constructor(env: Environment, name: string) {
@@ -328,8 +328,8 @@ export class Ass extends Val {
   eval(ark: ArkState): Val {
     const ref = this.ref.eval(ark)
     const res = this.val.eval(ark)
-    if (!(ref instanceof Ref || ref instanceof SymRef)) {
-      throw new AssException('assignment to non-Ref/SymRef')
+    if (!(ref instanceof Ref)) {
+      throw new AssException('assignment to non-Ref')
     }
     ref.set(ark.stack, res)
     return res
