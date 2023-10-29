@@ -282,23 +282,6 @@ export class CaptureRef extends Ref {
   }
 }
 
-export class RefRef {
-  ref: Ref
-
-  constructor(ref: Ref) {
-    this.ref = ref
-  }
-
-  get(stack: RuntimeStack): Val {
-    return this.ref.get(stack)
-  }
-
-  set(stack: RuntimeStack, val: Val) {
-    this.ref.set(stack, val)
-    return val
-  }
-}
-
 export class SymRef extends Val {
   ref: Ref | undefined
 
