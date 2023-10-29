@@ -65,12 +65,23 @@ export class Val {
   //   Val.counter += 1
   // }
 
-  public children: Val[] = []
+  children: Val[] = []
+
+  parentRef: [Val, number] | undefined
 
   debug: Map<string, any> = new Map()
 
   eval(_ark: ArkState): Val {
     return this
+  }
+
+  protected addChild(child: Val) {
+    child.parentRef = [this, this.children.length]
+    this.children.push(child)
+  }
+
+  setSelf(val: Val) {
+    this.parentRef![0].children[this.parentRef![1]] = val
   }
 }
 
@@ -142,7 +153,7 @@ export function bindArgsToParams(params: string[], args: Val[]): Ref[] {
 class FexprClosure extends Val {
   constructor(public params: string[], public freeVars: Ref[], body: Val) {
     super()
-    this.children.push(body)
+    this.addChild(body)
   }
 }
 
@@ -153,24 +164,22 @@ export class Fexpr extends Val {
 
   constructor(public params: string[], protected freeVars: FreeVars, body: Val) {
     super()
-    this.children.push(body)
+    this.addChild(body)
     let numStackFreeVars = 0
-    for (const [name, symrefs] of this.freeVars) {
+    for (const [name, refs] of this.freeVars) {
       let isStackFreeVar = false
-      for (const symref of symrefs) {
-        const loc = symref.ref
-        if (loc === undefined) {
+      for (const ref of refs) {
+        if (ref instanceof SymRef) {
           throw new Error(`undefined symbol ${name}`)
         }
-        if (loc instanceof StackRef) {
-          assert(!(loc instanceof CaptureRef))
-          assert(loc.level > 0)
+        if (ref instanceof StackRef) {
+          assert(ref.level > 0)
           if (!isStackFreeVar) {
             isStackFreeVar = true
-            this.boundFreeVars.push(loc)
+            this.boundFreeVars.push(ref)
             numStackFreeVars += 1
           }
-          symref.ref = new CaptureRef(numStackFreeVars - 1)
+          ref.setSelf(new CaptureRef(numStackFreeVars - 1))
         }
       }
     }
@@ -202,7 +211,10 @@ export class NativeFn extends NativeFexpr {}
 export class Call extends Val {
   constructor(fn: Val, args: Val[]) {
     super()
-    this.children.push(fn, ...args)
+    this.addChild(fn)
+    for (const arg of args) {
+      this.addChild(arg)
+    }
   }
 
   eval(ark: ArkState): Val {
@@ -239,12 +251,16 @@ export abstract class Ref extends Val {
   abstract get(stack: RuntimeStack): Val
 
   abstract set(stack: RuntimeStack, val: Val): Val
+
+  eval(ark: ArkState): Val {
+    return this.get(ark.stack)
+  }
 }
 
 export class ValRef extends Ref {
   constructor(val: Val = Null()) {
     super()
-    this.children.push(val)
+    this.addChild(val)
   }
 
   get(_stack: RuntimeStack): Val {
@@ -288,33 +304,22 @@ export class CaptureRef extends Ref {
   }
 }
 
-export class SymRef extends Ref {
-  ref: Ref | undefined
-
+export class SymRef extends Val {
   constructor(env: Environment, name: string) {
     super()
-    this.ref = env.getIndex(name)
     this.debug.set('name', name)
     this.debug.set('env', JSON.stringify(env))
   }
 
-  get(stack: RuntimeStack): Val {
-    return this.ref!.get(stack)
-  }
-
-  set(stack: RuntimeStack, val: Val) {
-    return this.ref!.set(stack, val)
-  }
-
-  eval(ark: ArkState): Val {
-    return this.get(ark.stack)
+  eval(): never {
+    throw new Error(`undefined symbol ${this.debug.get('name')}`)
   }
 }
 
 export class Get extends Val {
   constructor(val: Val) {
     super()
-    this.children.push(val)
+    this.addChild(val)
   }
 
   eval(ark: ArkState): Val {
@@ -330,7 +335,8 @@ export class Get extends Val {
 export class Ass extends Val {
   constructor(ref: Val, val: Val) {
     super()
-    this.children.push(ref, val)
+    this.addChild(ref)
+    this.addChild(val)
   }
 
   eval(ark: ArkState): Val {
@@ -393,7 +399,7 @@ export class Prop extends Val {
   // ref must compute a Ref
   constructor(public prop: string, ref: Val) {
     super()
-    this.children.push(ref)
+    this.addChild(ref)
   }
 
   eval(ark: ArkState): Val {
@@ -405,7 +411,7 @@ export class Prop extends Val {
 export class PropRef extends Ref {
   constructor(obj: Obj, public prop: string) {
     super()
-    this.children.push(obj)
+    this.addChild(obj)
   }
 
   get(_stack: RuntimeStack) {
@@ -606,7 +612,7 @@ export function link(compiledVal: CompiledArk, env: Namespace): Val {
       throw new Error(`undefined symbol ${name}`)
     }
     for (const symref of symrefs) {
-      symref.ref = new ValRef(env.get(name)!)
+      symref.setSelf(new ValRef(env.get(name)!))
     }
   }
   return val

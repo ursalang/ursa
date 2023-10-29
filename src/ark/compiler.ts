@@ -10,7 +10,7 @@ import {
 
 export type Namespace = Map<string, ValRef>
 
-export class FreeVars extends Map<string, SymRef[]> {
+export class FreeVars extends Map<string, (StackRef | SymRef)[]> {
   merge(moreVars: FreeVars): FreeVars {
     for (const [name, symrefs] of moreVars) {
       if (!this.has(name)) {
@@ -83,8 +83,8 @@ export function symRef(env: Environment, name: string): CompiledArk {
   if (val !== undefined) {
     return [val, new FreeVars()]
   }
-  const symref = new SymRef(env, name)
-  return [symref, new FreeVars([[name, [symref]]])]
+  const ref = env.getIndex(name) ?? new SymRef(env, name)
+  return [ref, new FreeVars([[name, [ref]]])]
 }
 
 export type CompiledArk = [value: Val, freeVars: FreeVars]
