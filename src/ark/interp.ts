@@ -30,7 +30,7 @@ export class ArkState {
 
   captureFreeVars(cl: Fexpr): Ref[] {
     const frame: Ref[] = []
-    for (const [loc] of cl.boundFreeVars) {
+    for (const loc of cl.boundFreeVars) {
       const ref = new ValRef(this.stack.pushFrame([[], []]).stack[loc.level][0][loc.index])
       frame.push(ref)
     }
@@ -146,7 +146,7 @@ class FexprClosure extends Val {
 class FnClosure extends FexprClosure {}
 
 export class Fexpr extends Val {
-  boundFreeVars: [StackRef, SymRef[]][] = []
+  boundFreeVars: StackRef[] = []
 
   constructor(public params: string[], protected freeVars: FreeVars, public body: Val) {
     super()
@@ -163,7 +163,7 @@ export class Fexpr extends Val {
           assert(loc.level > 0)
           if (!isStackFreeVar) {
             isStackFreeVar = true
-            this.boundFreeVars.push([loc, symrefs])
+            this.boundFreeVars.push(loc)
             numStackFreeVars += 1
           }
           symref.ref = new CaptureRef(numStackFreeVars - 1)
