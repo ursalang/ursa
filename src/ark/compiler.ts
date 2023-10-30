@@ -44,7 +44,9 @@ export class Environment {
     for (let i = 0; i < this.stack.length; i += 1) {
       const j = this.stack[i].indexOf(sym)
       if (j !== -1) {
-        return new StackRef(i, j)
+        const ref = new StackRef(i, j)
+        ref.debug.set('name', sym)
+        return ref
       }
     }
     return undefined
