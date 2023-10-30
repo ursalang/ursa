@@ -118,6 +118,7 @@ class ConcreteInterned {
 }
 
 export const Undefined = new Val()
+Undefined.debug.set('name', 'Undefined')
 export const Null = () => ConcreteInterned.value(null)
 export const Bool = (b: boolean) => ConcreteInterned.value(b)
 export const Num = (n: number) => ConcreteInterned.value(n)
