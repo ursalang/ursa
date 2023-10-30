@@ -66,13 +66,13 @@ function compile(exp: string) {
   }
 }
 
-function evaluate(exp: string) {
+function evaluate(ark: ArkState, exp: string) {
   const compiled = compile(exp)
   if (process.env.DEBUG) {
     console.log('Compiled Ark')
     debug(compiled, null)
   }
-  return new ArkState().run(compiled)
+  return ark.run(compiled)
 }
 
 async function repl() {
@@ -83,10 +83,11 @@ async function repl() {
     prompt: '> ',
   })
   rl.prompt()
+  const ark = new ArkState()
   let val
   for await (const line of rl) {
     try {
-      val = toJs(evaluate(line))
+      val = toJs(evaluate(ark, line))
       console.dir(val, {depth: null})
     } catch (error) {
       if (error instanceof Error) {
@@ -149,7 +150,7 @@ async function main() {
       )))
       // Run the program
       if (source !== undefined) {
-        result = evaluate(source)
+        result = evaluate(new ArkState(), source)
       }
       if (source === undefined || args.interactive) {
         result = await repl()

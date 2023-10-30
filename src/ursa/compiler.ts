@@ -62,6 +62,7 @@ function makeFn(env: Environment, params: Node, body: Node): Val {
   const bodyFreeVars = body.freeVars(innerEnv)
   const compiledBody = body.toAST(innerEnv, false)
   paramList.forEach((p) => bodyFreeVars.delete(p))
+  body.boundVars.forEach((b: string) => bodyFreeVars.delete(b))
   return new Fn(paramList, bodyFreeVars, compiledBody)
 }
 
@@ -80,6 +81,7 @@ function makeIfChain(ifs: Call[]): Call {
   return ifs[0]
 }
 
+// FIXME: Match the order of rules here to the grammar
 semantics.addOperation<AST>('toAST(env,lval)', {
   Ifs(ifs, _else, e_else) {
     const compiledIfs = ifs.asIteration().children.map((x) => x.toAST(this.args.env, false))
@@ -131,6 +133,45 @@ semantics.addOperation<AST>('toAST(env,lval)', {
       )
     }
     return new Ass(compiledLvalue, compiledValue)
+  },
+  Exp_let(lets) {
+    const parsedLets = []
+    const letIds: string[] = []
+    for (const l of lets.asIteration().children) {
+      const parsedLet: SingleLet = l.toAST(this.args.env, false)
+      parsedLets.push(parsedLet)
+      if (letIds.includes(parsedLet.id.sourceString)) {
+        throw new Error(`duplicate identifier in let: ${parsedLet.id}`)
+      }
+      letIds.push(parsedLet.id.sourceString)
+    }
+    const innerEnv = this.args.env.push(letIds)
+    const assignments = parsedLets.map(
+      (l) => new Ass(l.id.symref(innerEnv)[0], l.node.toAST(innerEnv, false)),
+    )
+    return assignments.length > 1 ? new Call(intrinsics.seq, assignments) : assignments[0]
+  },
+  Let(_let, ident, _eq, val) {
+    return new SingleLet(ident, val)
+  },
+  Exp_use(_use, pathList) {
+    const path = pathList.asIteration().children
+    const ident = path[path.length - 1]
+    // For path x.y.z, compile `let z = x.use(y.z); …`
+    const innerEnv = this.args.env.push([ident.sourceString])
+    const compiledLet = new Let(
+      [ident.sourceString],
+      new Call(intrinsics.seq, [
+        new Ass(
+          ident.symref(innerEnv)[0],
+          new Call(
+            new Get(new Prop('use', new Get(path[0].symref(innerEnv)[0]))),
+            path.slice(1).map((id) => Str(id.sourceString)),
+          ),
+        ),
+      ]),
+    )
+    return compiledLet
   },
   LogicExp_and(left, _and, right) {
     return new Call(
@@ -263,7 +304,8 @@ semantics.addOperation<AST>('toAST(env,lval)', {
   },
   Sequence_seq(exp, _sep, seq) {
     const exps = [exp.toAST(this.args.env, false)]
-    const compiledSeq = seq.toAST(this.args.env, false)
+    const innerEnv = this.args.env.push(exp.boundVars)
+    const compiledSeq = seq.toAST(innerEnv, false)
     if (compiledSeq instanceof Call && compiledSeq.children[0] === intrinsics.seq) {
       exps.push(...compiledSeq.children.slice(1))
     } else {
@@ -275,50 +317,11 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     if (exps.length === 1) {
       return exps[0]
     }
-    return new Call(intrinsics.seq, exps)
-  },
-  Sequence_let(lets, _sep, seq) {
-    const parsedLets = []
-    const letIds: string[] = []
-    for (const l of lets.asIteration().children) {
-      const parsedLet: SingleLet = l.toAST(this.args.env, false)
-      parsedLets.push(parsedLet)
-      if (letIds.includes(parsedLet.id.sourceString)) {
-        throw new Error(`duplicate identifier in let: ${parsedLet.id}`)
-      }
-      letIds.push(parsedLet.id.sourceString)
+    const compiledSeqBody = new Call(intrinsics.seq, exps)
+    if (exp.boundVars.length > 0) {
+      return new Let(exp.boundVars, compiledSeqBody)
     }
-    const innerBinding = this.args.env.push(letIds)
-    const assignments = parsedLets.map(
-      (l) => new Ass(l.id.symref(innerBinding)[0], l.node.toAST(innerBinding, false)),
-    )
-    return new Let(
-      letIds,
-      new Call(intrinsics.seq, [...assignments, seq.toAST(innerBinding, false)]),
-    )
-  },
-  Let(_let, ident, _eq, val) {
-    return new SingleLet(ident, val)
-  },
-  Sequence_use(_use, pathList, _sep, seq) {
-    const path = pathList.asIteration().children
-    const ident = path[path.length - 1]
-    // For path x.y.z, compile `let z = x.use(y.z); …`
-    const innerEnv = this.args.env.push([ident.sourceString])
-    const compiledLet = new Let(
-      [ident.sourceString],
-      new Call(intrinsics.seq, [
-        new Ass(
-          ident.symref(innerEnv)[0],
-          new Call(
-            new Get(new Prop('use', new Get(path[0].symref(innerEnv)[0]))),
-            path.slice(1).map((id) => Str(id.sourceString)),
-          ),
-        ),
-        seq.toAST(innerEnv, false),
-      ]),
-    )
-    return compiledLet
+    return compiledSeqBody
   },
   Sequence_empty() {
     return Null()
@@ -339,6 +342,30 @@ semantics.addOperation<AST>('toAST(env,lval)', {
   },
 })
 
+function mergeBoundVars(children: Node[]): string[] {
+  const boundVars: string[] = []
+  children.forEach((child) => boundVars.push(...child.boundVars))
+  return boundVars
+}
+
+semantics.addAttribute<String[]>('boundVars', {
+  _terminal() {
+    return []
+  },
+  _nonterminal(...children) {
+    return mergeBoundVars(children)
+  },
+  _iter(...children) {
+    return mergeBoundVars(children)
+  },
+  Let(_let, ident, _eq, _val) {
+    return [ident.sourceString]
+  },
+  Fn(_fn, _open, _params, _maybe_comma, _close, _body) {
+    return []
+  },
+})
+
 function mergeFreeVars(env: Environment, children: Node[]): FreeVars {
   const freeVars = new FreeVars()
   children.forEach((child) => freeVars.merge(child.freeVars(env)))
@@ -355,10 +382,10 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
   _iter(...children) {
     return mergeFreeVars(this.args.env, children)
   },
-  Sequence_let(lets, _sep, seq) {
+  Exp_let(lets) {
     const letIds = lets.asIteration().children.map((x) => x.children[1].sourceString)
     const innerBinding = this.args.env.push(letIds)
-    const freeVars = new FreeVars().merge(seq.freeVars(innerBinding))
+    const freeVars = new FreeVars()
     for (const l of lets.asIteration().children) {
       freeVars.merge(l.children[3].freeVars(innerBinding))
     }
@@ -367,21 +394,21 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
     }
     return freeVars
   },
-  Sequence_use(_use, pathList, _sep, seq) {
+  Exp_use(_use, pathList) {
     const path = pathList.asIteration().children
     const ident = path[path.length - 1]
     const innerEnv = this.args.env.push([ident.sourceString])
     const freeVars = new FreeVars()
-      .merge(seq.freeVars(innerEnv))
-      .merge(path[0].symref(this.args.env)[1])
+      .merge(path[0].symref(innerEnv)[1])
     freeVars.delete(ident.sourceString)
     return freeVars
   },
   Fn(_fn, _open, params, _maybe_comma, _close, body) {
     const paramStrings = listNodeToStringList(params)
-    const innerEnv = this.args.env.pushFrame(paramStrings)
+    const innerEnv = this.args.env.pushFrame([...paramStrings])
     const freeVars = new FreeVars().merge(body.freeVars(innerEnv))
     paramStrings.forEach((p) => freeVars.delete(p))
+    body.boundVars.forEach((b: string) => freeVars.delete(b))
     return freeVars
   },
   PropertyValue(_ident, _colon, value) {
@@ -392,6 +419,12 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
   },
   CallExp_property(propertyExp, _dot, _ident) {
     return propertyExp.freeVars(this.args.env)
+  },
+  Sequence_seq(exp, _sep, seq) {
+    const innerEnv = this.args.env.push(exp.boundVars)
+    const freeVars = new FreeVars().merge(exp.freeVars(this.args.env))
+    const seqFreeVars = seq.freeVars(innerEnv)
+    return freeVars.merge(seqFreeVars)
   },
   ident(_l, _ns) {
     return this.symref(this.args.env)[1]
@@ -415,5 +448,13 @@ export function compile(expr: string, env: Environment = new Environment()): Com
     throw new Error(matchResult.message)
   }
   const ast = semantics(matchResult)
-  return [ast.toAST(env, false), ast.freeVars(env)]
+  let compiledExp = ast.toAST(env, false)
+  const freeVars = ast.freeVars(env)
+  if (ast.boundVars.length > 0) {
+    compiledExp = new Let(ast.boundVars, compiledExp)
+    for (const id of ast.boundVars) {
+      freeVars.delete(id)
+    }
+  }
+  return [compiledExp, freeVars]
 }

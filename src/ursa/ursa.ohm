@@ -1,11 +1,7 @@
 Ursa {
   Sequence
-    = ListOf<Let, and> #sc Sequence         -- let
-    | use ListOf<ident, #"."> #sc Sequence  -- use
-    | Exp #sc Sequence                      -- seq
+    = Exp #sc Sequence                      -- seq
     | /* nothing */                         -- empty
-
-  Let = let ident "=" Exp
 
   // A semicolon is "automatically inserted" if a newline or the end of the input stream is
   // reached, or the offending token is "}".
@@ -118,10 +114,15 @@ Ursa {
     = LvalueExp ":=" AssignmentExp -- ass
     | LogicExp
 
+  // FIXME: Make each clause its own rule
   Exp
     = Ifs
     | Loop
     | AssignmentExp
+    | NonemptyListOf<Let, and>              -- let
+    | use ListOf<ident, #".">               -- use
+
+  Let = let ident "=" Exp
 
   Block = "{" Sequence "}"
 
