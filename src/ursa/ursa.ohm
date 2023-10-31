@@ -47,7 +47,6 @@ Ursa {
     | CallExp "." ident     -- property
     | CallExp Arguments     -- call
     | PropertyExp Arguments -- property_call
-
   Arguments = "(" ListOf<Exp, ","> #maybeCommaParen ")"
 
   LvalueExp
@@ -82,19 +81,19 @@ Ursa {
     | ProductExp "%" ExponentExp  -- mod
     | ExponentExp
 
-  ArithmeticExp
-    = ArithmeticExp "+" ProductExp  -- plus
-    | ArithmeticExp "-" ProductExp  -- minus
+  SumExp
+    = SumExp "+" ProductExp  -- plus
+    | SumExp "-" ProductExp  -- minus
     | ProductExp
 
   CompareExp
-    = CompareExp "==" ArithmeticExp -- eq
-    | CompareExp "!=" ArithmeticExp -- neq
-    | CompareExp "<"  ArithmeticExp -- lt
-    | CompareExp "<=" ArithmeticExp -- leq
-    | CompareExp ">"  ArithmeticExp -- gt
-    | CompareExp ">=" ArithmeticExp -- geq
-    | ArithmeticExp
+    = CompareExp "==" SumExp -- eq
+    | CompareExp "!=" SumExp -- neq
+    | CompareExp "<"  SumExp -- lt
+    | CompareExp "<=" SumExp -- leq
+    | CompareExp ">"  SumExp -- gt
+    | CompareExp ">=" SumExp -- geq
+    | SumExp
 
   BitwiseExp
     = BitwiseExp "&" CompareExp   -- and

@@ -81,227 +81,7 @@ function makeIfChain(ifs: Call[]): Call {
   return ifs[0]
 }
 
-// FIXME: Match the order of rules here to the grammar
 semantics.addOperation<AST>('toAST(env,lval)', {
-  Ifs(ifs, _else, e_else) {
-    const compiledIfs = ifs.asIteration().children.map((x) => x.toAST(this.args.env, false))
-    if (e_else.children.length > 0) {
-      compiledIfs.push(e_else.children[0].toAST(this.args.env, false))
-    }
-    return makeIfChain(compiledIfs)
-  },
-  If(_if, e_cond, e_then) {
-    const args: Val[] = [e_cond.toAST(this.args.env, false), e_then.toAST(this.args.env, false)]
-    return new Call(intrinsics.if, args)
-  },
-  Fn(_fn, _open, params, _maybe_comma, _close, body) {
-    return makeFn(this.args.env, params, body)
-  },
-  CallExp_call(exp, args) {
-    return new Call(exp.toAST(this.args.env, false), args.toAST(this.args.env, false).args)
-  },
-  CallExp_property_call(exp, args) {
-    return new Call(exp.toAST(this.args.env, false), args.toAST(this.args.env, false).args)
-  },
-  CallExp_property(exp, _dot, ident) {
-    const compiledProp = new Prop(ident.sourceString, exp.toAST(this.args.env, false))
-    return this.args.lval ? compiledProp : new Get(compiledProp)
-  },
-  Arguments(_open, args, _maybe_comma, _close) {
-    return new Arguments(args.asIteration().children.map((x) => x.toAST(this.args.env, false)))
-  },
-  PropertyExp_property(object, _dot, property) {
-    const compiledProp = new Prop(property.sourceString, object.toAST(this.args.env, false))
-    return this.args.lval ? compiledProp : new Get(compiledProp)
-  },
-  PropertyExp_index(object, _open, index, _close) {
-    return indexExp(this.args.env, this.args.lval, object, index)
-  },
-  CallExp_index(object, _open, index, _close) {
-    return indexExp(this.args.env, this.args.lval, object, index)
-  },
-  Loop(_loop, e_body) {
-    return new Call(intrinsics.loop, [e_body.toAST(this.args.env, false)])
-  },
-  AssignmentExp_ass(lvalue, _eq, value) {
-    const compiledLvalue = lvalue.toAST(this.args.env, true)
-    const compiledValue = value.toAST(this.args.env, false)
-    if (compiledLvalue instanceof IndexExp) {
-      return new Call(
-        new Get(new Prop('set', compiledLvalue.obj)),
-        [compiledLvalue.index, compiledValue],
-      )
-    }
-    return new Ass(compiledLvalue, compiledValue)
-  },
-  Exp_let(lets) {
-    const parsedLets = []
-    const letIds: string[] = []
-    for (const l of lets.asIteration().children) {
-      const parsedLet: SingleLet = l.toAST(this.args.env, false)
-      parsedLets.push(parsedLet)
-      if (letIds.includes(parsedLet.id.sourceString)) {
-        throw new Error(`duplicate identifier in let: ${parsedLet.id}`)
-      }
-      letIds.push(parsedLet.id.sourceString)
-    }
-    const innerEnv = this.args.env.push(letIds)
-    const assignments = parsedLets.map(
-      (l) => new Ass(l.id.symref(innerEnv)[0], l.node.toAST(innerEnv, false)),
-    )
-    return assignments.length > 1 ? new Call(intrinsics.seq, assignments) : assignments[0]
-  },
-  Let(_let, ident, _eq, val) {
-    return new SingleLet(ident, val)
-  },
-  Exp_use(_use, pathList) {
-    const path = pathList.asIteration().children
-    const ident = path[path.length - 1]
-    // For path x.y.z, compile `let z = x.use(y.z); …`
-    const innerEnv = this.args.env.push([ident.sourceString])
-    const compiledLet = new Let(
-      [ident.sourceString],
-      new Call(intrinsics.seq, [
-        new Ass(
-          ident.symref(innerEnv)[0],
-          new Call(
-            new Get(new Prop('use', new Get(path[0].symref(innerEnv)[0]))),
-            path.slice(1).map((id) => Str(id.sourceString)),
-          ),
-        ),
-      ]),
-    )
-    return compiledLet
-  },
-  LogicExp_and(left, _and, right) {
-    return new Call(
-      intrinsics.and,
-      [left.toAST(this.args.env, false), right.toAST(this.args.env, false)],
-    )
-  },
-  LogicExp_or(left, _or, right) {
-    return new Call(
-      intrinsics.or,
-      [left.toAST(this.args.env, false), right.toAST(this.args.env, false)],
-    )
-  },
-  UnaryExp_not(_not, exp) {
-    return new Call(intrinsics.not, [exp.toAST(this.args.env, false)])
-  },
-  UnaryExp_bitwise_not(_not, exp) {
-    return new Call(intrinsics['~'], [exp.toAST(this.args.env, false)])
-  },
-  BitwiseExp_and(left, _and, right) {
-    return new Call(intrinsics['&'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
-  },
-  BitwiseExp_or(left, _or, right) {
-    return new Call(intrinsics['|'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
-  },
-  BitwiseExp_xor(left, _xor, right) {
-    return new Call(intrinsics['^'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
-  },
-  BitwiseExp_lshift(left, _lshift, right) {
-    return new Call(intrinsics['<<'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
-  },
-  BitwiseExp_arshift(left, _rshift, right) {
-    return new Call(intrinsics['>>'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
-  },
-  BitwiseExp_lrshift(left, _arshift, right) {
-    return new Call(intrinsics['>>>'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
-  },
-  CompareExp_eq(left, _eq, right) {
-    return new Call(intrinsics['='], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
-  },
-  CompareExp_neq(left, _neq, right) {
-    return new Call(intrinsics['!='], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
-  },
-  CompareExp_lt(left, _le, right) {
-    return new Call(intrinsics['<'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
-  },
-  CompareExp_leq(left, _leq, right) {
-    return new Call(intrinsics['<='], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
-  },
-  CompareExp_gt(left, _gt, right) {
-    return new Call(intrinsics['>'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
-  },
-  CompareExp_geq(left, _geq, right) {
-    return new Call(intrinsics['>='], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
-  },
-  ArithmeticExp_plus(left, _plus, right) {
-    return new Call(intrinsics['+'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
-  },
-  ArithmeticExp_minus(left, _minus, right) {
-    return new Call(intrinsics['-'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
-  },
-  ProductExp_times(left, _times, right) {
-    return new Call(intrinsics['*'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
-  },
-  ProductExp_divide(left, _divide, right) {
-    return new Call(intrinsics['/'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
-  },
-  ProductExp_mod(left, _mod, right) {
-    return new Call(intrinsics['%'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
-  },
-  ExponentExp_power(left, _power, right) {
-    return new Call(intrinsics['**'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
-  },
-  PrimaryExp_paren(_open, exp, _close) {
-    return exp.toAST(this.args.env, false)
-  },
-  Block(_open, seq, _close) {
-    return seq.toAST(this.args.env, false)
-  },
-  List(_open, elems, _maybe_comma, _close) {
-    return new ListLiteral(elems.asIteration().children.map((x) => x.toAST(this.args.env, false)))
-  },
-  Object(_open, elems, _maybe_comma, _close) {
-    const inits = new Map()
-    const parsedElems = elems.asIteration().children.map(
-      (value) => value.toAST(this.args.env, false),
-    )
-    for (const elem of parsedElems) {
-      inits.set((elem as PropertyValue).key, (elem as PropertyValue).val)
-    }
-    return new ObjLiteral(inits)
-  },
-  PropertyValue(ident, _colon, value) {
-    return new PropertyValue(ident.sourceString, value.toAST(this.args.env, false))
-  },
-  Map(_open, elems, _maybe_comma, _close) {
-    const inits = new Map<Val, Val>()
-    const parsedElems = elems.asIteration().children.map(
-      (value) => value.toAST(this.args.env, false),
-    )
-    for (const elem of parsedElems) {
-      inits.set((elem as KeyValue).key, (elem as KeyValue).val)
-    }
-    return new DictLiteral(inits)
-  },
-  KeyValue(key, _colon, value) {
-    return new KeyValue(key.toAST(this.args.env, false), value.toAST(this.args.env, false))
-  },
-  UnaryExp_pos(_plus, exp) {
-    return new Call(intrinsics.pos, [exp.toAST(this.args.env, false)])
-  },
-  UnaryExp_neg(_minus, exp) {
-    return new Call(intrinsics.neg, [exp.toAST(this.args.env, false)])
-  },
-  UnaryExp_break(_break, exp) {
-    return new Call(intrinsics.break, [maybeVal(this.args.env, exp)])
-  },
-  UnaryExp_return(_return, exp) {
-    return new Call(intrinsics.return, [maybeVal(this.args.env, exp)])
-  },
-  PrimaryExp_continue(_continue) {
-    return new Call(intrinsics.continue, [])
-  },
-  PrimaryExp_null(_null) {
-    return Null()
-  },
-  PrimaryExp_ident(_sym) {
-    const symref = this.symref(this.args.env)[0]
-    return this.args.lval ? symref : new Get(symref)
-  },
   Sequence_seq(exp, _sep, seq) {
     const exps = [exp.toAST(this.args.env, false)]
     const innerEnv = this.args.env.push(exp.boundVars)
@@ -326,15 +106,259 @@ semantics.addOperation<AST>('toAST(env,lval)', {
   Sequence_empty() {
     return Null()
   },
+
+  PrimaryExp_continue(_continue) {
+    return new Call(intrinsics.continue, [])
+  },
+  PrimaryExp_ident(_sym) {
+    const symref = this.symref(this.args.env)[0]
+    return this.args.lval ? symref : new Get(symref)
+  },
+  PrimaryExp_paren(_open, exp, _close) {
+    return exp.toAST(this.args.env, false)
+  },
+
+  List(_open, elems, _maybe_comma, _close) {
+    return new ListLiteral(elems.asIteration().children.map((x) => x.toAST(this.args.env, false)))
+  },
+
+  Object(_open, elems, _maybe_comma, _close) {
+    const inits = new Map()
+    const parsedElems = elems.asIteration().children.map(
+      (value) => value.toAST(this.args.env, false),
+    )
+    for (const elem of parsedElems) {
+      inits.set((elem as PropertyValue).key, (elem as PropertyValue).val)
+    }
+    return new ObjLiteral(inits)
+  },
+  PropertyValue(ident, _colon, value) {
+    return new PropertyValue(ident.sourceString, value.toAST(this.args.env, false))
+  },
+
+  Map(_open, elems, _maybe_comma, _close) {
+    const inits = new Map<Val, Val>()
+    const parsedElems = elems.asIteration().children.map(
+      (value) => value.toAST(this.args.env, false),
+    )
+    for (const elem of parsedElems) {
+      inits.set((elem as KeyValue).key, (elem as KeyValue).val)
+    }
+    return new DictLiteral(inits)
+  },
+  KeyValue(key, _colon, value) {
+    return new KeyValue(key.toAST(this.args.env, false), value.toAST(this.args.env, false))
+  },
+
+  PropertyExp_property(object, _dot, property) {
+    const compiledProp = new Prop(property.sourceString, object.toAST(this.args.env, false))
+    return this.args.lval ? compiledProp : new Get(compiledProp)
+  },
+  PropertyExp_index(object, _open, index, _close) {
+    return indexExp(this.args.env, this.args.lval, object, index)
+  },
+
+  CallExp_index(object, _open, index, _close) {
+    return indexExp(this.args.env, this.args.lval, object, index)
+  },
+  CallExp_property(exp, _dot, ident) {
+    const compiledProp = new Prop(ident.sourceString, exp.toAST(this.args.env, false))
+    return this.args.lval ? compiledProp : new Get(compiledProp)
+  },
+  CallExp_call(exp, args) {
+    return new Call(exp.toAST(this.args.env, false), args.toAST(this.args.env, false).args)
+  },
+  CallExp_property_call(exp, args) {
+    return new Call(exp.toAST(this.args.env, false), args.toAST(this.args.env, false).args)
+  },
+  Arguments(_open, args, _maybe_comma, _close) {
+    return new Arguments(args.asIteration().children.map((x) => x.toAST(this.args.env, false)))
+  },
+
+  Ifs(ifs, _else, e_else) {
+    const compiledIfs = ifs.asIteration().children.map((x) => x.toAST(this.args.env, false))
+    if (e_else.children.length > 0) {
+      compiledIfs.push(e_else.children[0].toAST(this.args.env, false))
+    }
+    return makeIfChain(compiledIfs)
+  },
+  If(_if, e_cond, e_then) {
+    const args: Val[] = [e_cond.toAST(this.args.env, false), e_then.toAST(this.args.env, false)]
+    return new Call(intrinsics.if, args)
+  },
+
+  Fn(_fn, _open, params, _maybe_comma, _close, body) {
+    return makeFn(this.args.env, params, body)
+  },
+
+  Loop(_loop, e_body) {
+    return new Call(intrinsics.loop, [e_body.toAST(this.args.env, false)])
+  },
+
+  UnaryExp_break(_break, exp) {
+    return new Call(intrinsics.break, [maybeVal(this.args.env, exp)])
+  },
+  UnaryExp_return(_return, exp) {
+    return new Call(intrinsics.return, [maybeVal(this.args.env, exp)])
+  },
+  UnaryExp_not(_not, exp) {
+    return new Call(intrinsics.not, [exp.toAST(this.args.env, false)])
+  },
+  UnaryExp_bitwise_not(_not, exp) {
+    return new Call(intrinsics['~'], [exp.toAST(this.args.env, false)])
+  },
+  UnaryExp_pos(_plus, exp) {
+    return new Call(intrinsics.pos, [exp.toAST(this.args.env, false)])
+  },
+  UnaryExp_neg(_minus, exp) {
+    return new Call(intrinsics.neg, [exp.toAST(this.args.env, false)])
+  },
+
+  ExponentExp_power(left, _power, right) {
+    return new Call(intrinsics['**'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+  },
+
+  ProductExp_times(left, _times, right) {
+    return new Call(intrinsics['*'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+  },
+  ProductExp_divide(left, _divide, right) {
+    return new Call(intrinsics['/'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+  },
+  ProductExp_mod(left, _mod, right) {
+    return new Call(intrinsics['%'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+  },
+
+  SumExp_plus(left, _plus, right) {
+    return new Call(intrinsics['+'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+  },
+  SumExp_minus(left, _minus, right) {
+    return new Call(intrinsics['-'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+  },
+
+  CompareExp_eq(left, _eq, right) {
+    return new Call(intrinsics['='], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+  },
+  CompareExp_neq(left, _neq, right) {
+    return new Call(intrinsics['!='], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+  },
+  CompareExp_lt(left, _le, right) {
+    return new Call(intrinsics['<'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+  },
+  CompareExp_leq(left, _leq, right) {
+    return new Call(intrinsics['<='], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+  },
+  CompareExp_gt(left, _gt, right) {
+    return new Call(intrinsics['>'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+  },
+  CompareExp_geq(left, _geq, right) {
+    return new Call(intrinsics['>='], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+  },
+
+  BitwiseExp_and(left, _and, right) {
+    return new Call(intrinsics['&'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+  },
+  BitwiseExp_or(left, _or, right) {
+    return new Call(intrinsics['|'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+  },
+  BitwiseExp_xor(left, _xor, right) {
+    return new Call(intrinsics['^'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+  },
+  BitwiseExp_lshift(left, _lshift, right) {
+    return new Call(intrinsics['<<'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+  },
+  BitwiseExp_arshift(left, _rshift, right) {
+    return new Call(intrinsics['>>'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+  },
+  BitwiseExp_lrshift(left, _arshift, right) {
+    return new Call(intrinsics['>>>'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+  },
+
+  LogicExp_and(left, _and, right) {
+    return new Call(
+      intrinsics.and,
+      [left.toAST(this.args.env, false), right.toAST(this.args.env, false)],
+    )
+  },
+  LogicExp_or(left, _or, right) {
+    return new Call(
+      intrinsics.or,
+      [left.toAST(this.args.env, false), right.toAST(this.args.env, false)],
+    )
+  },
+
+  AssignmentExp_ass(lvalue, _eq, value) {
+    const compiledLvalue = lvalue.toAST(this.args.env, true)
+    const compiledValue = value.toAST(this.args.env, false)
+    if (compiledLvalue instanceof IndexExp) {
+      return new Call(
+        new Get(new Prop('set', compiledLvalue.obj)),
+        [compiledLvalue.index, compiledValue],
+      )
+    }
+    return new Ass(compiledLvalue, compiledValue)
+  },
+
+  Exp_let(lets) {
+    const parsedLets = []
+    const letIds: string[] = []
+    for (const l of lets.asIteration().children) {
+      const parsedLet: SingleLet = l.toAST(this.args.env, false)
+      parsedLets.push(parsedLet)
+      if (letIds.includes(parsedLet.id.sourceString)) {
+        throw new Error(`duplicate identifier in let: ${parsedLet.id}`)
+      }
+      letIds.push(parsedLet.id.sourceString)
+    }
+    const innerEnv = this.args.env.push(letIds)
+    const assignments = parsedLets.map(
+      (l) => new Ass(l.id.symref(innerEnv)[0], l.node.toAST(innerEnv, false)),
+    )
+    return assignments.length > 1 ? new Call(intrinsics.seq, assignments) : assignments[0]
+  },
+  Let(_let, ident, _eq, val) {
+    return new SingleLet(ident, val)
+  },
+
+  Exp_use(_use, pathList) {
+    const path = pathList.asIteration().children
+    const ident = path[path.length - 1]
+    // For path x.y.z, compile `let z = x.use(y.z); …`
+    const innerEnv = this.args.env.push([ident.sourceString])
+    const compiledLet = new Let(
+      [ident.sourceString],
+      new Call(intrinsics.seq, [
+        new Ass(
+          ident.symref(innerEnv)[0],
+          new Call(
+            new Get(new Prop('use', new Get(path[0].symref(innerEnv)[0]))),
+            path.slice(1).map((id) => Str(id.sourceString)),
+          ),
+        ),
+      ]),
+    )
+    return compiledLet
+  },
+
+  Block(_open, seq, _close) {
+    return seq.toAST(this.args.env, false)
+  },
+
   ident(_l, _ns) {
     return Str(this.sourceString)
   },
+
+  null(_null) {
+    return Null()
+  },
+
   bool(flag) {
     return Bool(flag.sourceString === 'true')
   },
+
   number(_) {
     return Num(parseFloat(this.sourceString))
   },
+
   string(_open, _str, _close) {
     // FIXME: Parse string properly
     // eslint-disable-next-line no-eval
@@ -358,11 +382,13 @@ semantics.addAttribute<String[]>('boundVars', {
   _iter(...children) {
     return mergeBoundVars(children)
   },
-  Let(_let, ident, _eq, _val) {
-    return [ident.sourceString]
-  },
+
   Fn(_fn, _open, _params, _maybe_comma, _close, _body) {
     return []
+  },
+
+  Let(_let, ident, _eq, _val) {
+    return [ident.sourceString]
   },
 })
 
@@ -382,6 +408,35 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
   _iter(...children) {
     return mergeFreeVars(this.args.env, children)
   },
+
+  Sequence_seq(exp, _sep, seq) {
+    const innerEnv = this.args.env.push(exp.boundVars)
+    const freeVars = new FreeVars().merge(exp.freeVars(this.args.env))
+    const seqFreeVars = seq.freeVars(innerEnv)
+    return freeVars.merge(seqFreeVars)
+  },
+
+  PropertyValue(_ident, _colon, value) {
+    return value.freeVars(this.args.env)
+  },
+
+  PropertyExp_property(propertyExp, _dot, _ident) {
+    return propertyExp.freeVars(this.args.env)
+  },
+
+  CallExp_property(propertyExp, _dot, _ident) {
+    return propertyExp.freeVars(this.args.env)
+  },
+
+  Fn(_fn, _open, params, _maybe_comma, _close, body) {
+    const paramStrings = listNodeToStringList(params)
+    const innerEnv = this.args.env.pushFrame([...paramStrings])
+    const freeVars = new FreeVars().merge(body.freeVars(innerEnv))
+    paramStrings.forEach((p) => freeVars.delete(p))
+    body.boundVars.forEach((b: string) => freeVars.delete(b))
+    return freeVars
+  },
+
   Exp_let(lets) {
     const letIds = lets.asIteration().children.map((x) => x.children[1].sourceString)
     const innerBinding = this.args.env.push(letIds)
@@ -403,29 +458,7 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
     freeVars.delete(ident.sourceString)
     return freeVars
   },
-  Fn(_fn, _open, params, _maybe_comma, _close, body) {
-    const paramStrings = listNodeToStringList(params)
-    const innerEnv = this.args.env.pushFrame([...paramStrings])
-    const freeVars = new FreeVars().merge(body.freeVars(innerEnv))
-    paramStrings.forEach((p) => freeVars.delete(p))
-    body.boundVars.forEach((b: string) => freeVars.delete(b))
-    return freeVars
-  },
-  PropertyValue(_ident, _colon, value) {
-    return value.freeVars(this.args.env)
-  },
-  PropertyExp_property(propertyExp, _dot, _ident) {
-    return propertyExp.freeVars(this.args.env)
-  },
-  CallExp_property(propertyExp, _dot, _ident) {
-    return propertyExp.freeVars(this.args.env)
-  },
-  Sequence_seq(exp, _sep, seq) {
-    const innerEnv = this.args.env.push(exp.boundVars)
-    const freeVars = new FreeVars().merge(exp.freeVars(this.args.env))
-    const seqFreeVars = seq.freeVars(innerEnv)
-    return freeVars.merge(seqFreeVars)
-  },
+
   ident(_l, _ns) {
     return this.symref(this.args.env)[1]
   },
