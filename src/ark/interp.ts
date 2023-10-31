@@ -493,9 +493,9 @@ export class Let extends Val {
   }
 
   eval(ark: ArkState): Val {
-    const frame = bindArgsToParams(this.boundVars, [])
+    const lets = bindArgsToParams(this.boundVars, [])
     const oldStack = ark.stack
-    ark.stack = ark.stack.push(frame)
+    ark.stack = ark.stack.push(lets)
     const res = this.body.eval(ark)
     ark.stack = oldStack
     return res
