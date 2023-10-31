@@ -16,7 +16,7 @@ export class RuntimeStack {
 
   push(items: Val[]) {
     return new (this.constructor as any)(
-      [[[...items, ...this.stack[0][0].slice()], this.stack[0][1]], ...this.stack.slice(1)],
+      [[[...this.stack[0][0].slice(), ...items], this.stack[0][1]], ...this.stack.slice(1)],
     )
   }
 

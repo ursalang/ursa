@@ -32,7 +32,7 @@ export class Environment {
 
   push(items: string[]) {
     return new (this.constructor as any)(
-      [[...items, ...this.stack[0].slice()], ...this.stack.slice(1)],
+      [[...this.stack[0].slice(), ...items], ...this.stack.slice(1)],
     )
   }
 
@@ -42,7 +42,7 @@ export class Environment {
 
   getIndex(sym: string): StackRef | undefined {
     for (let i = 0; i < this.stack.length; i += 1) {
-      const j = this.stack[i].indexOf(sym)
+      const j = this.stack[i].lastIndexOf(sym)
       if (j !== -1) {
         const ref = new StackRef(i, j)
         ref.debug.set('name', sym)
