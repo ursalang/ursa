@@ -406,10 +406,9 @@ export class NativeObj extends Val {
 }
 
 export class Prop extends Val {
-  // ref must compute a Ref
-  constructor(public prop: string, ref: Val) {
+  constructor(public prop: string, obj: Val) {
     super()
-    this.addChild(ref)
+    this.addChild(obj)
   }
 
   eval(ark: ArkState): Val {
