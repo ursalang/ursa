@@ -483,13 +483,15 @@ semantics.addOperation<CompiledArk>('symref(env)', {
   },
 })
 
-export function compile(expr: string, env: Environment = new Environment()): CompiledArk {
-  const matchResult = grammar.match(expr)
+export function compile(
+  expr: string,
+  env: Environment = new Environment(),
+  startRule?: string,
+): CompiledArk {
+  const matchResult = grammar.match(expr, startRule)
   if (matchResult.failed()) {
     throw new Error(matchResult.message)
   }
   const ast = semantics(matchResult)
-  const compiledExp = ast.toAST(env, false)
-  const freeVars = ast.freeVars(env)
-  return [compiledExp, freeVars]
+  return [ast.toAST(env, false), ast.freeVars(env), ast.boundVars]
 }

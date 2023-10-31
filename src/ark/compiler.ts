@@ -90,7 +90,8 @@ export function symRef(env: Environment, name: string): CompiledArk {
   return [ref, new FreeVars([[name, [ref]]])]
 }
 
-export type CompiledArk = [value: Val, freeVars: FreeVars]
+// FIXME: Separate out CompiledUrsa, with boundVars.
+export type CompiledArk = [value: Val, freeVars: FreeVars, boundVars?: string[]]
 
 function doCompile(value: any, env: Environment): CompiledArk {
   if (value === null) {
