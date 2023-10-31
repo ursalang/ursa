@@ -62,7 +62,6 @@ function makeFn(env: Environment, params: Node, body: Node): Val {
   const bodyFreeVars = body.freeVars(innerEnv)
   const compiledBody = body.toAST(innerEnv, false)
   paramList.forEach((p) => bodyFreeVars.delete(p))
-  body.boundVars.forEach((b: string) => bodyFreeVars.delete(b))
   return new Fn(paramList, bodyFreeVars, compiledBody)
 }
 
@@ -84,8 +83,12 @@ function makeIfChain(ifs: Call[]): Call {
 semantics.addOperation<AST>('toAST(env,lval)', {
   Sequence_seq(exp, _sep, seq) {
     const exps = [exp.toAST(this.args.env, false)]
-    const innerEnv = this.args.env.push(exp.boundVars)
-    const compiledSeq = seq.toAST(innerEnv, false)
+    let compiledSeq = seq.toAST(this.args.env.push(exp.boundVars), false)
+    const boundVars = exp.boundVars
+    if (compiledSeq instanceof Let) {
+      boundVars.push(...compiledSeq.boundVars)
+      compiledSeq = compiledSeq.body
+    }
     if (compiledSeq instanceof Call && compiledSeq.children[0] === intrinsics.seq) {
       exps.push(...compiledSeq.children.slice(1))
     } else {
@@ -95,8 +98,8 @@ semantics.addOperation<AST>('toAST(env,lval)', {
       exps.pop()
     }
     const compiledSeqBody = exps.length === 1 ? exps[0] : new Call(intrinsics.seq, exps)
-    if (exp.boundVars.length > 0) {
-      return new Let(exp.boundVars, compiledSeqBody)
+    if (boundVars.length > 0) {
+      return new Let(boundVars, compiledSeqBody)
     }
     return compiledSeqBody
   },
@@ -380,6 +383,10 @@ semantics.addAttribute<String[]>('boundVars', {
     return mergeBoundVars(children)
   },
 
+  Sequence_seq(_exp, _sc, _seq) {
+    return []
+  },
+
   Fn(_fn, _open, _params, _maybe_comma, _close, _body) {
     return []
   },
@@ -407,10 +414,15 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
   },
 
   Sequence_seq(exp, _sep, seq) {
-    const innerEnv = this.args.env.push(exp.boundVars)
     const freeVars = new FreeVars().merge(exp.freeVars(this.args.env))
-    const seqFreeVars = seq.freeVars(innerEnv)
-    return freeVars.merge(seqFreeVars)
+    freeVars.merge(seq.freeVars(this.args.env.push(exp.boundVars)))
+    for (const id of exp.boundVars) {
+      freeVars.delete(id)
+    }
+    for (const id of seq.boundVars) {
+      freeVars.delete(id)
+    }
+    return freeVars
   },
 
   PropertyValue(_ident, _colon, value) {
@@ -430,16 +442,15 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
     const innerEnv = this.args.env.pushFrame([...paramStrings])
     const freeVars = new FreeVars().merge(body.freeVars(innerEnv))
     paramStrings.forEach((p) => freeVars.delete(p))
-    body.boundVars.forEach((b: string) => freeVars.delete(b))
     return freeVars
   },
 
   Lets(lets) {
     const letIds = lets.asIteration().children.map((x) => x.children[1].sourceString)
-    const innerBinding = this.args.env.push(letIds)
+    const innerEnv = this.args.env.push(letIds)
     const freeVars = new FreeVars()
     for (const l of lets.asIteration().children) {
-      freeVars.merge(l.children[3].freeVars(innerBinding))
+      freeVars.merge(l.children[3].freeVars(innerEnv))
     }
     for (const id of letIds) {
       freeVars.delete(id)
@@ -480,8 +491,5 @@ export function compile(expr: string, env: Environment = new Environment()): Com
   const ast = semantics(matchResult)
   const compiledExp = ast.toAST(env, false)
   const freeVars = ast.freeVars(env)
-  for (const id of ast.boundVars) {
-    freeVars.delete(id)
-  }
   return [compiledExp, freeVars]
 }
