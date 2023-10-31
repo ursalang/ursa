@@ -478,13 +478,10 @@ export function compile(expr: string, env: Environment = new Environment()): Com
     throw new Error(matchResult.message)
   }
   const ast = semantics(matchResult)
-  let compiledExp = ast.toAST(env, false)
+  const compiledExp = ast.toAST(env, false)
   const freeVars = ast.freeVars(env)
-  if (ast.boundVars.length > 0) {
-    compiledExp = new Let(ast.boundVars, compiledExp)
-    for (const id of ast.boundVars) {
-      freeVars.delete(id)
-    }
+  for (const id of ast.boundVars) {
+    freeVars.delete(id)
   }
   return [compiledExp, freeVars]
 }
