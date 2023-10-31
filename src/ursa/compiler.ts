@@ -94,10 +94,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     while (exps.length > 0 && exps[exps.length - 1] === Null()) {
       exps.pop()
     }
-    if (exps.length === 1) {
-      return exps[0]
-    }
-    const compiledSeqBody = new Call(intrinsics.seq, exps)
+    const compiledSeqBody = exps.length === 1 ? exps[0] : new Call(intrinsics.seq, exps)
     if (exp.boundVars.length > 0) {
       return new Let(exp.boundVars, compiledSeqBody)
     }
