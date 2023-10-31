@@ -113,15 +113,17 @@ Ursa {
     = LvalueExp ":=" AssignmentExp -- ass
     | LogicExp
 
-  // FIXME: Make each clause its own rule
   Exp
     = Ifs
     | Loop
     | AssignmentExp
-    | NonemptyListOf<Let, and>              -- let
-    | use ListOf<ident, #".">               -- use
+    | Lets
+    | Use
 
+  Lets = NonemptyListOf<Let, and>
   Let = let ident "=" Exp
+
+  Use = use ListOf<ident, #".">
 
   Block = "{" Sequence "}"
 

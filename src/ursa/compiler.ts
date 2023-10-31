@@ -298,7 +298,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     return new Ass(compiledLvalue, compiledValue)
   },
 
-  Exp_let(lets) {
+  Lets(lets) {
     const parsedLets = []
     const letIds: string[] = []
     for (const l of lets.asIteration().children) {
@@ -319,7 +319,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     return new SingleLet(ident, val)
   },
 
-  Exp_use(_use, pathList) {
+  Use(_use, pathList) {
     const path = pathList.asIteration().children
     const ident = path[path.length - 1]
     // For path x.y.z, compile `let z = x.use(y.z); …`
@@ -437,7 +437,7 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
     return freeVars
   },
 
-  Exp_let(lets) {
+  Lets(lets) {
     const letIds = lets.asIteration().children.map((x) => x.children[1].sourceString)
     const innerBinding = this.args.env.push(letIds)
     const freeVars = new FreeVars()
@@ -449,7 +449,8 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
     }
     return freeVars
   },
-  Exp_use(_use, pathList) {
+
+  Use(_use, pathList) {
     const path = pathList.asIteration().children
     const ident = path[path.length - 1]
     const innerEnv = this.args.env.push([ident.sourceString])
