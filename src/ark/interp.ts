@@ -67,7 +67,7 @@ export class Val {
 
   children: Val[] = []
 
-  parentRef: [Val, number] | undefined
+  static parentRef: WeakMap<Val, [Val, number]> = new WeakMap()
 
   debug: Map<string, any> = new Map()
 
@@ -76,12 +76,13 @@ export class Val {
   }
 
   protected addChild(child: Val) {
-    child.parentRef = [this, this.children.length]
+    Val.parentRef.set(child, [this, this.children.length])
     this.children.push(child)
   }
 
   setSelf(val: Val) {
-    this.parentRef![0].children[this.parentRef![1]] = val
+    const [parent, index] = Val.parentRef.get(this)!
+    parent.children[index] = val
   }
 }
 
