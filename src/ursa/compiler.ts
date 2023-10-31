@@ -454,8 +454,7 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
     const path = pathList.asIteration().children
     const ident = path[path.length - 1]
     const innerEnv = this.args.env.push([ident.sourceString])
-    const freeVars = new FreeVars()
-      .merge(path[0].symref(innerEnv)[1])
+    const freeVars = new FreeVars().merge(path[0].symref(innerEnv)[1])
     freeVars.delete(ident.sourceString)
     return freeVars
   },
