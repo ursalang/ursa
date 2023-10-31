@@ -46,9 +46,8 @@ export class ArkState {
   }
 
   run(compiledVal: CompiledArk, env: Namespace = globals): Val {
-    const val = link(compiledVal, env)
-    this.stack = new RuntimeStack()
-    return val.eval(this)
+    link(compiledVal, env)
+    return compiledVal[0].eval(this)
   }
 }
 
@@ -615,8 +614,8 @@ if (globalThis.document !== undefined) {
 }
 
 // FIXME: support partial linking.
-export function link(compiledVal: CompiledArk, env: Namespace): Val {
-  const [val, freeVars] = compiledVal
+export function link(compiledVal: CompiledArk, env: Namespace) {
+  const freeVars = compiledVal[1]
   for (const [name, symrefs] of freeVars) {
     if (!env.has(name)) {
       throw new Error(`undefined symbol ${name}`)
@@ -625,7 +624,6 @@ export function link(compiledVal: CompiledArk, env: Namespace): Val {
       symref.setSelf(new ValRef(env.get(name)!))
     }
   }
-  return val
 }
 
 export function debug(x: any, depth: number | null = 1) {
