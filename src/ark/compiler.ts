@@ -46,6 +46,7 @@ export class Environment {
       if (j !== -1) {
         const ref = new StackRef(i, j)
         ref.debug.set('name', sym)
+        ref.debug.set('env', JSON.stringify(this))
         return ref
       }
     }
