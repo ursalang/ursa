@@ -308,7 +308,7 @@ export class CaptureRef extends Ref {
   }
 
   set(stack: RuntimeStack, val: Val) {
-    const ref = stack.stack[0][1][this.index];
+    const ref = stack.stack[0][1][this.index]
     ref.set(stack, val)
     return val
   }
