@@ -58,20 +58,17 @@ interface Args {
 const args: Args = parser.parse_args() as Args
 
 function compile(exp: string) {
-  switch (args.syntax) {
-    case 'json':
-      return arkCompile(exp)
-    default:
-      return ursaCompile(exp)
-  }
-}
-
-function evaluate(ark: ArkState, exp: string) {
-  const compiled = compile(exp)
+  const compiler = args.syntax === 'json' ? arkCompile : ursaCompile
+  const compiled = compiler(exp)
   if (process.env.DEBUG) {
     console.log('Compiled Ark')
     debug(compiled, null)
   }
+  return compiled
+}
+
+function evaluate(ark: ArkState, exp: string) {
+  const compiled = compile(exp)
   return ark.run(compiled)
 }
 
@@ -145,6 +142,8 @@ async function main() {
       result = compile(source)[0]
     } else {
       // Add command-line arguments.
+      // FIXME: add a valRef function which creates a ValRef and adds symbol
+      // info.
       globals.set('argv', new ValRef(new List(
         [Str(prog ?? process.argv[0]), ...args.argument.map((s) => Str(s))],
       )))
