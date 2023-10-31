@@ -156,9 +156,30 @@ class FexprClosure extends Val {
     super()
     this.addChild(body)
   }
+
+  call(ark: ArkState, ...args: Val[]): Val {
+    let res: Val = Null()
+    try {
+      const frame = bindArgsToParams(this.params, args)
+      const oldStack = ark.stack
+      ark.stack = ark.stack.pushFrame([frame, this.freeVars])
+      res = this.children[0].eval(ark)
+      ark.stack = oldStack
+    } catch (e) {
+      if (!(e instanceof ReturnException)) {
+        throw e
+      }
+      res = e.val
+    }
+    return res
+  }
 }
 
-class FnClosure extends FexprClosure {}
+class FnClosure extends FexprClosure {
+  call(ark: ArkState, ...args: Val[]): Val {
+    return super.call(ark, ...ark.evaluateArgs(...args))
+  }
+}
 
 export class Fexpr extends Val {
   boundFreeVars: StackRef[] = []
@@ -205,9 +226,17 @@ export class NativeFexpr extends Val {
     super()
     this.debug.set('name', name)
   }
+
+  call(ark: ArkState, ...args: Val[]) {
+    return this.body(ark, ...args)
+  }
 }
 
-export class NativeFn extends NativeFexpr {}
+export class NativeFn extends NativeFexpr {
+  call(ark: ArkState, ...args: Val[]) {
+    return this.body(ark, ...ark.evaluateArgs(...args))
+  }
+}
 
 export class Call extends Val {
   constructor(fn: Val, args: Val[]) {
@@ -220,31 +249,11 @@ export class Call extends Val {
 
   eval(ark: ArkState): Val {
     const fn = this.children[0].eval(ark)
-    let args = this.children.slice(1)
-    if (fn instanceof FnClosure) {
-      args = ark.evaluateArgs(...this.children.slice(1))
+    if (!(fn instanceof FexprClosure || fn instanceof NativeFexpr)) {
+      throw new Error('invalid Call')
     }
-    if (fn instanceof FexprClosure) {
-      let res: Val = Null()
-      try {
-        const frame = bindArgsToParams(fn.params, args)
-        const oldStack = ark.stack
-        ark.stack = ark.stack.pushFrame([frame, fn.freeVars])
-        res = fn.children[0].eval(ark)
-        ark.stack = oldStack
-      } catch (e) {
-        if (!(e instanceof ReturnException)) {
-          throw e
-        }
-        res = e.val
-      }
-      return res
-    } else if (fn instanceof NativeFn) {
-      return fn.body(ark, ...ark.evaluateArgs(...args))
-    } else if (fn instanceof NativeFexpr) {
-      return fn.body(ark, ...args)
-    }
-    throw new Error('invalid Call')
+    const args = this.children.slice(1)
+    return fn.call(ark, ...args)
   }
 }
 
