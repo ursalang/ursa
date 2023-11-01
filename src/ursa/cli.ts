@@ -140,7 +140,7 @@ async function main() {
     }
     if (args.compile) {
       if (source === undefined) {
-        throw new Error('--compile given, but nothing to compile!')
+        throw new Error('--compile given, but nothing to compile')
       }
       if (jsonFile === undefined) {
         throw new Error('--compile given with no input or output filename')
