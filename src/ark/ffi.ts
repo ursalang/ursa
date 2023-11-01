@@ -18,10 +18,11 @@ export function fromJs(x: any, thisObj?: Object): Val {
   }
   if (typeof x === 'function') {
     const fn = thisObj ? x.bind(thisObj) : x
-    return new NativeFn(
-      x.name,
+    const nativeFn = new NativeFn(
       (_ark: ArkState, ...args: Val[]) => fromJs(fn(...args.map(toJs))),
     )
+    nativeFn.debug.set('name', x.name)
+    return nativeFn
   }
   if (x instanceof Array) {
     return new ListLiteral(x)
