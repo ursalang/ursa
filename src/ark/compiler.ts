@@ -8,17 +8,17 @@ import {
   Fn, Fexpr, Prop, Let, Call,
 } from './interp.js'
 
-export class Namespace extends Map<string, ValRef> {
-  constructor(inits: [string, ValRef][]) {
+export class Namespace extends Map<string, Val> {
+  constructor(inits: [string, Val][]) {
     super(inits)
     for (const [name, valref] of inits) {
       valref.debug.set('name', name)
     }
   }
 
-  set(name: string, ref: ValRef) {
-    ref.debug.set('name', name)
-    super.set(name, ref)
+  set(name: string, val: Val) {
+    val.debug.set('name', name)
+    super.set(name, val)
     return this
   }
 }
@@ -95,7 +95,7 @@ function listToVals(env: Environment, l: any[]): [Val[], FreeVars] {
 }
 
 export function symRef(env: Environment, name: string): CompiledArk {
-  const val = intrinsics[name]
+  const val = intrinsics.get(name)
   if (val !== undefined) {
     return [val, new FreeVars()]
   }
@@ -207,7 +207,7 @@ function doCompile(value: any, env: Environment): CompiledArk {
             return doCompile(value[1], env)
           }
           const [elems, elemsFreeVars] = listToVals(env, value.slice(1))
-          return [new Call(intrinsics.seq, elems), elemsFreeVars]
+          return [new Call(intrinsics.get('seq')!, elems), elemsFreeVars]
         }
         default: {
           const [fn, fnFreeVars] = doCompile(value[0], env)

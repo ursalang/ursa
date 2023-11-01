@@ -89,7 +89,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
       boundVars.push(...compiledSeq.boundVars)
       compiledSeq = compiledSeq.body
     }
-    if (compiledSeq instanceof Call && compiledSeq.children[0] === intrinsics.seq) {
+    if (compiledSeq instanceof Call && compiledSeq.children[0] === intrinsics.get('seq')!) {
       exps.push(...compiledSeq.children.slice(1))
     } else {
       exps.push(compiledSeq)
@@ -97,7 +97,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     while (exps.length > 0 && exps[exps.length - 1] === Null()) {
       exps.pop()
     }
-    const compiledSeqBody = exps.length === 1 ? exps[0] : new Call(intrinsics.seq, exps)
+    const compiledSeqBody = exps.length === 1 ? exps[0] : new Call(intrinsics.get('seq')!, exps)
     if (boundVars.length > 0) {
       return new Let(boundVars, compiledSeqBody)
     }
@@ -108,7 +108,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
   },
 
   PrimaryExp_continue(_continue) {
-    return new Call(intrinsics.continue, [])
+    return new Call(intrinsics.get('continue')!, [])
   },
   PrimaryExp_ident(_sym) {
     const symref = this.symref(this.args.env)[0]
@@ -184,7 +184,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
   },
   If(_if, e_cond, e_then) {
     const args: Val[] = [e_cond.toAST(this.args.env, false), e_then.toAST(this.args.env, false)]
-    return new Call(intrinsics.if, args)
+    return new Call(intrinsics.get('if')!, args)
   },
 
   Fn(_fn, _open, params, _maybe_comma, _close, body) {
@@ -192,96 +192,96 @@ semantics.addOperation<AST>('toAST(env,lval)', {
   },
 
   Loop(_loop, e_body) {
-    return new Call(intrinsics.loop, [e_body.toAST(this.args.env, false)])
+    return new Call(intrinsics.get('loop')!, [e_body.toAST(this.args.env, false)])
   },
 
   UnaryExp_break(_break, exp) {
-    return new Call(intrinsics.break, [maybeVal(this.args.env, exp)])
+    return new Call(intrinsics.get('break')!, [maybeVal(this.args.env, exp)])
   },
   UnaryExp_return(_return, exp) {
-    return new Call(intrinsics.return, [maybeVal(this.args.env, exp)])
+    return new Call(intrinsics.get('return')!, [maybeVal(this.args.env, exp)])
   },
   UnaryExp_not(_not, exp) {
-    return new Call(intrinsics.not, [exp.toAST(this.args.env, false)])
+    return new Call(intrinsics.get('not')!, [exp.toAST(this.args.env, false)])
   },
   UnaryExp_bitwise_not(_not, exp) {
-    return new Call(intrinsics['~'], [exp.toAST(this.args.env, false)])
+    return new Call(intrinsics.get('~')!, [exp.toAST(this.args.env, false)])
   },
   UnaryExp_pos(_plus, exp) {
-    return new Call(intrinsics.pos, [exp.toAST(this.args.env, false)])
+    return new Call(intrinsics.get('pos')!, [exp.toAST(this.args.env, false)])
   },
   UnaryExp_neg(_minus, exp) {
-    return new Call(intrinsics.neg, [exp.toAST(this.args.env, false)])
+    return new Call(intrinsics.get('neg')!, [exp.toAST(this.args.env, false)])
   },
 
   ExponentExp_power(left, _power, right) {
-    return new Call(intrinsics['**'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+    return new Call(intrinsics.get('**')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
 
   ProductExp_times(left, _times, right) {
-    return new Call(intrinsics['*'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+    return new Call(intrinsics.get('*')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
   ProductExp_divide(left, _divide, right) {
-    return new Call(intrinsics['/'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+    return new Call(intrinsics.get('/')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
   ProductExp_mod(left, _mod, right) {
-    return new Call(intrinsics['%'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+    return new Call(intrinsics.get('%')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
 
   SumExp_plus(left, _plus, right) {
-    return new Call(intrinsics['+'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+    return new Call(intrinsics.get('+')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
   SumExp_minus(left, _minus, right) {
-    return new Call(intrinsics['-'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+    return new Call(intrinsics.get('-')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
 
   CompareExp_eq(left, _eq, right) {
-    return new Call(intrinsics['='], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+    return new Call(intrinsics.get('=')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
   CompareExp_neq(left, _neq, right) {
-    return new Call(intrinsics['!='], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+    return new Call(intrinsics.get('!=')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
   CompareExp_lt(left, _le, right) {
-    return new Call(intrinsics['<'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+    return new Call(intrinsics.get('<')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
   CompareExp_leq(left, _leq, right) {
-    return new Call(intrinsics['<='], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+    return new Call(intrinsics.get('<=')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
   CompareExp_gt(left, _gt, right) {
-    return new Call(intrinsics['>'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+    return new Call(intrinsics.get('>')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
   CompareExp_geq(left, _geq, right) {
-    return new Call(intrinsics['>='], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+    return new Call(intrinsics.get('>=')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
 
   BitwiseExp_and(left, _and, right) {
-    return new Call(intrinsics['&'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+    return new Call(intrinsics.get('&')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
   BitwiseExp_or(left, _or, right) {
-    return new Call(intrinsics['|'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+    return new Call(intrinsics.get('|')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
   BitwiseExp_xor(left, _xor, right) {
-    return new Call(intrinsics['^'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+    return new Call(intrinsics.get('^')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
   BitwiseExp_lshift(left, _lshift, right) {
-    return new Call(intrinsics['<<'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+    return new Call(intrinsics.get('<<')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
   BitwiseExp_arshift(left, _rshift, right) {
-    return new Call(intrinsics['>>'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+    return new Call(intrinsics.get('>>')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
   BitwiseExp_lrshift(left, _arshift, right) {
-    return new Call(intrinsics['>>>'], [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
+    return new Call(intrinsics.get('>>>')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)])
   },
 
   LogicExp_and(left, _and, right) {
     return new Call(
-      intrinsics.and,
+      intrinsics.get('and')!,
       [left.toAST(this.args.env, false), right.toAST(this.args.env, false)],
     )
   },
   LogicExp_or(left, _or, right) {
     return new Call(
-      intrinsics.or,
+      intrinsics.get('or')!,
       [left.toAST(this.args.env, false), right.toAST(this.args.env, false)],
     )
   },
@@ -313,7 +313,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     const assignments = parsedLets.map(
       (l) => new Ass(l.id.symref(innerEnv)[0], l.node.toAST(innerEnv, false)),
     )
-    return assignments.length > 1 ? new Call(intrinsics.seq, assignments) : assignments[0]
+    return assignments.length > 1 ? new Call(intrinsics.get('seq')!, assignments) : assignments[0]
   },
   Let(_let, ident, _eq, val) {
     return new SingleLet(ident, val)
@@ -326,7 +326,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     const innerEnv = this.args.env.push([ident.sourceString])
     const compiledLet = new Let(
       [ident.sourceString],
-      new Call(intrinsics.seq, [
+      new Call(intrinsics.get('seq')!, [
         new Ass(
           ident.symref(innerEnv)[0],
           new Call(

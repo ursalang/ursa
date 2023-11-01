@@ -501,40 +501,40 @@ export class Let extends Val {
   }
 }
 
-export const intrinsics: {[key: string]: Val} = {
-  pos: new NativeFn('pos', (_ark: ArkState, val: Val) => Num(+toJs(val))),
-  neg: new NativeFn('neg', (_ark: ArkState, val: Val) => Num(-toJs(val))),
-  not: new NativeFn('not', (_ark: ArkState, val: Val) => Bool(!toJs(val))),
-  '~': new NativeFn('bitwise_not', (_ark: ArkState, val: Val) => Num(~toJs(val))),
-  seq: new NativeFexpr('seq', (ark: ArkState, ...args: Val[]) => {
+export const intrinsics = new Namespace([
+  ['pos', new NativeFn('pos', (_ark: ArkState, val: Val) => Num(+toJs(val)))],
+  ['neg', new NativeFn('neg', (_ark: ArkState, val: Val) => Num(-toJs(val)))],
+  ['not', new NativeFn('not', (_ark: ArkState, val: Val) => Bool(!toJs(val)))],
+  ['~', new NativeFn('bitwise_not', (_ark: ArkState, val: Val) => Num(~toJs(val)))],
+  ['seq', new NativeFexpr('seq', (ark: ArkState, ...args: Val[]) => {
     let res: Val = Null()
     for (const exp of args) {
       res = exp.eval(ark)
     }
     return res
-  }),
-  if: new NativeFexpr('if', (ark: ArkState, cond: Val, e_then: Val, e_else: Val) => {
+  })],
+  ['if', new NativeFexpr('if', (ark: ArkState, cond: Val, e_then: Val, e_else: Val) => {
     const condVal = cond.eval(ark)
     if (toJs(condVal)) {
       return e_then.eval(ark)
     }
     return e_else ? e_else.eval(ark) : Null()
-  }),
-  and: new NativeFexpr('and', (ark: ArkState, left: Val, right: Val) => {
+  })],
+  ['and', new NativeFexpr('and', (ark: ArkState, left: Val, right: Val) => {
     const leftVal = left.eval(ark)
     if (toJs(leftVal)) {
       return right.eval(ark)
     }
     return leftVal
-  }),
-  or: new NativeFexpr('or', (ark: ArkState, left: Val, right: Val) => {
+  })],
+  ['or', new NativeFexpr('or', (ark: ArkState, left: Val, right: Val) => {
     const leftVal = left.eval(ark)
     if (toJs(leftVal)) {
       return leftVal
     }
     return right.eval(ark)
-  }),
-  loop: new NativeFexpr('loop', (ark: ArkState, body: Val) => {
+  })],
+  ['loop', new NativeFexpr('loop', (ark: ArkState, body: Val) => {
     for (; ;) {
       try {
         body.eval(ark)
@@ -547,35 +547,35 @@ export const intrinsics: {[key: string]: Val} = {
         }
       }
     }
-  }),
-  break: new NativeFn('break', (_ark: ArkState, val: Val) => {
+  })],
+  ['break', new NativeFn('break', (_ark: ArkState, val: Val) => {
     throw new BreakException(val)
-  }),
-  continue: new NativeFn('continue', () => {
+  })],
+  ['continue', new NativeFn('continue', () => {
     throw new ContinueException()
-  }),
-  return: new NativeFn('return', (_ark: ArkState, val: Val) => {
+  })],
+  ['return', new NativeFn('return', (_ark: ArkState, val: Val) => {
     throw new ReturnException(val)
-  }),
-  '=': new NativeFn('=', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) === toJs(right))),
-  '!=': new NativeFn('!=', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) !== toJs(right))),
-  '<': new NativeFn('<', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) < toJs(right))),
-  '<=': new NativeFn('<=', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) <= toJs(right))),
-  '>': new NativeFn('>', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) > toJs(right))),
-  '>=': new NativeFn('>=', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) >= toJs(right))),
-  '+': new NativeFn('+', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) + toJs(right))),
-  '-': new NativeFn('-', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) - toJs(right))),
-  '*': new NativeFn('*', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) * toJs(right))),
-  '/': new NativeFn('/', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) / toJs(right))),
-  '%': new NativeFn('%', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) % toJs(right))),
-  '**': new NativeFn('**', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) ** toJs(right))),
-  '&': new NativeFn('&', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) & toJs(right))),
-  '|': new NativeFn('|', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) | toJs(right))),
-  '^': new NativeFn('^', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) ^ toJs(right))),
-  '<<': new NativeFn('<<', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) << toJs(right))),
-  '>>': new NativeFn('>>', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) >> toJs(right))),
-  '>>>': new NativeFn('>>>', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) >>> toJs(right))),
-}
+  })],
+  ['=', new NativeFn('=', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) === toJs(right)))],
+  ['!=', new NativeFn('!=', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) !== toJs(right)))],
+  ['<', new NativeFn('<', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) < toJs(right)))],
+  ['<=', new NativeFn('<=', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) <= toJs(right)))],
+  ['>', new NativeFn('>', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) > toJs(right)))],
+  ['>=', new NativeFn('>=', (_ark: ArkState, left: Val, right: Val) => Bool(toJs(left) >= toJs(right)))],
+  ['+', new NativeFn('+', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) + toJs(right)))],
+  ['-', new NativeFn('-', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) - toJs(right)))],
+  ['*', new NativeFn('*', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) * toJs(right)))],
+  ['/', new NativeFn('/', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) / toJs(right)))],
+  ['%', new NativeFn('%', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) % toJs(right)))],
+  ['**', new NativeFn('**', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) ** toJs(right)))],
+  ['&', new NativeFn('&', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) & toJs(right)))],
+  ['|', new NativeFn('|', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) | toJs(right)))],
+  ['^', new NativeFn('^', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) ^ toJs(right)))],
+  ['<<', new NativeFn('<<', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) << toJs(right)))],
+  ['>>', new NativeFn('>>', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) >> toJs(right)))],
+  ['>>>', new NativeFn('>>>', (_ark: ArkState, left: Val, right: Val) => Num(toJs(left) >>> toJs(right)))],
+])
 
 export const globals = new Map([
   ['pi', new ValRef(Num(Math.PI))],
