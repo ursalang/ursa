@@ -10,7 +10,7 @@ import {
   debug, List, ValRef, Str, globals, ArkState, Undefined,
 } from '../ark/interp.js'
 import {toJs} from '../ark/ffi.js'
-import {serialize} from '../ark/serialize.js'
+import {serializeCompiledArk, serializeVal} from '../ark/serialize.js'
 import {Environment, compile as arkCompile} from '../ark/compiler.js'
 import {compile as ursaCompile} from './compiler.js'
 
@@ -128,6 +128,7 @@ async function main() {
     // Read input
     let source: string | undefined
     let result
+    let json
     if (args.eval !== undefined) {
       prog = '(eval)'
       source = args.eval
@@ -144,8 +145,8 @@ async function main() {
       if (jsonFile === undefined) {
         throw new Error('--compile given with no input or output filename')
       }
-      // FIXME: Handle freevars in compiled output
-      result = compile(source)[0]
+      result = compile(source)
+      json = serializeCompiledArk(result)
     } else {
       // Add command-line arguments.
       globals.set('argv', new ValRef(new List(
@@ -158,9 +159,9 @@ async function main() {
       if (source === undefined || args.interactive) {
         result = await repl()
       }
+      json = serializeVal(result) ?? 'null'
     }
     if (jsonFile !== undefined) {
-      const json = serialize(result) ?? 'null'
       assert(jsonFile)
       fs.writeFileSync(jsonFile, json)
     }
