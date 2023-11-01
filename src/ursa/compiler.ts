@@ -6,13 +6,19 @@ import {
   Call, Let, Fn, Prop, Ass, Get, intrinsics,
 } from '../ark/interp.js'
 import {
-  CompiledArk, symRef, Environment, FreeVars, PartialCompiledArk,
+  CompiledArk, symRef, Environment, FreeVars, PartialCompiledArk, checkParamList, ArkCompilerError,
 } from '../ark/compiler.js'
 // eslint-disable-next-line import/extensions
 import grammar, {UrsaSemantics} from './ursa.ohm-bundle.js'
 
 // Specify precise type so semantics can be precisely type-checked.
 const semantics: UrsaSemantics = grammar.createSemantics()
+
+class UrsaCompilerError extends Error {
+  constructor(node: Node, message: string) {
+    super(`${node.source.getLineAndColumnMessage()}\n${message}`)
+  }
+}
 
 // Base class for parsing the language, extended directly by classes used
 // only during parsing.
@@ -52,17 +58,24 @@ function maybeVal(env: Environment, exp: IterationNode): Val {
   return exp.children.length > 0 ? exp.children[0].toAST(env, false) : Null()
 }
 
-function listNodeToStringList(listNode: Node): string[] {
-  return listNode.asIteration().children.map((x) => x.sourceString)
+function listNodeToParamList(listNode: Node): string[] {
+  try {
+    return checkParamList(listNode.asIteration().children.map((x) => x.sourceString))
+  } catch (e) {
+    if (!(e instanceof ArkCompilerError)) {
+      throw e
+    }
+    throw new UrsaCompilerError(listNode, e.message)
+  }
 }
 
 function makeFn(env: Environment, params: Node, body: Node): Val {
-  const paramList = listNodeToStringList(params)
-  const innerEnv = env.pushFrame(paramList)
+  const paramStrings = listNodeToParamList(params)
+  const innerEnv = env.pushFrame(paramStrings)
   const bodyFreeVars = body.freeVars(innerEnv)
   const compiledBody = body.toAST(innerEnv, false)
-  paramList.forEach((p) => bodyFreeVars.delete(p))
-  return new Fn(paramList, bodyFreeVars, compiledBody)
+  paramStrings.forEach((p) => bodyFreeVars.delete(p))
+  return new Fn(paramStrings, bodyFreeVars, compiledBody)
 }
 
 function indexExp(env: Environment, lval: boolean, object: Node, index: Node): AST {
@@ -305,7 +318,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
       const parsedLet: SingleLet = l.toAST(this.args.env, false)
       parsedLets.push(parsedLet)
       if (letIds.includes(parsedLet.id.sourceString)) {
-        throw new Error(`duplicate identifier in let: ${parsedLet.id}`)
+        throw new UrsaCompilerError(this, `Duplicate identifier in let: ${parsedLet.id.sourceString}`)
       }
       letIds.push(parsedLet.id.sourceString)
     }
@@ -438,7 +451,7 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
   },
 
   Fn(_fn, _open, params, _maybe_comma, _close, body) {
-    const paramStrings = listNodeToStringList(params)
+    const paramStrings = listNodeToParamList(params)
     const innerEnv = this.args.env.pushFrame([...paramStrings])
     const freeVars = new FreeVars().merge(body.freeVars(innerEnv))
     paramStrings.forEach((p) => freeVars.delete(p))

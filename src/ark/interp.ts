@@ -48,11 +48,13 @@ export class ArkState {
   run(compiledVal: CompiledArk, env: Namespace = globals): Val {
     link(compiledVal, env)
     if (compiledVal.freeVars.size !== 0) {
-      throw new Error(`undefined symbols: ${[...compiledVal.freeVars.keys()].join(', ')}`)
+      throw new ArkRuntimeError(`undefined symbols: ${[...compiledVal.freeVars.keys()].join(', ')}`)
     }
     return compiledVal.value.eval(this)
   }
 }
+
+export class ArkRuntimeError extends Error {}
 
 // Base class for compiled code.
 export class Val {
@@ -187,7 +189,7 @@ export class Fexpr extends Val {
       let isStackFreeVar = false
       for (const ref of refs) {
         if (ref instanceof SymRef) {
-          throw new Error(`undefined symbol ${name}`)
+          throw new ArkRuntimeError(`undefined symbol ${name}`)
         }
         if (ref instanceof StackRef) {
           assert(ref.level > 0)
@@ -241,7 +243,7 @@ export class Call extends Val {
   eval(ark: ArkState): Val {
     const fn = this.children[0].eval(ark)
     if (!(fn instanceof FexprClosure || fn instanceof NativeFexpr)) {
-      throw new Error('invalid Call')
+      throw new ArkRuntimeError('invalid Call')
     }
     const args = this.children.slice(1)
     return fn.call(ark, ...args)
@@ -313,7 +315,7 @@ export class SymRef extends Val {
   }
 
   eval(): never {
-    throw new Error(`undefined symbol ${this.debug.get('name')}`)
+    throw new ArkRuntimeError(`undefined symbol ${this.debug.get('name')}`)
   }
 }
 
@@ -327,7 +329,7 @@ export class Get extends Val {
     const ref = (this.children[0].eval(ark) as Ref)
     const val = ref.get(ark.stack)
     if (val === Undefined) {
-      throw new Error(`uninitialized symbol ${this.children[0].debug.get('name')}`)
+      throw new ArkRuntimeError(`uninitialized symbol ${this.children[0].debug.get('name')}`)
     }
     return val
   }
@@ -344,7 +346,7 @@ export class Ass extends Val {
     const ref = this.children[0].eval(ark)
     const res = this.children[1].eval(ark)
     if (!(ref instanceof Ref)) {
-      throw new Error('assignment to non-Ref')
+      throw new ArkRuntimeError('assignment to non-Ref')
     }
     ref.set(ark.stack, res)
     return res

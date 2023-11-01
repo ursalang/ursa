@@ -8,6 +8,8 @@ import {
   Fn, Fexpr, Prop, Let, Call, ConcreteVal,
 } from './interp.js'
 
+export class ArkCompilerError extends Error {}
+
 export class Namespace extends Map<string, Val> {
   constructor(inits: [string, Val][]) {
     super(inits)
@@ -73,20 +75,24 @@ export class Environment {
   }
 }
 
-function paramList(params: any[]): string[] {
+export function checkParamList(params: string[]): string[] {
+  if (new Set(params).size !== params.length) {
+    throw new ArkCompilerError('Duplicate parameters in list')
+  }
+  return params
+}
+
+export function arkParamList(params: any[]): string[] {
   if (params.length === 0 || params[0] !== 'params') {
-    throw new Error(`invalid parameter list ${params}`)
+    throw new ArkCompilerError('Invalid parameter list')
   }
   const paramList = params.slice(1)
   for (const param of paramList) {
     if (typeof param !== 'string') {
-      throw new Error(`bad type in list ${params}`)
+      throw new ArkCompilerError('Bad type in list')
     }
   }
-  if (new Set(paramList).size !== paramList.length) {
-    throw new Error(`duplicate parameters in list ${params}`)
-  }
-  return paramList
+  return checkParamList(paramList)
 }
 
 function listToVals(env: Environment, l: any[]): [Val[], FreeVars] {
@@ -141,23 +147,23 @@ function doCompile(value: any, env: Environment): CompiledArk {
       switch (value[0]) {
         case 'str':
           if (value.length !== 2 || typeof value[1] !== 'string') {
-            throw new Error(`invalid 'str' ${value}`)
+            throw new ArkCompilerError(`invalid 'str' ${value}`)
           }
           return new CompiledArk(Str(value[1]))
         case 'let': {
           if (value.length !== 3) {
-            throw new Error("invalid 'let'")
+            throw new ArkCompilerError("invalid 'let'")
           }
-          const params = paramList(value[1])
+          const params = arkParamList(value[1])
           const compiled = doCompile(value[2], env.push(params))
           params.forEach((p) => compiled.freeVars.delete(p))
           return new CompiledArk(new Let(params, compiled.value), compiled.freeVars)
         }
         case 'fn': {
           if (value.length !== 3) {
-            throw new Error("invalid 'fn'")
+            throw new ArkCompilerError("invalid 'fn'")
           }
-          const params = paramList(value[1])
+          const params = arkParamList(value[1])
           const compiled = doCompile(value[2], env.pushFrame(params))
           params.forEach((p) => compiled.freeVars.delete(p))
           return new CompiledArk(
@@ -167,9 +173,9 @@ function doCompile(value: any, env: Environment): CompiledArk {
         }
         case 'fexpr': {
           if (value.length !== 3) {
-            throw new Error("invalid 'fexpr'")
+            throw new ArkCompilerError("invalid 'fexpr'")
           }
-          const params = paramList(value[1])
+          const params = arkParamList(value[1])
           const compiled = doCompile(value[2], env.pushFrame(params))
           params.map((p) => compiled.freeVars.delete(p))
           return new CompiledArk(
@@ -179,28 +185,28 @@ function doCompile(value: any, env: Environment): CompiledArk {
         }
         case 'prop': {
           if (value.length !== 3) {
-            throw new Error("invalid 'prop'")
+            throw new ArkCompilerError("invalid 'prop'")
           }
           const compiled = doCompile(value[2], env)
           return new CompiledArk(new Prop(value[1], compiled.value), compiled.freeVars)
         }
         case 'ref': {
           if (value.length !== 2) {
-            throw new Error("invalid 'ref'")
+            throw new ArkCompilerError("invalid 'ref'")
           }
           const compiled = doCompile(value[1], env)
           return new CompiledArk(new ValRef(compiled.value), compiled.freeVars)
         }
         case 'get': {
           if (value.length !== 2) {
-            throw new Error("invalid 'get'")
+            throw new ArkCompilerError("invalid 'get'")
           }
           const compiled = doCompile(value[1], env)
           return new CompiledArk(new Get(compiled.value), compiled.freeVars)
         }
         case 'set': {
           if (value.length !== 3) {
-            throw new Error("invalid 'set'")
+            throw new ArkCompilerError("invalid 'set'")
           }
           const compiledRef = doCompile(value[1], env)
           const compiledVal = doCompile(value[2], env)
@@ -252,7 +258,7 @@ function doCompile(value: any, env: Environment): CompiledArk {
     }
     return new CompiledArk(new ObjLiteral(inits), initsFreeVars)
   }
-  throw new Error(`invalid value ${value}`)
+  throw new ArkCompilerError(`invalid value ${value}`)
 }
 
 export function compile(expr: string, env: Environment = new Environment()): CompiledArk {
