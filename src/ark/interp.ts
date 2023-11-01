@@ -56,16 +56,12 @@ export class ArkState {
 
 // Base class for compiled code.
 export class Val {
-  // Uncomment the following for debug.
-  // FIXME: make this a run-time (or build-time?) option.
-  // static counter = 0
+  static nextId = 0
 
-  // uid: number
-
-  // constructor() {
-  //   this.uid = Val.counter
-  //   Val.counter += 1
-  // }
+  constructor() {
+    this.debug.set('uid', Val.nextId)
+    Val.nextId += 1
+  }
 
   children: Val[] = []
 
