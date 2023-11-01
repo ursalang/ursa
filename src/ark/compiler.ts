@@ -5,19 +5,25 @@ import {
   Val, intrinsics,
   Null, Bool, Num, Str, ValRef, StackRef, Ass, Get,
   ListLiteral, ObjLiteral, DictLiteral, SymRef,
-  Fn, Fexpr, Prop, Let, Call,
+  Fn, Fexpr, Prop, Let, Call, ConcreteVal,
 } from './interp.js'
 
 export class Namespace extends Map<string, Val> {
   constructor(inits: [string, Val][]) {
     super(inits)
-    for (const [name, valref] of inits) {
-      valref.debug.set('name', name)
+    for (const [name, val] of inits) {
+      Namespace.setName(name, val)
+    }
+  }
+
+  private static setName(name: string, val: Val) {
+    if (!(val instanceof ConcreteVal)) {
+      val.debug.set('name', name)
     }
   }
 
   set(name: string, val: Val) {
-    val.debug.set('name', name)
+    Namespace.setName(name, val)
     super.set(name, val)
     return this
   }
