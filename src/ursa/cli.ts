@@ -49,7 +49,6 @@ your option) any later version. There is no warranty.`,
 interface Args {
   module: string
   eval: string
-  // FIXME: JSON syntax is not compatible with the REPL.
   syntax: string
   compile: boolean
   output: string | undefined
