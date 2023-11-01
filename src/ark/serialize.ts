@@ -1,4 +1,4 @@
-import {CompiledArk} from './compiler.js'
+import {PartialCompiledArk} from './compiler.js'
 import {
   Ass, Call, ConcreteVal, Dict, Fexpr, Fn, Get, Let, List,
   NativeObj, Null, Obj, Prop, PropRef, Undefined, Val, ValRef,
@@ -66,10 +66,10 @@ export function serializeVal(val: Val) {
   return JSON.stringify(doSerialize(val))
 }
 
-export function serializeCompiledArk(compiled: CompiledArk): string {
+export function serializeCompiledArk(compiled: PartialCompiledArk): string {
   return JSON.stringify([
-    doSerialize(compiled[0]),
-    JSON.stringify(compiled[1]),
-    JSON.stringify(compiled[2]),
+    doSerialize(compiled.value),
+    JSON.stringify(compiled.freeVars),
+    JSON.stringify(compiled.boundVars),
   ])
 }

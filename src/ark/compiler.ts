@@ -93,9 +93,9 @@ function listToVals(env: Environment, l: any[]): [Val[], FreeVars] {
   const vals = []
   const freeVars = new FreeVars()
   for (const v of l) {
-    const [val, fv] = doCompile(v, env)
-    vals.push(val)
-    freeVars.merge(fv)
+    const compiled = doCompile(v, env)
+    vals.push(compiled.value)
+    freeVars.merge(compiled.freeVars)
   }
   return [vals, freeVars]
 }
@@ -103,24 +103,35 @@ function listToVals(env: Environment, l: any[]): [Val[], FreeVars] {
 export function symRef(env: Environment, name: string): CompiledArk {
   const val = intrinsics.get(name)
   if (val !== undefined) {
-    return [val, new FreeVars()]
+    return new CompiledArk(val)
   }
   const ref = env.getIndex(name) ?? new SymRef(env, name)
-  return [ref, new FreeVars([[name, [ref]]])]
+  return new CompiledArk(ref, new FreeVars([[name, [ref]]]))
 }
 
-// FIXME: Separate out CompiledUrsa, with boundVars.
-export type CompiledArk = [value: Val, freeVars: FreeVars, boundVars?: string[]]
+export class CompiledArk {
+  constructor(public value: Val, public freeVars: FreeVars = new FreeVars()) {}
+}
+
+export class PartialCompiledArk extends CompiledArk {
+  constructor(
+    public value: Val,
+    public freeVars: FreeVars = new FreeVars(),
+    public boundVars: string[] = [],
+  ) {
+    super(value, freeVars)
+  }
+}
 
 function doCompile(value: any, env: Environment): CompiledArk {
   if (value === null) {
-    return [Null(), new FreeVars()]
+    return new CompiledArk(Null())
   }
   if (typeof value === 'boolean') {
-    return [Bool(value), new FreeVars()]
+    return new CompiledArk(Bool(value))
   }
   if (typeof value === 'number') {
-    return [Num(value), new FreeVars()]
+    return new CompiledArk(Num(value))
   }
   if (typeof value === 'string') {
     return symRef(env, value)
@@ -132,94 +143,100 @@ function doCompile(value: any, env: Environment): CompiledArk {
           if (value.length !== 2 || typeof value[1] !== 'string') {
             throw new Error(`invalid 'str' ${value}`)
           }
-          return [Str(value[1]), new FreeVars()]
+          return new CompiledArk(Str(value[1]))
         case 'let': {
           if (value.length !== 3) {
             throw new Error("invalid 'let'")
           }
           const params = paramList(value[1])
-          const [body, freeVars] = doCompile(value[2], env.push(params))
-          params.forEach((p) => freeVars.delete(p))
-          return [new Let(params, body), freeVars]
+          const compiled = doCompile(value[2], env.push(params))
+          params.forEach((p) => compiled.freeVars.delete(p))
+          return new CompiledArk(new Let(params, compiled.value), compiled.freeVars)
         }
         case 'fn': {
           if (value.length !== 3) {
             throw new Error("invalid 'fn'")
           }
           const params = paramList(value[1])
-          const [body, freeVars] = doCompile(value[2], env.pushFrame(params))
-          params.forEach((p) => freeVars.delete(p))
-          return [new Fn(params, freeVars, body), freeVars]
+          const compiled = doCompile(value[2], env.pushFrame(params))
+          params.forEach((p) => compiled.freeVars.delete(p))
+          return new CompiledArk(
+            new Fn(params, compiled.freeVars, compiled.value),
+            compiled.freeVars,
+          )
         }
         case 'fexpr': {
           if (value.length !== 3) {
             throw new Error("invalid 'fexpr'")
           }
           const params = paramList(value[1])
-          const [body, freeVars] = doCompile(value[2], env.pushFrame(params))
-          params.map((p) => freeVars.delete(p))
-          return [new Fexpr(params, freeVars, body), freeVars]
+          const compiled = doCompile(value[2], env.pushFrame(params))
+          params.map((p) => compiled.freeVars.delete(p))
+          return new CompiledArk(
+            new Fexpr(params, compiled.freeVars, compiled.value),
+            compiled.freeVars,
+          )
         }
         case 'prop': {
           if (value.length !== 3) {
             throw new Error("invalid 'prop'")
           }
-          const [ref, refFreeVars] = doCompile(value[2], env)
-          const freeVars = new FreeVars().merge(refFreeVars)
-          return [new Prop(value[1], ref), freeVars]
+          const compiled = doCompile(value[2], env)
+          const freeVars = new FreeVars().merge(compiled.freeVars)
+          return new CompiledArk(new Prop(value[1], compiled.value), freeVars)
         }
         case 'ref': {
           if (value.length !== 2) {
             throw new Error("invalid 'ref'")
           }
-          const [val, freeVars] = doCompile(value[1], env)
-          return [new ValRef(val), freeVars]
+          const compiled = doCompile(value[1], env)
+          return new CompiledArk(new ValRef(compiled.value), compiled.freeVars)
         }
         case 'get': {
           if (value.length !== 2) {
             throw new Error("invalid 'get'")
           }
-          const [ref, refFreeVars] = doCompile(value[1], env)
-          return [new Get(ref), refFreeVars]
+          const compiled = doCompile(value[1], env)
+          return new CompiledArk(new Get(compiled.value), compiled.freeVars)
         }
         case 'set': {
           if (value.length !== 3) {
             throw new Error("invalid 'set'")
           }
-          const [ref, refFreeVars] = doCompile(value[1], env)
-          const [val, valFreeVars] = doCompile(value[2], env)
-          const freeVars = new FreeVars().merge(valFreeVars).merge(refFreeVars)
-          return [new Ass(ref, val), freeVars]
+          const compiledRef = doCompile(value[1], env)
+          const compiledVal = doCompile(value[2], env)
+          const freeVars = new FreeVars().merge(compiledVal.freeVars).merge(compiledRef.freeVars)
+          return new CompiledArk(new Ass(compiledRef.value, compiledVal.value), freeVars)
         }
         case 'list': {
           const [elems, elemsFreeVars] = listToVals(env, value.slice(1))
-          return [new ListLiteral(elems), elemsFreeVars]
+          return new CompiledArk(new ListLiteral(elems), elemsFreeVars)
         }
         case 'map': {
           const inits = new Map<Val, Val>()
           const initsFreeVars = new FreeVars()
           for (const pair of value.slice(1)) {
             assert(pair instanceof Array && pair.length === 2)
-            const [key, keyFreeVars] = doCompile(pair[0], env)
-            const [val, valFreeVars] = doCompile(pair[1], env)
-            inits.set(key, val)
-            initsFreeVars.merge(keyFreeVars)
-            initsFreeVars.merge(valFreeVars)
+            const compiledKey = doCompile(pair[0], env)
+            const compiledVal = doCompile(pair[1], env)
+            inits.set(compiledKey.value, compiledVal.value)
+            initsFreeVars.merge(compiledKey.freeVars)
+            initsFreeVars.merge(compiledVal.freeVars)
           }
-          return [new DictLiteral(inits), initsFreeVars]
+          return new CompiledArk(new DictLiteral(inits), initsFreeVars)
         }
         case 'seq': {
           if (value.length === 2) {
             return doCompile(value[1], env)
           }
           const [elems, elemsFreeVars] = listToVals(env, value.slice(1))
-          return [new Call(intrinsics.get('seq')!, elems), elemsFreeVars]
+          return new CompiledArk(new Call(intrinsics.get('seq')!, elems), elemsFreeVars)
         }
         default: {
-          const [fn, fnFreeVars] = doCompile(value[0], env)
+          const compiledFn = doCompile(value[0], env)
           const [args, argsFreeVars] = listToVals(env, value.slice(1))
-          const freeVars = new FreeVars().merge(argsFreeVars).merge(fnFreeVars)
-          return [new Call(fn, args), freeVars]
+          const freeVars = new FreeVars().merge(argsFreeVars).merge(compiledFn.freeVars)
+          return new CompiledArk(new Call(compiledFn.value, args), freeVars)
         }
       }
     }
@@ -229,12 +246,12 @@ function doCompile(value: any, env: Environment): CompiledArk {
     const initsFreeVars = new FreeVars()
     for (const key in value) {
       if (Object.hasOwn(value, key)) {
-        const [val, freeVars] = doCompile(value[key], env)
-        inits.set(key, val)
-        initsFreeVars.merge(freeVars)
+        const compiled = doCompile(value[key], env)
+        inits.set(key, compiled.value)
+        initsFreeVars.merge(compiled.freeVars)
       }
     }
-    return [new ObjLiteral(inits), initsFreeVars]
+    return new CompiledArk(new ObjLiteral(inits), initsFreeVars)
   }
   throw new Error(`invalid value ${value}`)
 }

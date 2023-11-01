@@ -6,7 +6,7 @@ import {
   Call, Let, Fn, Prop, Ass, Get, intrinsics,
 } from '../ark/interp.js'
 import {
-  CompiledArk, symRef, Environment, FreeVars,
+  CompiledArk, symRef, Environment, FreeVars, PartialCompiledArk,
 } from '../ark/compiler.js'
 // eslint-disable-next-line import/extensions
 import grammar, {UrsaSemantics} from './ursa.ohm-bundle.js'
@@ -111,7 +111,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     return new Call(intrinsics.get('continue')!, [])
   },
   PrimaryExp_ident(_sym) {
-    const symref = this.symref(this.args.env)[0]
+    const symref = this.symref(this.args.env).value
     return this.args.lval ? symref : new Get(symref)
   },
   PrimaryExp_paren(_open, exp, _close) {
@@ -311,7 +311,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     }
     const innerEnv = this.args.env.push(letIds)
     const assignments = parsedLets.map(
-      (l) => new Ass(l.id.symref(innerEnv)[0], l.node.toAST(innerEnv, false)),
+      (l) => new Ass(l.id.symref(innerEnv).value, l.node.toAST(innerEnv, false)),
     )
     return assignments.length > 1 ? new Call(intrinsics.get('seq')!, assignments) : assignments[0]
   },
@@ -328,9 +328,9 @@ semantics.addOperation<AST>('toAST(env,lval)', {
       [ident.sourceString],
       new Call(intrinsics.get('seq')!, [
         new Ass(
-          ident.symref(innerEnv)[0],
+          ident.symref(innerEnv).value,
           new Call(
-            new Get(new Prop('use', new Get(path[0].symref(innerEnv)[0]))),
+            new Get(new Prop('use', new Get(path[0].symref(innerEnv).value))),
             path.slice(1).map((id) => Str(id.sourceString)),
           ),
         ),
@@ -462,13 +462,13 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
     const path = pathList.asIteration().children
     const ident = path[path.length - 1]
     const innerEnv = this.args.env.push([ident.sourceString])
-    const freeVars = new FreeVars().merge(path[0].symref(innerEnv)[1])
+    const freeVars = new FreeVars().merge(path[0].symref(innerEnv).freeVars)
     freeVars.delete(ident.sourceString)
     return freeVars
   },
 
   ident(_l, _ns) {
-    return this.symref(this.args.env)[1]
+    return this.symref(this.args.env).freeVars
   },
 })
 
@@ -487,11 +487,11 @@ export function compile(
   expr: string,
   env: Environment = new Environment(),
   startRule?: string,
-): CompiledArk {
+): PartialCompiledArk {
   const matchResult = grammar.match(expr, startRule)
   if (matchResult.failed()) {
     throw new Error(matchResult.message)
   }
   const ast = semantics(matchResult)
-  return [ast.toAST(env, false), ast.freeVars(env), ast.boundVars]
+  return new PartialCompiledArk(ast.toAST(env, false), ast.freeVars(env), ast.boundVars)
 }

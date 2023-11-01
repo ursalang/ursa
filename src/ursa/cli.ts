@@ -11,7 +11,7 @@ import {
 } from '../ark/interp.js'
 import {toJs} from '../ark/ffi.js'
 import {serializeCompiledArk, serializeVal} from '../ark/serialize.js'
-import {Environment, compile as arkCompile} from '../ark/compiler.js'
+import {Environment, PartialCompiledArk, compile as arkCompile} from '../ark/compiler.js'
 import {compile as ursaCompile} from './compiler.js'
 
 if (process.env.DEBUG) {
@@ -83,12 +83,12 @@ async function repl() {
       const compiled = compile(line, env, 'Exp')
       // Filter out already-declared bindings
       for (const id of env.stack[0]) {
-        compiled[1].delete(id)
+        compiled.freeVars.delete(id)
       }
       // Handle new let bindings
-      if (compiled[2] !== undefined && compiled[2].length > 0) {
-        env = env.push(compiled[2])
-        ark.stack = ark.stack.push(Array(compiled[2].length).fill(new ValRef(Undefined)))
+      if (compiled instanceof PartialCompiledArk && compiled.boundVars.length > 0) {
+        env = env.push(compiled.boundVars)
+        ark.stack = ark.stack.push(Array(compiled.boundVars.length).fill(new ValRef(Undefined)))
       }
       val = toJs(ark.run(compiled))
       console.dir(val, {depth: null})
@@ -146,7 +146,7 @@ async function main() {
         throw new Error('--compile given with no input or output filename')
       }
       result = compile(source)
-      json = serializeCompiledArk(result)
+      json = serializeCompiledArk(new PartialCompiledArk(result.value, result.freeVars))
     } else {
       // Add command-line arguments.
       globals.set('argv', new ValRef(new List(

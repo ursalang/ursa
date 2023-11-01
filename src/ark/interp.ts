@@ -47,7 +47,7 @@ export class ArkState {
 
   run(compiledVal: CompiledArk, env: Namespace = globals): Val {
     link(compiledVal, env)
-    return compiledVal[0].eval(this)
+    return compiledVal.value.eval(this)
   }
 }
 
@@ -603,7 +603,7 @@ if (globalThis.document !== undefined) {
 
 // FIXME: support partial linking.
 export function link(compiledVal: CompiledArk, env: Namespace) {
-  const freeVars = compiledVal[1]
+  const freeVars = compiledVal.freeVars
   for (const [name, symrefs] of freeVars) {
     if (!env.has(name)) {
       throw new Error(`undefined symbol ${name}`)
