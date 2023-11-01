@@ -8,7 +8,20 @@ import {
   Fn, Fexpr, Prop, Let, Call,
 } from './interp.js'
 
-export type Namespace = Map<string, ValRef>
+export class Namespace extends Map<string, ValRef> {
+  constructor(inits: [string, ValRef][]) {
+    super(inits)
+    for (const [name, valref] of inits) {
+      valref.debug.set('name', name)
+    }
+  }
+
+  set(name: string, ref: ValRef) {
+    ref.debug.set('name', name)
+    super.set(name, ref)
+    return this
+  }
+}
 
 export class FreeVars extends Map<string, (StackRef | SymRef)[]> {
   merge(moreVars: FreeVars): FreeVars {

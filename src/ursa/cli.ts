@@ -148,8 +148,6 @@ async function main() {
       result = compile(source)[0]
     } else {
       // Add command-line arguments.
-      // FIXME: add a valRef function which creates a ValRef and adds symbol
-      // info.
       globals.set('argv', new ValRef(new List(
         [Str(prog ?? process.argv[0]), ...args.argument.map((s) => Str(s))],
       )))
