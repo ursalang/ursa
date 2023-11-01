@@ -135,10 +135,6 @@ export class ReturnException extends NonLocalReturn {}
 
 export class ContinueException extends NonLocalReturn {}
 
-export class PropertyException extends Error {}
-
-export class AssException extends Error {}
-
 export function bindArgsToParams(params: string[], args: Val[]): Ref[] {
   const frame: ValRef[] = params.map(
     (_key, index) => new ValRef(args[index] ?? Undefined),
@@ -348,7 +344,7 @@ export class Ass extends Val {
     const ref = this.children[0].eval(ark)
     const res = this.children[1].eval(ark)
     if (!(ref instanceof Ref)) {
-      throw new AssException('assignment to non-Ref')
+      throw new Error('assignment to non-Ref')
     }
     ref.set(ark.stack, res)
     return res
