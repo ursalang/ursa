@@ -182,8 +182,7 @@ function doCompile(value: any, env: Environment): CompiledArk {
             throw new Error("invalid 'prop'")
           }
           const compiled = doCompile(value[2], env)
-          const freeVars = new FreeVars().merge(compiled.freeVars)
-          return new CompiledArk(new Prop(value[1], compiled.value), freeVars)
+          return new CompiledArk(new Prop(value[1], compiled.value), compiled.freeVars)
         }
         case 'ref': {
           if (value.length !== 2) {
