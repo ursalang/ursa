@@ -6,7 +6,8 @@ import {
   Call, Let, Fn, Prop, Ass, Get, intrinsics,
 } from '../ark/interp.js'
 import {
-  CompiledArk, symRef, Environment, FreeVars, PartialCompiledArk, checkParamList, ArkCompilerError,
+  CompiledArk, symRef, Environment, FreeVars, PartialCompiledArk, checkParamList,
+  ArkCompilerError,
 } from '../ark/compiler.js'
 // eslint-disable-next-line import/extensions
 import grammar, {UrsaSemantics} from './ursa.ohm-bundle.js'
@@ -356,7 +357,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     return seq.toAST(this.args.env, false)
   },
 
-  ident(_l, _ns) {
+  ident(_ident) {
     return Str(this.sourceString)
   },
 
@@ -429,12 +430,8 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
   Sequence_seq(exp, _sep, seq) {
     const freeVars = new FreeVars().merge(exp.freeVars(this.args.env))
     freeVars.merge(seq.freeVars(this.args.env.push(exp.boundVars)))
-    for (const id of exp.boundVars) {
-      freeVars.delete(id)
-    }
-    for (const id of seq.boundVars) {
-      freeVars.delete(id)
-    }
+    exp.boundVars.forEach((b: string) => freeVars.delete(b))
+    seq.boundVars.forEach((b: string) => freeVars.delete(b))
     return freeVars
   },
 
@@ -480,7 +477,7 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
     return freeVars
   },
 
-  ident(_l, _ns) {
+  ident(_ident) {
     return this.symref(this.args.env).freeVars
   },
 })
@@ -488,9 +485,16 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
 // Ohm attributes can't take arguments, so memoize an operation.
 const symrefs = new Map<Node, CompiledArk>()
 semantics.addOperation<CompiledArk>('symref(env)', {
-  ident(_l, _ns) {
+  ident(_ident) {
     if (!symrefs.has(this)) {
-      symrefs.set(this, symRef(this.args.env, this.sourceString))
+      try {
+        symrefs.set(this, symRef(this.args.env, this.sourceString))
+      } catch (e) {
+        if (!(e instanceof ArkCompilerError)) {
+          throw e
+        }
+        throw new UrsaCompilerError(_ident, e.message)
+      }
     }
     return symrefs.get(this)!
   },
@@ -506,5 +510,8 @@ export function compile(
     throw new Error(matchResult.message)
   }
   const ast = semantics(matchResult)
-  return new PartialCompiledArk(ast.toAST(env, false), ast.freeVars(env), ast.boundVars)
+  const compiled = ast.toAST(env, false)
+  const freeVars = ast.freeVars(env)
+  env.externalSyms.forEach((_val, id) => freeVars.delete(id))
+  return new PartialCompiledArk(compiled, freeVars, ast.boundVars)
 }

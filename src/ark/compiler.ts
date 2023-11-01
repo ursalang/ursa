@@ -5,7 +5,7 @@ import {
   Val, intrinsics,
   Null, Bool, Num, Str, ValRef, StackRef, Ass, Get,
   ListLiteral, ObjLiteral, DictLiteral, SymRef,
-  Fn, Fexpr, Prop, Let, Call, ConcreteVal,
+  Fn, Fexpr, Prop, Let, Call, ConcreteVal, globals,
 } from './interp.js'
 
 export class ArkCompilerError extends Error {}
@@ -31,7 +31,7 @@ export class Namespace extends Map<string, Val> {
   }
 }
 
-export class FreeVars extends Map<string, (StackRef | SymRef)[]> {
+export class FreeVars extends Map<string, (StackRef | SymRef | ValRef)[]> {
   merge(moreVars: FreeVars): FreeVars {
     for (const [name, symrefs] of moreVars) {
       if (!this.has(name)) {
@@ -44,11 +44,8 @@ export class FreeVars extends Map<string, (StackRef | SymRef)[]> {
 }
 
 export class Environment {
-  public stack: string[][]
-
-  constructor(outerStack: string[][] = [[]]) {
-    assert(outerStack.length > 0)
-    this.stack = outerStack
+  constructor(public stack: string[][] = [[]], public externalSyms: Namespace = globals) {
+    assert(stack.length > 0)
   }
 
   push(items: string[]) {
@@ -61,7 +58,7 @@ export class Environment {
     return new (this.constructor as any)([frame, ...this.stack.slice()])
   }
 
-  getIndex(sym: string): StackRef | undefined {
+  getIndex(sym: string): StackRef | ValRef | undefined {
     for (let i = 0; i < this.stack.length; i += 1) {
       const j = this.stack[i].lastIndexOf(sym)
       if (j !== -1) {
@@ -71,7 +68,10 @@ export class Environment {
         return ref
       }
     }
-    return undefined
+    if (this.externalSyms.has(sym)) {
+      return new ValRef(this.externalSyms.get(sym))
+    }
+    throw new ArkCompilerError(`Undefined symbol ${sym}`)
   }
 }
 
@@ -147,12 +147,12 @@ function doCompile(value: any, env: Environment): CompiledArk {
       switch (value[0]) {
         case 'str':
           if (value.length !== 2 || typeof value[1] !== 'string') {
-            throw new ArkCompilerError(`invalid 'str' ${value}`)
+            throw new ArkCompilerError(`Invalid 'str' ${value}`)
           }
           return new CompiledArk(Str(value[1]))
         case 'let': {
           if (value.length !== 3) {
-            throw new ArkCompilerError("invalid 'let'")
+            throw new ArkCompilerError("Invalid 'let'")
           }
           const params = arkParamList(value[1])
           const compiled = doCompile(value[2], env.push(params))
@@ -161,7 +161,7 @@ function doCompile(value: any, env: Environment): CompiledArk {
         }
         case 'fn': {
           if (value.length !== 3) {
-            throw new ArkCompilerError("invalid 'fn'")
+            throw new ArkCompilerError("Invalid 'fn'")
           }
           const params = arkParamList(value[1])
           const compiled = doCompile(value[2], env.pushFrame(params))
@@ -173,7 +173,7 @@ function doCompile(value: any, env: Environment): CompiledArk {
         }
         case 'fexpr': {
           if (value.length !== 3) {
-            throw new ArkCompilerError("invalid 'fexpr'")
+            throw new ArkCompilerError("Invalid 'fexpr'")
           }
           const params = arkParamList(value[1])
           const compiled = doCompile(value[2], env.pushFrame(params))
@@ -185,28 +185,28 @@ function doCompile(value: any, env: Environment): CompiledArk {
         }
         case 'prop': {
           if (value.length !== 3) {
-            throw new ArkCompilerError("invalid 'prop'")
+            throw new ArkCompilerError("Invalid 'prop'")
           }
           const compiled = doCompile(value[2], env)
           return new CompiledArk(new Prop(value[1], compiled.value), compiled.freeVars)
         }
         case 'ref': {
           if (value.length !== 2) {
-            throw new ArkCompilerError("invalid 'ref'")
+            throw new ArkCompilerError("Invalid 'ref'")
           }
           const compiled = doCompile(value[1], env)
           return new CompiledArk(new ValRef(compiled.value), compiled.freeVars)
         }
         case 'get': {
           if (value.length !== 2) {
-            throw new ArkCompilerError("invalid 'get'")
+            throw new ArkCompilerError("Invalid 'get'")
           }
           const compiled = doCompile(value[1], env)
           return new CompiledArk(new Get(compiled.value), compiled.freeVars)
         }
         case 'set': {
           if (value.length !== 3) {
-            throw new ArkCompilerError("invalid 'set'")
+            throw new ArkCompilerError("Invalid 'set'")
           }
           const compiledRef = doCompile(value[1], env)
           const compiledVal = doCompile(value[2], env)
@@ -258,9 +258,14 @@ function doCompile(value: any, env: Environment): CompiledArk {
     }
     return new CompiledArk(new ObjLiteral(inits), initsFreeVars)
   }
-  throw new ArkCompilerError(`invalid value ${value}`)
+  throw new ArkCompilerError(`Invalid value ${value}`)
 }
 
-export function compile(expr: string, env: Environment = new Environment()): CompiledArk {
-  return doCompile(JSON.parse(expr), env)
+export function compile(
+  expr: string,
+  env: Environment = new Environment(),
+): CompiledArk {
+  const compiled = doCompile(JSON.parse(expr), env)
+  env.externalSyms.forEach((_val, id) => compiled.freeVars.delete(id))
+  return compiled
 }

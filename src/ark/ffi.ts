@@ -34,7 +34,7 @@ export function fromJs(x: any, thisObj?: Object): Val {
   if (typeof x === 'object') {
     return new NativeObj(x)
   }
-  throw new ArkRuntimeError(`cannot convert JavaScript value ${x}`)
+  throw new ArkRuntimeError(`Cannot convert JavaScript value ${x}`)
 }
 
 export function toJs(val: Val): any {
