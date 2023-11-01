@@ -47,6 +47,9 @@ export class ArkState {
 
   run(compiledVal: CompiledArk, env: Namespace = globals): Val {
     link(compiledVal, env)
+    if (compiledVal.freeVars.size !== 0) {
+      throw new Error(`undefined symbols: ${[...compiledVal.freeVars.keys()].join(', ')}`)
+    }
     return compiledVal.value.eval(this)
   }
 }
@@ -601,15 +604,12 @@ if (globalThis.document !== undefined) {
   globals.set('document', new ValRef(new NativeObj(globalThis.document)))
 }
 
-// FIXME: support partial linking.
 export function link(compiledVal: CompiledArk, env: Namespace) {
   const freeVars = compiledVal.freeVars
   for (const [name, symrefs] of freeVars) {
-    if (!env.has(name)) {
-      throw new Error(`undefined symbol ${name}`)
-    }
-    for (const symref of symrefs) {
-      symref.setSelf(new ValRef(env.get(name)!))
+    if (env.has(name)) {
+      symrefs.forEach((symref) => symref.setSelf(new ValRef(env.get(name)!)))
+      freeVars.delete(name)
     }
   }
 }
