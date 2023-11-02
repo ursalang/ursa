@@ -3,6 +3,8 @@ import {
   NativeFn, NativeObj, Null, Num, Obj, Str, Val,
 } from './interp.js'
 
+export class ArkFromJsError extends Error {}
+
 export function fromJs(x: any, thisObj?: Object): Val {
   if (x === null || x === undefined) {
     return Null()
@@ -33,7 +35,7 @@ export function fromJs(x: any, thisObj?: Object): Val {
   if (typeof x === 'object') {
     return new NativeObj(x)
   }
-  throw new Error(`Cannot convert JavaScript value ${x}`)
+  throw new ArkFromJsError(`Cannot convert JavaScript value ${x}`)
 }
 
 export function toJs(val: Val): any {

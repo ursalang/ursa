@@ -15,11 +15,15 @@ import grammar, {UrsaSemantics} from './ursa.ohm-bundle.js'
 // Specify precise type so semantics can be precisely type-checked.
 const semantics: UrsaSemantics = grammar.createSemantics()
 
-class UrsaCompilerError extends Error {
+class UrsaError extends Error {
   constructor(node: Node, message: string) {
     super(`${node.source.getLineAndColumnMessage()}\n${message}`)
   }
 }
+
+class UrsaCompilerError extends UrsaError {}
+
+class UrsaRuntimeError extends UrsaError {}
 
 // Base class for parsing the language, extended directly by classes used
 // only during parsing.
@@ -549,7 +553,7 @@ export function runWithTraceback(ark: ArkState, compiledVal: CompiledArk): Val {
     return ark.run(compiledVal)
   } catch (e) {
     if (e instanceof ArkRuntimeError) {
-      throw new UrsaCompilerError(e.val.debug.get('source') as Node, e.message)
+      throw new UrsaRuntimeError(ark.debug.get('source') as Node, e.message)
     }
     throw e
   }

@@ -3,7 +3,7 @@ import assert from 'assert'
 import {
   CompiledArk, Environment, FreeVars, Namespace,
 } from './compiler.js'
-import {fromJs, toJs} from './ffi.js'
+import {ArkFromJsError, fromJs, toJs} from './ffi.js'
 
 export class RuntimeStack {
   // Each stack frame consists of a pair of local vars and captures
@@ -26,7 +26,13 @@ export class RuntimeStack {
 }
 
 export class ArkState {
+  constructor() {
+    this.debug.set('source', [])
+  }
+
   stack = new RuntimeStack()
+
+  debug: Map<string, any> = new Map()
 
   captureFreeVars(cl: Fexpr): Ref[] {
     const frame: Ref[] = []
@@ -77,8 +83,20 @@ export class Val {
 
   debug: Map<string, any> = new Map()
 
-  eval(_ark: ArkState): Val {
+  _eval(_ark: ArkState): Val {
     return this
+  }
+
+  eval(ark: ArkState): Val {
+    const sourceLoc = this.debug.get('source')
+    if (sourceLoc !== undefined) {
+      ark.debug.get('source').push(sourceLoc)
+    }
+    const res = this._eval(ark)
+    if (sourceLoc !== undefined) {
+      ark.debug.get('source').pop()
+    }
+    return res
   }
 
   protected addChild(child: Val) {
@@ -210,13 +228,13 @@ export class Fexpr extends Val {
     }
   }
 
-  eval(ark: ArkState): Val {
+  _eval(ark: ArkState): Val {
     return new FexprClosure(this.params, ark.captureFreeVars(this), this.children[0])
   }
 }
 
 export class Fn extends Fexpr {
-  eval(ark: ArkState): Val {
+  _eval(ark: ArkState): Val {
     return new FnClosure(this.params, ark.captureFreeVars(this), this.children[0])
   }
 }
@@ -246,7 +264,7 @@ export class Call extends Val {
     }
   }
 
-  eval(ark: ArkState): Val {
+  _eval(ark: ArkState): Val {
     const fn = this.children[0].eval(ark)
     if (!(fn instanceof FexprClosure || fn instanceof NativeFexpr)) {
       throw new ArkRuntimeError('Invalid Call', this)
@@ -320,7 +338,7 @@ export class SymRef extends Val {
     this.debug.set('env', JSON.stringify(env))
   }
 
-  eval(): never {
+  _eval(_ark: ArkState): never {
     throw new ArkRuntimeError(`Unresolved symbol ${this.debug.get('name')}`, this)
   }
 }
@@ -331,7 +349,7 @@ export class Get extends Val {
     this.addChild(val)
   }
 
-  eval(ark: ArkState): Val {
+  _eval(ark: ArkState): Val {
     const ref = (this.children[0].eval(ark) as Ref)
     const val = ref.get(ark.stack)
     if (val === Undefined) {
@@ -348,7 +366,7 @@ export class Ass extends Val {
     this.addChild(val)
   }
 
-  eval(ark: ArkState): Val {
+  _eval(ark: ArkState): Val {
     const ref = this.children[0].eval(ark)
     const res = this.children[1].eval(ark)
     if (!(ref instanceof Ref)) {
@@ -380,7 +398,7 @@ export class Class extends Val {
 export class Obj extends Class {}
 
 export class ObjLiteral extends Obj {
-  eval(ark: ArkState): Val {
+  _eval(ark: ArkState): Val {
     const inits = new Map<string, Val>()
     for (const [k, v] of this.val) {
       inits.set(k, v.eval(ark))
@@ -395,10 +413,14 @@ export class NativeObj extends Val {
   }
 
   get(prop: string): Val | undefined {
-    // FIXME: Catch exception from fromJs and convert to
-    // ArkRuntimeException. We will need to trace up the parent to the first
-    // that has source location info.
-    return fromJs((this.obj as any)[prop], this.obj)
+    try {
+      return fromJs((this.obj as any)[prop], this.obj)
+    } catch (e) {
+      if (e instanceof ArkFromJsError) {
+        throw new ArkRuntimeError(e.message, this)
+      }
+      throw e
+    }
   }
 
   set(prop: string, val: Val) {
@@ -413,7 +435,7 @@ export class Prop extends Val {
     this.addChild(obj)
   }
 
-  eval(ark: ArkState): Val {
+  _eval(ark: ArkState): Val {
     const obj = this.children[0].eval(ark)
     return new PropRef(obj as Obj, this.prop)
   }
@@ -485,7 +507,7 @@ export class Let extends Val {
     super()
   }
 
-  eval(ark: ArkState): Val {
+  _eval(ark: ArkState): Val {
     const lets = bindArgsToParams(this.boundVars, [])
     const oldStack = ark.stack
     ark.stack = ark.stack.push(lets)

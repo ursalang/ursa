@@ -5,10 +5,13 @@ import {
 } from './interp.js'
 
 function doSerialize(val: Val): any {
-  const name = val.debug.get('name')
-  if (name !== undefined) {
-    return name
-  } else if (val instanceof ConcreteVal) {
+  if (val.debug !== undefined) {
+    const name = val.debug.get('name')
+    if (name !== undefined) {
+      return name
+    }
+  }
+  if (val instanceof ConcreteVal) {
     const rawVal = val.val
     if (typeof rawVal === 'string') {
       return ['str', val.val]
