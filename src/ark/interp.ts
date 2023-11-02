@@ -47,13 +47,20 @@ export class ArkState {
 
   run(compiledVal: CompiledArk): Val {
     if (compiledVal.freeVars.size !== 0) {
-      throw new ArkRuntimeError(`Undefined symbols ${[...compiledVal.freeVars.keys()].join(', ')}`)
+      throw new ArkRuntimeError(
+        `Undefined symbols ${[...compiledVal.freeVars.keys()].join(', ')}`,
+        compiledVal.value,
+      )
     }
     return compiledVal.value.eval(this)
   }
 }
 
-export class ArkRuntimeError extends Error {}
+export class ArkRuntimeError extends Error {
+  constructor(public message: string, public val: Val) {
+    super()
+  }
+}
 
 // Base class for compiled code.
 export class Val {
@@ -188,7 +195,7 @@ export class Fexpr extends Val {
       let isStackFreeVar = false
       for (const ref of refs) {
         if (ref instanceof SymRef) {
-          throw new ArkRuntimeError(`Undefined symbol ${name}`)
+          throw new ArkRuntimeError(`Undefined symbol ${name}`, this)
         }
         if (ref instanceof StackRef) {
           assert(ref.level > 0)
@@ -242,7 +249,7 @@ export class Call extends Val {
   eval(ark: ArkState): Val {
     const fn = this.children[0].eval(ark)
     if (!(fn instanceof FexprClosure || fn instanceof NativeFexpr)) {
-      throw new ArkRuntimeError('Invalid Call')
+      throw new ArkRuntimeError('Invalid Call', this)
     }
     const args = this.children.slice(1)
     return fn.call(ark, ...args)
@@ -314,7 +321,7 @@ export class SymRef extends Val {
   }
 
   eval(): never {
-    throw new ArkRuntimeError(`Unresolved symbol ${this.debug.get('name')}`)
+    throw new ArkRuntimeError(`Unresolved symbol ${this.debug.get('name')}`, this)
   }
 }
 
@@ -328,7 +335,7 @@ export class Get extends Val {
     const ref = (this.children[0].eval(ark) as Ref)
     const val = ref.get(ark.stack)
     if (val === Undefined) {
-      throw new ArkRuntimeError(`Uninitialized symbol ${this.children[0].debug.get('name')}`)
+      throw new ArkRuntimeError(`Uninitialized symbol ${this.children[0].debug.get('name')}`, this)
     }
     return val
   }
@@ -345,7 +352,7 @@ export class Ass extends Val {
     const ref = this.children[0].eval(ark)
     const res = this.children[1].eval(ark)
     if (!(ref instanceof Ref)) {
-      throw new ArkRuntimeError('Assignment to non-Ref')
+      throw new ArkRuntimeError('Invalid assignment', this)
     }
     ref.set(ark.stack, res)
     return res
@@ -388,6 +395,9 @@ export class NativeObj extends Val {
   }
 
   get(prop: string): Val | undefined {
+    // FIXME: Catch exception from fromJs and convert to
+    // ArkRuntimeException. We will need to trace up the parent to the first
+    // that has source location info.
     return fromJs((this.obj as any)[prop], this.obj)
   }
 

@@ -11,8 +11,10 @@ import {
 } from '../ark/interp.js'
 import {toJs} from '../ark/ffi.js'
 import {serializeCompiledArk, serializeVal} from '../ark/serialize.js'
-import {Environment, PartialCompiledArk, compile as arkCompile} from '../ark/compiler.js'
-import {compile as ursaCompile} from './compiler.js'
+import {
+  Environment, PartialCompiledArk, compile as arkCompile,
+} from '../ark/compiler.js'
+import {runWithTraceback, compile as ursaCompile} from './compiler.js'
 
 if (process.env.DEBUG) {
   Error.stackTraceLimit = Infinity
@@ -90,7 +92,7 @@ async function repl() {
         env = env.push(compiled.boundVars)
         ark.stack = ark.stack.push(Array(compiled.boundVars.length).fill(new ValRef(Undefined)))
       }
-      val = toJs(ark.run(compiled))
+      val = toJs(runWithTraceback(ark, compiled))
       console.dir(val, {depth: null})
     } catch (error) {
       if (error instanceof Error) {
@@ -154,7 +156,7 @@ async function main() {
       )))
       // Run the program
       if (source !== undefined) {
-        result = new ArkState().run(compile(source))
+        result = runWithTraceback(new ArkState(), compile(source))
       }
       if (source === undefined || args.interactive) {
         result = await repl()

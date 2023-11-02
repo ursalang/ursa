@@ -1,5 +1,4 @@
 import {
-  ArkRuntimeError,
   ArkState, Bool, ConcreteVal, Dict, DictLiteral, List, ListLiteral,
   NativeFn, NativeObj, Null, Num, Obj, Str, Val,
 } from './interp.js'
@@ -34,7 +33,7 @@ export function fromJs(x: any, thisObj?: Object): Val {
   if (typeof x === 'object') {
     return new NativeObj(x)
   }
-  throw new ArkRuntimeError(`Cannot convert JavaScript value ${x}`)
+  throw new Error(`Cannot convert JavaScript value ${x}`)
 }
 
 export function toJs(val: Val): any {
