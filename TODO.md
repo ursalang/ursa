@@ -1,7 +1,5 @@
 # Ursa to-do
 
-* FIXME: why are some Interval.sourceStrings coming back with the *entire* *grammar* (they should be matching the input, not the grammar!)?
-
 ## Ursa MVP
 
 * 100% test coverage.

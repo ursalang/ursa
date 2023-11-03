@@ -28,6 +28,7 @@ export class RuntimeStack {
 export class ArkState {
   constructor() {
     this.debug.set('source', [])
+    this.debug.set('stack', [])
   }
 
   stack = new RuntimeStack()
@@ -90,11 +91,11 @@ export class Val {
   eval(ark: ArkState): Val {
     const sourceLoc = this.debug.get('source')
     if (sourceLoc !== undefined) {
-      ark.debug.get('source').push(sourceLoc)
+      ark.debug.get('source').unshift(sourceLoc)
     }
     const res = this._eval(ark)
     if (sourceLoc !== undefined) {
-      ark.debug.get('source').pop()
+      ark.debug.get('source').shift()
     }
     return res
   }
@@ -267,10 +268,14 @@ export class Call extends Val {
   _eval(ark: ArkState): Val {
     const fn = this.children[0].eval(ark)
     if (!(fn instanceof FexprClosure || fn instanceof NativeFexpr)) {
-      throw new ArkRuntimeError('Invalid Call', this)
+      throw new ArkRuntimeError('Invalid call', this)
     }
+    const stackTrace = ark.debug.get('stack')
+    stackTrace.unshift([this, fn])
     const args = this.children.slice(1)
-    return fn.call(ark, ...args)
+    const res = fn.call(ark, ...args)
+    stackTrace.shift()
+    return res
   }
 }
 

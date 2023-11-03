@@ -1,4 +1,4 @@
-import {Node, IterationNode} from 'ohm-js'
+import {Node, IterationNode, Interval} from 'ohm-js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
@@ -16,14 +16,34 @@ import grammar, {UrsaSemantics} from './ursa.ohm-bundle.js'
 const semantics: UrsaSemantics = grammar.createSemantics()
 
 class UrsaError extends Error {
-  constructor(node: Node, message: string) {
-    super(`${node.source.getLineAndColumnMessage()}\n${message}`)
+  constructor(source: Interval, message: string) {
+    super(`${source.getLineAndColumnMessage()}\n${message}`)
   }
 }
 
 class UrsaCompilerError extends UrsaError {}
 
-class UrsaRuntimeError extends UrsaError {}
+class UrsaRuntimeError extends UrsaError {
+  constructor(public ark: ArkState, source: Interval, message: string) {
+    super(source, message)
+    const stack = ark.debug.get('stack')
+    const trace = []
+    // Ignore the top level (outermost frame).
+    for (const [call] of stack.slice(0, -1)) {
+      const source = call.debug.get('source')
+      if (source !== undefined) {
+        const line = source.getLineAndColumn()
+        trace.push(`line ${line.lineNum}\n    ${line.line}`)
+      } else {
+        trace.push('(uninstrumented stack frame)')
+      }
+    }
+    this.message += `
+
+Traceback (most recent call last)
+${trace.map((s) => `  ${s}`).join('\n')}`
+  }
+}
 
 // Base class for parsing the language, extended directly by classes used
 // only during parsing.
@@ -70,12 +90,12 @@ function listNodeToParamList(listNode: Node): string[] {
     if (!(e instanceof ArkCompilerError)) {
       throw e
     }
-    throw new UrsaCompilerError(listNode, e.message)
+    throw new UrsaCompilerError(listNode.source, e.message)
   }
 }
 
 function addLoc(val: Val, node: Node) {
-  val.debug.set('source', node)
+  val.debug.set('source', node.source)
   return val
 }
 
@@ -346,7 +366,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
       const parsedLet: SingleLet = l.toAST(this.args.env, false)
       parsedLets.push(parsedLet)
       if (letIds.includes(parsedLet.id.sourceString)) {
-        throw new UrsaCompilerError(this, `Duplicate identifier in let: ${parsedLet.id.sourceString}`)
+        throw new UrsaCompilerError(this.source, `Duplicate identifier in let: ${parsedLet.id.sourceString}`)
       }
       letIds.push(parsedLet.id.sourceString)
     }
@@ -517,7 +537,7 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
 // Ohm attributes can't take arguments, so memoize an operation.
 const symrefs = new Map<Node, CompiledArk>()
 semantics.addOperation<CompiledArk>('symref(env)', {
-  ident(_ident) {
+  ident(ident) {
     if (!symrefs.has(this)) {
       try {
         symrefs.set(this, symRef(this.args.env, this.sourceString))
@@ -525,7 +545,7 @@ semantics.addOperation<CompiledArk>('symref(env)', {
         if (!(e instanceof ArkCompilerError)) {
           throw e
         }
-        throw new UrsaCompilerError(_ident, e.message)
+        throw new UrsaCompilerError(ident.source, e.message)
       }
     }
     return symrefs.get(this)!
@@ -553,7 +573,8 @@ export function runWithTraceback(ark: ArkState, compiledVal: CompiledArk): Val {
     return ark.run(compiledVal)
   } catch (e) {
     if (e instanceof ArkRuntimeError) {
-      throw new UrsaRuntimeError(ark.debug.get('source') as Node, e.message)
+      const sourceLoc = ark.debug.get('source')
+      throw new UrsaRuntimeError(ark, sourceLoc[0] as Interval, e.message)
     }
     throw e
   }
