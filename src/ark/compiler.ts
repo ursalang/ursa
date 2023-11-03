@@ -59,19 +59,24 @@ export class Environment {
   }
 
   getIndex(sym: string): StackRef | ValRef | undefined {
+    let ref
     for (let i = 0; i < this.stack.length; i += 1) {
       const j = this.stack[i].lastIndexOf(sym)
       if (j !== -1) {
-        const ref = new StackRef(i, j)
-        ref.debug.set('name', sym)
-        ref.debug.set('env', JSON.stringify(this))
-        return ref
+        ref = new StackRef(i, j)
+        break
       }
     }
-    if (this.externalSyms.has(sym)) {
-      return new ValRef(this.externalSyms.get(sym))
+    if (ref === undefined) {
+      if (this.externalSyms.has(sym)) {
+        ref = new ValRef(this.externalSyms.get(sym))
+      } else {
+        throw new ArkCompilerError(`Undefined symbol ${sym}`)
+      }
     }
-    throw new ArkCompilerError(`Undefined symbol ${sym}`)
+    ref.debug.set('name', sym)
+    ref.debug.set('env', JSON.stringify(this))
+    return ref
   }
 }
 

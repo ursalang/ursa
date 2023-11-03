@@ -223,7 +223,9 @@ export class Fexpr extends Val {
             this.boundFreeVars.push(ref)
             numStackFreeVars += 1
           }
-          ref.setSelf(new CaptureRef(numStackFreeVars - 1))
+          const captureRef = new CaptureRef(numStackFreeVars - 1)
+          captureRef.debug.set('name', ref.debug.get('name'))
+          ref.setSelf(captureRef)
         }
       }
     }
