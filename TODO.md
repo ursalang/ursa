@@ -1,20 +1,24 @@
 # Ursa to-do
 
+## Version 0.2
+
+* Long strings.
+* Long comments.
+* Lists: iteration (with yield)
+* Vectors (this is really current List, for List we need `push`/`pop` etc.).
+* Maps: iteration (with yield), symbol keys
+* Sets.
+* Split into multiple packages (issue #7).
+* Map interface to file system and internet.
+
 ## Ursa MVP
 
 * 100% test coverage.
 * Tail recursion elimination
-* Method invocation
 * Co-routines (copy Python?)
-* Lists: iteration (with yield)
-* Vectors (this is really current List, for List we need `push`/`pop` etc.).
-* Maps: iteration (with yield), symbol keys
 * `self`
-* Long strings.
-* Long comments.
 * Streams, and use as interface to files.
-* Map interface to file system and internet.
-* Code formatting: `ursa fmt`.
+* Code formatting: `ursa fmt`; use [Prettier](https://prettier.io/).
 
 ## Ark improvements
 
@@ -25,7 +29,6 @@
 * Study vau, first-class environments (objects), and delimited
   continuations: https://github.com/catseye/Robin ; also see
   https://github.com/nukata/little-scheme-in-typescript
-* Add debug information: source locations.
 * Make code `readonly` (except `Ref` and `SymRef`). Start with `FreeVars`.
   See https://github.com/immutable-js/immutable-js/
 
