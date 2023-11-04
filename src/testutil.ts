@@ -41,17 +41,26 @@ export async function cliTest(
   syntax: string,
   title: string,
   file: string,
-  output?: string,
   args?: string[],
+  expected_stdout?: string,
+  expected_stderr?: string,
 ) {
   const tempFile = tmp.tmpNameSync()
   test(title, async (t) => {
-    const {stdout} = await run([`--syntax=${syntax}`, `--output=${tempFile}`, `${file}.${syntax}`, ...args ?? []])
-    const result = JSON.parse(fs.readFileSync(tempFile, {encoding: 'utf-8'}))
-    const expected = JSON.parse(fs.readFileSync(`${file}.result.json`, {encoding: 'utf-8'}))
-    t.deepEqual(result, expected)
-    if (output !== undefined) {
-      t.is(stdout, output)
+    try {
+      const {stdout} = await run([`--syntax=${syntax}`, `--output=${tempFile}`, `${file}.${syntax}`, ...args ?? []])
+      const result = JSON.parse(fs.readFileSync(tempFile, {encoding: 'utf-8'}))
+      const expected = JSON.parse(fs.readFileSync(`${file}.result.json`, {encoding: 'utf-8'}))
+      t.deepEqual(result, expected)
+      if (expected_stdout !== undefined) {
+        t.is(stdout, expected_stdout)
+      }
+    } catch (error) {
+      if (expected_stderr !== undefined) {
+        t.is((error as any).stderr.slice('run.js: '.length), expected_stderr)
+      } else {
+        throw error
+      }
     }
   })
 }

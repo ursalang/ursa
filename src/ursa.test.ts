@@ -19,19 +19,34 @@ const test = cliTest.bind(null, 'ursa');
   ['Mutual recursion', 'test/mutual-recursion'],
 ].map(([title, file]) => cliTest('ursa', title, file))
 
-test('Test I/O', 'test/print', 'Hello, world!')
+test('Test I/O', 'test/print', [], 'Hello, world!')
 
-test("'fs' module", 'test/fs', 'foo')
+test("'fs' module", 'test/fs', [], 'foo')
 
 // FIXME: make this work again
 // test('use fs', 'test/use-fs', 'foo')
 
-test('Find symbols in input', 'test/syms', 'fs\nwriteSync\nfoo\nis\nstdout', ['./test/fs.ursa'])
+test('Find symbols in input', 'test/syms', ['./test/fs.ursa'], 'fs\nwriteSync\nfoo\nis\nstdout')
+
+test('Test error on bad function call', 'test/bad-call', [], undefined, `\
+Error: Line 2, col 14:
+  1 | let h = 3
+> 2 | let g = fn() { h() }
+                   ^~~~~~~
+  3 | let f = fn() { g() }
+
+Invalid call
+
+Traceback (most recent call last)
+  line 3
+    let f = fn() { g() }, at top level
+  line 4
+    f(), in g`)
 
 // Rosetta code examples
-test('Hello world-Text', 'rosettacode/Hello world-Text', 'hello woods!')
+test('Hello world-Text', 'rosettacode/Hello world-Text', [], 'hello woods!')
 // Not run, as the program has an unbound variable
 // test('Conditional structures', 'rosettacode/Conditional structures.ursa')
 // Not run, as this program does not terminate
 // test('Integer sequence', 'Integer sequence.ursa'),
-test('Ackermann function', 'rosettacode/Ackermann function', '1\n125\n13')
+test('Ackermann function', 'rosettacode/Ackermann function', [], '1\n125\n13')

@@ -27,8 +27,9 @@ export class RuntimeStack {
 
 export class ArkState {
   constructor() {
-    this.debug.set('source', [])
-    this.debug.set('stack', [])
+    this.debug.set('sourceStack', [])
+    this.debug.set('callStack', [])
+    this.debug.set('fnSymStack', [])
   }
 
   stack = new RuntimeStack()
@@ -91,11 +92,11 @@ export class Val {
   eval(ark: ArkState): Val {
     const sourceLoc = this.debug.get('source')
     if (sourceLoc !== undefined) {
-      ark.debug.get('source').unshift(sourceLoc)
+      ark.debug.get('sourceStack').unshift(sourceLoc)
     }
     const res = this._eval(ark)
     if (sourceLoc !== undefined) {
-      ark.debug.get('source').shift()
+      ark.debug.get('sourceStack').shift()
     }
     return res
   }
@@ -268,15 +269,23 @@ export class Call extends Val {
   }
 
   _eval(ark: ArkState): Val {
-    const fn = this.children[0].eval(ark)
-    if (!(fn instanceof FexprClosure || fn instanceof NativeFexpr)) {
+    const fn = this.children[0]
+    let sym: Ref | undefined
+    if (fn instanceof Get && fn.children[0] instanceof Ref) {
+      sym = fn.children[0]
+    }
+    const fnVal = fn.eval(ark)
+    if (!(fnVal instanceof FexprClosure || fnVal instanceof NativeFexpr)) {
       throw new ArkRuntimeError('Invalid call', this)
     }
-    const stackTrace = ark.debug.get('stack')
-    stackTrace.unshift([this, fn])
+    const callStack = ark.debug.get('callStack')
+    const fnSymStack = ark.debug.get('fnSymStack')
+    callStack.unshift(this)
+    fnSymStack.unshift(sym)
     const args = this.children.slice(1)
-    const res = fn.call(ark, ...args)
-    stackTrace.shift()
+    const res = fnVal.call(ark, ...args)
+    callStack.shift()
+    fnSymStack.pop()
     return res
   }
 }

@@ -26,14 +26,16 @@ class UrsaCompilerError extends UrsaError {}
 class UrsaRuntimeError extends UrsaError {
   constructor(public ark: ArkState, source: Interval, message: string) {
     super(source, message)
-    const stack = ark.debug.get('stack')
+    const callStack = ark.debug.get('callStack')
+    const fnSymStack = ark.debug.get('fnSymStack')
     const trace = []
     // Ignore the top level (outermost frame).
-    for (const [call] of stack.slice(0, -1)) {
-      const source = call.debug.get('source')
+    for (let i = 0; i < callStack.length - 1; i += 1) {
+      const source = callStack[i].debug.get('source')
+      const fnName = (i > 0 ? `in ${fnSymStack[i - 1].debug.get('name')}` : 'at top level') ?? 'in anonymous function'
       if (source !== undefined) {
         const line = source.getLineAndColumn()
-        trace.push(`line ${line.lineNum}\n    ${line.line}`)
+        trace.push(`line ${line.lineNum}\n    ${line.line}, ${fnName}`)
       } else {
         trace.push('(uninstrumented stack frame)')
       }
@@ -573,7 +575,7 @@ export function runWithTraceback(ark: ArkState, compiledVal: CompiledArk): Val {
     return ark.run(compiledVal)
   } catch (e) {
     if (e instanceof ArkRuntimeError) {
-      const sourceLoc = ark.debug.get('source')
+      const sourceLoc = ark.debug.get('sourceStack')
       throw new UrsaRuntimeError(ark, sourceLoc[0] as Interval, e.message)
     }
     throw e
