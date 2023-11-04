@@ -1,7 +1,5 @@
 Ursa {
-  Sequence
-    = Exp #sc Sequence                      -- seq
-    | /* nothing */                         -- empty
+  Sequence = ListOf<Exp, #sc> #sc
 
   // A semicolon is "automatically inserted" if a newline or the end of the input stream is
   // reached, or the offending token is "}".

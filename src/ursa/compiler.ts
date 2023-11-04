@@ -117,28 +117,21 @@ function makeIfChain(ifs: Call[]): Call {
 }
 
 semantics.addOperation<AST>('toAST(env,lval)', {
-  Sequence_seq(exp, _sep, seq) {
-    const exps = [exp.toAST(this.args.env, false)]
-    let compiledSeq = seq.toAST(this.args.env.push(exp.boundVars), false)
-    const boundVars = exp.boundVars
-    if (compiledSeq instanceof Let) {
-      boundVars.push(...compiledSeq.boundVars)
-      compiledSeq = compiledSeq.body
+  Sequence(exps, _sc) {
+    const compiledExps = []
+    const boundVars = []
+    for (const exp of exps.asIteration().children) {
+      const compiledExp = exp.toAST(this.args.env.push(boundVars), false)
+      boundVars.push(...exp.boundVars)
+      compiledExps.push(compiledExp)
     }
-    if (compiledSeq instanceof Call && compiledSeq.children[0] === intrinsics.get('seq')!) {
-      exps.push(...compiledSeq.children.slice(1))
-    } else {
-      exps.push(compiledSeq)
-    }
-    while (exps.length > 0 && exps[exps.length - 1] === Null()) {
-      exps.pop()
-    }
-    const compiledSeqBody = exps.length === 1 ? exps[0] : new Call(intrinsics.get('seq')!, exps)
-    const compiledExp = boundVars.length > 0 ? new Let(boundVars, compiledSeqBody) : compiledSeqBody
-    return addLoc(compiledExp, this)
-  },
-  Sequence_empty() {
-    return addLoc(Null(), this)
+    const compiledSeqBody = compiledExps.length === 1
+      ? compiledExps[0]
+      : new Call(intrinsics.get('seq')!, compiledExps)
+    const compiledSeq = boundVars.length > 0
+      ? new Let(boundVars, compiledSeqBody)
+      : compiledSeqBody
+    return addLoc(compiledSeq, this)
   },
 
   PrimaryExp_continue(_continue) {
@@ -451,7 +444,7 @@ semantics.addAttribute<String[]>('boundVars', {
     return mergeBoundVars(children)
   },
 
-  Sequence_seq(_exp, _sc, _seq) {
+  Sequence(_exps, _sc) {
     return []
   },
 
@@ -481,11 +474,14 @@ semantics.addOperation<FreeVars>('freeVars(env)', {
     return mergeFreeVars(this.args.env, children)
   },
 
-  Sequence_seq(exp, _sep, seq) {
-    const freeVars = new FreeVars().merge(exp.freeVars(this.args.env))
-    freeVars.merge(seq.freeVars(this.args.env.push(exp.boundVars)))
-    exp.boundVars.forEach((b: string) => freeVars.delete(b))
-    seq.boundVars.forEach((b: string) => freeVars.delete(b))
+  Sequence(exps, _sc) {
+    const freeVars = new FreeVars()
+    const boundVars: string[] = []
+    exps.asIteration().children.forEach((exp) => {
+      boundVars.push(...exp.boundVars)
+      freeVars.merge(exp.freeVars(this.args.env.push(boundVars)))
+    })
+    boundVars.forEach((b: string) => freeVars.delete(b))
     return freeVars
   },
 
