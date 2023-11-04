@@ -44,9 +44,10 @@ Traceback (most recent call last)
     f(), in g`)
 
 // Rosetta code examples
-test('Hello world-Text', 'rosettacode/Hello world-Text', [], 'hello woods!')
+test('Accumulator factory', 'rosettacode/Accumulator factory', [], '8.3')
+test('Ackermann function', 'rosettacode/Ackermann function', [], '1\n125\n13')
 // Not run, as the program has an unbound variable
 // test('Conditional structures', 'rosettacode/Conditional structures.ursa')
+test('Hello world-Text', 'rosettacode/Hello world-Text', [], 'hello woods!')
 // Not run, as this program does not terminate
 // test('Integer sequence', 'Integer sequence.ursa'),
-test('Ackermann function', 'rosettacode/Ackermann function', [], '1\n125\n13')
