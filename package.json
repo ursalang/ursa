@@ -53,7 +53,7 @@
     "prebuild": "node --print \"'export default \\'' + require('./package.json').version + '\\';'\" > src/version.ts",
     "build": "tsc --build",
     "clean": "tsc --build --clean",
-    "generate": "ohm generateBundles --withTypes --esm 'src/ursa/*.ohm' && cp src/ursa/*ohm-bundle.js lib/ursa/",
+    "generate": "ohm generateBundles --withTypes --esm 'src/ursa/*.ohm' && mkdir -p lib/ursa && cp src/ursa/*ohm-bundle.js lib/ursa/",
     "test": "npm run generate && npm run build && ava",
     "test-ursa": "ava src/ursa/ursa.test.ts",
     "test-ark": "ava src/ark/ark.test.ts",
