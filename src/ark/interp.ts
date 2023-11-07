@@ -1,8 +1,6 @@
 import fs from 'fs'
 import assert from 'assert'
-import {
-  CompiledArk, FreeVars, Namespace,
-} from './compiler.js'
+import {CompiledArk, Namespace} from './compiler.js'
 import {ArkFromJsError, fromJs, toJs} from './ffi.js'
 
 export class RuntimeStack {
@@ -24,6 +22,8 @@ export class RuntimeStack {
     return new (this.constructor as any)([frame, ...this.stack.slice()])
   }
 }
+
+export type FreeVarsMap = Map<string, Ref[]>
 
 export class ArkState {
   constructor() {
@@ -207,7 +207,7 @@ class FnClosure extends FexprClosure {
 export class Fexpr extends Val {
   boundFreeVars: StackRef[] = []
 
-  constructor(public params: string[], protected freeVars: FreeVars, body: Val) {
+  constructor(public params: string[], protected freeVars: FreeVarsMap, body: Val) {
     super()
     this.addChild(body)
     let numStackFreeVars = 0

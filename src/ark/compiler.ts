@@ -5,7 +5,7 @@ import {
   Val, intrinsics,
   Null, Bool, Num, Str, ValRef, StackRef, Ass, Get,
   ListLiteral, ObjLiteral, DictLiteral, Ref,
-  Fn, Fexpr, Prop, Let, Call, ConcreteVal, globals,
+  Fn, Fexpr, Prop, Let, Call, ConcreteVal, globals, FreeVarsMap,
 } from './interp.js'
 
 export class ArkCompilerError extends Error {}
@@ -32,7 +32,7 @@ export class Namespace extends Map<string, Val> {
 }
 
 export class FreeVars extends Map<string, Ref[]> {
-  merge(moreVars: FreeVars): FreeVars {
+  merge(moreVars: FreeVarsMap): FreeVars {
     for (const [name, symrefs] of moreVars) {
       if (!this.has(name)) {
         this.set(name, [])
@@ -121,13 +121,13 @@ export function symRef(env: Environment, name: string): CompiledArk {
 }
 
 export class CompiledArk {
-  constructor(public value: Val, public freeVars: FreeVars = new FreeVars()) {}
+  constructor(public value: Val, public freeVars: FreeVarsMap = new Map()) {}
 }
 
 export class PartialCompiledArk extends CompiledArk {
   constructor(
     public value: Val,
-    public freeVars: FreeVars = new FreeVars(),
+    public freeVars: FreeVarsMap = new Map(),
     public boundVars: string[] = [],
   ) {
     super(value, freeVars)
