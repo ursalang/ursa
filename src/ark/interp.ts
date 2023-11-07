@@ -1,7 +1,7 @@
 import fs from 'fs'
 import assert from 'assert'
 import {
-  CompiledArk, Environment, FreeVars, Namespace,
+  CompiledArk, FreeVars, Namespace,
 } from './compiler.js'
 import {ArkFromJsError, fromJs, toJs} from './ffi.js'
 
@@ -211,12 +211,9 @@ export class Fexpr extends Val {
     super()
     this.addChild(body)
     let numStackFreeVars = 0
-    for (const [name, refs] of this.freeVars) {
+    for (const [, refs] of this.freeVars) {
       let isStackFreeVar = false
       for (const ref of refs) {
-        if (ref instanceof SymRef) {
-          throw new ArkRuntimeError(`Undefined symbol ${name}`, this)
-        }
         if (ref instanceof StackRef) {
           assert(ref.level > 0)
           if (!isStackFreeVar) {
@@ -344,18 +341,6 @@ export class CaptureRef extends Ref {
     const ref = stack.stack[0][1][this.index]
     ref.set(stack, val)
     return val
-  }
-}
-
-export class SymRef extends Val {
-  constructor(env: Environment, name: string) {
-    super()
-    this.debug.set('name', name)
-    this.debug.set('env', JSON.stringify(env))
-  }
-
-  _eval(_ark: ArkState): never {
-    throw new ArkRuntimeError(`Unresolved symbol ${this.debug.get('name')}`, this)
   }
 }
 

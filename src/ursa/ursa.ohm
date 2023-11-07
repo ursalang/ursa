@@ -51,12 +51,10 @@ Ursa {
     = CallExp
     | PropertyExp
 
-  Ifs
-    = NonemptyListOf<If, else> (else Block)?
+  Ifs = NonemptyListOf<If, else> (else Block)?
   If = if Exp Block
 
-  Fn
-    = fn "(" ListOf<ident, ","> #maybeCommaParen ")" Block
+  Fn = fn "(" ListOf<ident, ","> #maybeCommaParen ")" Block
 
   Loop = loop Block
 

@@ -4,7 +4,7 @@ import {
   debug,
   Val, intrinsics,
   Null, Bool, Num, Str, ValRef, StackRef, Ass, Get,
-  ListLiteral, ObjLiteral, DictLiteral, SymRef,
+  ListLiteral, ObjLiteral, DictLiteral, Ref,
   Fn, Fexpr, Prop, Let, Call, ConcreteVal, globals,
 } from './interp.js'
 
@@ -31,7 +31,7 @@ export class Namespace extends Map<string, Val> {
   }
 }
 
-export class FreeVars extends Map<string, (StackRef | SymRef | ValRef)[]> {
+export class FreeVars extends Map<string, Ref[]> {
   merge(moreVars: FreeVars): FreeVars {
     for (const [name, symrefs] of moreVars) {
       if (!this.has(name)) {
@@ -58,7 +58,7 @@ export class Environment {
     return new (this.constructor as any)([frame, ...this.stack.slice()])
   }
 
-  getIndex(sym: string): StackRef | ValRef | undefined {
+  getIndex(sym: string): StackRef | ValRef {
     let ref
     for (let i = 0; i < this.stack.length; i += 1) {
       const j = this.stack[i].lastIndexOf(sym)
@@ -116,7 +116,7 @@ export function symRef(env: Environment, name: string): CompiledArk {
   if (val !== undefined) {
     return new CompiledArk(val)
   }
-  const ref = env.getIndex(name) ?? new SymRef(env, name)
+  const ref = env.getIndex(name)
   return new CompiledArk(ref, new FreeVars([[name, [ref]]]))
 }
 

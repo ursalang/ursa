@@ -29,7 +29,7 @@
 * Study vau, first-class environments (objects), and delimited
   continuations: https://github.com/catseye/Robin ; also see
   https://github.com/nukata/little-scheme-in-typescript
-* Make code `readonly` (except `Ref` and `SymRef`). Start with `FreeVars`.
+* Make code `readonly` (except `Ref`). Start with `FreeVars`.
   See https://github.com/immutable-js/immutable-js/
 
 ## Ursa v1
