@@ -12,7 +12,7 @@ import {testUrsaGroup as testGroup} from '../testutil.js'
 
 Error.stackTraceLimit = Infinity
 
-testGroup('Comment', [
+testGroup('Comments', [
   ['// Comment', null],
   ['// Comment\n3', 3],
 ])

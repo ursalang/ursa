@@ -50,4 +50,4 @@ test('Ackermann function', 'rosettacode/Ackermann function', [], '1\n125\n13')
 // test('Conditional structures', 'rosettacode/Conditional structures.ursa')
 test('Hello world-Text', 'rosettacode/Hello world-Text', [], 'hello woods!')
 // Not run, as this program does not terminate
-// test('Integer sequence', 'Integer sequence.ursa'),
+// test('Integer sequence', 'Integer sequence.ursa')
