@@ -1,0 +1,12 @@
+{
+  "ignores": [
+    "@ava/typescript",
+    "@tsconfig/node18",
+    "eslint-config-airbnb-base",
+    "eslint-config-airbnb-typescript",
+    "eslint-plugin-import",
+    "pre-push",
+    "tslib",
+    "tsx"
+  ]
+}

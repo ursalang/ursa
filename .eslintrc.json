@@ -13,6 +13,7 @@
     "airbnb-base",
     "airbnb-typescript/base"
   ],
+  "ignorePatterns": [ "*.ohm-bundle.d.ts" ],
   "rules": {
     "max-classes-per-file": "off",
     "no-cond-assign": [
