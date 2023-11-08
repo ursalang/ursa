@@ -31,15 +31,13 @@ $ npm install -g @sc3d/ursa
 
 ## Use
 
-There’s very little documentation as yet, sorry! See the
-[web site](https://ursalang.github.io) and:
+For the Ursa front-end:
 
 ```sh
 $ ursa --help
-src/ursa/ursa.ohm # Language grammar
-src/ark/interp.ts # the guts of the semantics
-test/*.ursa # test/example programs
 ```
+
+For the language, see the [Ursalang web site](https://ursalang.github.io).
 
 ## Development
 
