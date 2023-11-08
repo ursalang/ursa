@@ -26,7 +26,7 @@ If none of the other methods work for you, do email the author; see above for ad
 Install Ursa with npm (part of [Node](https://nodejs.org/)):
 
 ```sh
-npm install -g @sc3d/ursa
+npm install -g @ursalang/ursa
 ```
 
 ## Use
