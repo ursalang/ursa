@@ -5,11 +5,12 @@ import {
   debug,
   Val, Null, Bool, Num, Str, ObjLiteral, ListLiteral, DictLiteral,
   Call, Let, Fn, Prop, Ass, Get, intrinsics, ArkState, ArkRuntimeError, FreeVarsMap,
-} from '../ark/interp.js'
+} from '@ursalang/ark'
 import {
   CompiledArk, symRef, Environment, PartialCompiledArk, checkParamList,
   ArkCompilerError,
-} from '../ark/compiler.js'
+// eslint-disable-next-line import/extensions
+} from '@ursalang/ark/lib/compiler.js'
 
 class UrsaError extends Error {
   constructor(source: Interval, message: string) {

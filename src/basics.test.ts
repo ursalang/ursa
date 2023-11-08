@@ -1,14 +1,16 @@
 import test from 'ava'
 
-import {compile} from './compiler.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
   BreakException, ArkState,
-} from '../ark/interp.js'
-import {toJs} from '../ark/ffi.js'
+} from '@ursalang/ark'
+// eslint-disable-next-line import/extensions
+import {toJs} from '@ursalang/ark/lib/ffi.js'
 
-import {testUrsaGroup as testGroup} from '../testutil.js'
+import {compile} from './compiler.js'
+
+import {testUrsaGroup as testGroup} from './testutil.js'
 
 Error.stackTraceLimit = Infinity
 

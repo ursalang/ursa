@@ -5,15 +5,20 @@ import fs, {PathOrFileDescriptor} from 'fs'
 import * as readline from 'node:readline'
 import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
 import assert from 'assert'
-import programVersion from '../version.js'
+
 import {
   debug, List, ValRef, Str, globals, ArkState, Undefined,
-} from '../ark/interp.js'
-import {toJs} from '../ark/ffi.js'
-import {serializeCompiledArk, serializeVal} from '../ark/serialize.js'
+} from '@ursalang/ark'
+// eslint-disable-next-line import/extensions
+import {toJs} from '@ursalang/ark/lib/ffi.js'
+// eslint-disable-next-line import/extensions
+import {serializeCompiledArk, serializeVal} from '@ursalang/ark/lib/serialize.js'
 import {
   Environment, PartialCompiledArk, compile as arkCompile,
-} from '../ark/compiler.js'
+  // eslint-disable-next-line import/extensions
+} from '@ursalang/ark/lib/compiler.js'
+
+import programVersion from './version.js'
 import {runWithTraceback, compile as ursaCompile} from './compiler.js'
 
 if (process.env.DEBUG) {

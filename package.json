@@ -3,10 +3,13 @@
   "description": "A simple, comfortable, general-purpose language",
   "version": "0.1.0",
   "author": "Reuben Thomas",
+  "license": "GPL-3.0-or-later",
+  "repository": "ursalang/ursa",
   "bin": {
     "ursa": "./bin/run.js"
   },
   "dependencies": {
+    "@ursalang/ark": "^0.1.0",
     "@ursalang/ohm-grammar": "^0.1.0",
     "argparse": "^2.0.1",
     "ohm-js": "^17.1.0",
@@ -39,9 +42,7 @@
     "/bin/run.js",
     "/lib"
   ],
-  "license": "GPL-3.0-or-later",
   "main": "lib/index.js",
-  "repository": "ursalang/ursa",
   "scripts": {
     "lint": "eslint . --ext .ts && depcheck",
     "prebuild": "node --print \"'export default \\'' + require('./package.json').version + '\\';'\" > src/version.ts",
