@@ -25,8 +25,8 @@ If none of the other methods work for you, do email the author; see above for ad
 
 Install Ursa with npm (part of [Node](https://nodejs.org/)):
 
-```
-$ npm install -g @sc3d/ursa
+```sh
+npm install -g @sc3d/ursa
 ```
 
 ## Use
@@ -34,7 +34,7 @@ $ npm install -g @sc3d/ursa
 For the Ursa front-end:
 
 ```sh
-$ ursa --help
+ursa --help
 ```
 
 For the language, see the [Ursalang web site](https://ursalang.github.io).
@@ -43,13 +43,13 @@ For the language, see the [Ursalang web site](https://ursalang.github.io).
 
 Check out the git repository and download dependencies with:
 
-```
+```sh
 git clone https://github.com/ursalang/ursa
 npm install
 ```
 
 To run the tests:
 
-```
+```sh
 npm test
 ```
