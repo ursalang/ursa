@@ -9,7 +9,7 @@ import {
 import {
   CompiledArk, symRef, Environment, PartialCompiledArk, checkParamList,
   ArkCompilerError,
-// eslint-disable-next-line import/extensions
+  // eslint-disable-next-line import/extensions
 } from '@ursalang/ark/lib/compiler.js'
 
 class UrsaError extends Error {
@@ -108,7 +108,7 @@ function indexExp(expNode: Node, env: Environment, lval: boolean, object: Node, 
 
 function makeIfChain(ifs: Call[]): Call {
   if (ifs.length > 1) {
-    ifs[0].children.push(makeIfChain(ifs.slice(1)))
+    ifs[0].args.push(makeIfChain(ifs.slice(1)))
   }
   return ifs[0]
 }
@@ -213,8 +213,8 @@ semantics.addOperation<AST>('toAST(env,lval)', {
   },
 
   Ifs(ifs, _else, e_else) {
-    const compiledIfs = ifs.asIteration().children.map(
-      (x) => addLoc(x.toAST(this.args.env, false), x),
+    const compiledIfs: Call[] = ifs.asIteration().children.map(
+      (x) => addLoc(x.toAST(this.args.env, false), x) as Call,
     )
     if (e_else.children.length > 0) {
       compiledIfs.push(e_else.children[0].toAST(this.args.env, false))
@@ -228,11 +228,11 @@ semantics.addOperation<AST>('toAST(env,lval)', {
 
   Fn(_fn, _open, params, _maybe_comma, _close, body) {
     const paramStrings = listNodeToParamList(params)
-    const innerEnv = this.args.env.pushFrame(paramStrings)
+    const innerEnv = this.args.env.pushFrame([paramStrings, []])
     const bodyFreeVars: FreeVarsMap = body.freeVars(innerEnv)
     const compiledBody = body.toAST(innerEnv, false)
     paramStrings.forEach((p) => bodyFreeVars.delete(p))
-    return addLoc(new Fn(paramStrings, bodyFreeVars, compiledBody), this)
+    return addLoc(new Fn(paramStrings, [...bodyFreeVars.values()].flat(), compiledBody), this)
   },
 
   Loop(_loop, e_body) {

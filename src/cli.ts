@@ -89,7 +89,7 @@ async function repl() {
     try {
       const compiled = compile(line, env, 'Exp')
       // Filter out already-declared bindings
-      for (const id of env.stack[0]) {
+      for (const id of env.stack[0][0]) {
         compiled.freeVars.delete(id)
       }
       // Handle new let bindings
