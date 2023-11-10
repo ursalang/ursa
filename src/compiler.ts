@@ -7,7 +7,7 @@ import {
   Val, Exp, Null, Bool, Num, Str, ObjLiteral, ListLiteral, DictLiteral,
   Call, Let, Fn, Prop, Ass, Get, intrinsics, ArkState, ArkRuntimeError, FreeVarsMap,
   CompiledArk, symRef, Environment, PartialCompiledArk, checkParamList,
-  ArkCompilerError,
+  ArkCompilerError, Seq, If, Loop, ArkAnd, ArkOr,
 } from '@ursalang/ark'
 
 class UrsaError extends Error {
@@ -104,9 +104,9 @@ function indexExp(expNode: Node, env: Environment, lval: boolean, object: Node, 
     : addLoc(new Call(new Get(new Prop('get', compiledObj)), [compiledIndex]), expNode)
 }
 
-function makeIfChain(ifs: Call[]): Call {
+function makeIfChain(ifs: If[]): If {
   if (ifs.length > 1) {
-    ifs[0].args.push(makeIfChain(ifs.slice(1)))
+    ifs[0].elseExp = makeIfChain(ifs.slice(1))
   }
   return ifs[0]
 }
@@ -122,7 +122,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     }
     const compiledSeqBody = compiledExps.length === 1
       ? compiledExps[0]
-      : new Call(intrinsics.get('seq')!, compiledExps)
+      : new Seq(compiledExps)
     const compiledSeq = boundVars.length > 0
       ? new Let(boundVars, compiledSeqBody)
       : compiledSeqBody
@@ -211,8 +211,8 @@ semantics.addOperation<AST>('toAST(env,lval)', {
   },
 
   Ifs(ifs, _else, e_else) {
-    const compiledIfs: Call[] = ifs.asIteration().children.map(
-      (x) => addLoc(x.toAST(this.args.env, false), x) as Call,
+    const compiledIfs: If[] = ifs.asIteration().children.map(
+      (x) => addLoc(x.toAST(this.args.env, false), x) as If,
     )
     if (e_else.children.length > 0) {
       compiledIfs.push(e_else.children[0].toAST(this.args.env, false))
@@ -220,8 +220,10 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     return makeIfChain(compiledIfs)
   },
   If(_if, e_cond, e_then) {
-    const args: Exp[] = [e_cond.toAST(this.args.env, false), e_then.toAST(this.args.env, false)]
-    return addLoc(new Call(intrinsics.get('if')!, args), this)
+    return addLoc(
+      new If(e_cond.toAST(this.args.env, false), e_then.toAST(this.args.env, false)),
+      this,
+    )
   },
 
   Fn(_fn, _open, params, _maybe_comma, _close, body) {
@@ -234,7 +236,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
   },
 
   Loop(_loop, e_body) {
-    return addLoc(new Call(intrinsics.get('loop')!, [e_body.toAST(this.args.env, false)]), this)
+    return addLoc(new Loop(e_body.toAST(this.args.env, false)), this)
   },
 
   UnaryExp_break(_break, exp) {
@@ -317,19 +319,13 @@ semantics.addOperation<AST>('toAST(env,lval)', {
 
   LogicExp_and(left, _and, right) {
     return addLoc(
-      new Call(
-        intrinsics.get('and')!,
-        [left.toAST(this.args.env, false), right.toAST(this.args.env, false)],
-      ),
+      new ArkAnd(left.toAST(this.args.env, false), right.toAST(this.args.env, false)),
       this,
     )
   },
   LogicExp_or(left, _or, right) {
     return addLoc(
-      new Call(
-        intrinsics.get('or')!,
-        [left.toAST(this.args.env, false), right.toAST(this.args.env, false)],
-      ),
+      new ArkOr(left.toAST(this.args.env, false), right.toAST(this.args.env, false)),
       this,
     )
   },
@@ -365,7 +361,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
       (l) => new Ass(l.id.symref(innerEnv).value, l.node.toAST(innerEnv, false)),
     )
     const compiled = assignments.length > 1
-      ? new Call(intrinsics.get('seq')!, assignments)
+      ? new Seq(assignments)
       : assignments[0]
     return addLoc(compiled, this)
   },
@@ -380,7 +376,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     const innerEnv = this.args.env.push([ident.sourceString])
     const compiledLet = new Let(
       [ident.sourceString],
-      new Call(intrinsics.get('seq')!, [
+      new Seq([
         new Ass(
           ident.symref(innerEnv).value,
           new Call(
