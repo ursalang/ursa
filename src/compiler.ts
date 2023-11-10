@@ -1,3 +1,7 @@
+// Ursa compiler.
+// © Reuben Thomas 2023
+// Released under the MIT license.
+
 import {Node, IterationNode, Interval} from 'ohm-js'
 
 import {grammar, semantics} from '@ursalang/ohm-grammar'

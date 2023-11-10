@@ -1,3 +1,7 @@
+// Ursa tests of basics using inline source snippets.
+// © Reuben Thomas 2023
+// Released under the MIT license.
+
 import test from 'ava'
 
 import {

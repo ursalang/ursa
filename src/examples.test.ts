@@ -1,3 +1,7 @@
+// Ursa tests using example source files.
+// © Reuben Thomas 2023
+// Released under the MIT license.
+
 import {cliTest} from './testutil.js'
 
 const test = cliTest.bind(null, 'ursa');

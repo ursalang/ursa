@@ -1,4 +1,6 @@
-// Ursa front-end
+// Ursa command-line front-end and REPL.
+// © Reuben Thomas 2023
+// Released under the MIT license.
 
 import path from 'path'
 import fs, {PathOrFileDescriptor} from 'fs'

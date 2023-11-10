@@ -1,3 +1,7 @@
+// Ursa test utilities.
+// © Reuben Thomas 2023
+// Released under the MIT license.
+
 import fs from 'fs'
 import test from 'ava'
 import tmp from 'tmp'
