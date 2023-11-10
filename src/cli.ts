@@ -95,7 +95,7 @@ async function repl() {
       // Handle new let bindings
       if (compiled instanceof PartialCompiledArk && compiled.boundVars.length > 0) {
         env = env.push(compiled.boundVars)
-        ark.stack = ark.stack.push(Array(compiled.boundVars.length).fill(new ValRef(Undefined)))
+        ark.stack.push(Array(compiled.boundVars.length).fill(new ValRef(Undefined)))
       }
       val = toJs(runWithTraceback(ark, compiled))
       console.dir(val, {depth: null})
