@@ -7,16 +7,10 @@ import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
 import assert from 'assert'
 
 import {
-  debug, List, ValRef, Str, globals, ArkState, Undefined,
-} from '@ursalang/ark'
-// eslint-disable-next-line import/extensions
-import {toJs} from '@ursalang/ark/lib/ffi.js'
-// eslint-disable-next-line import/extensions
-import {serializeCompiledArk, serializeVal} from '@ursalang/ark/lib/serialize.js'
-import {
+  debug, List, ValRef, Str, globals, ArkState, Undefined, toJs,
   Environment, PartialCompiledArk, compile as arkCompile,
-  // eslint-disable-next-line import/extensions
-} from '@ursalang/ark/lib/compiler.js'
+  serializeCompiledArk, serializeVal,
+} from '@ursalang/ark'
 
 import programVersion from './version.js'
 import {runWithTraceback, compile as ursaCompile} from './compiler.js'

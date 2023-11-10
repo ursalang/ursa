@@ -1,16 +1,14 @@
 import {Node, IterationNode, Interval} from 'ohm-js'
+
 import {grammar, semantics} from '@ursalang/ohm-grammar'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
   Val, Exp, Null, Bool, Num, Str, ObjLiteral, ListLiteral, DictLiteral,
   Call, Let, Fn, Prop, Ass, Get, intrinsics, ArkState, ArkRuntimeError, FreeVarsMap,
-} from '@ursalang/ark'
-import {
   CompiledArk, symRef, Environment, PartialCompiledArk, checkParamList,
   ArkCompilerError,
-  // eslint-disable-next-line import/extensions
-} from '@ursalang/ark/lib/compiler.js'
+} from '@ursalang/ark'
 
 class UrsaError extends Error {
   constructor(source: Interval, message: string) {

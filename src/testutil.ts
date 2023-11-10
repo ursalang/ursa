@@ -2,11 +2,11 @@ import fs from 'fs'
 import test from 'ava'
 import tmp from 'tmp'
 import {execa} from 'execa'
-import {ArkState, debug} from '@ursalang/ark'
-// eslint-disable-next-line import/extensions
-import {toJs} from '@ursalang/ark/lib/ffi.js'
-// eslint-disable-next-line import/extensions
-import {compile as arkCompile, CompiledArk} from '@ursalang/ark/lib/compiler.js'
+
+import {
+  ArkState, debug, toJs, compile as arkCompile, CompiledArk,
+} from '@ursalang/ark'
+
 import {compile as ursaCompile} from './compiler.js'
 
 const command = process.env.NODE_ENV === 'coverage' ? './bin/test-run.sh' : './bin/run.js'

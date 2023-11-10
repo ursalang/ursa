@@ -3,10 +3,8 @@ import test from 'ava'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  BreakException, ArkState,
+  BreakException, ArkState, toJs,
 } from '@ursalang/ark'
-// eslint-disable-next-line import/extensions
-import {toJs} from '@ursalang/ark/lib/ffi.js'
 
 import {compile} from './compiler.js'
 
