@@ -44,8 +44,8 @@ export async function cliTest(
   title: string,
   file: string,
   args?: string[],
-  expected_stdout?: string,
-  expected_stderr?: string,
+  expectedStdout?: string,
+  expectedStderr?: string,
 ) {
   const tempFile = tmp.tmpNameSync()
   test(title, async (t) => {
@@ -54,12 +54,12 @@ export async function cliTest(
       const result = JSON.parse(fs.readFileSync(tempFile, {encoding: 'utf-8'}))
       const expected = JSON.parse(fs.readFileSync(`${file}.result.json`, {encoding: 'utf-8'}))
       t.deepEqual(result, expected)
-      if (expected_stdout !== undefined) {
-        t.is(stdout, expected_stdout)
+      if (expectedStdout !== undefined) {
+        t.is(stdout, expectedStdout)
       }
     } catch (error) {
-      if (expected_stderr !== undefined) {
-        t.is((error as any).stderr.slice('run.js: '.length), expected_stderr)
+      if (expectedStderr !== undefined) {
+        t.is((error as any).stderr.slice('run.js: '.length), expectedStderr)
       } else {
         throw error
       }

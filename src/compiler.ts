@@ -142,14 +142,14 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     return addLoc(exp.toAST(this.args.env, false), this)
   },
 
-  List(_open, elems, _maybe_comma, _close) {
+  List(_open, elems, _maybeComma, _close) {
     return addLoc(
       new ArkListLiteral(elems.asIteration().children.map((x) => x.toAST(this.args.env, false))),
       this,
     )
   },
 
-  Object(_open, elems, _maybe_comma, _close) {
+  Object(_open, elems, _maybeComma, _close) {
     const inits = new Map()
     elems.asIteration().children.forEach((value) => {
       const elem = value.toAST(this.args.env, false)
@@ -164,7 +164,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     )
   },
 
-  Map(_open, elems, _maybe_comma, _close) {
+  Map(_open, elems, _maybeComma, _close) {
     const inits = new Map<ArkExp, ArkExp>()
     elems.asIteration().children.forEach((value) => {
       const elem = value.toAST(this.args.env, false)
@@ -206,29 +206,29 @@ semantics.addOperation<AST>('toAST(env,lval)', {
       this,
     )
   },
-  Arguments(_open, args, _maybe_comma, _close) {
+  Arguments(_open, args, _maybeComma, _close) {
     return new Arguments(
       args.asIteration().children.map((x) => addLoc(x.toAST(this.args.env, false), x)),
     )
   },
 
-  Ifs(ifs, _else, e_else) {
+  Ifs(ifs, _else, elseExp) {
     const compiledIfs: ArkIf[] = ifs.asIteration().children.map(
       (x) => addLoc(x.toAST(this.args.env, false), x) as ArkIf,
     )
-    if (e_else.children.length > 0) {
-      compiledIfs.push(e_else.children[0].toAST(this.args.env, false))
+    if (elseExp.children.length > 0) {
+      compiledIfs.push(elseExp.children[0].toAST(this.args.env, false))
     }
     return makeIfChain(compiledIfs)
   },
-  If(_if, e_cond, e_then) {
+  If(_if, cond, thenExp) {
     return addLoc(
-      new ArkIf(e_cond.toAST(this.args.env, false), e_then.toAST(this.args.env, false)),
+      new ArkIf(cond.toAST(this.args.env, false), thenExp.toAST(this.args.env, false)),
       this,
     )
   },
 
-  Fn(_fn, _open, params, _maybe_comma, _close, body) {
+  Fn(_fn, _open, params, _maybeComma, _close, body) {
     const paramStrings = listNodeToParamList(params)
     const innerEnv = this.args.env.pushFrame([paramStrings, []])
     const bodyFreeVars: FreeVarsMap = body.freeVars(innerEnv)
@@ -237,8 +237,8 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     return addLoc(new ArkFn(paramStrings, [...bodyFreeVars.values()].flat(), compiledBody), this)
   },
 
-  Loop(_loop, e_body) {
-    return addLoc(new ArkLoop(e_body.toAST(this.args.env, false)), this)
+  Loop(_loop, body) {
+    return addLoc(new ArkLoop(body.toAST(this.args.env, false)), this)
   },
 
   UnaryExp_break(_break, exp) {
