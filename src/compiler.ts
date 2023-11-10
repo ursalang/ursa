@@ -3,7 +3,7 @@ import {grammar, semantics} from '@ursalang/ohm-grammar'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  Val, Null, Bool, Num, Str, ObjLiteral, ListLiteral, DictLiteral,
+  Val, Exp, Null, Bool, Num, Str, ObjLiteral, ListLiteral, DictLiteral,
   Call, Let, Fn, Prop, Ass, Get, intrinsics, ArkState, ArkRuntimeError, FreeVarsMap,
 } from '@ursalang/ark'
 import {
@@ -49,19 +49,19 @@ ${trace.map((s) => `  ${s}`).join('\n')}`
 class AST {}
 
 class PropertyValue extends AST {
-  constructor(public key: string, public val: Val) {
+  constructor(public key: string, public val: Exp) {
     super()
   }
 }
 
 class KeyValue extends AST {
-  constructor(public key: Val, public val: Val) {
+  constructor(public key: Exp, public val: Exp) {
     super()
   }
 }
 
 class IndexExp extends AST {
-  constructor(public obj: Val, public index: Val) {
+  constructor(public obj: Exp, public index: Exp) {
     super()
   }
 }
@@ -73,12 +73,12 @@ class SingleLet extends AST {
 }
 
 class Arguments extends AST {
-  constructor(public args: Val[]) {
+  constructor(public args: Exp[]) {
     super()
   }
 }
 
-function maybeVal(env: Environment, exp: IterationNode): Val {
+function maybeVal(env: Environment, exp: IterationNode): Exp {
   return exp.children.length > 0 ? exp.children[0].toAST(env, false) : Null()
 }
 
@@ -93,7 +93,7 @@ function listNodeToParamList(listNode: Node): string[] {
   }
 }
 
-function addLoc(val: Val, node: Node) {
+function addLoc(val: Exp, node: Node) {
   val.debug.set('source', node.source)
   return val
 }
@@ -165,7 +165,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
   },
 
   Map(_open, elems, _maybe_comma, _close) {
-    const inits = new Map<Val, Val>()
+    const inits = new Map<Exp, Exp>()
     elems.asIteration().children.forEach((value) => {
       const elem = value.toAST(this.args.env, false)
       inits.set((elem as KeyValue).key, (elem as KeyValue).val)
@@ -222,7 +222,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     return makeIfChain(compiledIfs)
   },
   If(_if, e_cond, e_then) {
-    const args: Val[] = [e_cond.toAST(this.args.env, false), e_then.toAST(this.args.env, false)]
+    const args: Exp[] = [e_cond.toAST(this.args.env, false), e_then.toAST(this.args.env, false)]
     return addLoc(new Call(intrinsics.get('if')!, args), this)
   },
 
