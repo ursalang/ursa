@@ -463,8 +463,7 @@ export function runWithTraceback(ark: ArkState, compiledVal: CompiledArk): Val {
     return ark.run(compiledVal)
   } catch (e) {
     if (e instanceof ArkRuntimeError) {
-      const sourceLoc = ark.debug.get('sourceStack')
-      throw new UrsaRuntimeError(ark, sourceLoc[0] as Interval, e.message)
+      throw new UrsaRuntimeError(ark, e.sourceLoc as Interval, e.message)
     }
     throw e
   }
