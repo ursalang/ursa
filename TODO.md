@@ -8,7 +8,6 @@
 * Vectors (this is really current List, for List we need `push`/`pop` etc.).
 * Maps: iteration (with yield), symbol keys
 * Sets.
-* Split into multiple packages (issue #7).
 * Map interface to file system and internet.
 
 ## Ursa MVP
