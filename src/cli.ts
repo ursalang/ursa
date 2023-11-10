@@ -7,7 +7,8 @@ import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
 import assert from 'assert'
 
 import {
-  debug, List, ValRef, Str, globals, ArkState, Undefined, toJs,
+  debug, ArkState, toJs,
+  ArkUndefined, ArkList, ArkValRef, ArkString, globals,
   Environment, PartialCompiledArk, compile as arkCompile,
   serializeCompiledArk, serializeVal,
 } from '@ursalang/ark'
@@ -89,7 +90,7 @@ async function repl() {
       // Handle new let bindings
       if (compiled instanceof PartialCompiledArk && compiled.boundVars.length > 0) {
         env = env.push(compiled.boundVars)
-        ark.stack.push(Array(compiled.boundVars.length).fill(new ValRef(Undefined)))
+        ark.stack.push(Array(compiled.boundVars.length).fill(new ArkValRef(ArkUndefined)))
       }
       val = toJs(runWithTraceback(ark, compiled))
       console.dir(val, {depth: null})
@@ -150,8 +151,8 @@ async function main() {
       json = serializeCompiledArk(new PartialCompiledArk(result.value, result.freeVars))
     } else {
       // Add command-line arguments.
-      globals.set('argv', new ValRef(new List(
-        [Str(prog ?? process.argv[0]), ...args.argument.map((s) => Str(s))],
+      globals.set('argv', new ArkValRef(new ArkList(
+        [ArkString(prog ?? process.argv[0]), ...args.argument.map((s) => ArkString(s))],
       )))
       // Run the program
       if (source !== undefined) {

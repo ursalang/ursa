@@ -3,7 +3,7 @@ import test from 'ava'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  BreakException, ArkState, toJs,
+  ArkBreakException, ArkState, toJs,
 } from '@ursalang/ark'
 
 import {compile} from './compiler.js'
@@ -56,7 +56,7 @@ testGroup('Conditionals', [
 ])
 
 test('loop and break', (t) => {
-  const error = t.throws(() => new ArkState().run(compile('break')), {instanceOf: BreakException})
+  const error = t.throws(() => new ArkState().run(compile('break')), {instanceOf: ArkBreakException})
   if (error !== undefined) {
     t.is(toJs(error.val), null)
   }
