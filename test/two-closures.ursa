@@ -1,8 +1,10 @@
 let newAccum = fn() {
   let tot = 0
-  fn(x) {
+  let f = fn(x) {
     tot := tot + x
   }
+  tot := 2
+  f
 }
 let accum = newAccum()
 let accum2 = newAccum()

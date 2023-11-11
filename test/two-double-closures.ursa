@@ -1,6 +1,6 @@
 let newAccums = fn() {
   let tot = 0
-  [
+  let l = [
     fn(x) {
       tot := tot + x
     },
@@ -8,6 +8,8 @@ let newAccums = fn() {
       tot := tot + x
     },
   ]
+  tot := 2
+  l
 }
 let accums = newAccums()
 let accums2 = newAccums()
