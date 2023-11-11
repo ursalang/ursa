@@ -13,7 +13,7 @@ import {
   ArkSequence, ArkIf, ArkLoop, ArkAnd, ArkOr,
   ArkObjectLiteral, ArkListLiteral, ArkMapLiteral,
   ArkCall, ArkLet, ArkFn, ArkProperty, ArkGet, ArkSet,
-  CompiledArk, symRef, Environment, PartialCompiledArk, checkParamList,
+  CompiledArk, symRef, Environment, PartialCompiledArk, checkParamList, ArkLiteral,
 } from '@ursalang/ark'
 
 class UrsaError extends Error {
@@ -83,7 +83,7 @@ class Arguments extends AST {
 }
 
 function maybeVal(env: Environment, exp: IterationNode): ArkExp {
-  return exp.children.length > 0 ? exp.children[0].toAST(env, false) : ArkNull()
+  return exp.children.length > 0 ? exp.children[0].toAST(env, false) : new ArkLiteral(ArkNull())
 }
 
 function listNodeToParamList(listNode: Node): string[] {
@@ -387,7 +387,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
           ident.symref(innerEnv).value,
           new ArkCall(
             new ArkGet(new ArkProperty('use', new ArkGet(path[0].symref(innerEnv).value))),
-            path.slice(1).map((id) => ArkString(id.sourceString)),
+            path.slice(1).map((id) => new ArkLiteral(ArkString(id.sourceString))),
           ),
         ),
       ]),
@@ -402,25 +402,25 @@ semantics.addOperation<AST>('toAST(env,lval)', {
   // This rule is not used for symbol references, but for property and
   // parameter names.
   ident(_ident) {
-    return addLoc(ArkString(this.sourceString), this)
+    return addLoc(new ArkLiteral(ArkString(this.sourceString)), this)
   },
 
   null(_null) {
-    return addLoc(ArkNull(), this)
+    return addLoc(new ArkLiteral(ArkNull()), this)
   },
 
   bool(flag) {
-    return addLoc(ArkBoolean(flag.sourceString === 'true'), this)
+    return addLoc(new ArkLiteral(ArkBoolean(flag.sourceString === 'true')), this)
   },
 
   number(_) {
-    return addLoc(ArkNumber(parseFloat(this.sourceString)), this)
+    return addLoc(new ArkLiteral(ArkNumber(parseFloat(this.sourceString))), this)
   },
 
   string(_open, _str, _close) {
     // FIXME: Parse string properly
     // eslint-disable-next-line no-eval
-    return addLoc(ArkString(eval(this.sourceString)), this)
+    return addLoc(new ArkLiteral(ArkString(eval(this.sourceString))), this)
   },
 })
 
