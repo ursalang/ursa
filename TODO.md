@@ -4,7 +4,6 @@
 
 * Long strings (follow Rust: allow newlines in normal strings, and add
   Rust-style raw strings).
-* Long comments: like Rust: C-style and nestable.
 * Lists: iteration (with yield)
 * Vectors (this is really current List, for List we need `push`/`pop` etc.).
 * Maps: iteration (with yield), symbol keys
