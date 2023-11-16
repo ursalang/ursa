@@ -42,7 +42,7 @@
     "/bin/run.js",
     "/lib"
   ],
-  "main": "lib/index.js",
+  "main": "lib/compiler.js",
   "scripts": {
     "lint": "eslint . --ext .ts && depcheck",
     "prebuild": "node --print \"'export default \\'' + require('./package.json').version + '\\';'\" > src/version.ts",
@@ -74,5 +74,5 @@
     "test"
   ],
   "type": "module",
-  "types": "lib/index.d.ts"
+  "types": "lib/compiler.d.ts"
 }
