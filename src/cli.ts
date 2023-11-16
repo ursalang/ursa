@@ -11,8 +11,7 @@ import assert from 'assert'
 import {
   debug, ArkState, toJs,
   ArkUndefined, ArkList, ArkValRef, ArkString, globals,
-  Environment, PartialCompiledArk, compile as arkCompile,
-  serializeCompiledArk, serializeVal,
+  Environment, PartialCompiledArk, compile as arkCompile, serializeVal,
 } from '@ursalang/ark'
 
 import programVersion from './version.js'
@@ -150,7 +149,7 @@ async function main() {
         throw new Error('--compile given with no input or output filename')
       }
       result = compile(source)
-      json = serializeCompiledArk(new PartialCompiledArk(result.value, result.freeVars))
+      json = serializeVal(new PartialCompiledArk(result.value, result.freeVars).value)
     } else {
       // Add command-line arguments.
       globals.set('argv', new ArkValRef(new ArkList(
