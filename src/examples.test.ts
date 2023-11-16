@@ -43,9 +43,9 @@ Invalid call
 
 Traceback (most recent call last)
   line 3
-    let f = fn() { g() }, at top level
+    let f = fn() { g() }, in f
   line 4
-    f(), in g`)
+    f(), at top level`)
 
 // Rosetta code examples
 test('Accumulator factory', 'rosettacode/Accumulator factory', [], '8.3')
