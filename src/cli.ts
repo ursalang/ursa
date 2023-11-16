@@ -110,7 +110,7 @@ async function repl() {
 
 // Get output filename, if any
 let jsonFile: PathOrFileDescriptor | undefined = args.output
-if ((jsonFile === '-' || args.compile) && (args.module !== undefined || args.eval !== undefined)) {
+if (jsonFile === '-' || (args.compile && jsonFile === undefined)) {
   jsonFile = process.stdout.fd
 }
 
