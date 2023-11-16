@@ -28,12 +28,22 @@ class UrsaRuntimeError extends UrsaError {
   constructor(public ark: ArkState, source: Interval, message: string) {
     super(source, message)
     const trace = []
-    // Ignore the top level (outermost frame).
+    // Exclude top level stack frame from trace-back.
     for (let i = 0; i < ark.stack.stack.length - 1; i += 1) {
-      const source = ark.stack.stack[i][2].get('source')
-      const fnName = (i > 0 ? `in ${ark.stack.stack[i][2].get('name')}` : 'at top level') ?? 'in anonymous function'
-      if (source !== undefined) {
-        const line = source.getLineAndColumn()
+      const callInfo = ark.stack.stack[i][2].get('source').debug
+      let fnName
+      if (i < ark.stack.stack.length - 2) {
+        const fnNameInfo = ark.stack.stack[i + 1][2].get('name')
+        if (fnNameInfo !== undefined) {
+          fnName = fnNameInfo.debug.get('name')
+        }
+        fnName = `in ${fnName}`
+      } else {
+        fnName = 'at top level'
+      }
+      // 'at top level'
+      if (callInfo !== undefined) {
+        const line = callInfo.get('sourceLoc').getLineAndColumn()
         trace.push(`line ${line.lineNum}\n    ${line.line}, ${fnName}`)
       } else {
         trace.push('(uninstrumented stack frame)')
@@ -96,7 +106,7 @@ function listNodeToParamList(listNode: Node): string[] {
 }
 
 function addLoc(val: ArkExp, node: Node) {
-  val.debug.set('source', node.source)
+  val.debug.set('sourceLoc', node.source)
   return val
 }
 
