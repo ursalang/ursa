@@ -428,7 +428,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
   string(_open, _str, _close) {
     // FIXME: Parse string properly
     // eslint-disable-next-line no-eval
-    return addLoc(new ArkLiteral(ArkString(eval(this.sourceString.replaceAll('\n', '\\n')))), this)
+    return addLoc(new ArkLiteral(ArkString(eval(this.sourceString))), this)
   },
 
   literalString(_open, _str, _close) {

@@ -21,8 +21,8 @@ const test = cliTest.bind(null, 'ursa');
   ['Test JSON', 'test/json'],
   ['Test mixed lets and exps', 'test/mixed-lets-and-exps'],
   ['Mutual recursion', 'test/mutual-recursion'],
+  ['String with line continuation', 'test/string-line-continuation'],
   ['Literal string', 'test/literal-string'],
-  ['Long string', 'test/long-string'],
 ].map(([title, file]) => cliTest('ursa', title, file))
 
 test('Test I/O', 'test/print', [], 'Hello, world!')
