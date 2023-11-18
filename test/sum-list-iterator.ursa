@@ -1,0 +1,10 @@
+let sum = fn(l) {
+  let tot = 0
+  let it = l.iterator()
+  loop {
+    let e = it()
+    if e == null { return tot }
+    tot := tot + e
+  }
+}
+sum([10, 30, 50, 5, 5])

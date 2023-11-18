@@ -14,6 +14,8 @@ const test = cliTest.bind(null, 'ursa');
   ['Factorial (recurse with let fn)', 'test/fac-fn-let'],
   ['Sum list (break result)', 'test/sum-list-break'],
   ['Sum list (return result)', 'test/sum-list-return'],
+  ['Sum list (with iterator)', 'test/sum-list-iterator'],
+  ['Sum map (with iterator)', 'test/sum-map-iterator'],
   ['Double list', 'test/double-list'],
   ['Repeated closure', 'test/repeated-closure'],
   ['Two closures', 'test/two-closures'],
