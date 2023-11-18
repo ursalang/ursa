@@ -259,6 +259,27 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     return addLoc(new ArkLoop(body.toAST(this.args.env, false)), this)
   },
 
+  For(_for, ident, _of, iterator, body) {
+    const loopVar = ident.sourceString
+    const innerEnv = this.args.env.push([loopVar, '_for'])
+    const compiledLoopVar = symRef(innerEnv, loopVar).value
+    const compiledIterator = iterator.toAST(this.args.env, false)
+    const compiledBody = body.toAST(innerEnv, false)
+    const loopBody = new ArkSequence([
+      new ArkSet(compiledLoopVar, new ArkCall(new ArkGet(symRef(innerEnv, '_for').value), [])),
+      new ArkIf(
+        new ArkCall(intrinsics.get('=')!, [new ArkGet(compiledLoopVar), new ArkLiteral(ArkNull())]),
+        new ArkCall(intrinsics.get('break')!, []),
+      ),
+      compiledBody,
+    ])
+    const letBody = new ArkSequence([
+      new ArkSet(symRef(innerEnv, '_for').value, compiledIterator),
+      new ArkLoop(loopBody),
+    ])
+    return new ArkLet([loopVar, '_for'], letBody)
+  },
+
   UnaryExp_break(_break, exp) {
     return addLoc(new ArkCall(intrinsics.get('break')!, [maybeVal(this.args.env, exp)]), this)
   },

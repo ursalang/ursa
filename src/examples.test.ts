@@ -15,6 +15,7 @@ const test = cliTest.bind(null, 'ursa');
   ['Sum list (break result)', 'test/sum-list-break'],
   ['Sum list (return result)', 'test/sum-list-return'],
   ['Sum list (with iterator)', 'test/sum-list-iterator'],
+  ['Sum list (with for)', 'test/sum-list-for'],
   ['Sum map (with iterator)', 'test/sum-map-iterator'],
   ['Double list', 'test/double-list'],
   ['Repeated closure', 'test/repeated-closure'],

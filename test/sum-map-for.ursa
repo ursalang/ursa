@@ -1,0 +1,10 @@
+let sum = fn(m) {
+  let tot = 0
+  for l of m.iterator() {
+    let k = l[0] and let v = l[1]
+    print(k)
+    tot := tot + v
+  }
+  return tot
+}
+sum({"a": 10, "b": 30, "c": 50, "d": 5, "e": 5})
