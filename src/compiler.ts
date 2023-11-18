@@ -115,7 +115,7 @@ function indexExp(expNode: Node, env: Environment, lval: boolean, object: Node, 
   const compiledIndex = index.toAST(env, false)
   return lval
     ? new IndexExp(compiledObj, compiledIndex)
-    : addLoc(new ArkCall(new ArkGet(new ArkProperty('get', compiledObj)), [compiledIndex]), expNode)
+    : addLoc(new ArkCall(addLoc(new ArkGet(addLoc(new ArkProperty('get', compiledObj), object)), object), [compiledIndex]), expNode)
 }
 
 function makeIfChain(ifs: ArkIf[]): ArkIf {
@@ -192,7 +192,10 @@ semantics.addOperation<AST>('toAST(env,lval)', {
   },
 
   PropertyExp_property(object, _dot, property) {
-    const compiledProp = new ArkProperty(property.sourceString, object.toAST(this.args.env, false))
+    const compiledProp = addLoc(
+      new ArkProperty(property.sourceString, object.toAST(this.args.env, false)),
+      object,
+    )
     return addLoc(this.args.lval ? compiledProp : new ArkGet(compiledProp), this)
   },
   PropertyExp_index(object, _open, index, _close) {
@@ -203,7 +206,10 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     return indexExp(this, this.args.env, this.args.lval, object, index)
   },
   CallExp_property(exp, _dot, ident) {
-    const compiledProp = new ArkProperty(ident.sourceString, exp.toAST(this.args.env, false))
+    const compiledProp = addLoc(
+      new ArkProperty(ident.sourceString, exp.toAST(this.args.env, false)),
+      exp,
+    )
     return addLoc(this.args.lval ? compiledProp : new ArkGet(compiledProp), this)
   },
   CallExp_call(exp, args) {
@@ -350,7 +356,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
     let compiled
     if (compiledLvalue instanceof IndexExp) {
       compiled = new ArkCall(
-        new ArkGet(new ArkProperty('set', compiledLvalue.obj)),
+        new ArkGet(addLoc(new ArkProperty('set', compiledLvalue.obj), this)),
         [compiledLvalue.index, compiledValue],
       )
     } else {
@@ -394,7 +400,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
         new ArkSet(
           ident.symref(innerEnv).value,
           new ArkCall(
-            new ArkGet(new ArkProperty('use', new ArkGet(path[0].symref(innerEnv).value))),
+            new ArkGet(addLoc(new ArkProperty('use', new ArkGet(path[0].symref(innerEnv).value)), this)),
             path.slice(1).map((id) => new ArkLiteral(ArkString(id.sourceString))),
           ),
         ),

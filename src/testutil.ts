@@ -64,6 +64,9 @@ export async function cliTest(
     } catch (error) {
       if (expectedStderr !== undefined) {
         t.is((error as any).stderr.slice('run.js: '.length), expectedStderr)
+        if (expectedStdout !== undefined) {
+          t.is((error as any).stdout, expectedStdout)
+        }
       } else {
         throw error
       }

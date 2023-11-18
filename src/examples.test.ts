@@ -51,6 +51,24 @@ Traceback (most recent call last)
   line 4
     f(), at top level`)
 
+test('Test error on bad property access', 'test/sum-map-iterator-wrong', [], `\
+a
+b
+c
+d
+e`, `\
+Error: Line 6, col 13:
+  5 |     let l = it()
+> 6 |     let k = l[0] and let v = l[1]
+                  ^
+  7 |     if l == null { return tot }
+
+Attempt to read property of non-object
+
+Traceback (most recent call last)
+  line 12
+    sum({"a": 10, "b": 30, "c": 50, "d": 5, "e": 5}), at top level`)
+
 // Rosetta code examples
 test('Accumulator factory', 'rosettacode/Accumulator factory', [], '8.3')
 test('Ackermann function', 'rosettacode/Ackermann function', [], '1\n125\n13')

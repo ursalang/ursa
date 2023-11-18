@@ -1,0 +1,12 @@
+let sum = fn(m) {
+  let tot = 0
+  let it = m.iterator()
+  loop {
+    let l = it()
+    let k = l[0] and let v = l[1]
+    if l == null { return tot }
+    print(k)
+    tot := tot + v
+  }
+}
+sum({"a": 10, "b": 30, "c": 50, "d": 5, "e": 5})
