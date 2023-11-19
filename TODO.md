@@ -2,14 +2,17 @@
 
 ## Version 0.2
 
-* Vectors (this is really current List, for List we need `push`/`pop` etc.).
+* `range()` iterator, written in Ursa (start of stdlib/prelude).
 * Maps: symbol keys
-* Sets.
+* Sets: use `{ Exp, }` notation, with mandatory first comma.
 * Map interface to file system and internet.
 
 ## Ursa MVP
 
-* Generators and co-routines.
+* Comprehensions: `loop [ … ]` and `loop {k : v}` (`k:v` being syntactic
+  sugar for a pair?).
+* Generators and co-routines. A generator in a comprehension gives a lazy
+  list/map.
 * 100% test coverage.
 * Tail recursion elimination
 * Co-routines (copy Python?)
@@ -23,11 +26,12 @@
   APIs to be declared (especially for POSIX; later add GLib introspection),
   and allow C bindings to be generated for Ark values that have C types, and
   any base Ark type.
-* Type checking
+* Type checking; extra `for` sugar where when an object `obj` is given as
+  the iterator, `obj.iterator()` is automatically used.
 * Structs
 * Enums
 * Traits (use for built-in operators)
-* Classes: properties
+* Classes: properties, names for List, Map and Set
 * Tuples
 * Variadic functions?
 * Slices (implement on lists and strings)
