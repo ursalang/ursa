@@ -83,18 +83,20 @@ async function repl() {
   let val
   for await (const line of rl) {
     try {
-      const compiled = compile(line, env, 'Exp')
-      // Filter out already-declared bindings
-      for (const id of env.stack[0][0]) {
-        compiled.freeVars.delete(id)
+      if (line !== '') { // Ignore empty input, which is not a valid Exp.
+        const compiled = compile(line, env, 'Exp')
+        // Filter out already-declared bindings
+        for (const id of env.stack[0][0]) {
+          compiled.freeVars.delete(id)
+        }
+        // Handle new let bindings
+        if (compiled instanceof PartialCompiledArk && compiled.boundVars.length > 0) {
+          env = env.push(compiled.boundVars)
+          ark.stack.push(Array(compiled.boundVars.length).fill(new ArkValRef(ArkUndefined)))
+        }
+        val = toJs(runWithTraceback(ark, compiled))
+        console.dir(val, {depth: null})
       }
-      // Handle new let bindings
-      if (compiled instanceof PartialCompiledArk && compiled.boundVars.length > 0) {
-        env = env.push(compiled.boundVars)
-        ark.stack.push(Array(compiled.boundVars.length).fill(new ArkValRef(ArkUndefined)))
-      }
-      val = toJs(runWithTraceback(ark, compiled))
-      console.dir(val, {depth: null})
     } catch (error) {
       if (error instanceof Error) {
         console.error(error.message)
