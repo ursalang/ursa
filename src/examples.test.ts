@@ -1,3 +1,4 @@
+/* eslint-disable no-useless-concat */
 // Ursa tests using example source files.
 // © Reuben Thomas 2023
 // Released under the MIT license.
@@ -72,6 +73,18 @@ Attempt to read property of non-object
 Traceback (most recent call last)
   line 12
     sum({"a": 10, "b": 30, "c": 50, "d": 5, "e": 5}), at top level`)
+
+test('Test error on re-assignment with wrong type', 'test/bad-reassignment', [], undefined, `\
+Error: Line 3, col 1:
+  2 | a := 2
+> 3 | a := "hello"
+      ^~~~~~~~~~~~
+  4 | ` + `
+
+Assignment to different type
+
+Traceback (most recent call last)
+`)
 
 // Rosetta code examples
 test('Accumulator factory', 'rosettacode/Accumulator factory', [], '8.3')

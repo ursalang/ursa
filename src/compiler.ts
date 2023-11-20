@@ -260,24 +260,28 @@ semantics.addOperation<AST>('toAST(env,lval)', {
   },
 
   For(_for, ident, _of, iterator, body) {
-    const loopVar = ident.sourceString
-    const innerEnv = this.args.env.push([loopVar, '_for'])
-    const compiledLoopVar = symRef(innerEnv, loopVar).value
-    const compiledIterator = iterator.toAST(this.args.env, false)
-    const compiledBody = body.toAST(innerEnv, false)
-    const loopBody = new ArkSequence([
-      new ArkSet(compiledLoopVar, new ArkCall(new ArkGet(symRef(innerEnv, '_for').value), [])),
-      new ArkIf(
-        new ArkCall(intrinsics.get('=')!, [new ArkGet(compiledLoopVar), new ArkLiteral(ArkNull())]),
-        new ArkCall(intrinsics.get('break')!, []),
-      ),
-      compiledBody,
-    ])
+    const forVar = ident.sourceString
+    const innerEnv = this.args.env.push(['_for'])
+    const compiledIterator = iterator.toAST(innerEnv, false)
+    const loopEnv = innerEnv.push([forVar])
+    const compiledForVar = symRef(loopEnv, forVar).value
+    const compiledForBody = body.toAST(loopEnv, false)
+    const loopBody = new ArkLet(
+      [forVar],
+      new ArkSequence([
+        new ArkSet(compiledForVar, new ArkCall(new ArkGet(symRef(loopEnv, '_for').value), [])),
+        new ArkIf(
+          new ArkCall(intrinsics.get('=')!, [new ArkGet(compiledForVar), new ArkLiteral(ArkNull())]),
+          new ArkCall(intrinsics.get('break')!, []),
+        ),
+        compiledForBody,
+      ]),
+    )
     const letBody = new ArkSequence([
       new ArkSet(symRef(innerEnv, '_for').value, compiledIterator),
       new ArkLoop(loopBody),
     ])
-    return new ArkLet([loopVar, '_for'], letBody)
+    return new ArkLet(['_for'], letBody)
   },
 
   UnaryExp_break(_break, exp) {
