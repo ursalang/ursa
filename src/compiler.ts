@@ -18,7 +18,7 @@ import {
 
 class UrsaError extends Error {
   constructor(source: Interval, message: string) {
-    super(`${source.getLineAndColumnMessage()}\n${message}`)
+    super(`${source ? source.getLineAndColumnMessage() : 'unknown location'}\n${message}`)
   }
 }
 
