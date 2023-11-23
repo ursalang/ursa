@@ -4,17 +4,20 @@
 
 import {Node, IterationNode, Interval} from 'ohm-js'
 
-import {grammar, semantics} from '@ursalang/ohm-grammar'
+import {grammar, UrsaSemantics} from '@ursalang/ohm-grammar'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  ArkState, intrinsics, ArkRuntimeError, ArkCompilerError, FreeVarsMap,
+  ArkState, intrinsics, ArkRuntimeError, ArkCompilerError, FreeVars,
   ArkVal, ArkExp, ArkNull, ArkBoolean, ArkNumber, ArkString,
   ArkSequence, ArkIf, ArkLoop, ArkAnd, ArkOr,
   ArkObjectLiteral, ArkListLiteral, ArkMapLiteral,
   ArkCall, ArkLet, ArkFn, ArkProperty, ArkGet, ArkSet,
   CompiledArk, symRef, Environment, PartialCompiledArk, checkParamList, ArkLiteral,
 } from '@ursalang/ark'
+
+// Specify precise type so semantics can be precisely type-checked.
+const semantics: UrsaSemantics = grammar.createSemantics()
 
 class UrsaError extends Error {
   constructor(source: Interval, message: string) {
@@ -249,10 +252,10 @@ semantics.addOperation<AST>('toAST(env,lval)', {
   Fn(_fn, _open, params, _maybeComma, _close, body) {
     const paramStrings = listNodeToParamList(params)
     const innerEnv = this.args.env.pushFrame([paramStrings, []])
-    const bodyFreeVars: FreeVarsMap = body.freeVars(innerEnv)
+    const bodyFreeVars = body.freeVars(innerEnv)
     const compiledBody = body.toAST(innerEnv, false)
     paramStrings.forEach((p) => bodyFreeVars.delete(p))
-    return addLoc(new ArkFn(paramStrings, [...bodyFreeVars.values()].flat(), compiledBody), this)
+    return addLoc(new ArkFn(paramStrings, [...bodyFreeVars.values()], compiledBody), this)
   },
 
   Loop(_loop, body) {
@@ -467,6 +470,121 @@ semantics.addOperation<AST>('toAST(env,lval)', {
   },
 })
 
+function mergeBoundVars(children: Node[]): string[] {
+  const boundVars: string[] = []
+  children.forEach((child) => boundVars.push(...child.boundVars))
+  return boundVars
+}
+
+semantics.addAttribute<String[]>('boundVars', {
+  _terminal() {
+    return []
+  },
+  _nonterminal(...children) {
+    return mergeBoundVars(children)
+  },
+  _iter(...children) {
+    return mergeBoundVars(children)
+  },
+
+  Sequence(_exps, _sc) {
+    return []
+  },
+
+  Fn(_fn, _open, _params, _maybe_comma, _close, _body) {
+    return []
+  },
+
+  Let(_let, ident, _eq, _val) {
+    return [ident.sourceString]
+  },
+})
+
+function mergeFreeVars<EnvType>(env: EnvType, children: Node[]): FreeVars {
+  const freeVars = new FreeVars()
+  children.forEach((child) => freeVars.merge(child.freeVars(env)))
+  return freeVars
+}
+
+semantics.addOperation<Map<string, any>>('freeVars(env)', {
+  _terminal() {
+    return new FreeVars()
+  },
+  _nonterminal(...children) {
+    return mergeFreeVars(this.args.env, children)
+  },
+  _iter(...children) {
+    return mergeFreeVars(this.args.env, children)
+  },
+
+  Sequence(exps, _sc) {
+    const freeVars = new FreeVars()
+    const boundVars: string[] = []
+    exps.asIteration().children.forEach((exp) => {
+      boundVars.push(...exp.boundVars)
+      freeVars.merge(exp.freeVars(this.args.env.push(boundVars)))
+    })
+    boundVars.forEach((b: string) => freeVars.delete(b))
+    return freeVars
+  },
+
+  PropertyValue(_ident, _colon, value) {
+    return value.freeVars(this.args.env)
+  },
+
+  PropertyExp_property(propertyExp, _dot, _ident) {
+    return propertyExp.freeVars(this.args.env)
+  },
+
+  CallExp_property(propertyExp, _dot, _ident) {
+    return propertyExp.freeVars(this.args.env)
+  },
+
+  Fn(_fn, _open, params, _maybe_comma, _close, body) {
+    const paramStrings = params.asIteration().children.map((x) => x.sourceString)
+    const innerEnv = this.args.env.pushFrame([[...paramStrings], []])
+    const freeVars = new FreeVars().merge(body.freeVars(innerEnv))
+    paramStrings.forEach((p) => freeVars.delete(p))
+    return freeVars
+  },
+
+  Lets(lets) {
+    const letIds = lets.asIteration().children.map((x) => x.children[1].sourceString)
+    const innerEnv = this.args.env.push(letIds)
+    const freeVars = new FreeVars()
+    for (const l of lets.asIteration().children) {
+      freeVars.merge(l.children[3].freeVars(innerEnv))
+    }
+    for (const id of letIds) {
+      freeVars.delete(id)
+    }
+    return freeVars
+  },
+
+  For(_for, ident, _of, iterator, body) {
+    const forVar = ident.sourceString
+    const innerEnv = this.args.env.push(['_for'])
+    const loopEnv = innerEnv.push([forVar])
+    const freeVars = new FreeVars().merge(iterator.freeVars(innerEnv))
+      .merge(body.freeVars(loopEnv))
+    freeVars.delete(forVar)
+    return freeVars
+  },
+
+  Use(_use, pathList) {
+    const path = pathList.asIteration().children
+    const ident = path[path.length - 1]
+    const innerEnv = this.args.env.push([ident.sourceString])
+    const freeVars = new FreeVars().merge(path[0].symref(innerEnv).freeVars)
+    freeVars.delete(ident.sourceString)
+    return freeVars
+  },
+
+  ident(_ident) {
+    return this.symref(this.args.env).freeVars
+  },
+})
+
 // Ohm attributes can't take arguments, so memoize an operation.
 const symrefs = new Map<Node, CompiledArk>()
 semantics.addOperation<CompiledArk>('symref(env)', {
@@ -496,7 +614,7 @@ export function compile(
   }
   const ast = semantics(matchResult)
   const compiled = ast.toAST(env, false)
-  const freeVars: FreeVarsMap = ast.freeVars(env)
+  const freeVars = ast.freeVars(env)
   env.externalSyms.forEach((_val, id) => freeVars.delete(id))
   return new PartialCompiledArk(compiled, freeVars, ast.boundVars)
 }
