@@ -132,7 +132,6 @@ async function main() {
   try {
     // Read input
     let source: string | undefined
-    let result
     let json
     if (args.eval !== undefined) {
       prog = '(eval)'
@@ -150,14 +149,14 @@ async function main() {
       if (jsonFile === undefined) {
         throw new Error('--compile given with no input or output filename')
       }
-      result = compile(source)
-      json = serializeVal(new PartialCompiledArk(result.value, result.freeVars).value)
+      json = serializeVal(compile(source).value)
     } else {
       // Add command-line arguments.
       globals.set('argv', new ArkValRef(new ArkList(
         [ArkString(prog ?? process.argv[0]), ...args.argument.map((s) => ArkString(s))],
       )))
       // Run the program
+      let result
       if (source !== undefined) {
         result = runWithTraceback(new ArkState(), compile(source))
       }
