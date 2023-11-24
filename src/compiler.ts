@@ -147,7 +147,7 @@ semantics.addOperation<AST>('toAST(env,lval)', {
   },
 
   PrimaryExp_continue(_continue) {
-    return addLoc(new ArkCall(intrinsics.get('continue')!, []), this)
+    return addLoc(new ArkCall(new ArkLiteral(intrinsics.get('continue')!), []), this)
   },
   PrimaryExp_ident(_sym) {
     const symref = this.symref(this.args.env).value
@@ -274,8 +274,8 @@ semantics.addOperation<AST>('toAST(env,lval)', {
       new ArkSequence([
         new ArkSet(compiledForVar, new ArkCall(new ArkGet(symRef(loopEnv, '_for').value), [])),
         new ArkIf(
-          new ArkCall(intrinsics.get('=')!, [new ArkGet(compiledForVar), new ArkLiteral(ArkNull())]),
-          new ArkCall(intrinsics.get('break')!, []),
+          new ArkCall(new ArkLiteral(intrinsics.get('=')!), [new ArkGet(compiledForVar), new ArkLiteral(ArkNull())]),
+          new ArkCall(new ArkLiteral(intrinsics.get('break')!), []),
         ),
         compiledForBody,
       ]),
@@ -288,81 +288,81 @@ semantics.addOperation<AST>('toAST(env,lval)', {
   },
 
   UnaryExp_break(_break, exp) {
-    return addLoc(new ArkCall(intrinsics.get('break')!, [maybeVal(this.args.env, exp)]), this)
+    return addLoc(new ArkCall(new ArkLiteral(intrinsics.get('break')!), [maybeVal(this.args.env, exp)]), this)
   },
   UnaryExp_return(_return, exp) {
-    return addLoc(new ArkCall(intrinsics.get('return')!, [maybeVal(this.args.env, exp)]), this)
+    return addLoc(new ArkCall(new ArkLiteral(intrinsics.get('return')!), [maybeVal(this.args.env, exp)]), this)
   },
   UnaryExp_not(_not, exp) {
-    return addLoc(new ArkCall(intrinsics.get('not')!, [exp.toAST(this.args.env, false)]), this)
+    return addLoc(new ArkCall(new ArkLiteral(intrinsics.get('not')!), [exp.toAST(this.args.env, false)]), this)
   },
   UnaryExp_bitwise_not(_not, exp) {
-    return addLoc(new ArkCall(intrinsics.get('~')!, [exp.toAST(this.args.env, false)]), this)
+    return addLoc(new ArkCall(new ArkLiteral(intrinsics.get('~')!), [exp.toAST(this.args.env, false)]), this)
   },
   UnaryExp_pos(_plus, exp) {
-    return addLoc(new ArkCall(intrinsics.get('pos')!, [exp.toAST(this.args.env, false)]), this)
+    return addLoc(new ArkCall(new ArkLiteral(intrinsics.get('pos')!), [exp.toAST(this.args.env, false)]), this)
   },
   UnaryExp_neg(_minus, exp) {
-    return addLoc(new ArkCall(intrinsics.get('neg')!, [exp.toAST(this.args.env, false)]), this)
+    return addLoc(new ArkCall(new ArkLiteral(intrinsics.get('neg')!), [exp.toAST(this.args.env, false)]), this)
   },
 
   ExponentExp_power(left, _power, right) {
-    return addLoc(new ArkCall(intrinsics.get('**')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
+    return addLoc(new ArkCall(new ArkLiteral(intrinsics.get('**')!), [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
   },
 
   ProductExp_times(left, _times, right) {
-    return addLoc(new ArkCall(intrinsics.get('*')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
+    return addLoc(new ArkCall(new ArkLiteral(intrinsics.get('*')!), [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
   },
   ProductExp_divide(left, _divide, right) {
-    return addLoc(new ArkCall(intrinsics.get('/')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
+    return addLoc(new ArkCall(new ArkLiteral(intrinsics.get('/')!), [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
   },
   ProductExp_mod(left, _mod, right) {
-    return addLoc(new ArkCall(intrinsics.get('%')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
+    return addLoc(new ArkCall(new ArkLiteral(intrinsics.get('%')!), [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
   },
 
   SumExp_plus(left, _plus, right) {
-    return addLoc(new ArkCall(intrinsics.get('+')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
+    return addLoc(new ArkCall(new ArkLiteral(intrinsics.get('+')!), [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
   },
   SumExp_minus(left, _minus, right) {
-    return addLoc(new ArkCall(intrinsics.get('-')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
+    return addLoc(new ArkCall(new ArkLiteral(intrinsics.get('-')!), [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
   },
 
   CompareExp_eq(left, _eq, right) {
-    return addLoc(new ArkCall(intrinsics.get('=')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
+    return addLoc(new ArkCall(new ArkLiteral(intrinsics.get('=')!), [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
   },
   CompareExp_neq(left, _neq, right) {
-    return addLoc(new ArkCall(intrinsics.get('!=')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
+    return addLoc(new ArkCall(new ArkLiteral(intrinsics.get('!=')!), [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
   },
   CompareExp_lt(left, _le, right) {
-    return addLoc(new ArkCall(intrinsics.get('<')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
+    return addLoc(new ArkCall(new ArkLiteral(intrinsics.get('<')!), [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
   },
   CompareExp_leq(left, _leq, right) {
-    return addLoc(new ArkCall(intrinsics.get('<=')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
+    return addLoc(new ArkCall(new ArkLiteral(intrinsics.get('<=')!), [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
   },
   CompareExp_gt(left, _gt, right) {
-    return addLoc(new ArkCall(intrinsics.get('>')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
+    return addLoc(new ArkCall(new ArkLiteral(intrinsics.get('>')!), [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
   },
   CompareExp_geq(left, _geq, right) {
-    return addLoc(new ArkCall(intrinsics.get('>=')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
+    return addLoc(new ArkCall(new ArkLiteral(intrinsics.get('>=')!), [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
   },
 
   BitwiseExp_and(left, _and, right) {
-    return addLoc(new ArkCall(intrinsics.get('&')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
+    return addLoc(new ArkCall(new ArkLiteral(intrinsics.get('&')!), [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
   },
   BitwiseExp_or(left, _or, right) {
-    return addLoc(new ArkCall(intrinsics.get('|')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
+    return addLoc(new ArkCall(new ArkLiteral(intrinsics.get('|')!), [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
   },
   BitwiseExp_xor(left, _xor, right) {
-    return addLoc(new ArkCall(intrinsics.get('^')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
+    return addLoc(new ArkCall(new ArkLiteral(intrinsics.get('^')!), [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
   },
   BitwiseExp_lshift(left, _lshift, right) {
-    return addLoc(new ArkCall(intrinsics.get('<<')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
+    return addLoc(new ArkCall(new ArkLiteral(intrinsics.get('<<')!), [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
   },
   BitwiseExp_arshift(left, _rshift, right) {
-    return addLoc(new ArkCall(intrinsics.get('>>')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
+    return addLoc(new ArkCall(new ArkLiteral(intrinsics.get('>>')!), [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
   },
   BitwiseExp_lrshift(left, _arshift, right) {
-    return addLoc(new ArkCall(intrinsics.get('>>>')!, [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
+    return addLoc(new ArkCall(new ArkLiteral(intrinsics.get('>>>')!), [left.toAST(this.args.env, false), right.toAST(this.args.env, false)]), this)
   },
 
   LogicExp_and(left, _and, right) {
