@@ -1,3 +1,4 @@
+/* eslint-disable no-useless-concat */
 // Ursa tests of basics using inline source snippets.
 // © Reuben Thomas 2023
 // Released under the MIT license.
@@ -7,10 +8,11 @@ import test from 'ava'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  ArkBreakException, ArkState, toJs,
+  ArkState, toJs,
 } from '@ursalang/ark'
 
-import {compile} from './compiler.js'
+import assert from 'assert'
+import {compile, UrsaCompilerError} from './compiler.js'
 
 import {testUrsaGroup as testGroup} from './testutil.js'
 
@@ -60,10 +62,14 @@ testGroup('Conditionals', [
 ])
 
 test('loop and break', (t) => {
-  const error = t.throws(() => new ArkState().run(compile('break')), {instanceOf: ArkBreakException})
-  if (error !== undefined) {
-    t.is(toJs(error.val), null)
-  }
+  const error = t.throws(() => new ArkState().run(compile('break')), {instanceOf: UrsaCompilerError})
+  assert(error !== undefined)
+  t.is(error.message, `\
+Line 1, col 1:
+> 1 | break
+      ^~~~~
+
+break used outside a loop`)
   t.is(toJs(new ArkState().run(compile('loop { break 3 }'))), 3)
 })
 

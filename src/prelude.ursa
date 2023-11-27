@@ -1,0 +1,14 @@
+// Ursa prelude.
+// © Reuben Thomas 2023
+// Released under the MIT license.
+
+// Range iterator.
+let range = fn(n) {
+  let i = 0
+  fn() {
+    i := i + 1
+    if i <= n { i - 1 } else { null }
+  }
+}
+
+;
