@@ -93,9 +93,9 @@ class Arguments extends AST {
   }
 }
 
-function maybeVal(env: Environment, exp: IterationNode): ArkExp {
+function maybeVal(env: Environment, exp: IterationNode, inFn: boolean): ArkExp {
   return exp.children.length > 0
-    ? exp.children[0].toAST(env, false, true)
+    ? exp.children[0].toAST(env, false, true, inFn)
     : new ArkLiteral(ArkNull())
 }
 
@@ -120,11 +120,12 @@ function indexExp(
   env: Environment,
   lval: boolean,
   inLoop: boolean,
+  inFn: boolean,
   object: Node,
   index: Node,
 ): AST {
-  const compiledObj = object.toAST(env, false, inLoop)
-  const compiledIndex = index.toAST(env, false, inLoop)
+  const compiledObj = object.toAST(env, false, inLoop, inFn)
+  const compiledIndex = index.toAST(env, false, inLoop, inFn)
   return lval
     ? new IndexExp(compiledObj, compiledIndex)
     : addLoc(
@@ -149,12 +150,17 @@ function makeIfChain(ifs: ArkIf[]): ArkIf {
   return ifs[0]
 }
 
-semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
+semantics.addOperation<AST>('toAST(env,lval,inLoop,inFn)', {
   Sequence(exps, _sc) {
     const compiledExps = []
     const boundVars = []
     for (const exp of exps.asIteration().children) {
-      const compiledExp = exp.toAST(this.args.env.push(boundVars), false, this.args.inLoop)
+      const compiledExp = exp.toAST(
+        this.args.env.push(boundVars),
+        false,
+        this.args.inLoop,
+        this.args.inFn,
+      )
       boundVars.push(...exp.boundVars)
       compiledExps.push(compiledExp)
     }
@@ -178,13 +184,13 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
     return addLoc(this.args.lval ? symref : new ArkGet(symref), this)
   },
   PrimaryExp_paren(_open, exp, _close) {
-    return addLoc(exp.toAST(this.args.env, false, this.args.inLoop), this)
+    return addLoc(exp.toAST(this.args.env, false, this.args.inLoop, this.args.inFn), this)
   },
 
   List(_open, elems, _maybeComma, _close) {
     return addLoc(
       new ArkListLiteral(elems.asIteration().children.map(
-        (x) => x.toAST(this.args.env, false, this.args.inLoop),
+        (x) => x.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
       )),
       this,
     )
@@ -193,7 +199,7 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
   Object(_open, elems, _maybeComma, _close) {
     const inits = new Map()
     elems.asIteration().children.forEach((value) => {
-      const elem = value.toAST(this.args.env, false, this.args.inLoop)
+      const elem = value.toAST(this.args.env, false, this.args.inLoop, this.args.inFn)
       inits.set((elem as PropertyValue).key, (elem as PropertyValue).val)
     })
     return addLoc(new ArkObjectLiteral(inits), this)
@@ -201,42 +207,68 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
   PropertyValue(ident, _colon, value) {
     return new PropertyValue(
       ident.sourceString,
-      addLoc(value.toAST(this.args.env, false, this.args.inLoop), value),
+      addLoc(value.toAST(this.args.env, false, this.args.inLoop, this.args.inFn), value),
     )
   },
 
   Map(_open, elems, _maybeComma, _close) {
     const inits = new Map<ArkExp, ArkExp>()
     elems.asIteration().children.forEach((value) => {
-      const elem = value.toAST(this.args.env, false, this.args.inLoop)
+      const elem = value.toAST(this.args.env, false, this.args.inLoop, this.args.inFn)
       inits.set((elem as KeyValue).key, (elem as KeyValue).val)
     })
     return addLoc(new ArkMapLiteral(inits), this)
   },
   KeyValue(key, _colon, value) {
     return new KeyValue(
-      key.toAST(this.args.env, false, this.args.inLoop),
-      addLoc(value.toAST(this.args.env, false, this.args.inLoop), value),
+      key.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
+      addLoc(value.toAST(this.args.env, false, this.args.inLoop, this.args.inFn), value),
     )
   },
 
   PropertyExp_property(object, _dot, property) {
     const compiledProp = addLoc(
-      new ArkProperty(property.sourceString, object.toAST(this.args.env, false, this.args.inLoop)),
+      new ArkProperty(property.sourceString, object.toAST(
+        this.args.env,
+        false,
+        this.args.inLoop,
+        this.args.inFn,
+      )),
       object,
     )
     return addLoc(this.args.lval ? compiledProp : new ArkGet(compiledProp), this)
   },
   PropertyExp_index(object, _open, index, _close) {
-    return indexExp(this, this.args.env, this.args.lval, this.args.inLoop, object, index)
+    return indexExp(
+      this,
+      this.args.env,
+      this.args.lval,
+      this.args.inLoop,
+      this.args.inFn,
+      object,
+      index,
+    )
   },
 
   CallExp_index(object, _open, index, _close) {
-    return indexExp(this, this.args.env, this.args.lval, this.args.inLoop, object, index)
+    return indexExp(
+      this,
+      this.args.env,
+      this.args.lval,
+      this.args.inLoop,
+      this.args.inFn,
+      object,
+      index,
+    )
   },
   CallExp_property(exp, _dot, ident) {
     const compiledProp = addLoc(
-      new ArkProperty(ident.sourceString, exp.toAST(this.args.env, false, this.args.inLoop)),
+      new ArkProperty(ident.sourceString, exp.toAST(
+        this.args.env,
+        false,
+        this.args.inLoop,
+        this.args.inFn,
+      )),
       exp,
     )
     return addLoc(this.args.lval ? compiledProp : new ArkGet(compiledProp), this)
@@ -244,8 +276,8 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
   CallExp_call(exp, args) {
     return addLoc(
       new ArkCall(
-        exp.toAST(this.args.env, false, this.args.inLoop),
-        args.toAST(this.args.env, false, this.args.inLoop).args,
+        exp.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
+        args.toAST(this.args.env, false, this.args.inLoop, this.args.inFn).args,
       ),
       this,
     )
@@ -253,8 +285,8 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
   CallExp_property_call(exp, args) {
     return addLoc(
       new ArkCall(
-        exp.toAST(this.args.env, false, this.args.inLoop),
-        args.toAST(this.args.env, false, this.args.inLoop).args,
+        exp.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
+        args.toAST(this.args.env, false, this.args.inLoop, this.args.inFn).args,
       ),
       this,
     )
@@ -262,25 +294,30 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
   Arguments(_open, args, _maybeComma, _close) {
     return new Arguments(
       args.asIteration().children.map(
-        (x) => addLoc(x.toAST(this.args.env, false, this.args.inLoop), x),
+        (x) => addLoc(x.toAST(this.args.env, false, this.args.inLoop, this.args.inFn), x),
       ),
     )
   },
 
   Ifs(ifs, _else, elseExp) {
     const compiledIfs: ArkIf[] = ifs.asIteration().children.map(
-      (x) => addLoc(x.toAST(this.args.env, false, this.args.inLoop), x) as ArkIf,
+      (x) => addLoc(x.toAST(this.args.env, false, this.args.inLoop, this.args.inFn), x) as ArkIf,
     )
     if (elseExp.children.length > 0) {
-      compiledIfs.push(elseExp.children[0].toAST(this.args.env, false, this.args.inLoop))
+      compiledIfs.push(elseExp.children[0].toAST(
+        this.args.env,
+        false,
+        this.args.inLoop,
+        this.args.inFn,
+      ))
     }
     return makeIfChain(compiledIfs)
   },
   If(_if, cond, thenExp) {
     return addLoc(
       new ArkIf(
-        cond.toAST(this.args.env, false, this.args.inLoop),
-        thenExp.toAST(this.args.env, false, this.args.inLoop),
+        cond.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
+        thenExp.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
       ),
       this,
     )
@@ -290,22 +327,22 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
     const paramStrings = listNodeToParamList(params)
     const innerEnv = this.args.env.pushFrame([paramStrings, []])
     const bodyFreeVars = body.freeVars(innerEnv)
-    const compiledBody = body.toAST(innerEnv, false, false)
+    const compiledBody = body.toAST(innerEnv, false, false, true)
     paramStrings.forEach((p) => bodyFreeVars.delete(p))
     return addLoc(new ArkFn(paramStrings, [...bodyFreeVars.values()], compiledBody), this)
   },
 
   Loop(_loop, body) {
-    return addLoc(new ArkLoop(body.toAST(this.args.env, false, true)), this)
+    return addLoc(new ArkLoop(body.toAST(this.args.env, false, true, this.args.inFn)), this)
   },
 
   For(_for, ident, _of, iterator, body) {
     const forVar = ident.sourceString
     const innerEnv = this.args.env.push(['_for'])
-    const compiledIterator = iterator.toAST(innerEnv, false, this.args.inLoop)
+    const compiledIterator = iterator.toAST(innerEnv, false, this.args.inLoop, this.args.inFn)
     const loopEnv = innerEnv.push([forVar])
     const compiledForVar = symRef(loopEnv, forVar).value
-    const compiledForBody = body.toAST(loopEnv, false, true)
+    const compiledForBody = body.toAST(loopEnv, false, true, this.args.inFn)
     const loopBody = new ArkLet(
       [forVar],
       new ArkSequence([
@@ -330,37 +367,40 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
     }
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('break')!),
-      [maybeVal(this.args.env, exp)],
+      [maybeVal(this.args.env, exp, this.args.inFn)],
     ), this)
   },
   UnaryExp_return(_return, exp) {
+    if (!this.args.inFn) {
+      throw new UrsaCompilerError(_return.source, 'return used outside a function')
+    }
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('return')!),
-      [maybeVal(this.args.env, exp)],
+      [maybeVal(this.args.env, exp, this.args.inFn)],
     ), this)
   },
   UnaryExp_not(_not, exp) {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('not')!),
-      [exp.toAST(this.args.env, false, this.args.inLoop)],
+      [exp.toAST(this.args.env, false, this.args.inLoop, this.args.inFn)],
     ), this)
   },
   UnaryExp_bitwise_not(_not, exp) {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('~')!),
-      [exp.toAST(this.args.env, false, this.args.inLoop)],
+      [exp.toAST(this.args.env, false, this.args.inLoop, this.args.inFn)],
     ), this)
   },
   UnaryExp_pos(_plus, exp) {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('pos')!),
-      [exp.toAST(this.args.env, false, this.args.inLoop)],
+      [exp.toAST(this.args.env, false, this.args.inLoop, this.args.inFn)],
     ), this)
   },
   UnaryExp_neg(_minus, exp) {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('neg')!),
-      [exp.toAST(this.args.env, false, this.args.inLoop)],
+      [exp.toAST(this.args.env, false, this.args.inLoop, this.args.inFn)],
     ), this)
   },
 
@@ -368,8 +408,8 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('**')!),
       [
-        left.toAST(this.args.env, false, this.args.inLoop),
-        right.toAST(this.args.env, false, this.args.inLoop),
+        left.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
+        right.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
       ],
     ), this)
   },
@@ -378,8 +418,8 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('*')!),
       [
-        left.toAST(this.args.env, false, this.args.inLoop),
-        right.toAST(this.args.env, false, this.args.inLoop),
+        left.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
+        right.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
       ],
     ), this)
   },
@@ -387,8 +427,8 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('/')!),
       [
-        left.toAST(this.args.env, false, this.args.inLoop),
-        right.toAST(this.args.env, false, this.args.inLoop),
+        left.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
+        right.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
       ],
     ), this)
   },
@@ -396,8 +436,8 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('%')!),
       [
-        left.toAST(this.args.env, false, this.args.inLoop),
-        right.toAST(this.args.env, false, this.args.inLoop)],
+        left.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
+        right.toAST(this.args.env, false, this.args.inLoop, this.args.inFn)],
     ), this)
   },
 
@@ -405,8 +445,8 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('+')!),
       [
-        left.toAST(this.args.env, false, this.args.inLoop),
-        right.toAST(this.args.env, false, this.args.inLoop),
+        left.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
+        right.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
       ],
     ), this)
   },
@@ -414,8 +454,8 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('-')!),
       [
-        left.toAST(this.args.env, false, this.args.inLoop),
-        right.toAST(this.args.env, false, this.args.inLoop),
+        left.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
+        right.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
       ],
     ), this)
   },
@@ -424,8 +464,8 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('=')!),
       [
-        left.toAST(this.args.env, false, this.args.inLoop),
-        right.toAST(this.args.env, false, this.args.inLoop),
+        left.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
+        right.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
       ],
     ), this)
   },
@@ -433,16 +473,16 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('!=')!),
       [
-        left.toAST(this.args.env, false, this.args.inLoop),
-        right.toAST(this.args.env, false, this.args.inLoop)],
+        left.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
+        right.toAST(this.args.env, false, this.args.inLoop, this.args.inFn)],
     ), this)
   },
   CompareExp_lt(left, _le, right) {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('<')!),
       [
-        left.toAST(this.args.env, false, this.args.inLoop),
-        right.toAST(this.args.env, false, this.args.inLoop),
+        left.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
+        right.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
       ],
     ), this)
   },
@@ -450,8 +490,8 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('<=')!),
       [
-        left.toAST(this.args.env, false, this.args.inLoop),
-        right.toAST(this.args.env, false, this.args.inLoop),
+        left.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
+        right.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
       ],
     ), this)
   },
@@ -459,8 +499,8 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('>')!),
       [
-        left.toAST(this.args.env, false, this.args.inLoop),
-        right.toAST(this.args.env, false, this.args.inLoop),
+        left.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
+        right.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
       ],
     ), this)
   },
@@ -468,8 +508,8 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('>=')!),
       [
-        left.toAST(this.args.env, false, this.args.inLoop),
-        right.toAST(this.args.env, false, this.args.inLoop),
+        left.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
+        right.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
       ],
     ), this)
   },
@@ -478,8 +518,8 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('&')!),
       [
-        left.toAST(this.args.env, false, this.args.inLoop),
-        right.toAST(this.args.env, false, this.args.inLoop),
+        left.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
+        right.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
       ],
     ), this)
   },
@@ -487,8 +527,8 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('|')!),
       [
-        left.toAST(this.args.env, false, this.args.inLoop),
-        right.toAST(this.args.env, false, this.args.inLoop),
+        left.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
+        right.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
       ],
     ), this)
   },
@@ -496,8 +536,8 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('^')!),
       [
-        left.toAST(this.args.env, false, this.args.inLoop),
-        right.toAST(this.args.env, false, this.args.inLoop),
+        left.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
+        right.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
       ],
     ), this)
   },
@@ -505,8 +545,8 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('<<')!),
       [
-        left.toAST(this.args.env, false, this.args.inLoop),
-        right.toAST(this.args.env, false, this.args.inLoop),
+        left.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
+        right.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
       ],
     ), this)
   },
@@ -514,8 +554,8 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('>>')!),
       [
-        left.toAST(this.args.env, false, this.args.inLoop),
-        right.toAST(this.args.env, false, this.args.inLoop),
+        left.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
+        right.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
       ],
     ), this)
   },
@@ -523,8 +563,8 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('>>>')!),
       [
-        left.toAST(this.args.env, false, this.args.inLoop),
-        right.toAST(this.args.env, false, this.args.inLoop),
+        left.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
+        right.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
       ],
     ), this)
   },
@@ -532,8 +572,8 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
   LogicExp_and(left, _and, right) {
     return addLoc(
       new ArkAnd(
-        left.toAST(this.args.env, false, this.args.inLoop),
-        right.toAST(this.args.env, false, this.args.inLoop),
+        left.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
+        right.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
       ),
       this,
     )
@@ -541,16 +581,16 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
   LogicExp_or(left, _or, right) {
     return addLoc(
       new ArkOr(
-        left.toAST(this.args.env, false, this.args.inLoop),
-        right.toAST(this.args.env, false, this.args.inLoop),
+        left.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
+        right.toAST(this.args.env, false, this.args.inLoop, this.args.inFn),
       ),
       this,
     )
   },
 
   AssignmentExp_ass(lvalue, _eq, value) {
-    const compiledLvalue = lvalue.toAST(this.args.env, true, this.args.inLoop)
-    const compiledValue = value.toAST(this.args.env, false, this.args.inLoop)
+    const compiledLvalue = lvalue.toAST(this.args.env, true, this.args.inLoop, this.args.inFn)
+    const compiledValue = value.toAST(this.args.env, false, this.args.inLoop, this.args.inFn)
     let compiled
     if (compiledLvalue instanceof IndexExp) {
       compiled = new ArkCall(
@@ -567,7 +607,7 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
     const parsedLets = []
     const letIds: string[] = []
     for (const l of lets.asIteration().children) {
-      const parsedLet: SingleLet = l.toAST(this.args.env, false, this.args.inLoop)
+      const parsedLet: SingleLet = l.toAST(this.args.env, false, this.args.inLoop, this.args.inFn)
       parsedLets.push(parsedLet)
       if (letIds.includes(parsedLet.id.sourceString)) {
         throw new UrsaCompilerError(this.source, `Duplicate identifier in let: ${parsedLet.id.sourceString}`)
@@ -578,7 +618,7 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
     const assignments = parsedLets.map(
       (l) => new ArkSet(
         l.id.symref(innerEnv).value,
-        l.node.toAST(innerEnv, false, this.args.inLoop),
+        l.node.toAST(innerEnv, false, this.args.inLoop, this.args.inFn),
       ),
     )
     const compiled = assignments.length > 1
@@ -611,7 +651,7 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop)', {
   },
 
   Block(_open, seq, _close) {
-    return addLoc(seq.toAST(this.args.env, false, this.args.inLoop), this)
+    return addLoc(seq.toAST(this.args.env, false, this.args.inLoop, this.args.inFn), this)
   },
 
   // This rule is not used for symbol references, but for property and
@@ -786,7 +826,7 @@ export function compile(
     throw new Error(matchResult.message)
   }
   const ast = semantics(matchResult)
-  const compiled = ast.toAST(env, false, false)
+  const compiled = ast.toAST(env, false, false, false)
   const freeVars = ast.freeVars(env)
   env.externalSyms.forEach((_val, id) => freeVars.delete(id))
   return new PartialCompiledArk(compiled, freeVars, ast.boundVars)

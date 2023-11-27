@@ -73,6 +73,18 @@ break used outside a loop`)
   t.is(toJs(new ArkState().run(compile('loop { break 3 }'))), 3)
 })
 
+test('return', (t) => {
+  const error = t.throws(() => new ArkState().run(compile('return')), {instanceOf: UrsaCompilerError})
+  assert(error !== undefined)
+  t.is(error.message, `\
+Line 1, col 1:
+> 1 | return
+      ^~~~~~
+
+return used outside a function`)
+  t.is(toJs(new ArkState().run(compile('fn () { return 3 }()'))), 3)
+})
+
 testGroup('let', [
   ['let a = 3; a', 3],
   ['let b = 5; b := 7; b', 7],
