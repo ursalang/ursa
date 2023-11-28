@@ -3,7 +3,6 @@
 ## Version 0.2
 
 * `range()` iterator, written in Ursa (start of stdlib/prelude).
-* Maps: symbol keys
 * Sets: use `{ Exp, }` notation, with mandatory first comma.
 * Map interface to file system and internet.
 
