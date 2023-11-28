@@ -173,12 +173,6 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop,inFn)', {
     return addLoc(compiledSeq, this)
   },
 
-  PrimaryExp_continue(_continue) {
-    if (!this.args.inLoop) {
-      throw new UrsaCompilerError(_continue.source, 'continue used outside a loop')
-    }
-    return addLoc(new ArkCall(new ArkLiteral(intrinsics.get('continue')!), []), this)
-  },
   PrimaryExp_ident(_sym) {
     const symref = this.symref(this.args.env).value
     return addLoc(this.args.lval ? symref : new ArkGet(symref), this)
@@ -361,24 +355,6 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop,inFn)', {
     return new ArkLet(['_for'], letBody)
   },
 
-  UnaryExp_break(_break, exp) {
-    if (!this.args.inLoop) {
-      throw new UrsaCompilerError(_break.source, 'break used outside a loop')
-    }
-    return addLoc(new ArkCall(
-      new ArkLiteral(intrinsics.get('break')!),
-      [maybeVal(this.args.env, exp, this.args.inFn)],
-    ), this)
-  },
-  UnaryExp_return(_return, exp) {
-    if (!this.args.inFn) {
-      throw new UrsaCompilerError(_return.source, 'return used outside a function')
-    }
-    return addLoc(new ArkCall(
-      new ArkLiteral(intrinsics.get('return')!),
-      [maybeVal(this.args.env, exp, this.args.inFn)],
-    ), this)
-  },
   UnaryExp_not(_not, exp) {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('not')!),
@@ -601,6 +577,31 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop,inFn)', {
       compiled = new ArkSet(compiledLvalue, compiledValue)
     }
     return addLoc(compiled, this)
+  },
+
+  Exp_break(_break, exp) {
+    if (!this.args.inLoop) {
+      throw new UrsaCompilerError(_break.source, 'break used outside a loop')
+    }
+    return addLoc(new ArkCall(
+      new ArkLiteral(intrinsics.get('break')!),
+      [maybeVal(this.args.env, exp, this.args.inFn)],
+    ), this)
+  },
+  Exp_continue(_continue) {
+    if (!this.args.inLoop) {
+      throw new UrsaCompilerError(_continue.source, 'continue used outside a loop')
+    }
+    return addLoc(new ArkCall(new ArkLiteral(intrinsics.get('continue')!), []), this)
+  },
+  Exp_return(_return, exp) {
+    if (!this.args.inFn) {
+      throw new UrsaCompilerError(_return.source, 'return used outside a function')
+    }
+    return addLoc(new ArkCall(
+      new ArkLiteral(intrinsics.get('return')!),
+      [maybeVal(this.args.env, exp, this.args.inFn)],
+    ), this)
   },
 
   Lets(lets) {
