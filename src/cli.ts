@@ -163,7 +163,7 @@ async function main() {
       if (source === undefined || args.interactive) {
         result = await repl()
       }
-      json = serializeVal(result) ?? 'null'
+      json = serializeVal(result ?? ArkNull()) ?? 'null'
     }
     if (jsonFile !== undefined) {
       assert(jsonFile)
