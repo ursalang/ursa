@@ -829,7 +829,7 @@ export function compile(
   const ast = semantics(matchResult)
   const compiled = ast.toAST(env, false, false, false)
   const freeVars = ast.freeVars(env)
-  env.externalSyms.forEach((_val, id) => freeVars.delete(id))
+  env.externalSyms.val.forEach((_val, id) => freeVars.delete(id))
   return new PartialCompiledArk(compiled, freeVars, ast.boundVars)
 }
 

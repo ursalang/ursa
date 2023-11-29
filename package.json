@@ -46,7 +46,7 @@
   "scripts": {
     "lint": "eslint . --ext .ts && depcheck",
     "prebuild": "node --print \"'export default \\'' + require('./package.json').version + '\\';'\" > src/version.ts",
-    "build": "tsc --build",
+    "build": "tsc --build && cp src/prelude.ursa lib/",
     "clean": "tsc --build --clean",
     "test": "npm run build && ava",
     "test-ursa": "ava src/ursa/ursa.test.ts",
