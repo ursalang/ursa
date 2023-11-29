@@ -95,7 +95,7 @@ async function repl() {
           env = env.push(compiled.boundVars)
           ark.stack.push(Array(compiled.boundVars.length).fill(new ArkValRef(ArkUndefined)))
         }
-        val = toJs(runWithTraceback(ark, compiled))
+        val = toJs(await runWithTraceback(ark, compiled))
         console.dir(val, {depth: null})
       }
     } catch (error) {
@@ -148,7 +148,7 @@ async function main() {
       fs.readFileSync(path.join(thisDir, 'prelude.ursa'), {encoding: 'utf-8'}),
     )
     const ark = new ArkState()
-    const preludeObj = prelude.value.eval(ark) as ArkObject
+    const preludeObj = await prelude.value.eval(ark) as ArkObject
     for (const [sym, val] of preludeObj.val) {
       globals.set(sym, new ArkValRef(val))
     }
@@ -168,7 +168,7 @@ async function main() {
       // Run the program
       let result
       if (source !== undefined) {
-        result = runWithTraceback(ark, compile(source))
+        result = await runWithTraceback(ark, compile(source))
       }
       if (source === undefined || args.interactive) {
         result = await repl()

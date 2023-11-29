@@ -833,9 +833,9 @@ export function compile(
   return new PartialCompiledArk(compiled, freeVars, ast.boundVars)
 }
 
-export function runWithTraceback(ark: ArkState, compiledVal: CompiledArk): ArkVal {
+export async function runWithTraceback(ark: ArkState, compiledVal: CompiledArk): Promise<ArkVal> {
   try {
-    return ark.run(compiledVal)
+    return await ark.run(compiledVal)
   } catch (e) {
     if (e instanceof ArkRuntimeError) {
       throw new UrsaRuntimeError(ark, e.sourceLoc as Interval, e.message)

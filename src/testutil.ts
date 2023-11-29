@@ -24,13 +24,14 @@ function doTestGroup(
   compile: (expr: string) => CompiledArk,
   tests: [string, any][],
 ) {
-  test(title, (t) => {
+  test(title, async (t) => {
     for (const [source, expected] of tests) {
       const compiled = compile(source)
       if (process.env.DEBUG) {
         debug(compiled, null)
       }
-      t.deepEqual(toJs(new ArkState().run(compiled)), expected)
+      // eslint-disable-next-line no-await-in-loop
+      t.deepEqual(toJs(await new ArkState().run(compiled)), expected)
     }
   })
 }

@@ -61,7 +61,7 @@ testGroup('Conditionals', [
   ['if 3 + 4 == 8 {1} else if 3 + 4 == 7 {2} else {3}', 2],
 ])
 
-test('loop and break', (t) => {
+test('loop and break', async (t) => {
   const error = t.throws(() => new ArkState().run(compile('break')), {instanceOf: UrsaCompilerError})
   assert(error !== undefined)
   t.is(error.message, `\
@@ -70,11 +70,11 @@ Line 1, col 1:
       ^~~~~
 
 break used outside a loop`)
-  t.is(toJs(new ArkState().run(compile('loop { break 3 }'))), 3)
+  t.is(toJs(await new ArkState().run(compile('loop { break 3 }'))), 3)
 })
 
-test('return', (t) => {
-  const error = t.throws(() => new ArkState().run(compile('return')), {instanceOf: UrsaCompilerError})
+test('return', async (t) => {
+  const error = await t.throwsAsync(async () => new ArkState().run(compile('return')), {instanceOf: UrsaCompilerError})
   assert(error !== undefined)
   t.is(error.message, `\
 Line 1, col 1:
@@ -82,7 +82,7 @@ Line 1, col 1:
       ^~~~~~
 
 return used outside a function`)
-  t.is(toJs(new ArkState().run(compile('fn () { return 3 }()'))), 3)
+  t.is(toJs(await new ArkState().run(compile('fn () { return 3 }()'))), 3)
 })
 
 testGroup('let', [

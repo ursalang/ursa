@@ -36,8 +36,7 @@ test('Test I/O', 'test/print', [], 'Hello, world!')
 
 test("'fs' module", 'test/fs', [], 'foo')
 
-// FIXME: make this work again
-// test('use fs', 'test/use-fs', 'foo')
+test('use fs', 'test/use-fs', [], 'foo')
 
 test('Find symbols in input', 'test/syms', ['./test/fs.ursa'], 'fs\nwriteSync\nfoo\nis\nstdout')
 
