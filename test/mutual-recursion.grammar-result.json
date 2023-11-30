@@ -1,0 +1,139 @@
+[
+  [
+    {
+      "1": "is_even",
+      "3": {
+        "2": [
+          "n"
+        ],
+        "5": [
+          {
+            "0": [
+              {
+                "1": {
+                  "0": "n",
+                  "2": "0",
+                  "type": "CompareExp_eq"
+                },
+                "2": [
+                  "true"
+                ],
+                "type": "If"
+              }
+            ],
+            "1": "else",
+            "2": [
+              {
+                "0": "is_odd",
+                "1": {
+                  "1": [
+                    {
+                      "0": "n",
+                      "2": "1",
+                      "type": "SumExp_minus"
+                    }
+                  ],
+                  "type": "Arguments"
+                },
+                "type": "CallExp_property_call"
+              }
+            ],
+            "type": "Ifs"
+          }
+        ],
+        "type": "Fn"
+      },
+      "type": "Let"
+    },
+    {
+      "1": "is_odd",
+      "3": {
+        "2": [
+          "n"
+        ],
+        "5": [
+          {
+            "0": [
+              {
+                "1": {
+                  "0": "n",
+                  "2": "0",
+                  "type": "CompareExp_eq"
+                },
+                "2": [
+                  "false"
+                ],
+                "type": "If"
+              }
+            ],
+            "1": "else",
+            "2": [
+              {
+                "0": "is_even",
+                "1": {
+                  "1": [
+                    {
+                      "0": "n",
+                      "2": "1",
+                      "type": "SumExp_minus"
+                    }
+                  ],
+                  "type": "Arguments"
+                },
+                "type": "CallExp_property_call"
+              }
+            ],
+            "type": "Ifs"
+          }
+        ],
+        "type": "Fn"
+      },
+      "type": "Let"
+    }
+  ],
+  {
+    "1": [
+      {
+        "0": "is_even",
+        "1": {
+          "1": [
+            "0"
+          ],
+          "type": "Arguments"
+        },
+        "type": "CallExp_property_call"
+      },
+      {
+        "0": "is_even",
+        "1": {
+          "1": [
+            "1"
+          ],
+          "type": "Arguments"
+        },
+        "type": "CallExp_property_call"
+      },
+      {
+        "0": "is_odd",
+        "1": {
+          "1": [
+            "5"
+          ],
+          "type": "Arguments"
+        },
+        "type": "CallExp_property_call"
+      },
+      {
+        "0": "is_odd",
+        "1": {
+          "1": [
+            "12"
+          ],
+          "type": "Arguments"
+        },
+        "type": "CallExp_property_call"
+      }
+    ],
+    "type": "List"
+  }
+]

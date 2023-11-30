@@ -1,0 +1,57 @@
+[
+  [
+    {
+      "1": "h",
+      "3": "3",
+      "type": "Let"
+    }
+  ],
+  [
+    {
+      "1": "g",
+      "3": {
+        "2": [],
+        "5": [
+          {
+            "0": "h",
+            "1": {
+              "1": [],
+              "type": "Arguments"
+            },
+            "type": "CallExp_property_call"
+          }
+        ],
+        "type": "Fn"
+      },
+      "type": "Let"
+    }
+  ],
+  [
+    {
+      "1": "f",
+      "3": {
+        "2": [],
+        "5": [
+          {
+            "0": "g",
+            "1": {
+              "1": [],
+              "type": "Arguments"
+            },
+            "type": "CallExp_property_call"
+          }
+        ],
+        "type": "Fn"
+      },
+      "type": "Let"
+    }
+  ],
+  {
+    "0": "f",
+    "1": {
+      "1": [],
+      "type": "Arguments"
+    },
+    "type": "CallExp_property_call"
+  }
+]

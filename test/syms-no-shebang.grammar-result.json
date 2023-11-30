@@ -1,0 +1,104 @@
+[
+  [
+    {
+      "1": "s",
+      "3": {
+        "0": {
+          "0": "fs",
+          "2": "readFileSync",
+          "type": "PropertyExp_property"
+        },
+        "1": {
+          "1": [
+            {
+              "0": "argv",
+              "2": "1",
+              "type": "PropertyExp_index"
+            },
+            "\"utf-8\""
+          ],
+          "type": "Arguments"
+        },
+        "type": "CallExp_property_call"
+      },
+      "type": "Let"
+    }
+  ],
+  [
+    {
+      "1": "regex",
+      "3": {
+        "0": "RegExp",
+        "1": {
+          "1": [
+            "\"\\\\p{L}+\"",
+            "\"ug\""
+          ],
+          "type": "Arguments"
+        },
+        "type": "CallExp_property_call"
+      },
+      "type": "Let"
+    }
+  ],
+  {
+    "1": [
+      [
+        {
+          "1": "m",
+          "3": {
+            "0": {
+              "0": "regex",
+              "2": "exec",
+              "type": "PropertyExp_property"
+            },
+            "1": {
+              "1": [
+                "s"
+              ],
+              "type": "Arguments"
+            },
+            "type": "CallExp_property_call"
+          },
+          "type": "Let"
+        }
+      ],
+      {
+        "0": [
+          {
+            "1": {
+              "0": "m",
+              "2": "null",
+              "type": "CompareExp_eq"
+            },
+            "2": [
+              {
+                "1": null,
+                "type": "Exp_break"
+              }
+            ],
+            "type": "If"
+          }
+        ],
+        "1": null,
+        "2": null,
+        "type": "Ifs"
+      },
+      {
+        "0": "print",
+        "1": {
+          "1": [
+            {
+              "0": "m",
+              "2": "0",
+              "type": "PropertyExp_index"
+            }
+          ],
+          "type": "Arguments"
+        },
+        "type": "CallExp_property_call"
+      }
+    ],
+    "type": "Loop"
+  }
+]

@@ -1,0 +1,63 @@
+[
+  [
+    {
+      "1": "fac",
+      "3": {
+        "2": [
+          "x"
+        ],
+        "5": [
+          {
+            "0": [
+              {
+                "1": {
+                  "0": "x",
+                  "2": "0",
+                  "type": "CompareExp_eq"
+                },
+                "2": [
+                  "1"
+                ],
+                "type": "If"
+              }
+            ],
+            "1": "else",
+            "2": [
+              {
+                "0": "x",
+                "2": {
+                  "0": "fac",
+                  "1": {
+                    "1": [
+                      {
+                        "0": "x",
+                        "2": "1",
+                        "type": "SumExp_minus"
+                      }
+                    ],
+                    "type": "Arguments"
+                  },
+                  "type": "CallExp_property_call"
+                },
+                "type": "ProductExp_times"
+              }
+            ],
+            "type": "Ifs"
+          }
+        ],
+        "type": "Fn"
+      },
+      "type": "Let"
+    }
+  ],
+  {
+    "0": "fac",
+    "1": {
+      "1": [
+        "6"
+      ],
+      "type": "Arguments"
+    },
+    "type": "CallExp_property_call"
+  }
+]

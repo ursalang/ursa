@@ -1,0 +1,101 @@
+[
+  [
+    {
+      "1": "sum",
+      "3": {
+        "2": [
+          "l"
+        ],
+        "5": [
+          [
+            {
+              "1": "tot",
+              "3": "0",
+              "type": "Let"
+            }
+          ],
+          [
+            {
+              "1": "i",
+              "3": "0",
+              "type": "Let"
+            }
+          ],
+          {
+            "1": [
+              {
+                "0": [
+                  {
+                    "1": {
+                      "0": "i",
+                      "2": {
+                        "0": "l",
+                        "2": "length",
+                        "type": "PropertyExp_property"
+                      },
+                      "type": "CompareExp_eq"
+                    },
+                    "2": [
+                      {
+                        "1": "tot",
+                        "type": "Exp_break"
+                      }
+                    ],
+                    "type": "If"
+                  }
+                ],
+                "1": null,
+                "2": null,
+                "type": "Ifs"
+              },
+              {
+                "0": "tot",
+                "2": {
+                  "0": "tot",
+                  "2": {
+                    "0": "l",
+                    "2": "i",
+                    "type": "PropertyExp_index"
+                  },
+                  "type": "SumExp_plus"
+                },
+                "type": "AssignmentExp_ass"
+              },
+              {
+                "0": "i",
+                "2": {
+                  "0": "i",
+                  "2": "1",
+                  "type": "SumExp_plus"
+                },
+                "type": "AssignmentExp_ass"
+              }
+            ],
+            "type": "Loop"
+          }
+        ],
+        "type": "Fn"
+      },
+      "type": "Let"
+    }
+  ],
+  {
+    "0": "sum",
+    "1": {
+      "1": [
+        {
+          "1": [
+            "10",
+            "30",
+            "50",
+            "5",
+            "5"
+          ],
+          "type": "List"
+        }
+      ],
+      "type": "Arguments"
+    },
+    "type": "CallExp_property_call"
+  }
+]

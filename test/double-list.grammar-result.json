@@ -1,0 +1,96 @@
+[
+  [
+    {
+      "1": "double",
+      "3": {
+        "2": [
+          "l"
+        ],
+        "5": [
+          [
+            {
+              "1": "i",
+              "3": "0",
+              "type": "Let"
+            }
+          ],
+          {
+            "1": [
+              {
+                "0": [
+                  {
+                    "1": {
+                      "0": "i",
+                      "2": {
+                        "0": "l",
+                        "2": "length",
+                        "type": "PropertyExp_property"
+                      },
+                      "type": "CompareExp_eq"
+                    },
+                    "2": [
+                      {
+                        "1": "l",
+                        "type": "Exp_return"
+                      }
+                    ],
+                    "type": "If"
+                  }
+                ],
+                "1": null,
+                "2": null,
+                "type": "Ifs"
+              },
+              {
+                "0": {
+                  "0": "l",
+                  "2": "i",
+                  "type": "PropertyExp_index"
+                },
+                "2": {
+                  "0": {
+                    "0": "l",
+                    "2": "i",
+                    "type": "PropertyExp_index"
+                  },
+                  "2": "2",
+                  "type": "ProductExp_times"
+                },
+                "type": "AssignmentExp_ass"
+              },
+              {
+                "0": "i",
+                "2": {
+                  "0": "i",
+                  "2": "1",
+                  "type": "SumExp_plus"
+                },
+                "type": "AssignmentExp_ass"
+              }
+            ],
+            "type": "Loop"
+          }
+        ],
+        "type": "Fn"
+      },
+      "type": "Let"
+    }
+  ],
+  {
+    "0": "double",
+    "1": {
+      "1": [
+        {
+          "1": [
+            "1",
+            "2",
+            "3"
+          ],
+          "type": "List"
+        }
+      ],
+      "type": "Arguments"
+    },
+    "type": "CallExp_property_call"
+  }
+]

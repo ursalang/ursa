@@ -1,2 +1,1 @@
-#!/usr/bin/env ursa
 print("Hello, world!")

@@ -1,0 +1,57 @@
+[
+  [
+    {
+      "1": "tot",
+      "3": "0",
+      "type": "Let"
+    }
+  ],
+  [
+    {
+      "1": "accum",
+      "3": {
+        "2": [
+          "x"
+        ],
+        "5": [
+          {
+            "0": "tot",
+            "2": {
+              "0": "tot",
+              "2": "x",
+              "type": "SumExp_plus"
+            },
+            "type": "AssignmentExp_ass"
+          }
+        ],
+        "type": "Fn"
+      },
+      "type": "Let"
+    }
+  ],
+  {
+    "1": [
+      {
+        "0": "accum",
+        "1": {
+          "1": [
+            "1"
+          ],
+          "type": "Arguments"
+        },
+        "type": "CallExp_property_call"
+      },
+      {
+        "0": "accum",
+        "1": {
+          "1": [
+            "1"
+          ],
+          "type": "Arguments"
+        },
+        "type": "CallExp_property_call"
+      }
+    ],
+    "type": "List"
+  }
+]

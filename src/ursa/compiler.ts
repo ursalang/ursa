@@ -4,7 +4,8 @@
 
 import {Node, IterationNode, Interval} from 'ohm-js'
 
-import {grammar, UrsaSemantics} from '@ursalang/ohm-grammar'
+// eslint-disable-next-line import/extensions
+import grammar, {UrsaSemantics} from '../grammar/ursa.ohm-bundle.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,

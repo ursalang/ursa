@@ -1,0 +1,33 @@
+[
+  [
+    {
+      "1": "a",
+      "3": "1",
+      "type": "Let"
+    }
+  ],
+  {
+    "0": "print",
+    "1": {
+      "1": [
+        "\"hello\""
+      ],
+      "type": "Arguments"
+    },
+    "type": "CallExp_property_call"
+  },
+  [
+    {
+      "1": "b",
+      "3": "2",
+      "type": "Let"
+    }
+  ],
+  {
+    "1": [
+      "a",
+      "b"
+    ],
+    "type": "List"
+  }
+]

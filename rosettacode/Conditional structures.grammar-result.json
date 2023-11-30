@@ -1,0 +1,22 @@
+[
+  {
+    "0": [
+      {
+        "1": {
+          "0": "x",
+          "2": "9000",
+          "type": "CompareExp_gt"
+        },
+        "2": [
+          "\"That's impossible!!!\""
+        ],
+        "type": "If"
+      }
+    ],
+    "1": "else",
+    "2": [
+      "\"Ok, I guess\""
+    ],
+    "type": "Ifs"
+  }
+]

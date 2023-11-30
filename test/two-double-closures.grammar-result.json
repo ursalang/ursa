@@ -1,0 +1,199 @@
+[
+  [
+    {
+      "1": "newAccums",
+      "3": {
+        "2": [],
+        "5": [
+          [
+            {
+              "1": "tot",
+              "3": "0",
+              "type": "Let"
+            }
+          ],
+          [
+            {
+              "1": "l",
+              "3": {
+                "1": [
+                  {
+                    "2": [
+                      "x"
+                    ],
+                    "5": [
+                      {
+                        "0": "tot",
+                        "2": {
+                          "0": "tot",
+                          "2": "x",
+                          "type": "SumExp_plus"
+                        },
+                        "type": "AssignmentExp_ass"
+                      }
+                    ],
+                    "type": "Fn"
+                  },
+                  {
+                    "2": [
+                      "x"
+                    ],
+                    "5": [
+                      {
+                        "0": "tot",
+                        "2": {
+                          "0": "tot",
+                          "2": "x",
+                          "type": "SumExp_plus"
+                        },
+                        "type": "AssignmentExp_ass"
+                      }
+                    ],
+                    "type": "Fn"
+                  }
+                ],
+                "type": "List"
+              },
+              "type": "Let"
+            }
+          ],
+          {
+            "0": "tot",
+            "2": "2",
+            "type": "AssignmentExp_ass"
+          },
+          "l"
+        ],
+        "type": "Fn"
+      },
+      "type": "Let"
+    }
+  ],
+  [
+    {
+      "1": "accums",
+      "3": {
+        "0": "newAccums",
+        "1": {
+          "1": [],
+          "type": "Arguments"
+        },
+        "type": "CallExp_property_call"
+      },
+      "type": "Let"
+    }
+  ],
+  [
+    {
+      "1": "accums2",
+      "3": {
+        "0": "newAccums",
+        "1": {
+          "1": [],
+          "type": "Arguments"
+        },
+        "type": "CallExp_property_call"
+      },
+      "type": "Let"
+    }
+  ],
+  {
+    "1": [
+      {
+        "1": [
+          {
+            "0": {
+              "0": "accums",
+              "2": "0",
+              "type": "PropertyExp_index"
+            },
+            "1": {
+              "1": [
+                "1"
+              ],
+              "type": "Arguments"
+            },
+            "type": "CallExp_property_call"
+          },
+          {
+            "0": {
+              "0": "accums",
+              "2": "0",
+              "type": "PropertyExp_index"
+            },
+            "1": {
+              "1": [
+                "1"
+              ],
+              "type": "Arguments"
+            },
+            "type": "CallExp_property_call"
+          },
+          {
+            "0": {
+              "0": "accums2",
+              "2": "0",
+              "type": "PropertyExp_index"
+            },
+            "1": {
+              "1": [
+                "1"
+              ],
+              "type": "Arguments"
+            },
+            "type": "CallExp_property_call"
+          }
+        ],
+        "type": "List"
+      },
+      {
+        "1": [
+          {
+            "0": {
+              "0": "accums",
+              "2": "1",
+              "type": "PropertyExp_index"
+            },
+            "1": {
+              "1": [
+                "1"
+              ],
+              "type": "Arguments"
+            },
+            "type": "CallExp_property_call"
+          },
+          {
+            "0": {
+              "0": "accums",
+              "2": "1",
+              "type": "PropertyExp_index"
+            },
+            "1": {
+              "1": [
+                "1"
+              ],
+              "type": "Arguments"
+            },
+            "type": "CallExp_property_call"
+          },
+          {
+            "0": {
+              "0": "accums2",
+              "2": "1",
+              "type": "PropertyExp_index"
+            },
+            "1": {
+              "1": [
+                "1"
+              ],
+              "type": "Arguments"
+            },
+            "type": "CallExp_property_call"
+          }
+        ],
+        "type": "List"
+      }
+    ],
+    "type": "List"
+  }
+]

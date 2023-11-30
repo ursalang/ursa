@@ -1,0 +1,113 @@
+[
+  [
+    {
+      "1": "newAccum",
+      "3": {
+        "2": [],
+        "5": [
+          [
+            {
+              "1": "tot",
+              "3": "0",
+              "type": "Let"
+            }
+          ],
+          [
+            {
+              "1": "f",
+              "3": {
+                "2": [
+                  "x"
+                ],
+                "5": [
+                  {
+                    "0": "tot",
+                    "2": {
+                      "0": "tot",
+                      "2": "x",
+                      "type": "SumExp_plus"
+                    },
+                    "type": "AssignmentExp_ass"
+                  }
+                ],
+                "type": "Fn"
+              },
+              "type": "Let"
+            }
+          ],
+          {
+            "0": "tot",
+            "2": "2",
+            "type": "AssignmentExp_ass"
+          },
+          "f"
+        ],
+        "type": "Fn"
+      },
+      "type": "Let"
+    }
+  ],
+  [
+    {
+      "1": "accum",
+      "3": {
+        "0": "newAccum",
+        "1": {
+          "1": [],
+          "type": "Arguments"
+        },
+        "type": "CallExp_property_call"
+      },
+      "type": "Let"
+    }
+  ],
+  [
+    {
+      "1": "accum2",
+      "3": {
+        "0": "newAccum",
+        "1": {
+          "1": [],
+          "type": "Arguments"
+        },
+        "type": "CallExp_property_call"
+      },
+      "type": "Let"
+    }
+  ],
+  {
+    "1": [
+      {
+        "0": "accum",
+        "1": {
+          "1": [
+            "1"
+          ],
+          "type": "Arguments"
+        },
+        "type": "CallExp_property_call"
+      },
+      {
+        "0": "accum",
+        "1": {
+          "1": [
+            "1"
+          ],
+          "type": "Arguments"
+        },
+        "type": "CallExp_property_call"
+      },
+      {
+        "0": "accum2",
+        "1": {
+          "1": [
+            "1"
+          ],
+          "type": "Arguments"
+        },
+        "type": "CallExp_property_call"
+      }
+    ],
+    "type": "List"
+  }
+]

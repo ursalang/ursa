@@ -1,0 +1,31 @@
+[
+  [
+    {
+      "1": "f",
+      "3": {
+        "2": [
+          "x"
+        ],
+        "5": [
+          {
+            "0": "x",
+            "2": "1",
+            "type": "SumExp_plus"
+          }
+        ],
+        "type": "Fn"
+      },
+      "type": "Let"
+    }
+  ],
+  {
+    "0": "f",
+    "1": {
+      "1": [
+        "1"
+      ],
+      "type": "Arguments"
+    },
+    "type": "CallExp_property_call"
+  }
+]

@@ -1,4 +1,3 @@
-#!/usr/bin/env ursa
 // List symbols in input
 
 let s = fs.readFileSync(argv[1], "utf-8")

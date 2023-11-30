@@ -1,0 +1,24 @@
+[
+  {
+    "1": [
+      "js",
+      "fs"
+    ],
+    "type": "Use"
+  },
+  {
+    "0": {
+      "0": "fs",
+      "2": "writeSync",
+      "type": "PropertyExp_property"
+    },
+    "1": {
+      "1": [
+        "1",
+        "\"foo\""
+      ],
+      "type": "Arguments"
+    },
+    "type": "CallExp_property_call"
+  }
+]
