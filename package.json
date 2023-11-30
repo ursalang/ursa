@@ -9,7 +9,6 @@
     "ursa": "./bin/run.js"
   },
   "dependencies": {
-    "@ursalang/ark": "^0.1.0",
     "@ursalang/ohm-grammar": "^0.1.0",
     "argparse": "^2.0.1",
     "ohm-js": "^17.1.0",
@@ -46,7 +45,7 @@
   "scripts": {
     "lint": "eslint . --ext .ts && depcheck",
     "prebuild": "node --print \"'export default \\'' + require('./package.json').version + '\\';'\" > src/version.ts",
-    "build": "tsc --build && cp src/prelude.ursa lib/",
+    "build": "tsc --build && cp src/ursa/prelude.ursa lib/ursa/",
     "clean": "tsc --build --clean",
     "test": "npm run build && ava",
     "test-ursa": "ava src/ursa/ursa.test.ts",

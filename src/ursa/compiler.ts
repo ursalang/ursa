@@ -14,7 +14,7 @@ import {
   ArkObjectLiteral, ArkListLiteral, ArkMapLiteral,
   ArkCall, ArkLet, ArkFn, ArkProperty, ArkGet, ArkSet,
   CompiledArk, symRef, Environment, PartialCompiledArk, checkParamList, ArkLiteral,
-} from '@ursalang/ark'
+} from '../ark/index.js'
 
 // Specify precise type so semantics can be precisely type-checked.
 const semantics: UrsaSemantics = grammar.createSemantics()
@@ -690,7 +690,7 @@ function mergeBoundVars(children: Node[]): string[] {
   return boundVars
 }
 
-semantics.addAttribute<String[]>('boundVars', {
+semantics.addAttribute<string[]>('boundVars', {
   _terminal() {
     return []
   },

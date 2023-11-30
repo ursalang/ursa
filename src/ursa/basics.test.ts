@@ -5,13 +5,13 @@
 
 import test from 'ava'
 
+import assert from 'assert'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
   ArkState, toJs,
-} from '@ursalang/ark'
+} from '../ark/index.js'
 
-import assert from 'assert'
 import {compile, UrsaCompilerError} from './compiler.js'
 
 import {testUrsaGroup as testGroup} from './testutil.js'

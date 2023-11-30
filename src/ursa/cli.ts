@@ -13,9 +13,9 @@ import {
   debug, ArkState, toJs,
   ArkUndefined, ArkNull, ArkObject, ArkList, ArkValRef, ArkString, globals,
   Environment, PartialCompiledArk, compile as arkCompile, serializeVal,
-} from '@ursalang/ark'
+} from '../ark/index.js'
 
-import programVersion from './version.js'
+import programVersion from '../version.js'
 import {runWithTraceback, compile as ursaCompile} from './compiler.js'
 
 if (process.env.DEBUG) {

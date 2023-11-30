@@ -9,7 +9,7 @@ import {execa} from 'execa'
 
 import {
   ArkState, debug, toJs, compile as arkCompile, CompiledArk,
-} from '@ursalang/ark'
+} from '../ark/index.js'
 
 import {compile as ursaCompile} from './compiler.js'
 
