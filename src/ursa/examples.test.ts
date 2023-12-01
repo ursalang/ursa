@@ -32,15 +32,15 @@ const test = cliTest.bind(null, 'ursa');
   ['Literal string', 'test/literal-string'],
 ].map(([title, file]) => cliTest('ursa', title, file))
 
-test('Test I/O', 'test/print', [], 'Hello, world!')
+void test('Test I/O', 'test/print', [], 'Hello, world!')
 
-test("'fs' module", 'test/fs', [], 'foo')
+void test("'fs' module", 'test/fs', [], 'foo')
 
-test('use fs', 'test/use-fs', [], 'foo')
+void test('use fs', 'test/use-fs', [], 'foo')
 
-test('Find symbols in input', 'test/syms', ['./test/fs.ursa'], 'fs\nwriteSync\nfoo\nis\nstdout')
+void test('Find symbols in input', 'test/syms', ['./test/fs.ursa'], 'fs\nwriteSync\nfoo\nis\nstdout')
 
-test('Test error on bad function call', 'test/bad-call', [], undefined, `\
+void test('Test error on bad function call', 'test/bad-call', [], undefined, `\
 Error: Line 2, col 14:
   1 | let h = 3
 > 2 | let g = fn() { h() }
@@ -55,7 +55,7 @@ Traceback (most recent call last)
   line 4
     f(), at top level`)
 
-test('Test error on bad property access', 'test/sum-map-iterator-wrong', [], `\
+void test('Test error on bad property access', 'test/sum-map-iterator-wrong', [], `\
 a
 b
 c
@@ -73,7 +73,7 @@ Traceback (most recent call last)
   line 12
     sum({"a": 10, "b": 30, "c": 50, "d": 5, "e": 5}), at top level`)
 
-test('Test error on re-assignment with wrong type', 'test/bad-reassignment', [], undefined, `\
+void test('Test error on re-assignment with wrong type', 'test/bad-reassignment', [], undefined, `\
 Error: Line 3, col 1:
   2 | a := 2
 > 3 | a := "hello"
@@ -86,10 +86,10 @@ Traceback (most recent call last)
 `)
 
 // Rosetta code examples
-test('Accumulator factory', 'rosettacode/Accumulator factory', [], '8.3')
-test('Ackermann function', 'rosettacode/Ackermann function', [], '1\n125\n13')
+void test('Accumulator factory', 'rosettacode/Accumulator factory', [], '8.3')
+void test('Ackermann function', 'rosettacode/Ackermann function', [], '1\n125\n13')
 // Not run, as the program has an unbound variable
 // test('Conditional structures', 'rosettacode/Conditional structures')
-test('Hello world-Text', 'rosettacode/Hello world-Text', [], 'hello woods!')
+void test('Hello world-Text', 'rosettacode/Hello world-Text', [], 'hello woods!')
 // Not run, as this program does not terminate
 // test('Integer sequence', 'rosettacode/Integer sequence')

@@ -110,6 +110,6 @@ testGroup('Objects', [
 ])
 
 testGroup('Maps', [
-  ['{"a": 1, "b": 2 + 0, 3: 4}', new Map<any, any>([['a', 1], ['b', 2], [3, 4]])],
-  ['let t = {"a": 1, "b": 2 + 0, 3: 4}; t["b"] := 1; t', new Map<any, any>([['a', 1], ['b', 1], [3, 4]])],
+  ['{"a": 1, "b": 2 + 0, 3: 4}', new Map<unknown, unknown>([['a', 1], ['b', 2], [3, 4]])],
+  ['let t = {"a": 1, "b": 2 + 0, 3: 4}; t["b"] := 1; t', new Map<unknown, unknown>([['a', 1], ['b', 1], [3, 4]])],
 ])

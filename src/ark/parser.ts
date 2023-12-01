@@ -27,7 +27,7 @@ export class Namespace<T extends ArkVal> extends Map<string, T> {
 
   private static setName(name: string, val: ArkVal) {
     if (!(val instanceof ArkConcreteVal)) {
-      val.debug.set('name', name)
+      val.debug.name = name
     }
   }
 
@@ -57,13 +57,13 @@ export class Environment {
   }
 
   push(items: string[]) {
-    return new (this.constructor as any)(
+    return new Environment(
       [[[...this.stack[0][0].slice(), ...items], this.stack[0][1]], ...this.stack.slice(1)],
     )
   }
 
   pushFrame(frame: [string[], string[]]) {
-    return new (this.constructor as any)([frame, ...this.stack.slice()])
+    return new Environment([frame, ...this.stack.slice()])
   }
 
   getIndex(sym: string): ArkRef {
@@ -81,8 +81,8 @@ export class Environment {
         throw new ArkCompilerError(`Undefined symbol ${sym}`)
       }
     }
-    ref.debug.set('name', sym)
-    ref.debug.set('env', JSON.stringify(this))
+    ref.debug.name = sym
+    ref.debug.env = JSON.stringify(this)
     return ref as ArkRef
   }
 }
@@ -94,7 +94,7 @@ export function checkParamList(params: string[]): string[] {
   return params
 }
 
-export function arkParamList(params: any[]): string[] {
+export function arkParamList(params: string[]): string[] {
   if (params.length === 0 || params[0] !== 'params') {
     throw new ArkCompilerError('Invalid parameter list')
   }
@@ -107,7 +107,7 @@ export function arkParamList(params: any[]): string[] {
   return checkParamList(paramList)
 }
 
-function listToVals(env: Environment, l: any[]): [ArkExp[], FreeVars] {
+function listToVals(env: Environment, l: unknown[]): [ArkExp[], FreeVars] {
   const vals = []
   const freeVars = new FreeVars()
   for (const v of l) {
@@ -135,7 +135,7 @@ export function symRef(env: Environment, name: string): CompiledArk {
     ref = new ArkCaptureRef(k)
     env.stack[0][1].push(name)
   }
-  ref.debug.set('name', name)
+  ref.debug.name = name
   return new CompiledArk(new ArkLiteral(ref), freeVars)
 }
 
@@ -153,7 +153,7 @@ export class PartialCompiledArk extends CompiledArk {
   }
 }
 
-function doCompile(env: Environment, value: any): CompiledArk {
+function doCompile(env: Environment, value: unknown): CompiledArk {
   if (value === null) {
     return new CompiledArk(new ArkLiteral(ArkNull()))
   }
@@ -175,19 +175,19 @@ function doCompile(env: Environment, value: any): CompiledArk {
           }
           return new CompiledArk(new ArkLiteral(ArkString(value[1])))
         case 'let': {
-          if (value.length !== 3) {
+          if (value.length !== 3 || !(value[1] instanceof Array)) {
             throw new ArkCompilerError("Invalid 'let'")
           }
-          const params = arkParamList(value[1])
+          const params = arkParamList(value[1] as string[])
           const compiled = doCompile(env.push(params), value[2])
           params.forEach((p) => compiled.freeVars.delete(p))
           return new CompiledArk(new ArkLet(params, compiled.value), compiled.freeVars)
         }
         case 'fn': {
-          if (value.length !== 3) {
+          if (value.length !== 3 || !(value[1] instanceof Array)) {
             throw new ArkCompilerError("Invalid 'fn'")
           }
-          const params = arkParamList(value[1])
+          const params = arkParamList(value[1] as string[])
           const compiled = doCompile(env.pushFrame([params, []]), value[2])
           params.forEach((p) => compiled.freeVars.delete(p))
           return new CompiledArk(
@@ -196,7 +196,7 @@ function doCompile(env: Environment, value: any): CompiledArk {
           )
         }
         case 'prop': {
-          if (value.length !== 3) {
+          if (value.length !== 3 || typeof value[1] !== 'string') {
             throw new ArkCompilerError("Invalid 'prop'")
           }
           const compiled = doCompile(env, value[2])
@@ -302,11 +302,11 @@ function doCompile(env: Environment, value: any): CompiledArk {
     }
   }
   if (typeof value === 'object') {
-    const inits = new Map()
+    const inits = new Map<string, ArkExp>()
     const initsFreeVars = new FreeVars()
     for (const key in value) {
       if (Object.hasOwn(value, key)) {
-        const compiled = doCompile(env, value[key])
+        const compiled = doCompile(env, (value as {[key: string]: unknown})[key])
         inits.set(key, compiled.value)
         initsFreeVars.merge(compiled.freeVars)
       }

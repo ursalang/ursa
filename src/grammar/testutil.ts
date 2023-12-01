@@ -9,14 +9,14 @@ import {toAST} from 'ohm-js/extras'
 // eslint-disable-next-line import/extensions
 import grammar from './ursa.ohm-bundle.js'
 
-function stringifyAST(ast: any) {
+function stringifyAST(ast: unknown) {
   return JSON.stringify(ast, null, 2)
 }
 
 export function parse(
   expr: string,
   startRule?: string,
-): {} {
+): object {
   const matchResult = grammar.match(expr, startRule)
   if (matchResult.failed()) {
     throw new Error(matchResult.message)
@@ -52,7 +52,7 @@ export function parse(
 
 export function testGroup(
   title: string,
-  tests: [string, any][],
+  tests: [string, unknown][],
 ) {
   test(title, (t) => {
     for (const [source, expected] of tests) {
@@ -62,27 +62,15 @@ export function testGroup(
   })
 }
 
-export async function fileTest(
-  title: string,
-  file: string,
-  expected_stderr?: string,
-) {
-  test(title, async (t) => {
-    try {
-      const result = parse(fs.readFileSync(`${file}.ursa`, {encoding: 'utf-8'}))
-      if (process.env.TEST_REGENERATE_EXPECTED) {
-        fs.writeFileSync(`${file}.grammar-result.json`, JSON.stringify(result, null, 2))
-        t.pass()
-      } else {
-        const expected = JSON.parse(fs.readFileSync(`${file}.grammar-result.json`, {encoding: 'utf-8'}))
-        t.deepEqual(result, expected)
-      }
-    } catch (error) {
-      if (expected_stderr !== undefined) {
-        t.is((error as any).stderr.slice('run.js: '.length), expected_stderr)
-      } else {
-        throw error
-      }
+export function fileTest(title: string, file: string) {
+  test(title, (t) => {
+    const result = parse(fs.readFileSync(`${file}.ursa`, {encoding: 'utf-8'}))
+    if (process.env.TEST_REGENERATE_EXPECTED) {
+      fs.writeFileSync(`${file}.grammar-result.json`, JSON.stringify(result, null, 2))
+      t.pass()
+    } else {
+      const expected: unknown = JSON.parse(fs.readFileSync(`${file}.grammar-result.json`, {encoding: 'utf-8'}))
+      t.deepEqual(result, expected)
     }
   })
 }

@@ -17,4 +17,4 @@ import {cliTest} from '../testutil.js'
   ['Repeated closure', 'test/repeated-closure'],
   ['Two double closures', 'test/two-double-closures'],
   // eslint-disable-next-line @typescript-eslint/return-await
-].map(async ([title, file]) => await cliTest('json', title, file))
+].map(([title, file]) => cliTest('json', title, file))

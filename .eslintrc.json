@@ -11,7 +11,8 @@
   ],
   "extends": [
     "airbnb-base",
-    "airbnb-typescript/base"
+    "airbnb-typescript/base",
+    "plugin:@typescript-eslint/recommended-type-checked"
   ],
   "ignorePatterns": [ "*.ohm-bundle.d.ts" ],
   "rules": {
@@ -36,6 +37,7 @@
     "no-param-reassign": "off",
     "no-restricted-syntax": "off",
     "no-underscore-dangle": "off",
+    "no-void": [ "error", { "allowAsStatement": true } ],
     "no-warning-comments": "off",
     "prefer-destructuring": "off",
     "@typescript-eslint/no-shadow": "off",

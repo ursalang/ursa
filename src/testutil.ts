@@ -5,7 +5,7 @@
 import fs from 'fs'
 import test from 'ava'
 import tmp from 'tmp'
-import {execa} from 'execa'
+import {ExecaReturnValue, execa} from 'execa'
 
 import {ArkState, debug} from './ark/interpreter.js'
 import {compile as arkCompile, CompiledArk} from './ark/parser.js'
@@ -22,7 +22,7 @@ async function run(args: string[]) {
 function doTestGroup(
   title: string,
   compile: (expr: string) => CompiledArk,
-  tests: [string, any][],
+  tests: [string, unknown][],
 ) {
   test(title, async (t) => {
     for (const [source, expected] of tests) {
@@ -36,15 +36,15 @@ function doTestGroup(
   })
 }
 
-export function testArkGroup(title: string, tests: [string, any][]) {
+export function testArkGroup(title: string, tests: [string, unknown][]) {
   return doTestGroup(title, arkCompile, tests)
 }
 
-export function testUrsaGroup(title: string, tests: [string, any][]) {
+export function testUrsaGroup(title: string, tests: [string, unknown][]) {
   return doTestGroup(title, ursaCompile, tests)
 }
 
-export async function cliTest(
+export function cliTest(
   syntax: string,
   title: string,
   file: string,
@@ -56,8 +56,8 @@ export async function cliTest(
   test(title, async (t) => {
     try {
       const {stdout} = await run([`--syntax=${syntax}`, `--output=${tempFile}`, `${file}.${syntax}`, ...args ?? []])
-      const result = JSON.parse(fs.readFileSync(tempFile, {encoding: 'utf-8'}))
-      const expected = JSON.parse(fs.readFileSync(`${file}.result.json`, {encoding: 'utf-8'}))
+      const result: unknown = JSON.parse(fs.readFileSync(tempFile, {encoding: 'utf-8'}))
+      const expected: unknown = JSON.parse(fs.readFileSync(`${file}.result.json`, {encoding: 'utf-8'}))
       t.deepEqual(result, expected)
       if (syntax === 'json') {
         const source = fs.readFileSync(`${file}.json`, {encoding: 'utf-8'})
@@ -69,9 +69,9 @@ export async function cliTest(
       }
     } catch (error) {
       if (expectedStderr !== undefined) {
-        t.is((error as any).stderr.slice('run.js: '.length), expectedStderr)
+        t.is((error as ExecaReturnValue).stderr.slice('run.js: '.length), expectedStderr)
         if (expectedStdout !== undefined) {
-          t.is((error as any).stdout, expectedStdout)
+          t.is((error as ExecaReturnValue).stdout, expectedStdout)
         }
       } else {
         throw error

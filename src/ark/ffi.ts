@@ -9,7 +9,7 @@ import {
 
 export class ArkFromJsError extends Error {}
 
-export function fromJs(x: any, thisObj?: Object): ArkVal {
+export function fromJs(x: unknown, thisObj?: object): ArkVal {
   if (x === null || x === undefined) {
     return ArkNull()
   }
@@ -23,37 +23,45 @@ export function fromJs(x: any, thisObj?: Object): ArkVal {
     return ArkString(x)
   }
   if (typeof x === 'function') {
-    const fn = thisObj ? x.bind(thisObj) : x
+    // eslint-disable-next-line max-len
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/ban-types
+    const fn: Function = thisObj ? x.bind(thisObj) : x
     const nativeFn = new NativeFn(
       [],
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       (...args: ArkVal[]) => fromJs(fn(...args.map(toJs))),
     )
-    nativeFn.debug.set('name', x.name)
+    nativeFn.debug.name = x.name
     return nativeFn
   }
   if (x instanceof Array) {
-    return new ArkList(x)
+    return new ArkList(x as [])
   }
   if (x instanceof Map) {
-    return new ArkMap(x)
+    const map = new Map<ArkVal, ArkVal>()
+    for (const [k, v] of x) {
+      map.set(fromJs(k), fromJs(v))
+    }
+    return new ArkMap(map)
   }
   if (typeof x === 'object') {
     return new NativeObject(x)
   }
+  // eslint-disable-next-line @typescript-eslint/no-base-to-string
   throw new ArkFromJsError(`Cannot convert JavaScript value ${x}`)
 }
 
-export function toJs(val: ArkVal): any {
+export function toJs(val: ArkVal): unknown {
   if (val instanceof ArkConcreteVal) {
     return val.val
   } else if (val instanceof ArkObject) {
-    const obj = {}
+    const obj: {[key: string]: unknown} = {}
     for (const [k, v] of val.val) {
-      (obj as any)[k] = toJs(v)
+      obj[k] = toJs(v)
     }
     return obj
   } else if (val instanceof ArkMap) {
-    const jsMap = new Map<any, ArkVal>()
+    const jsMap = new Map<unknown, unknown>()
     for (const [k, v] of val.map) {
       jsMap.set(toJs(k), toJs(v))
     }

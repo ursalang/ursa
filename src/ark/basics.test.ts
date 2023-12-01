@@ -76,5 +76,5 @@ testGroup('Lists', [
 ])
 
 testGroup('Maps', [
-  ['["seq",["map",[["str","a"],1],[["str","b"],["+",2,0]],[3,4]]]', new Map<any, any>([['a', 1], ['b', 2], [3, 4]])],
+  ['["seq",["map",[["str","a"],1],[["str","b"],["+",2,0]],[3,4]]]', new Map<unknown, unknown>([['a', 1], ['b', 2], [3, 4]])],
 ])

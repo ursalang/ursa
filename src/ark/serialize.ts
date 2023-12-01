@@ -13,15 +13,15 @@ import {
   ArkStackRef, ArkCaptureRef,
 } from './interpreter.js'
 
-export function valToJs(val: ArkVal): any {
+export function valToJs(val: ArkVal): unknown {
   if (val.debug !== undefined) {
-    const name = val.debug.get('name')
+    const name = val.debug.name
     if (name !== undefined) {
       return name
     }
   }
   if (val instanceof ArkConcreteVal) {
-    const rawVal = val.val
+    const rawVal: unknown = val.val
     if (typeof rawVal === 'string') {
       return ['str', val.val]
     }
@@ -41,13 +41,13 @@ export function valToJs(val: ArkVal): any {
   } else if (val instanceof ArkObject || val instanceof ArkObjectLiteral) {
     const obj = {}
     for (const [k, v] of val.val) {
-      (obj as any)[k] = valToJs(v)
+      (obj as {[key: string]: unknown})[k] = valToJs(v)
     }
     return obj
   } else if (val instanceof ArkList || val instanceof ArkListLiteral) {
     return ['list', ...val.list.map(valToJs)]
   } else if (val instanceof ArkMap || val instanceof ArkMapLiteral) {
-    const obj: any[] = ['map']
+    const obj: unknown[] = ['map']
     for (const [k, v] of val.map) {
       obj.push([valToJs(k), valToJs(v)])
     }
@@ -83,14 +83,15 @@ export function valToJs(val: ArkVal): any {
   } else if (val === ArkUndefined) {
     return undefined
   } else if (val instanceof NativeObject) {
-    const obj = {}
+    const obj: {[key: string]: unknown} = {}
     for (const k in val.obj) {
       if (Object.hasOwn(val.obj, k)) {
-        (obj as any)[k] = valToJs((val.obj as any)[k])
+        obj[k] = valToJs((val.obj as {[key: string]: ArkVal})[k])
       }
     }
     return obj
   }
+  // eslint-disable-next-line @typescript-eslint/no-base-to-string
   return val.toString()
 }
 
@@ -99,7 +100,7 @@ export function serializeVal(val: ArkVal) {
 }
 
 function freeVarsToJs(freeVars: FreeVars) {
-  const obj: {[key: string]: {}} = {}
+  const obj: {[key: string]: unknown} = {}
   for (const [sym, ref] of freeVars) {
     obj[sym] = valToJs(ref)
   }

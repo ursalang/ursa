@@ -10,8 +10,8 @@ import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
 import assert from 'assert'
 
 import {
-  debug, ArkState,
-  ArkUndefined, ArkNull, ArkObject, ArkList, ArkValRef, ArkString, globals,
+  debug, ArkState, ArkUndefined, ArkNull, ArkObject, ArkList,
+  ArkVal, ArkValRef, ArkString, globals,
 } from '../ark/interpreter.js'
 import {
   Environment, CompiledArk, PartialCompiledArk, compile as arkCompile,
@@ -83,7 +83,7 @@ function compile(
   return compiled
 }
 
-async function repl() {
+async function repl(): Promise<ArkVal> {
   console.log(`Welcome to Ursa ${programVersion}.`)
   const rl = readline.createInterface({
     input: process.stdin,
@@ -93,7 +93,7 @@ async function repl() {
   rl.prompt()
   const ark = new ArkState()
   let env = new Environment()
-  let val
+  let val: ArkVal = ArkNull()
   for await (const line of rl) {
     try {
       if (line !== '') { // Ignore empty input, which is not a valid Exp.
@@ -105,10 +105,12 @@ async function repl() {
         // Handle new let bindings
         if (compiled instanceof PartialCompiledArk && compiled.boundVars.length > 0) {
           env = env.push(compiled.boundVars)
-          ark.stack.push(Array(compiled.boundVars.length).fill(new ArkValRef(ArkUndefined)))
+          ark.stack.push(Array<ArkValRef>(compiled.boundVars.length).fill(
+            new ArkValRef(ArkUndefined),
+          ))
         }
-        val = toJs(await runWithTraceback(ark, compiled))
-        console.dir(val, {depth: null})
+        val = await runWithTraceback(ark, compiled)
+        console.dir(toJs(val), {depth: null})
       }
     } catch (error) {
       if (error instanceof Error) {
@@ -178,7 +180,7 @@ async function main() {
         [ArkString(prog ?? process.argv[0]), ...args.argument.map((s) => ArkString(s))],
       )))
       // Run the program
-      let result
+      let result: ArkVal | undefined
       if (source !== undefined) {
         result = await runWithTraceback(ark, compile(source))
       }
@@ -201,4 +203,4 @@ async function main() {
   }
 }
 
-main()
+await main()
