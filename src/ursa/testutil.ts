@@ -7,9 +7,9 @@ import test from 'ava'
 import tmp from 'tmp'
 import {execa} from 'execa'
 
-import {
-  ArkState, debug, toJs, compile as arkCompile, CompiledArk,
-} from '../ark/index.js'
+import {ArkState, debug} from '../ark/interpreter.js'
+import {compile as arkCompile, CompiledArk} from '../ark/parser.js'
+import {toJs} from '../ark/ffi.js'
 
 import {compile as ursaCompile} from './compiler.js'
 

@@ -4,13 +4,14 @@
 // Released under the MIT license.
 
 import test from 'ava'
-
 import assert from 'assert'
+
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  ArkState, toJs,
-} from '../ark/index.js'
+  ArkState,
+} from '../ark/interpreter.js'
+import {toJs} from '../ark/ffi.js'
 
 import {compile, UrsaCompilerError} from './compiler.js'
 

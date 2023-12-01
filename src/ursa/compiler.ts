@@ -9,13 +9,16 @@ import grammar, {UrsaSemantics} from '../grammar/ursa.ohm-bundle.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  ArkState, intrinsics, ArkRuntimeError, ArkCompilerError, FreeVars,
-  ArkVal, ArkExp, ArkNull, ArkBoolean, ArkNumber, ArkString,
+  ArkState, intrinsics, ArkRuntimeError,
+  ArkVal, ArkExp, ArkLiteral, ArkNull, ArkBoolean, ArkNumber, ArkString,
   ArkSequence, ArkIf, ArkLoop, ArkAnd, ArkOr,
   ArkObjectLiteral, ArkListLiteral, ArkMapLiteral,
   ArkCall, ArkLet, ArkFn, ArkProperty, ArkGet, ArkSet,
-  CompiledArk, symRef, Environment, PartialCompiledArk, checkParamList, ArkLiteral,
-} from '../ark/index.js'
+} from '../ark/interpreter.js'
+import {
+  ArkCompilerError, FreeVars,
+  CompiledArk, symRef, Environment, PartialCompiledArk, checkParamList,
+} from '../ark/parser.js'
 
 // Specify precise type so semantics can be precisely type-checked.
 const semantics: UrsaSemantics = grammar.createSemantics()

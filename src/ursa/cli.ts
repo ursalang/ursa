@@ -10,10 +10,14 @@ import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
 import assert from 'assert'
 
 import {
-  debug, ArkState, toJs,
+  debug, ArkState,
   ArkUndefined, ArkNull, ArkObject, ArkList, ArkValRef, ArkString, globals,
-  Environment, PartialCompiledArk, compile as arkCompile, serializeVal,
-} from '../ark/index.js'
+} from '../ark/interpreter.js'
+import {
+  Environment, CompiledArk, PartialCompiledArk, compile as arkCompile,
+} from '../ark/parser.js'
+import {toJs} from '../ark/ffi.js'
+import {serializeVal} from '../ark/serialize.js'
 
 import programVersion from '../version.js'
 import {runWithTraceback, compile as ursaCompile} from './compiler.js'
@@ -61,9 +65,17 @@ interface Args {
 }
 const args: Args = parser.parse_args() as Args
 
-function compile(exp: string, env: Environment = new Environment(), startRule?: string) {
-  const compiler = args.syntax === 'json' ? arkCompile : ursaCompile
-  const compiled = compiler(exp, env, startRule)
+function compile(
+  exp: string,
+  env: Environment = new Environment(),
+  startRule?: string,
+): CompiledArk {
+  let compiled: CompiledArk
+  if (args.syntax === 'json') {
+    compiled = arkCompile(exp, env)
+  } else {
+    compiled = ursaCompile(exp, env, startRule)
+  }
   if (process.env.DEBUG) {
     console.log('Compiled Ark')
     debug(compiled, null)
