@@ -9,10 +9,6 @@ import {toAST} from 'ohm-js/extras'
 // eslint-disable-next-line import/extensions
 import grammar from './ursa.ohm-bundle.js'
 
-export function debug(x: any, depth: number | null = 1) {
-  console.dir(x, {depth, colors: true})
-}
-
 function stringifyAST(ast: any) {
   return JSON.stringify(ast, null, 2)
 }
