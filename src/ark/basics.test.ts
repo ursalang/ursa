@@ -12,7 +12,7 @@ import {
 import {toJs} from './ffi.js'
 import {compile} from './parser.js'
 
-import {testGroup} from './testutil.js'
+import {testArkGroup as testGroup} from '../testutil.js'
 
 Error.stackTraceLimit = Infinity
 

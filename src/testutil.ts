@@ -7,11 +7,11 @@ import test from 'ava'
 import tmp from 'tmp'
 import {execa} from 'execa'
 
-import {ArkState, debug} from '../ark/interpreter.js'
-import {compile as arkCompile, CompiledArk} from '../ark/parser.js'
-import {toJs} from '../ark/ffi.js'
-
-import {compile as ursaCompile} from './compiler.js'
+import {ArkState, debug} from './ark/interpreter.js'
+import {compile as arkCompile, CompiledArk} from './ark/parser.js'
+import {toJs} from './ark/ffi.js'
+import {valToJs} from './ark/serialize.js'
+import {compile as ursaCompile} from './ursa/compiler.js'
 
 const command = process.env.NODE_ENV === 'coverage' ? './bin/test-run.sh' : './bin/run.js'
 
@@ -59,6 +59,11 @@ export async function cliTest(
       const result = JSON.parse(fs.readFileSync(tempFile, {encoding: 'utf-8'}))
       const expected = JSON.parse(fs.readFileSync(`${file}.result.json`, {encoding: 'utf-8'}))
       t.deepEqual(result, expected)
+      if (syntax === 'json') {
+        const source = fs.readFileSync(`${file}.json`, {encoding: 'utf-8'})
+        const compiled = arkCompile(source)
+        t.deepEqual(valToJs(compiled.value), JSON.parse(source))
+      }
       if (expectedStdout !== undefined) {
         t.is(stdout, expectedStdout)
       }

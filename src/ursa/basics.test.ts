@@ -15,7 +15,7 @@ import {toJs} from '../ark/ffi.js'
 
 import {compile, UrsaCompilerError} from './compiler.js'
 
-import {testUrsaGroup as testGroup} from './testutil.js'
+import {testUrsaGroup as testGroup} from '../testutil.js'
 
 Error.stackTraceLimit = Infinity
 
