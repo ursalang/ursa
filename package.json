@@ -1,7 +1,7 @@
 {
   "name": "@ursalang/ursa",
   "description": "A simple, comfortable, general-purpose language",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "author": "Reuben Thomas",
   "license": "GPL-3.0-or-later",
   "repository": "ursalang/ursa",
