@@ -3,7 +3,6 @@
 ## Version 0.2
 
 * Add string indexing.
-* Use `use js` to move most of the globals into the prelude.
 * Sets: use `{ Exp, }` notation, with mandatory first comma.
 * Map interface to file system and internet.
 
