@@ -122,16 +122,56 @@ export class ArkLiteral extends ArkExp {
   }
 }
 
-export class ArkConcreteVal<T> extends ArkVal {
+// FIXME: Need to differentiate "indexable" (List, string) from "has
+// properties" (List, Object).
+abstract class ArkAbstractClass extends ArkVal {
+  abstract get(prop: string): ArkVal | undefined
+
+  abstract set(prop: string, val: ArkVal): ArkVal
+}
+
+export class ArkClass extends ArkAbstractClass {
+  constructor(public properties: Map<string, ArkVal> = new Map()) {
+    super()
+  }
+
+  get(prop: string): ArkVal | undefined {
+    return this.properties.get(prop)
+  }
+
+  set(prop: string, val: ArkVal) {
+    this.properties.set(prop, val)
+    return val
+  }
+}
+
+export abstract class ArkConcreteVal<T> extends ArkClass {
   constructor(public val: T) {
     super()
   }
 }
 
-export class ArkNullType extends ArkConcreteVal<null> {}
-export class ArkBooleanType extends ArkConcreteVal<boolean> {}
-export class ArkNumberType extends ArkConcreteVal<number> {}
-export class ArkStringType extends ArkConcreteVal<string> {}
+export class ArkNullClass extends ArkConcreteVal<null> {}
+export class ArkBooleanClass extends ArkConcreteVal<boolean> {}
+export class ArkNumberClass extends ArkConcreteVal<number> {}
+export class ArkStringClass extends ArkConcreteVal<string> {
+  constructor(val: string) {
+    super(val)
+    this.properties = new Map([
+      ['get', new NativeFn(['index'], (index: ArkVal) => ArkString(this.val[toJs(index) as number]))],
+      ['iterator', new NativeFn([], () => {
+        const str = this.val
+        const generator = (function* listGenerator() {
+          for (const elem of str) {
+            yield ArkString(elem)
+          }
+          return ArkNull()
+        }())
+        return new NativeFn([], () => generator.next().value)
+      })],
+    ])
+  }
+}
 
 class ConcreteInterned {
   constructor() {
@@ -162,16 +202,16 @@ class ConcreteInterned {
 export const ArkUndefined = new ArkVal()
 ArkUndefined.debug.name = 'Undefined'
 export function ArkNull() {
-  return ConcreteInterned.value<ArkNullType, null>(ArkNullType, null)
+  return ConcreteInterned.value<ArkNullClass, null>(ArkNullClass, null)
 }
 export function ArkBoolean(b: boolean) {
-  return ConcreteInterned.value<ArkBooleanType, boolean>(ArkBooleanType, b)
+  return ConcreteInterned.value<ArkBooleanClass, boolean>(ArkBooleanClass, b)
 }
 export function ArkNumber(n: number) {
-  return ConcreteInterned.value<ArkNumberType, number>(ArkNumberType, n)
+  return ConcreteInterned.value<ArkNumberClass, number>(ArkNumberClass, n)
 }
 export function ArkString(s: string) {
-  return ConcreteInterned.value<ArkStringType, string>(ArkStringType, s)
+  return ConcreteInterned.value<ArkStringClass, string>(ArkStringClass, s)
 }
 
 export class ArkNonLocalReturn extends Error {
@@ -369,7 +409,7 @@ export class ArkSet extends ArkExp {
     }
     const oldVal = ref.get(ark.stack)
     if (oldVal !== ArkUndefined
-      && oldVal.constructor !== ArkNullType
+      && oldVal.constructor !== ArkNullClass
       && res.constructor !== oldVal.constructor) {
       throw new ArkRuntimeError('Assignment to different type', this)
     }
@@ -378,40 +418,16 @@ export class ArkSet extends ArkExp {
   }
 }
 
-abstract class ArkAbstractClass extends ArkVal {
-  abstract get(prop: string): ArkVal | undefined
-
-  abstract set(prop: string, val: ArkVal): ArkVal
-}
-
-export class ArkClass extends ArkAbstractClass {
-  public val: Map<string, ArkVal>
-
-  constructor(obj: Map<string, ArkVal>) {
-    super()
-    this.val = obj
-  }
-
-  get(prop: string): ArkVal | undefined {
-    return this.val.get(prop)
-  }
-
-  set(prop: string, val: ArkVal) {
-    this.val.set(prop, val)
-    return val
-  }
-}
-
 export class ArkObject extends ArkClass {}
 
 export class ArkObjectLiteral extends ArkExp {
-  constructor(public val: Map<string, ArkExp>) {
+  constructor(public properties: Map<string, ArkExp>) {
     super()
   }
 
   async eval(ark: ArkState): Promise<ArkVal> {
     const inits = new Map<string, ArkVal>()
-    for (const [k, v] of this.val) {
+    for (const [k, v] of this.properties) {
       // eslint-disable-next-line no-await-in-loop
       inits.set(k, await v.eval(ark))
     }
@@ -448,7 +464,8 @@ export class ArkProperty extends ArkExp {
 
   async eval(ark: ArkState): Promise<ArkVal> {
     const obj = await this.obj.eval(ark)
-    if (!(obj instanceof ArkAbstractClass)) {
+    // FIXME: This is ad-hoc. See ArkAbstractClass.
+    if (!(obj instanceof ArkAbstractClass) || obj instanceof ArkNullClass) {
       throw new ArkRuntimeError('Attempt to read property of non-object', this)
     }
     return new ArkPropertyRef(obj, this.prop)
@@ -500,7 +517,7 @@ export class ArkList extends ArkClass {
         return new NativeFn([], () => generator.next().value)
       })],
     ]))
-    this.val.set('length', ArkNumber(this.list.length))
+    this.properties.set('length', ArkNumber(this.list.length))
   }
 }
 

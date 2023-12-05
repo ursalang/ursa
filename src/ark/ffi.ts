@@ -56,7 +56,7 @@ export function toJs(val: ArkVal): unknown {
     return val.val
   } else if (val instanceof ArkObject) {
     const obj: {[key: string]: unknown} = {}
-    for (const [k, v] of val.val) {
+    for (const [k, v] of val.properties) {
       obj[k] = toJs(v)
     }
     return obj

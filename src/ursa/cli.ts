@@ -163,7 +163,7 @@ async function main() {
     )
     const ark = new ArkState()
     const preludeObj = await prelude.value.eval(ark) as ArkObject
-    for (const [sym, val] of preludeObj.val) {
+    for (const [sym, val] of preludeObj.properties) {
       globals.set(sym, new ArkValRef(val))
     }
     if (args.compile) {

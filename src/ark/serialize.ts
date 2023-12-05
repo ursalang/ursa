@@ -40,7 +40,7 @@ export function valToJs(val: ArkVal): unknown {
     return ['fn', ['params', ...val.params], valToJs(val.body)]
   } else if (val instanceof ArkObject || val instanceof ArkObjectLiteral) {
     const obj = {}
-    for (const [k, v] of val.val) {
+    for (const [k, v] of val.properties) {
       (obj as {[key: string]: unknown})[k] = valToJs(v)
     }
     return obj

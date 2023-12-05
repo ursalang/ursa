@@ -321,6 +321,6 @@ export function compile(
   env: Environment = new Environment(),
 ): CompiledArk {
   const compiled = doCompile(env, JSON.parse(expr))
-  env.externalSyms.val.forEach((_val, id) => compiled.freeVars.delete(id))
+  env.externalSyms.properties.forEach((_val, id) => compiled.freeVars.delete(id))
   return compiled
 }

@@ -1194,7 +1194,7 @@ export function compile(
   const ast = semantics(matchResult)
   const compiled = (ast.toAST as ToExp)(env, false, false, false)
   const freeVars = (ast.freeVars as FreeVarsAction)(env)
-  env.externalSyms.val.forEach((_val, id) => freeVars.delete(id))
+  env.externalSyms.properties.forEach((_val, id) => freeVars.delete(id))
   return new PartialCompiledArk(compiled, freeVars, (ast.boundVars as BoundVarsAttribute))
 }
 

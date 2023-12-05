@@ -2,7 +2,6 @@
 
 ## Version 0.2
 
-* Add string indexing.
 * Sets: use `{ Exp, }` notation, with mandatory first comma.
 * Map interface to file system and internet.
 
