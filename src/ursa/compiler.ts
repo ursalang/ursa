@@ -991,21 +991,18 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop,inFn)', {
   Use(_use, pathList) {
     const path = pathList.asIteration().children
     const ident = path[path.length - 1]
-    // For path x.y.z, compile `let z = x.use(y.z); …`
+    // For path x.y.z, compile `let z = x.use(y.z)`
     const innerEnv = (this.args as ToASTArgs).env.push([ident.sourceString])
-    const compiledLet = new ArkLet(
-      [ident.sourceString],
-      new ArkSequence([
-        new ArkSet(
-          (ident.symref as SymrefsAction)(innerEnv).value,
-          new ArkCall(
-            new ArkGet(addLoc(new ArkProperty('use', new ArkGet((path[0].symref as SymrefsAction)(innerEnv).value)), this)),
-            path.slice(1).map((id) => new ArkLiteral(ArkString(id.sourceString))),
-          ),
+    const compiledUse = new ArkSequence([
+      new ArkSet(
+        (ident.symref as SymrefsAction)(innerEnv).value,
+        new ArkCall(
+          new ArkGet(addLoc(new ArkProperty('use', new ArkGet((path[0].symref as SymrefsAction)(innerEnv).value)), this)),
+          path.slice(1).map((id) => new ArkLiteral(ArkString(id.sourceString))),
         ),
-      ]),
-    )
-    return addLoc(compiledLet, this)
+      ),
+    ])
+    return addLoc(compiledUse, this)
   },
 
   Block(_open, seq, _close) {
@@ -1073,6 +1070,12 @@ semantics.addAttribute<string[]>('boundVars', {
   },
 
   Let(_let, ident, _eq, _val) {
+    return [ident.sourceString]
+  },
+
+  Use(_use, pathList) {
+    const path = pathList.asIteration().children
+    const ident = path[path.length - 1]
     return [ident.sourceString]
   },
 })

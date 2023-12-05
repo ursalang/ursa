@@ -2,7 +2,6 @@
 // © Reuben Thomas 2023
 // Released under the GPL version 3, or (at your option) any later version.
 
-import fs from 'fs'
 import assert from 'assert'
 import util from 'util'
 
@@ -757,7 +756,6 @@ export const globals = new ArkObject(new Map([
     debug(obj)
     return ArkNull()
   }))],
-  ['fs', new ArkValRef(new NativeObject(fs))],
   ['js', new ArkValRef(new ArkObject(new Map([[
     'use', new NativeAsyncFn([], async (...args: ArkVal[]) => {
       const importPath = (args.map(toJs).join('.'))

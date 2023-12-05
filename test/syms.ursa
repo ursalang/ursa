@@ -1,6 +1,7 @@
 #!/usr/bin/env ursa
 // List symbols in input
 
+use js.fs
 let s = fs.readFileSync(argv[1], "utf-8")
 let regex = RegExp("\\p{L}+", "ug")
 

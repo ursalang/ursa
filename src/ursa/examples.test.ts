@@ -34,11 +34,9 @@ const test = cliTest.bind(null, 'ursa');
 
 void test('Test I/O', 'test/print', [], 'Hello, world!')
 
-void test("'fs' module", 'test/fs', [], 'foo')
-
 void test('use fs', 'test/use-fs', [], 'foo')
 
-void test('Find symbols in input', 'test/syms', ['./test/fs.ursa'], 'fs\nwriteSync\nfoo\nis\nstdout')
+void test('Find symbols in input', 'test/syms', ['./test/use-fs.ursa'], 'use\njs\nfs\nfs\nwriteSync\nfoo\nis\nstdout')
 
 void test('Test error on bad function call', 'test/bad-call', [], undefined, `\
 Error: Line 2, col 14:
