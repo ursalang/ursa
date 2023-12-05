@@ -4,6 +4,7 @@
 
 import {Node, IterationNode, Interval} from 'ohm-js'
 
+import {assert} from 'console'
 // eslint-disable-next-line import/extensions
 import grammar, {UrsaSemantics} from '../grammar/ursa.ohm-bundle.js'
 import {
@@ -167,18 +168,30 @@ type ToASTArgs = {
 
 semantics.addOperation<AST>('toAST(env,lval,inLoop,inFn)', {
   Sequence(exps, _sc) {
-    const compiledExps = []
     const boundVars: BoundVarsAttribute = []
     for (const exp of exps.asIteration().children) {
+      boundVars.push(...(exp.boundVars as BoundVarsAttribute))
+    }
+    const compiledExps = []
+    const innerEnv = (this.args as ToASTArgs).env.push(
+      Array<undefined>(boundVars.length).fill(undefined),
+    )
+    const outerLocals = (this.args as ToASTArgs).env.stack[0][0].length
+    let nextLocal = 0
+    for (const exp of exps.asIteration().children) {
+      for (let i = 0; i < (exp.boundVars as BoundVarsAttribute).length; i += 1) {
+        innerEnv.stack[0][0][outerLocals + nextLocal] = boundVars[nextLocal]
+        nextLocal += 1
+      }
       const compiledExp = (exp.toAST as ToExp)(
-        (this.args as ToASTArgs).env.push(boundVars),
+        innerEnv,
         false,
         (this.args as ToASTArgs).inLoop,
         (this.args as ToASTArgs).inFn,
       )
-      boundVars.push(...(exp.boundVars as BoundVarsAttribute))
       compiledExps.push(compiledExp)
     }
+    assert(nextLocal === boundVars.length)
     const compiledSeqBody = compiledExps.length === 1
       ? compiledExps[0]
       : new ArkSequence(compiledExps)
@@ -967,12 +980,11 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop,inFn)', {
       }
       letIds.push(parsedLet.id.sourceString)
     }
-    const innerEnv = ((this.args as ToASTArgs)).env.push(letIds)
     const assignments = parsedLets.map(
       (l) => new ArkSet(
-        (l.id.symref as SymrefsAction)(innerEnv).value,
+        (l.id.symref as SymrefsAction)((this.args as ToASTArgs).env).value,
         (l.node.toAST as ToExp)(
-          innerEnv,
+          (this.args as ToASTArgs).env,
           false,
           (this.args as ToASTArgs).inLoop,
           (this.args as ToASTArgs).inFn,
@@ -992,12 +1004,11 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop,inFn)', {
     const path = pathList.asIteration().children
     const ident = path[path.length - 1]
     // For path x.y.z, compile `let z = x.use(y.z)`
-    const innerEnv = (this.args as ToASTArgs).env.push([ident.sourceString])
     const compiledUse = new ArkSequence([
       new ArkSet(
-        (ident.symref as SymrefsAction)(innerEnv).value,
+        (ident.symref as SymrefsAction)((this.args as ToASTArgs).env).value,
         new ArkCall(
-          new ArkGet(addLoc(new ArkProperty('use', new ArkGet((path[0].symref as SymrefsAction)(innerEnv).value)), this)),
+          new ArkGet(addLoc(new ArkProperty('use', new ArkGet((path[0].symref as SymrefsAction)((this.args as ToASTArgs).env).value)), this)),
           path.slice(1).map((id) => new ArkLiteral(ArkString(id.sourceString))),
         ),
       ),

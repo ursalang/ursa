@@ -48,15 +48,17 @@ export class FreeVars extends Map<string, ArkStackRef> {
 }
 
 export class Environment {
-  // Each stack frame consists of a pair of local vars and captures
+  // Each stack frame consists of a pair of local variables and captures.
+  // Local variable names are undefined between the point where they are
+  // allocated and the point at which they are declared.
   constructor(
-    public stack: [string[], string[]][] = [[[], []]],
+    public stack: [(string | undefined)[], string[]][] = [[[], []]],
     public externalSyms: ArkObject = globals,
   ) {
     assert(stack.length > 0)
   }
 
-  push(items: string[]) {
+  push(items: (string | undefined)[]) {
     return new Environment(
       [[[...this.stack[0][0].slice(), ...items], this.stack[0][1]], ...this.stack.slice(1)],
     )
@@ -68,7 +70,7 @@ export class Environment {
 
   getIndex(sym: string): ArkRef {
     let ref
-    for (let i = 0; i < this.stack.length; i += 1) {
+    for (let i = this.stack.length - 1; i >= 0; i -= 1) {
       const j = this.stack[i][0].lastIndexOf(sym)
       if (j !== -1) {
         ref = new ArkStackRef(i, j)
