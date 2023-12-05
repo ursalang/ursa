@@ -49,8 +49,6 @@ export class RuntimeStack {
 export class ArkState {
   readonly stack = new RuntimeStack()
 
-  debug: Map<string, unknown> = new Map()
-
   async run(compiledVal: CompiledArk): Promise<ArkVal> {
     if (compiledVal.freeVars.size !== 0) {
       throw new ArkRuntimeError(
