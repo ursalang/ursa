@@ -1,0 +1,19 @@
+// FIXME: Make this work, and use it as a test
+
+// Currently, it will return e.g. a 400 error, but neither callback is ever
+// run, presumably because we're not allowing async routines to run in Ursa?
+
+use js.http
+
+let requestListener = fn (req, res) {
+  res.writeHead(200)
+  res.end("My first server!")
+}
+
+let server = http.createServer(requestListener)
+let host = "localhost"
+let port = 8888
+server.listen(port, host, fn () {
+  // FIXME: Use string interpolation here
+  print("Server is running on http://localhost:8888")
+})
