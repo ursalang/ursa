@@ -756,9 +756,8 @@ export const intrinsics = new Namespace([
 ])
 
 export const globals = new ArkObject(new Map([
+  // Ursa's prelude (see also prelude.ursa).
   ['version', new ArkValRef(ArkString(programVersion))],
-  ['pi', new ArkValRef(ArkNumber(Math.PI))],
-  ['e', new ArkValRef(ArkNumber(Math.E))],
   ['print', new ArkValRef(new NativeFn(['obj'], (obj: ArkVal) => {
     console.log(toJs(obj))
     return ArkNull()
@@ -767,6 +766,8 @@ export const globals = new ArkObject(new Map([
     debug(obj)
     return ArkNull()
   }))],
+
+  // JavaScript bindings—imported libraries (with "use").
   ['js', new ArkValRef(new ArkObject(new Map([[
     'use', new NativeAsyncFn([], async (...args: ArkVal[]) => {
       const importPath = (args.map(toJs).join('.'))
@@ -780,6 +781,10 @@ export const globals = new ArkObject(new Map([
       return new ArkObject(wrappedModule)
     }),
   ]])))],
+
+  // Ad-hoc bindings of built-in JavaScript facilities.
+  ['pi', new ArkValRef(ArkNumber(Math.PI))],
+  ['e', new ArkValRef(ArkNumber(Math.E))],
   ['JSON', new ArkValRef(new NativeObject(JSON))],
   ['process', new ArkValRef(new NativeObject(process))],
   ['RegExp', new ArkValRef(new NativeFn(['regex', 'options'], (regex: ArkVal, options: ArkVal) => new NativeObject(new RegExp(
