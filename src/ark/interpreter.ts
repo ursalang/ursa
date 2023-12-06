@@ -218,10 +218,38 @@ export class ArkNonLocalReturn extends Error {
 }
 
 export class ArkBreakException extends ArkNonLocalReturn {}
-
 export class ArkReturnException extends ArkNonLocalReturn {}
-
 export class ArkContinueException extends ArkNonLocalReturn {}
+
+export class ArkBreak extends ArkExp {
+  constructor(public val: ArkExp = new ArkLiteral(ArkNull())) {
+    super()
+  }
+
+  async eval(ark: ArkState) {
+    throw new ArkBreakException(await this.val.eval(ark))
+    return Promise.resolve(ArkNull())
+  }
+}
+
+export class ArkContinue extends ArkExp {
+  // eslint-disable-next-line class-methods-use-this
+  eval(_ark: ArkState) {
+    throw new ArkContinueException()
+    return Promise.resolve(ArkNull())
+  }
+}
+
+export class ArkReturn extends ArkExp {
+  constructor(public val: ArkExp = new ArkLiteral(ArkNull())) {
+    super()
+  }
+
+  async eval(ark: ArkState) {
+    throw new ArkReturnException(await this.val.eval(ark))
+    return Promise.resolve(ArkNull())
+  }
+}
 
 function bindArgsToParams(params: string[], args: ArkVal[]): ArkRef[] {
   const frame: ArkValRef[] = params.map((_val, index) => new ArkValRef(args[index] ?? ArkUndefined))
@@ -251,8 +279,6 @@ class ArkClosure extends ArkCallable {
       if (!(e instanceof ArkReturnException)) {
         throw e
       }
-      // Pop intrinsics.return's call frame
-      ark.stack.popFrame()
       return e.val
     }
   }
@@ -694,15 +720,11 @@ export class ArkLoop extends ArkExp {
         await this.body.eval(ark)
       } catch (e) {
         if (e instanceof ArkBreakException) {
-          // Pop intrinsics.break's call frame
-          ark.stack.popFrame()
           return e.val
         }
         if (!(e instanceof ArkContinueException)) {
           throw e
         }
-        // Pop intrinsics.continue's call frame
-        ark.stack.popFrame()
       }
     }
   }
@@ -713,15 +735,6 @@ export const intrinsics = new Namespace([
   ['neg', new NativeFn(['val'], (val: ArkVal) => ArkNumber(-(toJs(val) as number)))],
   ['not', new NativeFn(['val'], (val: ArkVal) => ArkBoolean(!(toJs(val) as boolean)))],
   ['~', new NativeFn(['val'], (val: ArkVal) => ArkNumber(~(toJs(val) as number)))],
-  ['break', new NativeFn(['val'], (val: ArkVal) => {
-    throw new ArkBreakException(val === ArkUndefined ? ArkNull() : val)
-  })],
-  ['continue', new NativeFn([], () => {
-    throw new ArkContinueException()
-  })],
-  ['return', new NativeFn(['val'], (val: ArkVal) => {
-    throw new ArkReturnException(val)
-  })],
   ['=', new NativeFn(['left', 'right'], (left: ArkVal, right: ArkVal) => ArkBoolean(toJs(left) === toJs(right)))],
   ['!=', new NativeFn(['left', 'right'], (left: ArkVal, right: ArkVal) => ArkBoolean(toJs(left) !== toJs(right)))],
   ['<', new NativeFn(['left', 'right'], (left: ArkVal, right: ArkVal) => ArkBoolean((toJs(left) as number) < (toJs(right) as number)))],

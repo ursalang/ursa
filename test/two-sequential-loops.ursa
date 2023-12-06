@@ -1,0 +1,5 @@
+let l = [1,2,3]
+for e of l.iterator() {print(e)}
+
+let s = "abc"
+for c of s.iterator() {print(c)}

@@ -8,11 +8,11 @@ import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
   ArkExp, ArkVal, intrinsics, globals,
-  ArkIf, ArkAnd, ArkOr, ArkSequence, ArkLoop,
+  ArkIf, ArkAnd, ArkOr, ArkSequence, ArkLoop, ArkBreak, ArkContinue,
   ArkConcreteVal, ArkNull, ArkBoolean, ArkNumber, ArkString,
   ArkGet, ArkSet, ArkRef, ArkStackRef, ArkCaptureRef,
   ArkListLiteral, ArkObjectLiteral, ArkMapLiteral,
-  ArkFn, ArkProperty, ArkLet, ArkCall, ArkLiteral, ArkObject,
+  ArkFn, ArkReturn, ArkProperty, ArkLet, ArkCall, ArkLiteral, ArkObject,
 } from './interpreter.js'
 
 export class ArkCompilerError extends Error {}
@@ -293,6 +293,32 @@ function doCompile(env: Environment, value: unknown): CompiledArk {
           }
           const compiledBody = doCompile(env, value[1])
           return new CompiledArk(new ArkLoop(compiledBody.value), compiledBody.freeVars)
+        }
+        case 'break': {
+          if (value.length < 1 || value.length > 2) {
+            throw new ArkCompilerError("Invalid 'break'")
+          }
+          if (value.length === 2) {
+            const compiledBody = doCompile(env, value[1])
+            return new CompiledArk(new ArkBreak(compiledBody.value), compiledBody.freeVars)
+          }
+          return new CompiledArk(new ArkBreak())
+        }
+        case 'continue': {
+          if (value.length !== 2) {
+            throw new ArkCompilerError("Invalid 'continue'")
+          }
+          return new CompiledArk(new ArkContinue())
+        }
+        case 'return': {
+          if (value.length < 1 || value.length > 2) {
+            throw new ArkCompilerError("Invalid 'return'")
+          }
+          if (value.length === 2) {
+            const compiledBody = doCompile(env, value[1])
+            return new CompiledArk(new ArkReturn(compiledBody.value), compiledBody.freeVars)
+          }
+          return new CompiledArk(new ArkReturn())
         }
         default: {
           const compiledFn = doCompile(env, value[0])

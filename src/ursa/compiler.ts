@@ -14,7 +14,8 @@ import {
   ArkVal, ArkExp, ArkLiteral, ArkNull, ArkBoolean, ArkNumber, ArkString,
   ArkSequence, ArkIf, ArkLoop, ArkAnd, ArkOr,
   ArkObjectLiteral, ArkListLiteral, ArkMapLiteral,
-  ArkCall, ArkLet, ArkFn, ArkProperty, ArkGet, ArkSet,
+  ArkCall, ArkLet, ArkFn, ArkProperty, ArkGet, ArkSet, ArkReturn,
+  ArkBreak, ArkContinue,
 } from '../ark/interpreter.js'
 import {
   ArkCompilerError, FreeVars,
@@ -473,7 +474,7 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop,inFn)', {
         new ArkSet(compiledForVar, new ArkCall(new ArkGet(symRef(loopEnv, '_for').value), [])),
         new ArkIf(
           new ArkCall(new ArkLiteral(intrinsics.get('=')), [new ArkGet(compiledForVar), new ArkLiteral(ArkNull())]),
-          new ArkCall(new ArkLiteral(intrinsics.get('break')), []),
+          new ArkBreak(),
         ),
         compiledForBody,
       ]),
@@ -943,24 +944,22 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop,inFn)', {
     if (!(this.args as ToASTArgs).inLoop) {
       throw new UrsaCompilerError(_break.source, 'break used outside a loop')
     }
-    return addLoc(new ArkCall(
-      new ArkLiteral(intrinsics.get('break')),
-      [maybeVal((this.args as ToASTArgs).env, exp, (this.args as ToASTArgs).inFn)],
+    return addLoc(new ArkBreak(
+      maybeVal((this.args as ToASTArgs).env, exp, (this.args as ToASTArgs).inFn),
     ), this)
   },
   Exp_continue(_continue) {
     if (!(this.args as ToASTArgs).inLoop) {
       throw new UrsaCompilerError(_continue.source, 'continue used outside a loop')
     }
-    return addLoc(new ArkCall(new ArkLiteral(intrinsics.get('continue')), []), this)
+    return addLoc(new ArkContinue(), this)
   },
   Exp_return(_return, exp) {
     if (!(this.args as ToASTArgs).inFn) {
       throw new UrsaCompilerError(_return.source, 'return used outside a function')
     }
-    return addLoc(new ArkCall(
-      new ArkLiteral(intrinsics.get('return')),
-      [maybeVal((this.args as ToASTArgs).env, exp, (this.args as ToASTArgs).inFn)],
+    return addLoc(new ArkReturn(
+      maybeVal((this.args as ToASTArgs).env, exp, (this.args as ToASTArgs).inFn),
     ), this)
   },
 

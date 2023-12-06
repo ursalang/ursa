@@ -6,8 +6,8 @@ import {FreeVars, PartialCompiledArk} from './parser.js'
 import {
   ArkVal, ArkValRef, ArkConcreteVal,
   ArkUndefined, ArkNull, ArkSequence,
-  ArkAnd, ArkOr, ArkIf, ArkLoop,
-  ArkGet, ArkSet, ArkLet, ArkCall, ArkFn,
+  ArkAnd, ArkOr, ArkIf, ArkLoop, ArkBreak, ArkContinue,
+  ArkGet, ArkSet, ArkLet, ArkCall, ArkFn, ArkReturn,
   NativeObject, ArkObject, ArkList, ArkMap, ArkProperty, ArkPropertyRef,
   ArkLiteral, ArkListLiteral, ArkMapLiteral, ArkObjectLiteral,
   ArkStackRef, ArkCaptureRef,
@@ -78,6 +78,12 @@ export function valToJs(val: ArkVal): unknown {
     return ['or', valToJs(val.left), valToJs(val.right)]
   } else if (val instanceof ArkLoop) {
     return ['loop', valToJs(val.body)]
+  } else if (val instanceof ArkBreak) {
+    return ['break', valToJs(val.val)]
+  } else if (val instanceof ArkContinue) {
+    return ['continue']
+  } else if (val instanceof ArkReturn) {
+    return ['return', valToJs(val.val)]
   } else if (val === ArkNull()) {
     return null
   } else if (val === ArkUndefined) {
