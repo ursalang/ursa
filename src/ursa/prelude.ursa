@@ -2,8 +2,8 @@
 // © Reuben Thomas 2023
 // Released under the MIT license.
 
-// Range iterator.
 {
+  // Range iterator.
   range: fn(n) {
     let i = 0
     fn() {
