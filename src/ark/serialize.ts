@@ -14,6 +14,9 @@ import {
 } from './interpreter.js'
 
 export function valToJs(val: ArkVal): unknown {
+  if (val instanceof NativeObject) {
+    return val.obj
+  }
   if (val.debug !== undefined) {
     const name = val.debug.name
     if (name !== undefined) {
@@ -88,14 +91,6 @@ export function valToJs(val: ArkVal): unknown {
     return null
   } else if (val === ArkUndefined) {
     return undefined
-  } else if (val instanceof NativeObject) {
-    const obj: {[key: string]: unknown} = {}
-    for (const k in val.obj) {
-      if (Object.hasOwn(val.obj, k)) {
-        obj[k] = valToJs((val.obj as {[key: string]: ArkVal})[k])
-      }
-    }
-    return obj
   }
   // eslint-disable-next-line @typescript-eslint/no-base-to-string
   return val.toString()
