@@ -15,7 +15,7 @@ import {
 } from '../ark/interpreter.js'
 import {
   Environment, CompiledArk, PartialCompiledArk, compile as arkCompile,
-} from '../ark/parser.js'
+} from '../ark/compiler.js'
 import {toJs} from '../ark/ffi.js'
 import {serializeVal} from '../ark/serialize.js'
 

@@ -8,7 +8,7 @@ import tmp from 'tmp'
 import {ExecaReturnValue, execa} from 'execa'
 
 import {ArkState, debug} from './ark/interpreter.js'
-import {compile as arkCompile, CompiledArk} from './ark/parser.js'
+import {compile as arkCompile, CompiledArk} from './ark/compiler.js'
 import {toJs} from './ark/ffi.js'
 import {valToJs} from './ark/serialize.js'
 import {compile as ursaCompile} from './ursa/compiler.js'

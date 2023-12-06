@@ -6,7 +6,7 @@ import assert from 'assert'
 import util from 'util'
 
 import programVersion from '../version.js'
-import {CompiledArk, Namespace} from './parser.js'
+import {CompiledArk, Namespace} from './compiler.js'
 import {ArkFromJsError, fromJs, toJs} from './ffi.js'
 
 // Each stack frame consists of a pair of local vars and captures, plus

@@ -10,7 +10,7 @@ import {
   ArkBreakException, ArkState,
 } from './interpreter.js'
 import {toJs} from './ffi.js'
-import {compile} from './parser.js'
+import {compile} from './compiler.js'
 
 import {testArkGroup as testGroup} from '../testutil.js'
 

@@ -2,7 +2,7 @@
 // © Reuben Thomas 2023
 // Released under the GPL version 3, or (at your option) any later version.
 
-import {FreeVars, PartialCompiledArk} from './parser.js'
+import {FreeVars, PartialCompiledArk} from './compiler.js'
 import {
   ArkVal, ArkValRef, ArkConcreteVal,
   ArkUndefined, ArkNull, ArkSequence,

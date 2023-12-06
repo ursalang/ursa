@@ -20,7 +20,7 @@ import {
 import {
   ArkCompilerError, FreeVars,
   CompiledArk, symRef, Environment, PartialCompiledArk, checkParamList,
-} from '../ark/parser.js'
+} from '../ark/compiler.js'
 
 // Specify precise type so semantics can be precisely type-checked.
 const semantics: UrsaSemantics = grammar.createSemantics()
