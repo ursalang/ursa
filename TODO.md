@@ -5,6 +5,13 @@
 * Sets: use `{ Exp, }` notation, with mandatory first comma.
 * Map interface to file system and internet.
 
+## Version 0.3
+
+* Classes: properties, names for List, Map and Set
+* Ability to use async JavaScript APIs.
+* Generators and co-routines. A generator in a comprehension gives a lazy
+  list/map.
+
 # Ark improvements
 
 * To optimize symbol references, add `var` (mutable `let`), and
@@ -21,8 +28,6 @@
 
 * Comprehensions: `loop [ … ]` and `loop {k : v}` (`k:v` being syntactic
   sugar for a pair?).
-* Generators and co-routines. A generator in a comprehension gives a lazy
-  list/map.
 * 100% test coverage.
 * Tail recursion elimination
 * Co-routines (copy Python?)
@@ -41,7 +46,6 @@
 * Structs
 * Enums
 * Traits (use for built-in operators)
-* Classes: properties, names for List, Map and Set
 * Tuples
 * Variadic functions?
 * Slices (implement on lists and strings)
