@@ -1,6 +1,6 @@
 let sum = fn(m) {
   let tot = 0
-  let it = m.iterator()
+  let it = m.iter()
   loop {
     let l = it()
     let k = l[0] and let v = l[1]

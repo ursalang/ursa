@@ -1,6 +1,6 @@
 let sum = fn(l) {
   let tot = 0
-  for e of l.iterator() {
+  for e of l.iter() {
     tot := tot + e
   }
   return tot

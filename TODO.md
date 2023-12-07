@@ -1,8 +1,14 @@
 # Ursa to-do
 
+## Miscellaneous
+
+* Objects/maps use `[]` instead of `{}` and `=` instead of `:`.
+* Use Collatz conjecture as example for first tutorial lesson. Instead of
+  getting the student to write code from scratch to start with, show them
+  some code and get them to manipulate it.
+
 ## Version 0.2
 
-* Sets: use `{ Exp, }` notation, with mandatory first comma.
 * Map interface to file system and internet.
 
 ## Version 0.3
@@ -42,7 +48,7 @@
   and allow C bindings to be generated for Ark values that have C types, and
   any base Ark type.
 * Type checking; extra `for` sugar where when an object `obj` is given as
-  the iterator, `obj.iterator()` is automatically used.
+  the iterator, `obj.iter()` is automatically used.
 * Structs
 * Enums
 * Traits (use for built-in operators)

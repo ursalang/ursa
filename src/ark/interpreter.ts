@@ -156,7 +156,7 @@ export class ArkStringClass extends ArkConcreteVal<string> {
     super(val)
     this.properties = new Map([
       ['get', new NativeFn(['index'], (index: ArkVal) => ArkString(this.val[toJs(index) as number]))],
-      ['iterator', new NativeFn([], () => {
+      ['iter', new NativeFn([], () => {
         const str = this.val
         const generator = (function* listGenerator() {
           for (const elem of str) {
@@ -529,7 +529,7 @@ export class ArkList extends ArkClass {
         this.list.pop()
         return this
       })],
-      ['iterator', new NativeFn([], () => {
+      ['iter', new NativeFn([], () => {
         const list = this.list
         const generator = (function* listGenerator() {
           for (const elem of list) {
@@ -575,7 +575,7 @@ export class ArkMap extends ArkClass {
         return this
       })],
       ['has', new NativeFn(['index'], (index: ArkVal) => ArkBoolean(this.map.has(index)))],
-      ['iterator', new NativeFn([], () => {
+      ['iter', new NativeFn([], () => {
         const map = this.map
         const generator = (function* mapEntriesGenerator() {
           for (const [key, value] of map.entries()) {
