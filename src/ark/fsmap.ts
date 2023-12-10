@@ -1,7 +1,11 @@
 import fs from 'fs'
 import path from 'path'
 
-class RawDirectory {
+export type ValueTree =
+  | string
+  | Map<string, ValueTree>
+
+export class FsMap {
   directory: string
 
   // @param path directory path
@@ -10,113 +14,71 @@ class RawDirectory {
   constructor(fspath: string) {
     if (!path.isAbsolute(fspath)) {
       fspath = path.join(process.cwd(), fspath)
-    }
-    if (!fs.statSync(fspath).isDirectory()) {
+    } else if (!fs.statSync(fspath).isDirectory()) {
       throw new Error(`\`${fspath}' does not exist or is not a directory`)
     }
+    // if (value instanceof ValueDirectory) {
+    //   // To match object semantics we'd hardlink, but that's not allowed for directories
+    //   fs.symlinkSync(value.directory, fspath)
+    // }
     this.directory = fspath
   }
 
-  // eslint-disable-next-line generator-star-spacing
-  *[Symbol.iterator]() {
-    for (const entry of fs.readdirSync(this.directory)) {
-      yield entry
-    }
-  }
-}
-
-export type ValueTree =
-  | string
-  | {[x: string]: ValueTree}
-
-export const toObjectSym = Symbol.for('toObject')
-export const directorySym = Symbol.for('getDirectory')
-
-export type ValueDirectory = {
-  [x: string]: ValueTree,
-  [Symbol.iterator]: () => Iterator<string>,
-  [toObjectSym]: ValueTree,
-  [directorySym]: string,
-}
-
-export function valueDirectoryToObject(dir: ValueDirectory) {
-  if (typeof dir === 'string') {
-    return dir
-  }
-  const res: ValueTree = {}
-  for (const obj of dir) {
-    const subobj = dir[obj]
-    if (typeof subobj === 'string') {
-      res[obj] = subobj
-    } else {
-      const fspath = path.join(dir[directorySym], obj)
-      res[obj] = valueDirectoryToObject(valueDirectory(fspath))
-    }
-  }
-  return res
-}
-
-export function valueDirectory(fspath: string): ValueDirectory {
-  const directory = new RawDirectory(fspath)
-  return new Proxy(directory, {
-    get(target: RawDirectory, prop: string | symbol, receiver: ValueDirectory) {
-      if (prop === Symbol.iterator) {
-        return target[Symbol.iterator].bind(target)
-      } else if (prop === toObjectSym) {
-        return valueDirectoryToObject(receiver)
-      } else if (prop === directorySym) {
-        return directory.directory
-      }
-
-      const fspath = path.join(target.directory, prop.toString())
-      const stats = fs.statSync(fspath, {throwIfNoEntry: false})
-      if (stats !== undefined) {
-        if (stats.isFile()) {
-          return fs.readFileSync(fspath, {encoding: 'utf-8'})
-        } else if (stats.isDirectory()) {
-          return new RawDirectory(fspath)
-        }
-      }
+  get(key: string): FsMap | string | undefined {
+    key = key.replace(path.sep, '_')
+    const fspath = path.join(this.directory, key.toString())
+    const stats = fs.statSync(fspath, {throwIfNoEntry: false})
+    if (stats === undefined) {
       return stats
-    },
+    }
+    if (stats.isFile()) {
+      return fs.readFileSync(fspath, {encoding: 'utf-8'})
+    } else if (stats.isDirectory()) {
+      return new FsMap(fspath)
+    } else {
+      throw new Error(`${key} is not a file or directory in ValueDirectory`)
+    }
+  }
 
-    set(target: RawDirectory, prop: string, value: ValueTree, _receiver) {
-      if (typeof prop !== 'string') {
-        throw new Error('keys of ValueDirectory must be of type string')
+  set(key: string, value: ValueTree): FsMap {
+    key = key.replace(path.sep, '_')
+    const fspath = path.join(this.directory, key)
+    if (typeof value === 'string') {
+      fs.writeFileSync(fspath, value)
+    } else {
+      fs.mkdirSync(fspath)
+      const dir = new FsMap(fspath)
+      for (const [key, subval] of value) {
+        dir.set(key, subval)
+      }
+    }
+    return this
+  }
+
+  delete(key: string): boolean {
+    const fspath = path.join(this.directory, key)
+    if (fs.existsSync(fspath)) {
+      fs.unlinkSync(fspath)
+      return true
+    }
+    return false
+  }
+
+  keys(): string[] {
+    return fs.readdirSync(this.directory)
+  }
+
+  toObject() {
+    const res: ValueTree = new Map()
+    for (const key of this.keys()) {
+      const subobj = this.get(key)
+      if (typeof subobj === 'string') {
+        res.set(key, subobj)
       } else {
-        prop = prop.replace(path.sep, '_')
-        const fspath = path.join(target.directory, prop)
-        if (value === undefined) {
-          fs.unlinkSync(fspath)
-        } else if (typeof value !== 'object') {
-          // eslint-disable-next-line @typescript-eslint/no-base-to-string
-          fs.writeFileSync(fspath, value.toString())
-        } else if (value instanceof RawDirectory) {
-          // To match object semantics we'd hardlink, but that's not allowed for directories
-          fs.symlinkSync(value.directory, fspath)
-        } else if (typeof value === 'object' && value !== null) {
-          fs.mkdirSync(fspath)
-          const dir = valueDirectory(fspath)
-          for (const key in value) {
-            if (Object.hasOwn(value, key)) {
-              (dir as unknown as {[x: string]: ValueTree})[key] = value[key]
-            }
-          }
-        }
-        return true
+        const fspath = path.join(this.directory, key)
+        res.set(key, new FsMap(fspath).toObject())
       }
-    },
-
-    ownKeys(target: RawDirectory) {
-      const keys = []
-      for (const obj of target) {
-        keys.push(obj)
-      }
-      return keys
-    },
-
-    getOwnPropertyDescriptor(_target, _prop) {
-      return {enumerable: true, configurable: true, writable: true}
-    },
-  }) as unknown as ValueDirectory
+    }
+    return res
+  }
 }
