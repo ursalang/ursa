@@ -1,12 +1,5 @@
 # Ursa to-do
 
-## Miscellaneous
-
-* Objects/maps use `[]` instead of `{}` and `=` instead of `:`.
-* Use Collatz conjecture as example for first tutorial lesson. Instead of
-  getting the student to write code from scratch to start with, show them
-  some code and get them to manipulate it.
-
 ## Version 0.3
 
 * Map interface to internet.
