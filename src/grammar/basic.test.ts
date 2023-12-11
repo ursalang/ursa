@@ -194,7 +194,7 @@ testGroup('Lists', [
 
 testGroup('Objects', [
   ['{}', [{1: [], type: 'Object'}]],
-  ['{a: 1, b: 2, c:3}', [
+  ['{a = 1, b = 2, c=3}', [
     {
       1: [
         {0: 'a', 2: '1', type: 'PropertyValue'},
@@ -204,7 +204,7 @@ testGroup('Objects', [
       type: 'Object',
     },
   ]],
-  ['let o = {a: 1, b: 2}; o.b := "abc"; o', [
+  ['let o = {a = 1, b = 2}; o.b := "abc"; o', [
     [
       {
         1: 'o',
@@ -225,7 +225,7 @@ testGroup('Objects', [
     },
     'o',
   ]],
-  ['let o = {a: 1, b: 2}; o.b := "abc"; o.c := 3; o', [
+  ['let o = {a = 1, b = 2}; o.b := "abc"; o.c := 3; o', [
     [
       {
         1: 'o',

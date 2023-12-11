@@ -33,7 +33,7 @@ Ursa {
   List = "[" ListOf<AssignmentExp, ","> #maybeCommaBracket "]"
 
   Object = "{" ListOf<PropertyValue, ","> #maybeCommaBrace "}"
-  PropertyValue = ident ":" Exp
+  PropertyValue = ident "=" Exp
 
   Map = "{" ListOf<KeyValue, ","> #maybeCommaBrace "}"
   KeyValue = Exp ":" Exp

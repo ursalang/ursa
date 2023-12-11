@@ -4,7 +4,7 @@
 
 {
   // Range iterator.
-  range: fn(n) {
+  range = fn(n) {
     let i = 0
     fn() {
       i := i + 1
