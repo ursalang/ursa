@@ -54,10 +54,11 @@ async function doCliTest(
   expectedStdout?: string,
   expectedStderr?: string,
 ) {
-  const tempFile = tmp.tmpNameSync()
+  const tempFile = tmp.fileSync()
+  t.teardown(() => tempFile.removeCallback())
   try {
-    const {stdout} = await run([`--syntax=${syntax}`, `--output=${tempFile}`, `${file}.${syntax}`, ...args ?? []])
-    const result: unknown = JSON.parse(fs.readFileSync(tempFile, {encoding: 'utf-8'}))
+    const {stdout} = await run([`--syntax=${syntax}`, `--output=${tempFile.name}`, `${file}.${syntax}`, ...args ?? []])
+    const result: unknown = JSON.parse(fs.readFileSync(tempFile.name, {encoding: 'utf-8'}))
     const expected: unknown = JSON.parse(fs.readFileSync(`${file}.result.json`, {encoding: 'utf-8'}))
     t.deepEqual(result, expected)
     if (syntax === 'json') {
