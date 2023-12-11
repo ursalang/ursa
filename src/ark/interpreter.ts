@@ -786,7 +786,13 @@ export const globals = new ArkObject(new Map([
 
   // Ad-hoc bindings of built-in JavaScript facilities.
   ['pi', new ArkValRef(ArkNumber(Math.PI))],
-  ['e', new ArkValRef(ArkNumber(Math.E))],
+  ['sqrt', new ArkValRef(new NativeFn(['n'], (n: ArkVal) => ArkNumber(Math.sqrt(toJs(n) as number))))],
+  ['exp', new ArkValRef(new NativeFn(['n'], (n: ArkVal) => ArkNumber(Math.exp(toJs(n) as number))))],
+  ['exp', new ArkValRef(new NativeFn(['n'], (n: ArkVal) => ArkNumber(Math.exp(toJs(n) as number))))],
+  ['log', new ArkValRef(new NativeFn(['n'], (n: ArkVal) => ArkNumber(Math.log(toJs(n) as number))))],
+  ['sin', new ArkValRef(new NativeFn(['n'], (n: ArkVal) => ArkNumber(Math.sin(toJs(n) as number))))],
+  ['cos', new ArkValRef(new NativeFn(['n'], (n: ArkVal) => ArkNumber(Math.cos(toJs(n) as number))))],
+  ['tan', new ArkValRef(new NativeFn(['n'], (n: ArkVal) => ArkNumber(Math.tan(toJs(n) as number))))],
   ['JSON', new ArkValRef(new NativeObject(JSON))],
   ['process', new ArkValRef(new NativeObject(process))],
   ['RegExp', new ArkValRef(new NativeFn(['regex', 'options'], (regex: ArkVal, options: ArkVal) => new NativeObject(new RegExp(
