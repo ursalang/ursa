@@ -11,7 +11,7 @@ import assert from 'assert'
 
 import {
   debug, ArkState, ArkUndefined, ArkNull, ArkObject, ArkList,
-  ArkVal, ArkValRef, ArkString, globals,
+  ArkLet, ArkVal, ArkValRef, ArkString, globals,
 } from '../ark/interpreter.js'
 import {
   Environment, CompiledArk, PartialCompiledArk, compile as arkCompile,
@@ -96,28 +96,32 @@ async function repl(): Promise<ArkVal> {
   let val: ArkVal = ArkNull()
   for await (const line of rl) {
     try {
-      if (line !== '') { // Ignore empty input, which is not a valid Exp.
-        const compiled = compile(line, env, 'Exp')
-        // Filter out already-declared bindings
-        for (const id of env.stack[0][0]) {
-          compiled.freeVars.delete(id!)
-        }
-        // Handle new let bindings
-        if (compiled instanceof PartialCompiledArk && compiled.boundVars.length > 0) {
-          env = env.push(compiled.boundVars)
-          ark.stack.push(Array<ArkValRef>(compiled.boundVars.length).fill(
-            new ArkValRef(ArkUndefined),
-          ))
-        }
-        val = await runWithTraceback(ark, compiled)
-        console.dir(toJs(val), {depth: null})
+      let compiled = compile(line, env)
+      // Filter out already-declared bindings
+      for (const id of env.stack[0][0]) {
+        compiled.freeVars.delete(id!)
       }
+      // Handle new let bindings
+      if (compiled instanceof PartialCompiledArk && compiled.value instanceof ArkLet) {
+        env = env.push(compiled.value.boundVars)
+        ark.stack.push(Array<ArkValRef>(compiled.value.boundVars.length).fill(
+          new ArkValRef(ArkUndefined),
+        ))
+        compiled = new PartialCompiledArk(
+          compiled.value.body,
+          compiled.freeVars,
+          compiled.value.boundVars,
+        )
+      }
+      val = await runWithTraceback(ark, compiled)
+      console.dir(toJs(val), {depth: null})
     } catch (error) {
       if (error instanceof Error) {
         console.error(error.message)
       } else {
         console.error(error)
       }
+      throw error
     }
     rl.prompt()
   }
