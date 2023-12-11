@@ -159,7 +159,7 @@ export class ArkStringClass extends ArkConcreteVal<string> {
       ['get', new NativeFn(['index'], (index: ArkVal) => ArkString(this.val[toJs(index) as number]))],
       ['iter', new NativeFn([], () => {
         const str = this.val
-        const generator = (function* listGenerator() {
+        const generator = (function* stringGenerator() {
           for (const elem of str) {
             yield ArkString(elem)
           }
