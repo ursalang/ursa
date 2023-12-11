@@ -1,33 +1,7 @@
-import util from 'util'
 import test from 'ava'
-import tmp from 'tmp'
-import {compareSync, Difference} from 'dir-compare'
 
+import {dirTest} from '../testutil.js'
 import {FsMap, ValueTree} from './fsmap.js'
-
-function diffsetDiffsOnly(diffSet: Difference[]): Difference[] {
-  return diffSet.filter((diff) => diff.state !== 'equal')
-}
-
-export function dirTest(title: string, dir: string, callback: (dirObj: FsMap) => void) {
-  const tmpDir = tmp.dirSync({unsafeCleanup: true})
-  const dirObj = new FsMap(tmpDir.name)
-  callback(dirObj)
-  test(title, (t) => {
-    t.teardown(() => {
-      // AVA seems to prevent automatic cleanup.
-      tmpDir.removeCallback()
-    })
-    const compareResult = compareSync(tmpDir.name, dir, {
-      compareContent: true,
-      excludeFilter: '.gitkeep',
-    })
-    t.assert(
-      compareResult.same,
-      util.inspect(diffsetDiffsOnly(compareResult.diffSet as Difference[])),
-    )
-  })
-}
 
 function objTest(title: string, dir: string, value: ValueTree) {
   test(title, (t) => {
@@ -36,33 +10,40 @@ function objTest(title: string, dir: string, value: ValueTree) {
   })
 }
 
-dirTest(
+test(
   'Bind an empty directory',
+  dirTest,
   'test/fsmap/empty',
-  (_dir) => {},
+  (_t, _dir) => {},
 )
 
-dirTest(
+test(
   'Create one file',
+  dirTest,
   'test/fsmap/one-file',
-  (dir) => {
-    dir.set('a', 'xyz')
+  (_t, dir) => {
+    const dirMap = new FsMap(dir)
+    dirMap.set('a', 'xyz')
   },
 )
 
-dirTest(
+test(
   'Create a directory',
+  dirTest,
   'test/fsmap/one-subdir',
-  (dir) => {
-    dir.set('a', new Map())
+  (_t, dir) => {
+    const dirMap = new FsMap(dir)
+    dirMap.set('a', new Map())
   },
 )
 
-dirTest(
+test(
   'Create a directory with some contents',
+  dirTest,
   'test/fsmap/subdir-with-contents',
-  (dir) => {
-    dir.set('a', new Map([['x', 'abc'], ['y', 'xyz']]))
+  (_t, dir) => {
+    const dirMap = new FsMap(dir)
+    dirMap.set('a', new Map([['x', 'abc'], ['y', 'xyz']]))
   },
 )
 

@@ -1,0 +1,3 @@
+let f = fs(argv[1])
+f["foo"] := {"a": "abc", "z": "xyz"}
+f["foo"]["a"]

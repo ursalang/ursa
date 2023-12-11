@@ -8,6 +8,7 @@ import util from 'util'
 import programVersion from '../version.js'
 import {CompiledArk, Namespace} from './compiler.js'
 import {ArkFromJsError, fromJs, toJs} from './ffi.js'
+import {FsMap} from './fsmap.js'
 
 // Each stack frame consists of a pair of local vars and captures, plus
 // debug info.
@@ -766,6 +767,7 @@ export const globals = new ArkObject(new Map([
     debug(obj)
     return ArkNull()
   }))],
+  ['fs', new ArkValRef(new NativeFn(['path'], (path: ArkVal) => new NativeObject(new FsMap(toJs(path) as string))))],
 
   // JavaScript bindings—imported libraries (with "use").
   ['js', new ArkValRef(new ArkObject(new Map([[

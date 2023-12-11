@@ -7,12 +7,9 @@
   getting the student to write code from scratch to start with, show them
   some code and get them to manipulate it.
 
-## Version 0.2
-
-* Map interface to file system and internet.
-
 ## Version 0.3
 
+* Map interface to internet.
 * Classes: properties, names for List, Map and Set
 * Ability to use async JavaScript APIs.
 * Generators and co-routines. A generator in a comprehension gives a lazy

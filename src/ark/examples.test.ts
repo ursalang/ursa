@@ -2,7 +2,7 @@
 // © Reuben Thomas 2023
 // Released under the GPL version 3, or (at your option) any later version.
 
-import {cliTest} from '../testutil.js'
+import {arkTest} from '../testutil.js'
 
 [
   ['Increment a variable in a loop', 'test/increment-variable-in-loop'],
@@ -17,4 +17,4 @@ import {cliTest} from '../testutil.js'
   ['Repeated closure', 'test/repeated-closure'],
   ['Two double closures', 'test/two-double-closures'],
   // eslint-disable-next-line @typescript-eslint/return-await
-].map(([title, file]) => cliTest('json', title, file))
+].map(([title, file]) => arkTest(title, file))
