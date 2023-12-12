@@ -7,36 +7,15 @@ import assert from 'assert'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  ArkExp, ArkVal, intrinsics, globals,
+  ArkExp, intrinsics, globals,
   ArkIf, ArkAnd, ArkOr, ArkSequence, ArkLoop, ArkBreak, ArkContinue,
-  ArkConcreteVal, ArkNull, ArkBoolean, ArkNumber, ArkString,
+  ArkNull, ArkBoolean, ArkNumber, ArkString,
   ArkGet, ArkSet, ArkRef, ArkStackRef, ArkCaptureRef,
   ArkListLiteral, ArkObjectLiteral, ArkMapLiteral,
   ArkFn, ArkReturn, ArkProperty, ArkLet, ArkCall, ArkLiteral, ArkObject,
 } from './interpreter.js'
 
 export class ArkCompilerError extends Error {}
-
-export class Namespace<T extends ArkVal> extends Map<string, T> {
-  constructor(inits: [string, T][]) {
-    super(inits)
-    for (const [name, val] of inits) {
-      Namespace.setName(name, val)
-    }
-  }
-
-  private static setName(name: string, val: ArkVal) {
-    if (!(val instanceof ArkConcreteVal)) {
-      val.debug.name = name
-    }
-  }
-
-  set(name: string, val: T) {
-    Namespace.setName(name, val)
-    super.set(name, val)
-    return this
-  }
-}
 
 export class FreeVars extends Map<string, ArkStackRef> {
   merge(moreVars: FreeVars): FreeVars {

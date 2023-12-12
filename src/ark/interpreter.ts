@@ -6,9 +6,30 @@ import assert from 'assert'
 import util from 'util'
 
 import programVersion from '../version.js'
-import {CompiledArk, Namespace} from './compiler.js'
+import {CompiledArk} from './compiler.js'
 import {ArkFromJsError, fromJs, toJs} from './ffi.js'
 import {FsMap} from './fsmap.js'
+
+class Namespace<T extends ArkVal> extends Map<string, T> {
+  constructor(inits: [string, T][]) {
+    super(inits)
+    for (const [name, val] of inits) {
+      Namespace.setName(name, val)
+    }
+  }
+
+  private static setName(name: string, val: ArkVal) {
+    if (!(val instanceof ArkConcreteVal)) {
+      val.debug.name = name
+    }
+  }
+
+  set(name: string, val: T) {
+    Namespace.setName(name, val)
+    super.set(name, val)
+    return this
+  }
+}
 
 // Each stack frame consists of a pair of local vars and captures, plus
 // debug info.
