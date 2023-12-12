@@ -826,5 +826,12 @@ if (globalThis.document !== undefined) {
 }
 
 export function debug(x: unknown, depth: number | null = 1) {
-  console.log(util.inspect(x, {depth, colors: true, sorted: true}))
+  console.log(util.inspect(
+    x,
+    {
+      depth,
+      colors: process.stdout && process.stdout.isTTY,
+      sorted: true,
+    },
+  ))
 }
