@@ -114,14 +114,16 @@ async function repl(): Promise<ArkVal> {
         )
       }
       val = await runWithTraceback(ark, compiled)
-      console.dir(toJs(val), {depth: null})
+      debug(toJs(val))
     } catch (error) {
+      if (process.env.DEBUG) {
+        throw error
+      }
       if (error instanceof Error) {
         console.error(error.message)
       } else {
         console.error(error)
       }
-      throw error
     }
     rl.prompt()
   }
