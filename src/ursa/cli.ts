@@ -4,13 +4,12 @@
 
 import path from 'path'
 import fs, {PathOrFileDescriptor} from 'fs'
-import {fileURLToPath} from 'url'
 import * as readline from 'node:readline'
 import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
 import assert from 'assert'
 
 import {
-  debug, ArkState, ArkUndefined, ArkNull, ArkObject, ArkList,
+  debug, ArkState, ArkUndefined, ArkNull, ArkList,
   ArkLet, ArkVal, ArkValRef, ArkString, globals,
 } from '../ark/interpreter.js'
 import {
@@ -163,15 +162,7 @@ async function main() {
         source = source.substring(source.indexOf('\n'))
       }
     }
-    const thisDir = path.dirname(fileURLToPath(import.meta.url))
-    const prelude = ursaCompile(
-      fs.readFileSync(path.join(thisDir, 'prelude.ursa'), {encoding: 'utf-8'}),
-    )
     const ark = new ArkState()
-    const preludeObj = await prelude.value.eval(ark) as ArkObject
-    for (const [sym, val] of preludeObj.properties) {
-      globals.set(sym, new ArkValRef(val))
-    }
     if (args.compile) {
       if (source === undefined) {
         throw new Error('--compile given, but nothing to compile')

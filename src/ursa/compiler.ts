@@ -2,6 +2,10 @@
 // © Reuben Thomas 2023
 // Released under the MIT license.
 
+import fs from 'fs'
+import path from 'path'
+import {fileURLToPath} from 'url'
+
 import {Node, IterationNode, Interval} from 'ohm-js'
 
 import {assert} from 'console'
@@ -10,12 +14,12 @@ import grammar, {UrsaSemantics} from '../grammar/ursa.ohm-bundle.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  ArkState, intrinsics, ArkRuntimeError,
+  globals, ArkState, intrinsics, ArkRuntimeError,
   ArkVal, ArkExp, ArkLiteral, ArkNull, ArkBoolean, ArkNumber, ArkString,
   ArkSequence, ArkIf, ArkLoop, ArkAnd, ArkOr,
-  ArkObjectLiteral, ArkListLiteral, ArkMapLiteral,
+  ArkObject, ArkObjectLiteral, ArkListLiteral, ArkMapLiteral,
   ArkCall, ArkLet, ArkFn, ArkProperty, ArkGet, ArkSet, ArkReturn,
-  ArkBreak, ArkContinue,
+  ArkBreak, ArkContinue, ArkValRef,
 } from '../ark/interpreter.js'
 import {
   ArkCompilerError, FreeVars,
@@ -1220,4 +1224,15 @@ export async function runWithTraceback(ark: ArkState, compiledVal: CompiledArk):
     }
     throw e
   }
+}
+
+// Compile the prelude and add its values to the globals
+const thisDir = path.dirname(fileURLToPath(import.meta.url))
+const prelude = compile(
+  fs.readFileSync(path.join(thisDir, 'prelude.ursa'), {encoding: 'utf-8'}),
+)
+const ark = new ArkState()
+const preludeObj = await prelude.value.eval(ark) as ArkObject
+for (const [sym, val] of preludeObj.properties) {
+  globals.set(sym, new ArkValRef(val))
 }
