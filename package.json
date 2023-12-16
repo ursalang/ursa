@@ -1,7 +1,7 @@
 {
   "name": "@ursalang/ursa",
   "description": "A simple, comfortable, general-purpose language",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "author": "Reuben Thomas",
   "license": "GPL-3.0-or-later",
   "repository": "ursalang/ursa",
@@ -61,7 +61,9 @@
     "no-diff-or-untracked": "git diff --exit-code && git ls-files --other --directory --exclude-standard | sed q1"
   },
   "ava": {
-    "nodeArguments": [ "--no-warnings" ],
+    "nodeArguments": [
+      "--no-warnings"
+    ],
     "typescript": {
       "rewritePaths": {
         "src/": "lib/"
