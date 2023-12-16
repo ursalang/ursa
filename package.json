@@ -45,10 +45,11 @@
   "main": "lib/compiler.js",
   "scripts": {
     "lint": "eslint . --ext .ts && depcheck",
-    "prebuild": "node --print \"'export default \\'' + require('./package.json').version + '\\';'\" > src/version.ts",
-    "build": "tsc --build && cp src/ursa/prelude.ursa lib/ursa/",
+    "prebuild": "node --print \"'export default \\'' + require('./package.json').version + '\\';'\" > src/version.ts && echo null > src/ark/prelude.json",
+    "build": "tsc --build && npm run compile-prelude && cp src/*/prelude.* lib/ursa/",
     "clean": "tsc --build --clean",
     "generate": "ohm generateBundles --withTypes --esm 'src/grammar/*.ohm' && mkdir -p lib/grammar/ && cp src/grammar/*ohm-bundle.js src/grammar/*ohm-bundle.d.ts lib/grammar/",
+    "compile-prelude": "./bin/run.js --compile --output=src/ark/prelude.json src/ursa/prelude.ursa",
     "test": "npm run generate && npm run build && ava",
     "test-ursa": "ava src/ursa/ursa.test.ts",
     "test-ark": "ava src/ark/ark.test.ts",
@@ -60,6 +61,7 @@
     "no-diff-or-untracked": "git diff --exit-code && git ls-files --other --directory --exclude-standard | sed q1"
   },
   "ava": {
+    "nodeArguments": [ "--no-warnings" ],
     "typescript": {
       "rewritePaths": {
         "src/": "lib/"

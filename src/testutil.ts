@@ -10,7 +10,7 @@ import {ExecaReturnValue, execa} from 'execa'
 import {compareSync, Difference} from 'dir-compare'
 
 import {ArkState, debug} from './ark/interpreter.js'
-import {compile as arkCompile, CompiledArk} from './ark/compiler.js'
+import {compile as doArkCompile, CompiledArk} from './ark/compiler.js'
 import {toJs} from './ark/ffi.js'
 import {valToJs} from './ark/serialize.js'
 import {compile as ursaCompile} from './ursa/compiler.js'
@@ -19,6 +19,10 @@ const command = process.env.NODE_ENV === 'coverage' ? './bin/test-run.sh' : './b
 
 async function run(args: string[]) {
   return execa(command, args)
+}
+
+function arkCompile(source: string) {
+  return doArkCompile(JSON.parse(source))
 }
 
 function doTestGroup(

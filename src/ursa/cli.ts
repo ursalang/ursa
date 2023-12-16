@@ -71,7 +71,7 @@ function compile(
 ): CompiledArk {
   let compiled: CompiledArk
   if (args.syntax === 'json') {
-    compiled = arkCompile(exp, env)
+    compiled = arkCompile(JSON.parse(exp), env)
   } else {
     compiled = ursaCompile(exp, env, startRule)
   }

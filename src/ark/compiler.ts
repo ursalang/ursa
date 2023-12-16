@@ -4,10 +4,11 @@
 
 import assert from 'assert'
 
+import preludeJson from './prelude.json' assert {type: 'json'}
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  ArkExp, intrinsics, globals,
+  ArkState, ArkExp, ArkValRef, intrinsics, globals,
   ArkIf, ArkAnd, ArkOr, ArkSequence, ArkLoop, ArkBreak, ArkContinue,
   ArkNull, ArkBoolean, ArkNumber, ArkString,
   ArkGet, ArkSet, ArkRef, ArkStackRef, ArkCaptureRef,
@@ -324,10 +325,18 @@ function doCompile(env: Environment, value: unknown): CompiledArk {
 }
 
 export function compile(
-  expr: string,
+  expr: unknown,
   env: Environment = new Environment(),
 ): CompiledArk {
-  const compiled = doCompile(env, JSON.parse(expr))
+  const compiled = doCompile(env, expr)
   env.externalSyms.properties.forEach((_val, id) => compiled.freeVars.delete(id))
   return compiled
+}
+
+// Compile the prelude and add its values to the globals
+const ark = new ArkState()
+const prelude = compile(preludeJson)
+const preludeObj = await prelude.value.eval(ark) as ArkObject
+for (const [sym, val] of preludeObj.properties) {
+  globals.set(sym, new ArkValRef(val))
 }
