@@ -17,8 +17,8 @@ import {compile as ursaCompile} from './ursa/compiler.js'
 
 const command = process.env.NODE_ENV === 'coverage' ? './bin/test-run.sh' : './bin/run.js'
 
-async function run(args: string[]) {
-  return execa(command, args)
+async function run(args: string[], inputFile?: string) {
+  return execa(command, args, {inputFile})
 }
 
 function arkCompile(source: string) {
@@ -54,17 +54,29 @@ async function doCliTest(
   t: ExecutionContext,
   syntax: string,
   file: string,
-  args?: string[],
+  extraArgs?: string[],
   expectedStdout?: string,
   expectedStderr?: string,
+  useRepl?: boolean,
 ) {
-  const tempFile = tmp.fileSync()
-  t.teardown(() => tempFile.removeCallback())
+  const fileName = `${file}.${syntax}`
+  const args = [`--syntax=${syntax}`]
+  let tempFile: tmp.FileResult
+  if (!useRepl) {
+    tempFile = tmp.fileSync()
+    t.teardown(() => tempFile.removeCallback())
+    args.push(`--output=${tempFile.name}`, fileName)
+  }
   try {
-    const {stdout} = await run([`--syntax=${syntax}`, `--output=${tempFile.name}`, `${file}.${syntax}`, ...args ?? []])
-    const result: unknown = JSON.parse(fs.readFileSync(tempFile.name, {encoding: 'utf-8'}))
-    const expected: unknown = JSON.parse(fs.readFileSync(`${file}.result.json`, {encoding: 'utf-8'}))
-    t.deepEqual(result, expected)
+    const {stdout, stderr} = await run(
+      [...args, ...extraArgs ?? []],
+      useRepl ? fileName : undefined,
+    )
+    if (!useRepl) {
+      const result: unknown = JSON.parse(fs.readFileSync(tempFile!.name, {encoding: 'utf-8'}))
+      const expected: unknown = JSON.parse(fs.readFileSync(`${file}.result.json`, {encoding: 'utf-8'}))
+      t.deepEqual(result, expected)
+    }
     if (syntax === 'json') {
       const source = fs.readFileSync(`${file}.json`, {encoding: 'utf-8'})
       const compiled = arkCompile(source)
@@ -72,6 +84,9 @@ async function doCliTest(
     }
     if (expectedStdout !== undefined) {
       t.is(stdout, expectedStdout)
+    }
+    if (expectedStderr !== undefined) {
+      t.is(stderr, expectedStderr)
     }
   } catch (error) {
     if (expectedStderr !== undefined) {
@@ -93,8 +108,9 @@ function cliTest(syntax: string) {
       args?: string[],
       expectedStdout?: string,
       expectedStderr?: string,
+      useRepl?: boolean,
     ) => {
-      await doCliTest(t, syntax, file, args, expectedStdout, expectedStderr)
+      await doCliTest(t, syntax, file, args, expectedStdout, expectedStderr, useRepl)
     },
   )
 }
