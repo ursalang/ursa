@@ -1,7 +1,7 @@
 {
   "ignores": [
     "@ava/typescript",
-    "@tsconfig/node18",
+    "@tsconfig/node20",
     "eslint-config-airbnb-base",
     "eslint-config-airbnb-typescript",
     "eslint-plugin-import",

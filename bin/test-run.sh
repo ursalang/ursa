@@ -1,2 +1,2 @@
 #!/bin/sh
-npx tsx ./src/ursa/cli.ts "$@"
+npx tsx $(dirname $(command -v -- "$0"))/../src/ursa/cli.ts "$@"
