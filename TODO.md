@@ -3,7 +3,8 @@
 ## Version 0.3
 
 * Map interface to internet.
-* Classes: properties, names for List, Map and Set
+* Next Rosetta Code example: [anagrams](https://rosettacode.org/wiki/Anagrams#Python)
+* Classes: properties, names for List and Map
 * Ability to use async JavaScript APIs.
 * Generators and co-routines. A generator in a comprehension gives a lazy
   list/map.
@@ -29,7 +30,7 @@
 * Co-routines (copy Python?)
 * `self`
 * Streams, and use as interface to files.
-* Code formatting: `ursa fmt`; use [Prettier](https://prettier.io/).
+* Code formatting: `ursa fmt`; use [Prettier](https://prettier.io/), or write our own using Ohm.
 
 ## Ursa v1
 
