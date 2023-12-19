@@ -2,11 +2,13 @@
 // © Reuben Thomas 2023
 // Released under the MIT license.
 
+import assert from 'assert'
 import path from 'path'
+import os from 'os'
 import fs, {PathOrFileDescriptor} from 'fs'
 import * as readline from 'node:readline'
+
 import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
-import assert from 'assert'
 
 import {
   debug, ArkState, ArkUndefined, ArkNull, ArkList,
@@ -29,7 +31,8 @@ if (process.env.DEBUG) {
 const parser = new ArgumentParser({
   description: 'The Ursa language.',
   formatter_class: RawDescriptionHelpFormatter,
-  epilog: "`-' given as a file name means standard input or output.",
+  epilog: `\`-' given as a file name means standard input or output.
+Command line history is read from and saved to ~/.ursarc`,
 })
 const inputGroup = parser.add_mutually_exclusive_group()
 
@@ -84,10 +87,22 @@ function compile(
 
 async function repl(): Promise<ArkVal> {
   console.log(`Welcome to Ursa ${programVersion}.`)
+  const historyFile = path.join(os.homedir(), '.ursarc')
+  let history: string[] = []
+  if (fs.existsSync(historyFile)) {
+    history = fs.readFileSync(historyFile, {encoding: 'utf-8'}).split('\n').reverse()
+  }
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
     prompt: '> ',
+    history,
+    historySize: Infinity,
+    removeHistoryDuplicates: true,
+  })
+  rl.on('history', (history: string[]) => {
+    const reversedHistory: string[] = history.toReversed()
+    fs.writeFileSync(historyFile, `${reversedHistory.join('\n')}\n`)
   })
   rl.prompt()
   const ark = new ArkState()
