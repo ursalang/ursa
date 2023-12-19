@@ -18,8 +18,9 @@ Ursa is free software, licensed under the GNU GPL version 3 (or, at your
 option, any later version), and written in TypeScript.
 
 Please [ask questions, make comments](https://ursalang.github.io/discussions.html);
-you can [open bug reports](https://github.com/ursalang/ursa/issues) on our GitHub issue tracker.
-If none of the other methods work for you, do email the author; see above for address.
+you can [open bug reports](https://github.com/ursalang/ursa/issues) on our
+GitHub issue tracker. If none of the other methods work for you, do email
+the author; see above for address.
 
 ## Installation
 
