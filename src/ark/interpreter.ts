@@ -780,25 +780,24 @@ export const intrinsics = new Namespace([
 export const globals = new ArkObject(new Map([
   // Ursa's prelude (see also prelude.ursa).
   ['version', new ArkValRef(ArkString(programVersion))],
-  ['print', new ArkValRef(new NativeFn(['obj'], (obj: ArkVal) => {
-    console.log(toJs(obj))
-    return ArkNull()
-  }))],
   ['debug', new ArkValRef(new NativeFn(['obj'], (obj: ArkVal) => {
     debug(obj)
     return ArkNull()
   }))],
   ['fs', new ArkValRef(new NativeFn(['path'], (path: ArkVal) => new NativeObject(new FsMap(toJs(path) as string))))],
-  ['pi', new ArkValRef(ArkNumber(Math.PI))],
-  ['sqrt', new ArkValRef(new NativeFn(['n'], (n: ArkVal) => ArkNumber(Math.sqrt(toJs(n) as number))))],
-  ['exp', new ArkValRef(new NativeFn(['n'], (n: ArkVal) => ArkNumber(Math.exp(toJs(n) as number))))],
-  ['log', new ArkValRef(new NativeFn(['n'], (n: ArkVal) => ArkNumber(Math.log(toJs(n) as number))))],
-  ['sin', new ArkValRef(new NativeFn(['n'], (n: ArkVal) => ArkNumber(Math.sin(toJs(n) as number))))],
-  ['cos', new ArkValRef(new NativeFn(['n'], (n: ArkVal) => ArkNumber(Math.cos(toJs(n) as number))))],
-  ['tan', new ArkValRef(new NativeFn(['n'], (n: ArkVal) => ArkNumber(Math.tan(toJs(n) as number))))],
 
   // JavaScript bindings—imported libraries (with "use").
   ['js', new ArkValRef(new ArkObject(new Map([[
+    'use', new NativeFn([], (arg: ArkVal) => {
+      const name = toJs(arg)
+      // eslint-disable-next-line max-len
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+      return fromJs((globalThis as any)[name as string])
+    }),
+  ]])))],
+
+  // JavaScript bindings—imported libraries (with "use").
+  ['jslib', new ArkValRef(new ArkObject(new Map([[
     'use', new NativeAsyncFn([], async (...args: ArkVal[]) => {
       const importPath = (args.map(toJs).join('.'))
       const module: unknown = await import(importPath)
@@ -811,15 +810,6 @@ export const globals = new ArkObject(new Map([
       return new ArkObject(wrappedModule)
     }),
   ]])))],
-
-  // Ad-hoc bindings of built-in JavaScript facilities.
-  ['JSON', new ArkValRef(new NativeObject(JSON))],
-  ['process', new ArkValRef(new NativeObject(process))],
-  ['RegExp', new ArkValRef(new NativeFn(['regex', 'options'], (regex: ArkVal, options: ArkVal) => new NativeObject(new RegExp(
-    (regex as ArkConcreteVal<string>).val,
-    ((options ?? ArkString('')) as ArkConcreteVal<string>).val,
-  )))),
-  ],
 ]))
 if (globalThis.document !== undefined) {
   globals.set('document', new ArkValRef(new NativeObject(globalThis.document)))

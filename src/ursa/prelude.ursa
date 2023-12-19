@@ -2,13 +2,37 @@
 // © Reuben Thomas 2023
 // Released under the MIT license.
 
+use js.Math
+use js.JSON
+use js.process
+use js.RegExp
+
+use jslib.console
+
 {
-  // Range iterator.
+  // Basic facilities
+  print = console.log,
+
+  // Various JavaScript facilities
+  JSON = JSON,
+  RegExp = RegExp,
+  process = process,
+
+  // Maths
+  pi = Math.PI,
+  sqrt = Math.sqrt,
+  exp = Math.exp,
+  log = Math.log,
+  sin = Math.sin,
+  cos = Math.cos,
+  tan = Math.tan,
+
+  // Range iterator
   range = fn(n) {
     let i = 0
     fn() {
       i := i + 1
       if i <= n { i - 1 } else { null }
     }
-  }
+  },
 }

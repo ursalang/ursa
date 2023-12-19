@@ -32,7 +32,7 @@ import {ursaTest, ursaDirTest} from '../testutil.js'
 
 ursaTest('Test I/O', 'test/print', [], 'Hello, world!')
 ursaTest('use fs', 'test/use-fs', [], 'foo')
-ursaTest('Find symbols in input', 'test/syms', ['./test/use-fs.ursa'], 'use\njs\nfs\nfs\nwriteSync\nfoo\nis\nstdout')
+ursaTest('Find symbols in input', 'test/syms', ['./test/use-fs.ursa'], 'use\njslib\nfs\nfs\nwriteSync\nfoo\nis\nstdout')
 ursaTest('Two sequential loops', 'test/two-sequential-loops', [], '1\n2\n3\na\nb\nc')
 ursaDirTest('fs', 'test/fs', 'test/fs.result')
 

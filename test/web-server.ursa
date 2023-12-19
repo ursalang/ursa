@@ -3,7 +3,7 @@
 // Currently, it will return e.g. a 400 error, but neither callback is ever
 // run, presumably because we're not allowing async routines to run in Ursa?
 
-use js.http
+use jslib.http
 
 let requestListener = fn (req, res) {
   res.writeHead(200)
