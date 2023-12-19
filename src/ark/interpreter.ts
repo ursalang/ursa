@@ -811,9 +811,6 @@ export const globals = new ArkObject(new Map([
     }),
   ]])))],
 ]))
-if (globalThis.document !== undefined) {
-  globals.set('document', new ArkValRef(new NativeObject(globalThis.document)))
-}
 
 export function debug(x: unknown, depth: number | null = 1) {
   console.log(util.inspect(

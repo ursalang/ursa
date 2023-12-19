@@ -6,8 +6,8 @@ use js.Math
 use js.JSON
 use js.process
 use js.RegExp
-
-use jslib.console
+use js.document
+use js.console
 
 {
   // Basic facilities
@@ -17,6 +17,7 @@ use jslib.console
   JSON = JSON,
   RegExp = RegExp,
   process = process,
+  document = document,
 
   // Maths
   pi = Math.PI,
