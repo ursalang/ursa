@@ -23,7 +23,7 @@
                       "0": "i",
                       "2": {
                         "0": "l",
-                        "2": "length",
+                        "2": "len",
                         "type": "PropertyExp_property"
                       },
                       "type": "CompareExp_eq"

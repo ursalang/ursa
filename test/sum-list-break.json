@@ -22,7 +22,7 @@
                 "seq",
                 [
                   "if",
-                  [ "=", [ "get", "i" ], [ "get", [ "prop", "length", [ "get", "l" ] ] ] ],
+                  [ "=", [ "get", "i" ], [ "get", [ "prop", "len", [ "get", "l" ] ] ] ],
                   [ "break", [ "get", "tot" ] ]
                 ],
                 [

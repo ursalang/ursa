@@ -161,10 +161,10 @@ testGroup('fn', [
 
 testGroup('Lists', [
   ['[1, 2, 3]', [{1: ['1', '2', '3'], type: 'List'}]],
-  ['[1, 2, 3].length', [
+  ['[1, 2, 3].len', [
     {
       0: {1: ['1', '2', '3'], type: 'List'},
-      2: 'length',
+      2: 'len',
       type: 'PropertyExp_property',
     },
   ]],

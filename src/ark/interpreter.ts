@@ -562,7 +562,7 @@ export class ArkList extends ArkClass {
         return new NativeFn([], () => generator.next().value)
       })],
     ]))
-    this.properties.set('length', ArkNumber(this.list.length))
+    this.properties.set('len', ArkNumber(this.list.length))
   }
 }
 
