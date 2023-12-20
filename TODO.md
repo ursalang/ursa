@@ -23,6 +23,8 @@
 
 ## Ursa MVP
 
+* Make main actions sub-commands of main command (`ursa run`, `ursa fmt`,
+  `ursa compile` etc.).
 * Comprehensions: `loop [ … ]` and `loop {k : v}` (`k:v` being syntactic
   sugar for a pair?).
 * 100% test coverage.
@@ -30,7 +32,9 @@
 * Co-routines (copy Python?)
 * `self`
 * Streams, and use as interface to files.
-* Code formatting: `ursa fmt`; use [Prettier](https://prettier.io/), or write our own using Ohm.
+* Code formatting: optionally omit redundant semicolons, format long lines
+  as multiple lines (splitting at comma and semi-colon separators), have
+  some blank lines. Run all tests twice, once having reformatted the code.
 
 ## Ursa v1
 

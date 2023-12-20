@@ -24,7 +24,7 @@ import {
 } from '../ark/compiler.js'
 
 // Specify precise type so semantics can be precisely type-checked.
-const semantics: UrsaSemantics = grammar.createSemantics()
+export const semantics: UrsaSemantics = grammar.createSemantics()
 
 class UrsaError extends Error {
   constructor(source: Interval, message: string) {
@@ -389,7 +389,7 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop,inFn)', {
     )
   },
 
-  Ifs(ifs, _else, elseExp) {
+  Ifs(ifs, _else, elseBlock) {
     const compiledIfs: ArkIf[] = ifs.asIteration().children.map(
       (x) => addLoc(
         (x.toAST as ToExp)(
@@ -401,8 +401,8 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop,inFn)', {
         x,
       ) as ArkIf,
     )
-    if (elseExp.children.length > 0) {
-      compiledIfs.push((elseExp.children[0].toAST as ToExp)(
+    if (elseBlock.children.length > 0) {
+      compiledIfs.push((elseBlock.children[0].toAST as ToExp)(
         (this.args as ToASTArgs).env,
         false,
         (this.args as ToASTArgs).inLoop,
@@ -411,7 +411,7 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop,inFn)', {
     }
     return makeIfChain(compiledIfs)
   },
-  If(_if, cond, thenExp) {
+  If(_if, cond, thenBlock) {
     return addLoc(
       new ArkIf(
         (cond.toAST as ToExp)(
@@ -420,7 +420,7 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop,inFn)', {
           (this.args as ToASTArgs).inLoop,
           (this.args as ToASTArgs).inFn,
         ),
-        (thenExp.toAST as ToExp)(
+        (thenBlock.toAST as ToExp)(
           (this.args as ToASTArgs).env,
           false,
           (this.args as ToASTArgs).inLoop,
@@ -685,7 +685,7 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop,inFn)', {
         )],
     ), this)
   },
-  CompareExp_lt(left, _le, right) {
+  CompareExp_lt(left, _lt, right) {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('<')),
       [
@@ -838,7 +838,7 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop,inFn)', {
       ],
     ), this)
   },
-  BitwiseExp_arshift(left, _rshift, right) {
+  BitwiseExp_arshift(left, _arshift, right) {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('>>')),
       [
@@ -857,7 +857,7 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop,inFn)', {
       ],
     ), this)
   },
-  BitwiseExp_lrshift(left, _arshift, right) {
+  BitwiseExp_lrshift(left, _lrshift, right) {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('>>>')),
       [
@@ -916,7 +916,7 @@ semantics.addOperation<AST>('toAST(env,lval,inLoop,inFn)', {
     )
   },
 
-  AssignmentExp_ass(lvalue, _eq, value) {
+  AssignmentExp_ass(lvalue, _ass, value) {
     const compiledLvalue = (lvalue.toAST as ToExp)(
       (this.args as ToASTArgs).env,
       true,
@@ -1076,7 +1076,7 @@ semantics.addAttribute<string[]>('boundVars', {
     return []
   },
 
-  Fn(_fn, _open, _params, _maybe_comma, _close, _body) {
+  Fn(_fn, _open, _params, _maybeComma, _close, _body) {
     return []
   },
 
@@ -1132,7 +1132,7 @@ semantics.addOperation<Map<string, unknown>>('freeVars(env)', {
     return (propertyExp.freeVars as FreeVarsAction)((this.args as ToASTArgs).env)
   },
 
-  Fn(_fn, _open, params, _maybe_comma, _close, body) {
+  Fn(_fn, _open, params, _maybeComma, _close, body) {
     const paramStrings = params.asIteration().children.map((x) => x.sourceString)
     const innerEnv = (this.args as ToASTArgs).env.pushFrame([[...paramStrings], []])
     const freeVars = new FreeVars().merge((body.freeVars as FreeVarsAction)(innerEnv))

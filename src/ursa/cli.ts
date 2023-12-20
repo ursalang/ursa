@@ -22,6 +22,7 @@ import {serializeVal} from '../ark/serialize.js'
 
 import programVersion from '../version.js'
 import {runWithTraceback, compile as ursaCompile} from './compiler.js'
+import {format} from './fmt.js'
 
 if (process.env.DEBUG) {
   Error.stackTraceLimit = Infinity
@@ -43,7 +44,9 @@ inputGroup.add_argument('--eval', '-e', {metavar: 'EXPRESSION', help: 'execute t
 parser.add_argument('--syntax', {
   default: 'ursa', choices: ['ursa', 'json'], help: 'syntax to use [default: ursa]',
 })
-parser.add_argument('--compile', '-c', {action: 'store_true', help: 'compile input to JSON file'})
+const actionGroup = parser.add_mutually_exclusive_group()
+actionGroup.add_argument('--compile', '-c', {action: 'store_true', help: 'compile input to JSON file'})
+actionGroup.add_argument('--format', {action: 'store_true', help: 'format input source'})
 parser.add_argument('--output', '-o', {metavar: 'FILE', help: 'JSON output file [default: standard output]'})
 parser.add_argument('--interactive', '-i', {action: 'store_true', help: 'enter interactive mode after running given code'})
 
@@ -61,6 +64,7 @@ interface Args {
   eval: string
   syntax: string
   compile: boolean
+  format: boolean
   output: string | undefined
   interactive: boolean
   argument: string[]
@@ -145,9 +149,9 @@ async function repl(): Promise<ArkVal> {
 }
 
 // Get output filename, if any
-let jsonFile: PathOrFileDescriptor | undefined = args.output
-if (jsonFile === '-' || (args.compile && jsonFile === undefined)) {
-  jsonFile = process.stdout.fd
+let outputFile: PathOrFileDescriptor | undefined = args.output
+if (outputFile === '-' || ((args.compile || args.format) && outputFile === undefined)) {
+  outputFile = process.stdout.fd
 }
 
 // Program name for argv[0]
@@ -167,7 +171,7 @@ async function main() {
   try {
     // Read input
     let source: string | undefined
-    let json
+    let output
     if (args.eval !== undefined) {
       prog = '(eval)'
       source = args.eval
@@ -178,14 +182,18 @@ async function main() {
       }
     }
     const ark = new ArkState()
-    if (args.compile) {
+    if (args.compile || args.format) {
       if (source === undefined) {
         throw new Error('--compile given, but nothing to compile')
       }
-      if (jsonFile === undefined) {
+      if (outputFile === undefined) {
         throw new Error('--compile given with no input or output filename')
       }
-      json = serializeVal(compile(source).value)
+    }
+    if (args.compile) {
+      output = serializeVal(compile(source!).value)
+    } else if (args.format) {
+      output = format(source!)
     } else {
       // Add command-line arguments.
       globals.set('argv', new ArkValRef(new ArkList(
@@ -199,11 +207,11 @@ async function main() {
       if (source === undefined || args.interactive) {
         result = await repl()
       }
-      json = serializeVal(result ?? ArkNull()) ?? 'null'
+      output = serializeVal(result ?? ArkNull()) ?? 'null'
     }
-    if (jsonFile !== undefined) {
-      assert(jsonFile)
-      fs.writeFileSync(jsonFile, json)
+    if (outputFile !== undefined) {
+      assert(outputFile)
+      fs.writeFileSync(outputFile, output)
     }
   } catch (error) {
     if (process.env.DEBUG) {
