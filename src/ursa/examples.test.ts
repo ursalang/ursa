@@ -31,8 +31,8 @@ import {ursaTest, ursaDirTest} from '../testutil.js'
 ].map(([title, file]) => ursaTest(title, file))
 
 ursaTest('Test I/O', 'test/print', [], 'Hello, world!')
-ursaTest('use fs', 'test/use-fs', [], 'foo')
-ursaTest('Find symbols in input', 'test/syms', ['./test/use-fs.ursa'], 'use\njslib\nfs\nfs\nwriteSync\nfoo\nis\nstdout')
+ursaTest('use jslib.fs', 'test/use-jslib-fs', [], 'foo')
+ursaTest('Find symbols in input', 'test/syms', ['./test/use-jslib-fs.ursa'], 'use\njslib\nfs\nfs\nwriteSync\nfoo\nis\nstdout')
 ursaTest('Two sequential loops', 'test/two-sequential-loops', [], '1\n2\n3\na\nb\nc')
 ursaDirTest('fs', 'test/fs', 'test/fs.result')
 

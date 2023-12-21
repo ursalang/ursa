@@ -19,7 +19,7 @@ test('Test JSON', 'test/json')
 test('Test mixed lets and exps', 'test/mixed-lets-and-exps')
 test('Mutual recursion', 'test/mutual-recursion')
 test('Test I/O', 'test/print')
-test('use fs', 'test/use-fs')
+test('use jslib.fs', 'test/use-jslib-fs')
 test('Find symbols in input', 'test/syms-no-shebang')
 test('Test error on bad function call', 'test/bad-call')
 
