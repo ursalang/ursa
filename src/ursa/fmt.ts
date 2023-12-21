@@ -8,6 +8,14 @@ import {Node} from 'ohm-js'
 import grammar from '../grammar/ursa.ohm-bundle.js'
 import {semantics} from './compiler.js'
 
+// FIXME: Format as tokens, then Exps in horizontal (wrapped) or vertical
+// mode. Blocks & Sequences are always formatted vertically. For all other
+// elements, get the length of the expression, compare to the line length
+// (taking indentation into account), then if the line is too long, go into
+// vertical mode for the current element, and recurse, trying to format each
+// child as a horizontal element. Depending on the rule, position each
+// formatted element appropriately.
+
 function formatIter(args: FmtArgs, node: Node): string[] {
   return node.asIteration().children.map(
     (child) => (child.fmt as FmtAction)(args.indent, args.indentSize),
@@ -39,25 +47,22 @@ semantics.addOperation<string>('fmt(indent, indentSize)', {
     return `(${(exp.fmt as FmtAction)((this.args as FmtArgs).indent, (this.args as FmtArgs).indentSize)})`
   },
 
-  // FIXME: decide whether to put on more than one line
   List(_open, elems, _maybeComma, _close) {
     return `[${formatIter(this.args as FmtArgs, elems).join(', ')}]`
   },
 
-  // FIXME: decide whether to put on more than one line
   Object(_open, elems, _maybeComma, _close) {
     return `{${formatIter(this.args as FmtArgs, elems).join(', ')}}`
   },
   PropertyValue(ident, _colon, value) {
-    return `${(ident.fmt as FmtAction)((this.args as FmtArgs).indent, (this.args as FmtArgs).indentSize)} : ${(value.fmt as FmtAction)((this.args as FmtArgs).indent, (this.args as FmtArgs).indentSize)}`
+    return `${(ident.fmt as FmtAction)((this.args as FmtArgs).indent, (this.args as FmtArgs).indentSize)}: ${(value.fmt as FmtAction)((this.args as FmtArgs).indent, (this.args as FmtArgs).indentSize)}`
   },
 
-  // FIXME: decide whether to put on more than one line
   Map(_open, elems, _maybeComma, _close) {
     return `{${formatIter(this.args as FmtArgs, elems).join(', ')}}`
   },
   KeyValue(key, _colon, value) {
-    return `${(key.fmt as FmtAction)((this.args as FmtArgs).indent, (this.args as FmtArgs).indentSize)} : ${(value.fmt as FmtAction)((this.args as FmtArgs).indent, (this.args as FmtArgs).indentSize)}`
+    return `${(key.fmt as FmtAction)((this.args as FmtArgs).indent, (this.args as FmtArgs).indentSize)}: ${(value.fmt as FmtAction)((this.args as FmtArgs).indent, (this.args as FmtArgs).indentSize)}`
   },
 
   PropertyExp_property(object, _dot, property) {
@@ -74,21 +79,25 @@ semantics.addOperation<string>('fmt(indent, indentSize)', {
     return `${(exp.fmt as FmtAction)((this.args as FmtArgs).indent, (this.args as FmtArgs).indentSize)}.${(ident.fmt as FmtAction)((this.args as FmtArgs).indent, (this.args as FmtArgs).indentSize)}`
   },
   CallExp_call(exp, args) {
-    return `${(exp.fmt as FmtAction)((this.args as FmtArgs).indent, (this.args as FmtArgs).indentSize)}(${(args.fmt as FmtAction)((this.args as FmtArgs).indent, (this.args as FmtArgs).indentSize)})`
+    return `${(exp.fmt as FmtAction)((this.args as FmtArgs).indent, (this.args as FmtArgs).indentSize)}${(args.fmt as FmtAction)((this.args as FmtArgs).indent, (this.args as FmtArgs).indentSize)}`
   },
   CallExp_property_call(exp, args) {
-    return `${(exp.fmt as FmtAction)((this.args as FmtArgs).indent, (this.args as FmtArgs).indentSize)}(${(args.fmt as FmtAction)((this.args as FmtArgs).indent, (this.args as FmtArgs).indentSize)})`
+    return `${(exp.fmt as FmtAction)((this.args as FmtArgs).indent, (this.args as FmtArgs).indentSize)}${(args.fmt as FmtAction)((this.args as FmtArgs).indent, (this.args as FmtArgs).indentSize)}`
   },
-  // FIXME: decide whether to put on more than one line; if so, add commas
   Arguments(_open, args, _maybeComma, _close) {
     return `(${formatIter(this.args as FmtArgs, args).join(', ')})`
   },
+
   Ifs(ifs, _else, elseBlock) {
     const formattedIfs = formatIter(this.args as FmtArgs, ifs)
     if (elseBlock.children.length > 0) {
-      formattedIfs.push('else', (elseBlock.children[0].fmt as FmtAction)((this.args as FmtArgs).indent, (this.args as FmtArgs).indentSize))
+      const formattedElse = (elseBlock.children[0].fmt as FmtAction)(
+        (this.args as FmtArgs).indent,
+        (this.args as FmtArgs).indentSize,
+      )
+      formattedIfs.push(formattedElse)
     }
-    return formattedIfs.join(newlineAndIndent((this.args as FmtArgs).indent))
+    return formattedIfs.join(' else ')
   },
   If(_if, cond, thenBlock) {
     return `if ${(cond.fmt as FmtAction)((this.args as FmtArgs).indent, (this.args as FmtArgs).indentSize)} ${(thenBlock.fmt as FmtAction)((this.args as FmtArgs).indent, (this.args as FmtArgs).indentSize)}`

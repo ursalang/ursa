@@ -34,6 +34,17 @@ ursaTest('Test I/O', 'test/print', [], 'Hello, world!')
 ursaTest('use jslib.fs', 'test/use-jslib-fs', [], 'foo')
 ursaTest('Find symbols in input', 'test/syms', ['./test/use-jslib-fs.ursa'], 'use\njslib\nfs\nfs\nwriteSync\nfoo\nis\nstdout')
 ursaTest('Two sequential loops', 'test/two-sequential-loops', [], '1\n2\n3\na\nb\nc')
+ursaTest('else-if', 'test/else-if', [], `\
+nought
+one
+two
+many
+many
+many
+many
+many
+many
+many`)
 ursaDirTest('fs', 'test/fs', 'test/fs.result')
 
 ursaTest('Test error on bad function call', 'test/bad-call', [], undefined, `\
@@ -49,6 +60,19 @@ Traceback (most recent call last)
   line 3
     let f = fn() { g() }, in f
   line 4
+    f(), at top level`, undefined, `\
+Error: Line 2, col 15:
+  1 | let h = 3
+> 2 | let g = fn () {
+                    ^
+  3 |     h()
+
+Invalid call
+
+Traceback (most recent call last)
+  line 5
+    let f = fn () {, in f
+  line 8
     f(), at top level`)
 
 ursaTest('Test error on bad property access', 'test/sum-map-iterator-wrong', [], `\
@@ -67,6 +91,17 @@ Attempt to read property of non-object
 
 Traceback (most recent call last)
   line 12
+    sum({"a": 10, "b": 30, "c": 50, "d": 5, "e": 5}), at top level`, undefined, `\
+Error: Line 6, col 17:
+  5 |         let l = it()
+> 6 |         let k = l[0] and let v = l[1]
+                      ^
+  7 |         if l == null {
+
+Attempt to read property of non-object
+
+Traceback (most recent call last)
+  line 14
     sum({"a": 10, "b": 30, "c": 50, "d": 5, "e": 5}), at top level`)
 
 ursaTest('Test error on re-assignment with wrong type', 'test/bad-reassignment', [], undefined, `\

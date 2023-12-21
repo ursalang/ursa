@@ -30,4 +30,6 @@ Welcome to Ursa ${version}.
          ^
 Expected "(", "{", "[", "_", a letter, a digit, ".", "r####\\"", "r###\\"", "r##\\"", "r#\\"", "r\\"", "\\"", "true", "false", "null", "fn", "-", "+", "~", or "not"`,
   true,
+  undefined,
+  true,
 )
