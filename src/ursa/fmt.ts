@@ -18,7 +18,6 @@ function newlineAndIndent(indent: number): string {
   return `\n${' '.repeat(indent)}`
 }
 
-// FIXME: remove unnecessary semi-colons.
 type FmtAction = (indent: number, indentSize: number) => string
 type FmtArgs = {
   indent: number,
@@ -33,7 +32,7 @@ semantics.addOperation<string>('fmt(indent, indentSize)', {
   },
 
   Sequence(exps, _sc) {
-    return `${formatIter(this.args as FmtArgs, exps).join(`;${newlineAndIndent((this.args as FmtArgs).indent)}`)};`
+    return `${formatIter(this.args as FmtArgs, exps).join(`${newlineAndIndent((this.args as FmtArgs).indent)}`)}`
   },
 
   PrimaryExp_paren(_open, exp, _close) {
