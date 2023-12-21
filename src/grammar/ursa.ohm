@@ -6,7 +6,7 @@ Ursa {
   Sequence = ListOf<Exp, #sc> #sc
 
   // A semicolon is "automatically inserted" if a newline or the end of the input stream is
-  // reached, or the offending token is "}".
+  // reached, or the next token is "}".
   // NOTE: Applications of this rule *must* appear in a lexical context -- either in the body of a
   // lexical rule, or inside `#()`.
   sc = space* (";" | end)
