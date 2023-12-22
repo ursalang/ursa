@@ -1,6 +1,6 @@
 // Ursa compiler.
 // © Reuben Thomas 2023
-// Released under the MIT license.
+// Released under the GPL version 3, or (at your option) any later version.
 
 import {Node} from 'ohm-js'
 

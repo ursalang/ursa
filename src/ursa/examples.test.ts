@@ -1,7 +1,7 @@
 /* eslint-disable no-useless-concat */
 // Ursa tests using example source files.
 // © Reuben Thomas 2023
-// Released under the MIT license.
+// Released under the GPL version 3, or (at your option) any later version.
 
 import {ursaTest, ursaDirTest} from '../testutil.js'
 

@@ -1,7 +1,7 @@
 /* eslint-disable no-useless-concat */
 // Ursa REPL tests.
 // © Reuben Thomas 2023
-// Released under the MIT license.
+// Released under the GPL version 3, or (at your option) any later version.
 
 import version from '../version.js'
 

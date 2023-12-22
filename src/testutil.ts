@@ -1,6 +1,6 @@
 // Ursa test utilities.
 // © Reuben Thomas 2023
-// Released under the MIT license.
+// Released under the GPL version 3, or (at your option) any later version.
 
 import util from 'util'
 import fs from 'fs'
