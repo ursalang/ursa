@@ -1,3 +1,7 @@
+// Simple file system interface.
+// © Reuben Thomas 2023
+// Released under the MIT license.
+
 import fs from 'fs'
 import path from 'path'
 

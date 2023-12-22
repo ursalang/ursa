@@ -1,6 +1,6 @@
 // Ark tests using example source files.
 // © Reuben Thomas 2023
-// Released under the GPL version 3, or (at your option) any later version.
+// Released under the MIT license.
 
 import {arkTest} from '../testutil.js'
 

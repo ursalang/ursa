@@ -14,8 +14,10 @@ Currently, Ursa is under development, as reflected in the version number.
 The intention is that once it reaches version 1, the language will not
 change or evolve further.
 
-Ursa is free software, licensed under the GNU GPL version 3 (or, at your
-option, any later version), and written in TypeScript.
+Ursa is free software. The Ohm grammar and the run-time (Ark, and the Ursa
+prelude) are licensed under the MIT license. All other files are licensed
+under the GNU GPL version 3 (or, at your option, any later version), unless
+explicitly mentioned otherwise.
 
 Please [ask questions, make comments](https://ursalang.github.io/discussions.html);
 you can [open bug reports](https://github.com/ursalang/ursa/issues) on our
