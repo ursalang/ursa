@@ -32,9 +32,9 @@
 * Co-routines (copy Python?)
 * `self`
 * Streams, and use as interface to files.
-* Code formatting: optionally omit redundant semicolons, format long lines
-  as multiple lines (splitting at comma and semi-colon separators), have
-  some blank lines. Run all tests twice, once having reformatted the code.
+* Code formatting: format long lines as multiple lines (splitting at comma
+  and semi-colon separators), have blank lines between top-level multiline
+  `let`s.
 
 ## Ursa v1
 
