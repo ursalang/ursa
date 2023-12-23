@@ -113,10 +113,16 @@ function addLoc(val: ArkExp, node: Node) {
   return val
 }
 
-function indexExp(expNode: NonterminalNode, isLval: boolean, object: Node, index: Node): ArkExp {
-  const a = expNode.args.a
-  const compiledObj = object.toExp(a)
-  const compiledIndex = index.toExp(a)
+// The first argument must be `this` from a Semantics operation, so it
+// contains `.args`.
+function indexExp(
+  expNode: NonterminalNode,
+  isLval: boolean,
+  object: Node,
+  index: Node,
+): ArkExp {
+  const compiledObj = object.toExp(expNode.args.a)
+  const compiledIndex = index.toExp(expNode.args.a)
   return addLoc(
     new ArkCall(
       new ArkGet(addLoc(new ArkProperty(isLval ? 'set' : 'get', compiledObj), object)),
@@ -169,10 +175,10 @@ semantics.addOperation<ArkExp>('toExp(a)', {
       boundVars.push(...exp.boundVars)
     }
     const compiledExps = []
-    const innerEnv = this.args.a.env.push(
+    const innerEnv = this.args.a.env!.push(
       Array<undefined>(boundVars.length).fill(undefined),
     )
-    const outerLocals = this.args.a.env.stack[0][0].length
+    const outerLocals = this.args.a.env!.stack[0][0].length
     let nextLocal = 0
     for (const exp of exps.asIteration().children) {
       for (let i = 0; i < exp.boundVars.length; i += 1) {
@@ -272,7 +278,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
 
   Fn(_fn, _open, params, _maybeComma, _close, body) {
     const paramStrings = listNodeToParamList(params)
-    const innerEnv = this.args.a.env.pushFrame([paramStrings, []])
+    const innerEnv = this.args.a.env!.pushFrame([paramStrings, []])
     const bodyFreeVars = body.freeVars({...this.args.a, env: innerEnv})
     const compiledBody = body.toExp({env: innerEnv, inLoop: false, inFn: true})
     paramStrings.forEach((p) => bodyFreeVars.delete(p))
@@ -285,7 +291,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
 
   For(_for, ident, _of, iterator, body) {
     const forVar = ident.sourceString
-    const innerEnv = this.args.a.env.push(['_for'])
+    const innerEnv = this.args.a.env!.push(['_for'])
     const compiledIterator = iterator.toExp({...this.args.a, env: innerEnv})
     const loopEnv = innerEnv.push([forVar])
     const compiledForVar = symRef(loopEnv, forVar).value
@@ -627,10 +633,10 @@ semantics.addOperation<Map<string, unknown>>('freeVars(a)', {
     return new FreeVars()
   },
   _nonterminal(...children) {
-    return mergeFreeVars(this.args.a.env, children)
+    return mergeFreeVars(this.args.a.env!, children)
   },
   _iter(...children) {
-    return mergeFreeVars(this.args.a.env, children)
+    return mergeFreeVars(this.args.a.env!, children)
   },
 
   Sequence(exps, _sc) {
@@ -638,7 +644,7 @@ semantics.addOperation<Map<string, unknown>>('freeVars(a)', {
     const boundVars: string[] = []
     exps.asIteration().children.forEach((exp) => {
       boundVars.push(...exp.boundVars)
-      freeVars.merge(exp.freeVars({env: this.args.a.env.push(boundVars)}))
+      freeVars.merge(exp.freeVars({env: this.args.a.env!.push(boundVars)}))
     })
     boundVars.forEach((b: string) => freeVars.delete(b))
     return freeVars
@@ -658,7 +664,7 @@ semantics.addOperation<Map<string, unknown>>('freeVars(a)', {
 
   Fn(_fn, _open, params, _maybeComma, _close, body) {
     const paramStrings = params.asIteration().children.map((x) => x.sourceString)
-    const innerEnv = this.args.a.env.pushFrame([[...paramStrings], []])
+    const innerEnv = this.args.a.env!.pushFrame([[...paramStrings], []])
     const freeVars = new FreeVars().merge(body.freeVars({env: innerEnv}))
     paramStrings.forEach((p) => freeVars.delete(p))
     return freeVars
@@ -666,7 +672,7 @@ semantics.addOperation<Map<string, unknown>>('freeVars(a)', {
 
   Lets(lets) {
     const letIds = lets.asIteration().children.map((x) => x.children[1].children[0].sourceString)
-    const innerEnv = this.args.a.env.push(letIds)
+    const innerEnv = this.args.a.env!.push(letIds)
     const freeVars = new FreeVars()
     for (const l of lets.asIteration().children) {
       freeVars.merge((l.children[1].children[2] as Node).freeVars({env: innerEnv}))
@@ -679,7 +685,7 @@ semantics.addOperation<Map<string, unknown>>('freeVars(a)', {
 
   For(_for, ident, _of, iterator, body) {
     const forVar = ident.sourceString
-    const innerEnv = this.args.a.env.push(['_for'])
+    const innerEnv = this.args.a.env!.push(['_for'])
     const loopEnv = innerEnv.push([forVar])
     const freeVars = new FreeVars().merge(iterator.freeVars({env: innerEnv}))
       .merge(body.freeVars({env: loopEnv}))
@@ -690,7 +696,7 @@ semantics.addOperation<Map<string, unknown>>('freeVars(a)', {
   Use(_use, pathList) {
     const path = pathList.asIteration().children
     const ident = path[path.length - 1]
-    const innerEnv = this.args.a.env.push([ident.sourceString])
+    const innerEnv = this.args.a.env!.push([ident.sourceString])
     const freeVars = new FreeVars().merge(path[0].symref({...this.args.a, env: innerEnv}).freeVars)
     freeVars.delete(ident.sourceString)
     return freeVars
@@ -707,7 +713,7 @@ semantics.addOperation<CompiledArk>('symref(a)', {
   ident(ident) {
     if (!symrefs.has(this)) {
       try {
-        symrefs.set(this, symRef(this.args.a.env, this.sourceString))
+        symrefs.set(this, symRef(this.args.a.env!, this.sourceString))
       } catch (e) {
         if (!(e instanceof ArkCompilerError)) {
           throw e

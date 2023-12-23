@@ -31,9 +31,8 @@
 * Co-routines (copy Python?)
 * `self`
 * Streams, and use as interface to files.
-* Code formatting: format long lines as multiple lines (splitting at comma
-  and semi-colon separators), have blank lines between top-level multiline
-  `let`s.
+* Code formatting: have blank lines between top-level multiline `let`s, and
+  after the last `use` in a series of `use`s.
 
 ## Ursa v1
 

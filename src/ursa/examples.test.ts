@@ -61,17 +61,17 @@ Traceback (most recent call last)
     let f = fn() { g() }, in f
   line 4
     f(), at top level`, undefined, `\
-Error: Line 2, col 15:
+Error: Line 2, col 14:
   1 | let h = 3
-> 2 | let g = fn () {
-                    ^
+> 2 | let g = fn() {
+                   ^
   3 |     h()
 
 Invalid call
 
 Traceback (most recent call last)
   line 5
-    let f = fn () {, in f
+    let f = fn() {, in f
   line 8
     f(), at top level`)
 

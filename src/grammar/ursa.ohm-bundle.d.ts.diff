@@ -1,6 +1,6 @@
---- src/grammar/ursa.ohm-bundle.d.ts	2023-12-28 17:41:52.729303563 +0000
-+++ src/grammar/ursa.ohm-bundle.d.ts.bak	2023-12-28 17:41:52.301302184 +0000
-@@ -4,14 +4,57 @@
+--- src/grammar/ursa.ohm-bundle.d.ts	2023-12-30 18:35:56.474526995 +0000
++++ src/grammar/ursa.ohm-bundle.d.ts.bak	2023-12-30 18:35:56.042524812 +0000
+@@ -4,14 +4,66 @@
  import {
    BaseActionDict,
    Grammar,
@@ -16,19 +16,24 @@
  
 +import {ArkExp} from '../ark/interpreter.js';
 +import {Environment, FreeVars, CompiledArk} from '../ark/compiler.js';
-+import {Definition, KeyValue, Arguments} from '../ursa/compiler.js';
++import {Definition, KeyValue, Arguments, SingleLet} from '../ursa/compiler.js';
++import {Span, HSpan, VSpan} from '../ursa/fmt.js';
 +
 +export type UrsaActionArgs = {
-+  env: Environment;
++  // `toExp` etc. arguments
++  env?: Environment;
 +  inLoop?: boolean;
 +  inFn?: boolean;
++
++  // `fmt` arguments
++  maxWidth?: number;
++  indentString?: string;
++  simpleExpDepth?: number;
 +};
 +
 +export type UrsaSemanticsArgs = {
-+  a: UrsaActionArgs;
-+  indent: number;
-+  indentSize: number;
-+};
++  a: UrsaActionArgs
++}
 +
 +export type UrsaOperations = {
 +  toExp(a: UrsaActionArgs): ArkExp;
@@ -36,9 +41,11 @@
 +  toDefinition(a: UrsaActionArgs): Definition;
 +  toKeyValue(a: UrsaActionArgs): KeyValue;
 +  toArguments(a: UrsaActionArgs): Arguments;
++  toLet(): SingleLet;
 +  boundVars: string[];
 +  freeVars(a: UrsaActionArgs): FreeVars;
-+  fmt(indent: number, indentSize: number): string;
++  fmt(a: UrsaActionArgs): Span;
++  hfmt(a: UrsaActionArgs): Span;
 +  symref(a: UrsaActionArgs): CompiledArk;
 +};
 +
@@ -49,7 +56,9 @@
 +export type IterationNode = UrsaIterationNode & UrsaOperations;
 +
 +interface UrsaNonterminalNode extends NonterminalNodeBase {
-+  args: UrsaSemanticsArgs;
++  // A hack to enable type-checking of `.args`. This member is really only
++  // present in `this` of semantics action routines.
++  args: UrsaSemanticsArgs
 +  asIteration(): IterationNode;
 +}
 +export type NonterminalNode = UrsaNonterminalNode & UrsaOperations;
@@ -61,7 +70,7 @@
    Sequence?: (this: NonterminalNode, arg0: NonterminalNode, arg1: NonterminalNode) => T;
    sc?: (this: NonterminalNode, arg0: IterationNode | NonterminalNode, arg1: NonterminalNode | TerminalNode) => T;
    maybeCommaParen?: (this: NonterminalNode, arg0: IterationNode, arg1: TerminalNode) => T;
-@@ -136,12 +179,13 @@
+@@ -136,12 +188,13 @@
    unicodeSpaceSeparator?: (this: NonterminalNode, arg0: TerminalNode) => T;
  }
  
@@ -76,7 +85,7 @@
  
  export interface UrsaGrammar extends Grammar {
    createSemantics(): UrsaSemantics;
-@@ -150,4 +194,3 @@
+@@ -150,4 +203,3 @@
  
  declare const grammar: UrsaGrammar;
  export default grammar;
