@@ -127,7 +127,7 @@ Ursa {
   Lets = NonemptyListOf<Let, and>
   Let = let ident "=" Exp
 
-  Use = use ListOf<ident, #".">
+  Use = use ListOf<ident, ".">
 
   Block = "{" Sequence "}"
 
