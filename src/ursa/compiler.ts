@@ -298,11 +298,9 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
       ) as ArkIf,
     )
     if (elseBlock.children.length > 0) {
-      compiledIfs.push(elseBlock.children[0].toExp(
-        this.args.env,
-        this.args.inLoop,
-        this.args.inFn,
-      ) as ArkIf)
+      compiledIfs.push(
+        elseBlock.children[0].toExp(this.args.env, this.args.inLoop, this.args.inFn) as ArkIf,
+      )
     }
     return makeIfChain(compiledIfs)
   },
