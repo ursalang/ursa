@@ -1,6 +1,6 @@
---- src/grammar/ursa.ohm-bundle.d.ts	2023-12-24 09:52:13.763353380 +0200
-+++ src/grammar/ursa.ohm-bundle.d.ts.bak	2023-12-24 09:52:12.879333089 +0200
-@@ -4,14 +4,54 @@
+--- src/grammar/ursa.ohm-bundle.d.ts	2023-12-24 22:55:10.839628783 +0200
++++ src/grammar/ursa.ohm-bundle.d.ts.bak	2023-12-24 22:55:09.755537176 +0200
+@@ -4,14 +4,58 @@
  import {
    BaseActionDict,
    Grammar,
@@ -14,29 +14,33 @@
    TerminalNode
  } from 'ohm-js';
  
-+import {ArkExp} from '../ark/interpreter.js'
-+import {Environment, FreeVars, CompiledArk} from '../ark/compiler.js'
-+import {PropertyValue, KeyValue, Arguments, SingleLet} from '../ursa/compiler.js'
++import {ArkExp} from '../ark/interpreter.js';
++import {Environment, FreeVars, CompiledArk} from '../ark/compiler.js';
++import {PropertyValue, KeyValue, Arguments, SingleLet} from '../ursa/compiler.js';
++
++export type UrsaActionArgs = {
++  env: Environment;
++  inLoop?: boolean;
++  inFn?: boolean;
++};
 +
 +export type UrsaSemanticsArgs = {
-+  env: Environment;
-+  inLoop: boolean;
-+  inFn: boolean;
++  a: UrsaActionArgs;
 +  indent: number;
 +  indentSize: number;
 +};
 +
 +export type UrsaOperations = {
-+  toExp(env: Environment, inLoop: boolean, inFn: boolean): ArkExp;
-+  toLval(env: Environment, inLoop: boolean, inFn: boolean): ArkExp;
-+  toPropertyValue(env: Environment, inLoop: boolean, inFn: boolean): PropertyValue;
-+  toKeyValue(env: Environment, inLoop: boolean, inFn: boolean): KeyValue;
-+  toArguments(env: Environment, inLoop: boolean, inFn: boolean): Arguments;
++  toExp(a: UrsaActionArgs): ArkExp;
++  toLval(a: UrsaActionArgs): ArkExp;
++  toPropertyValue(a: UrsaActionArgs): PropertyValue;
++  toKeyValue(a: UrsaActionArgs): KeyValue;
++  toArguments(a: UrsaActionArgs): Arguments;
 +  toLet(): SingleLet;
 +  boundVars: string[];
-+  freeVars(env: Environment): FreeVars;
++  freeVars(a: UrsaActionArgs): FreeVars;
 +  fmt(indent: number, indentSize: number): string;
-+  symref(env: Environment): CompiledArk;
++  symref(a: UrsaActionArgs): CompiledArk;
 +};
 +
 +export type Node = NodeBase & UrsaOperations;
@@ -58,7 +62,7 @@
    Sequence?: (this: NonterminalNode, arg0: NonterminalNode, arg1: NonterminalNode) => T;
    sc?: (this: NonterminalNode, arg0: IterationNode | NonterminalNode, arg1: NonterminalNode | TerminalNode) => T;
    maybeCommaParen?: (this: NonterminalNode, arg0: IterationNode, arg1: TerminalNode) => T;
-@@ -136,12 +176,13 @@
+@@ -136,12 +180,13 @@
    unicodeSpaceSeparator?: (this: NonterminalNode, arg0: TerminalNode) => T;
  }
  
@@ -73,7 +77,7 @@
  
  export interface UrsaGrammar extends Grammar {
    createSemantics(): UrsaSemantics;
-@@ -150,4 +191,3 @@
+@@ -150,4 +195,3 @@
  
  declare const grammar: UrsaGrammar;
  export default grammar;

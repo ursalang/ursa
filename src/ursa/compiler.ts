@@ -7,7 +7,8 @@ import assert from 'assert'
 import {Interval} from 'ohm-js'
 
 import grammar, {
-  Node, IterationNode, UrsaSemantics, NonterminalNode, UrsaOperations, UrsaSemanticsArgs,
+  Node, IterationNode, UrsaSemantics, NonterminalNode,
+  UrsaOperations, UrsaActionArgs,
   // eslint-disable-next-line import/extensions
 } from '../grammar/ursa.ohm-bundle.js'
 import {
@@ -96,9 +97,9 @@ export class Arguments extends AST {
   }
 }
 
-function maybeVal(env: Environment, exp: IterationNode, inFn: boolean): ArkExp {
+function maybeVal(a: UrsaActionArgs, exp: IterationNode): ArkExp {
   return exp.children.length > 0
-    ? exp.children[0].toExp(env, true, inFn)
+    ? exp.children[0].toExp(a)
     : new ArkLiteral(ArkNull())
 }
 
@@ -119,9 +120,9 @@ function addLoc(val: ArkExp, node: Node) {
 }
 
 function indexExp(expNode: NonterminalNode, isLval: boolean, object: Node, index: Node): ArkExp {
-  const args = expNode.args
-  const compiledObj = object.toExp(args.env, args.inLoop, args.inFn)
-  const compiledIndex = index.toExp(args.env, args.inLoop, args.inFn)
+  const a = expNode.args.a
+  const compiledObj = object.toExp(a)
+  const compiledIndex = index.toExp(a)
   return addLoc(
     new ArkCall(
       new ArkGet(addLoc(new ArkProperty(isLval ? 'set' : 'get', compiledObj), object)),
@@ -131,14 +132,8 @@ function indexExp(expNode: NonterminalNode, isLval: boolean, object: Node, index
   )
 }
 
-function makeProperty(args: UrsaSemanticsArgs, object: NonterminalNode, property: Node) {
-  return addLoc(
-    new ArkProperty(
-      property.sourceString,
-      object.toExp(args.env, args.inLoop, args.inFn),
-    ),
-    object,
-  )
+function makeProperty(a: UrsaActionArgs, object: NonterminalNode, property: Node) {
+  return addLoc(new ArkProperty(property.sourceString, object.toExp(a)), object)
 }
 
 function makeIfChain(ifs: ArkIf[]): ArkIf {
@@ -148,36 +143,36 @@ function makeIfChain(ifs: ArkIf[]): ArkIf {
   return ifs[0]
 }
 
-semantics.addOperation<PropertyValue>('toPropertyValue(env,inLoop,inFn)', {
+semantics.addOperation<PropertyValue>('toPropertyValue(a)', {
   PropertyValue(ident, _colon, value) {
     return new PropertyValue(
       ident.sourceString,
       addLoc(
-        value.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+        value.toExp(this.args.a),
         value,
       ),
     )
   },
 })
 
-semantics.addOperation<KeyValue>('toKeyValue(env,inLoop,inFn)', {
+semantics.addOperation<KeyValue>('toKeyValue(a)', {
   KeyValue(key, _colon, value) {
     return new KeyValue(
-      key.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+      key.toExp(this.args.a),
       addLoc(
-        value.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+        value.toExp(this.args.a),
         value,
       ),
     )
   },
 })
 
-semantics.addOperation<Arguments>('toArguments(env,inLoop,inFn)', {
+semantics.addOperation<Arguments>('toArguments(a)', {
   Arguments(_open, args, _maybeComma, _close) {
     return new Arguments(
       args.asIteration().children.map(
         (x) => addLoc(
-          x.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+          x.toExp(this.args.a),
           x,
         ),
       ),
@@ -191,24 +186,24 @@ semantics.addOperation<SingleLet>('toLet()', {
   },
 })
 
-semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
+semantics.addOperation<ArkExp>('toExp(a)', {
   Sequence(exps, _sc) {
     const boundVars = []
     for (const exp of exps.asIteration().children) {
       boundVars.push(...exp.boundVars)
     }
     const compiledExps = []
-    const innerEnv = this.args.env.push(
+    const innerEnv = this.args.a.env.push(
       Array<undefined>(boundVars.length).fill(undefined),
     )
-    const outerLocals = this.args.env.stack[0][0].length
+    const outerLocals = this.args.a.env.stack[0][0].length
     let nextLocal = 0
     for (const exp of exps.asIteration().children) {
       for (let i = 0; i < exp.boundVars.length; i += 1) {
         innerEnv.stack[0][0][outerLocals + nextLocal] = boundVars[nextLocal]
         nextLocal += 1
       }
-      const compiledExp = exp.toExp(innerEnv, this.args.inLoop, this.args.inFn)
+      const compiledExp = exp.toExp({...this.args.a, env: innerEnv})
       compiledExps.push(compiledExp)
     }
     assert(nextLocal === boundVars.length)
@@ -222,11 +217,11 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
   },
 
   PrimaryExp_ident(_sym) {
-    return addLoc(new ArkGet(this.symref(this.args.env).value), this)
+    return addLoc(new ArkGet(this.symref(this.args.a).value), this)
   },
   PrimaryExp_paren(_open, exp, _close) {
     return addLoc(
-      exp.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+      exp.toExp(this.args.a),
       this,
     )
   },
@@ -234,7 +229,7 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
   List(_open, elems, _maybeComma, _close) {
     return addLoc(
       new ArkListLiteral((elems.asIteration().children).map(
-        (x) => x.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+        (x) => x.toExp(this.args.a),
       )),
       this,
     )
@@ -243,7 +238,7 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
   Object(_open, elems, _maybeComma, _close) {
     const inits = new Map<string, ArkExp>()
     elems.asIteration().children.forEach((value) => {
-      const elem = value.toPropertyValue(this.args.env, this.args.inLoop, this.args.inFn)
+      const elem = value.toPropertyValue(this.args.a)
       inits.set(elem.key, elem.val)
     })
     return addLoc(new ArkObjectLiteral(inits), this)
@@ -252,7 +247,7 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
   Map(_open, elems, _maybeComma, _close) {
     const inits = new Map<ArkExp, ArkExp>()
     elems.asIteration().children.forEach((value) => {
-      const elem = value.toKeyValue(this.args.env, this.args.inLoop, this.args.inFn)
+      const elem = value.toKeyValue(this.args.a)
       inits.set(elem.key, elem.val)
     })
     return addLoc(new ArkMapLiteral(inits), this)
@@ -262,20 +257,20 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
     return indexExp(this, false, object, index)
   },
   PropertyExp_property(object, _dot, property) {
-    return addLoc(new ArkGet(makeProperty(this.args, object, property)), this)
+    return addLoc(new ArkGet(makeProperty(this.args.a, object, property)), this)
   },
 
   CallExp_index(object, _open, index, _close) {
     return indexExp(this, false, object, index)
   },
   CallExp_property(exp, _dot, ident) {
-    return addLoc(new ArkGet(makeProperty(this.args, exp, ident)), this)
+    return addLoc(new ArkGet(makeProperty(this.args.a, exp, ident)), this)
   },
   CallExp_call(exp, args) {
     return addLoc(
       new ArkCall(
-        exp.toExp(this.args.env, this.args.inLoop, this.args.inFn),
-        args.toArguments(this.args.env, this.args.inLoop, this.args.inFn).args,
+        exp.toExp(this.args.a),
+        args.toArguments(this.args.a).args,
       ),
       this,
     )
@@ -283,8 +278,8 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
   CallExp_property_call(exp, args) {
     return addLoc(
       new ArkCall(
-        exp.toExp(this.args.env, this.args.inLoop, this.args.inFn),
-        args.toArguments(this.args.env, this.args.inLoop, this.args.inFn).args,
+        exp.toExp(this.args.a),
+        args.toArguments(this.args.a).args,
       ),
       this,
     )
@@ -293,13 +288,13 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
   Ifs(ifs, _else, elseBlock) {
     const compiledIfs: ArkIf[] = (ifs.asIteration().children).map(
       (x) => addLoc(
-        x.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+        x.toExp(this.args.a),
         x,
       ) as ArkIf,
     )
     if (elseBlock.children.length > 0) {
       compiledIfs.push(
-        elseBlock.children[0].toExp(this.args.env, this.args.inLoop, this.args.inFn) as ArkIf,
+        elseBlock.children[0].toExp(this.args.a) as ArkIf,
       )
     }
     return makeIfChain(compiledIfs)
@@ -307,8 +302,8 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
   If(_if, cond, thenBlock) {
     return addLoc(
       new ArkIf(
-        cond.toExp(this.args.env, this.args.inLoop, this.args.inFn),
-        thenBlock.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+        cond.toExp(this.args.a),
+        thenBlock.toExp(this.args.a),
       ),
       this,
     )
@@ -316,27 +311,24 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
 
   Fn(_fn, _open, params, _maybeComma, _close, body) {
     const paramStrings = listNodeToParamList(params)
-    const innerEnv = this.args.env.pushFrame([paramStrings, []])
-    const bodyFreeVars = body.freeVars(innerEnv)
-    const compiledBody = body.toExp(innerEnv, false, true)
+    const innerEnv = this.args.a.env.pushFrame([paramStrings, []])
+    const bodyFreeVars = body.freeVars({...this.args.a, env: innerEnv})
+    const compiledBody = body.toExp({env: innerEnv, inLoop: false, inFn: true})
     paramStrings.forEach((p) => bodyFreeVars.delete(p))
     return addLoc(new ArkFn(paramStrings, [...bodyFreeVars.values()], compiledBody), this)
   },
 
   Loop(_loop, body) {
-    return addLoc(
-      new ArkLoop(body.toExp(this.args.env, true, this.args.inFn)),
-      this,
-    )
+    return addLoc(new ArkLoop(body.toExp({...this.args.a, inLoop: true})), this)
   },
 
   For(_for, ident, _of, iterator, body) {
     const forVar = ident.sourceString
-    const innerEnv = this.args.env.push(['_for'])
-    const compiledIterator = iterator.toExp(innerEnv, this.args.inLoop, this.args.inFn)
+    const innerEnv = this.args.a.env.push(['_for'])
+    const compiledIterator = iterator.toExp({...this.args.a, env: innerEnv})
     const loopEnv = innerEnv.push([forVar])
     const compiledForVar = symRef(loopEnv, forVar).value
-    const compiledForBody = body.toExp(loopEnv, true, this.args.inFn)
+    const compiledForBody = body.toExp({...this.args.a, env: loopEnv, inLoop: true})
     const loopBody = new ArkLet(
       [forVar],
       new ArkSequence([
@@ -358,25 +350,25 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
   UnaryExp_not(_not, exp) {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('not')),
-      [exp.toExp(this.args.env, this.args.inLoop, this.args.inFn)],
+      [exp.toExp(this.args.a)],
     ), this)
   },
   UnaryExp_bitwise_not(_not, exp) {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('~')),
-      [exp.toExp(this.args.env, this.args.inLoop, this.args.inFn)],
+      [exp.toExp(this.args.a)],
     ), this)
   },
   UnaryExp_pos(_plus, exp) {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('pos')),
-      [exp.toExp(this.args.env, this.args.inLoop, this.args.inFn)],
+      [exp.toExp(this.args.a)],
     ), this)
   },
   UnaryExp_neg(_minus, exp) {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('neg')),
-      [exp.toExp(this.args.env, this.args.inLoop, this.args.inFn)],
+      [exp.toExp(this.args.a)],
     ), this)
   },
 
@@ -384,8 +376,8 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('**')),
       [
-        left.toExp(this.args.env, this.args.inLoop, this.args.inFn),
-        right.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+        left.toExp(this.args.a),
+        right.toExp(this.args.a),
       ],
     ), this)
   },
@@ -394,8 +386,8 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('*')),
       [
-        left.toExp(this.args.env, this.args.inLoop, this.args.inFn),
-        right.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+        left.toExp(this.args.a),
+        right.toExp(this.args.a),
       ],
     ), this)
   },
@@ -403,8 +395,8 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('/')),
       [
-        left.toExp(this.args.env, this.args.inLoop, this.args.inFn),
-        right.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+        left.toExp(this.args.a),
+        right.toExp(this.args.a),
       ],
     ), this)
   },
@@ -412,8 +404,8 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('%')),
       [
-        left.toExp(this.args.env, this.args.inLoop, this.args.inFn),
-        right.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+        left.toExp(this.args.a),
+        right.toExp(this.args.a),
       ],
     ), this)
   },
@@ -422,8 +414,8 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('+')),
       [
-        left.toExp(this.args.env, this.args.inLoop, this.args.inFn),
-        right.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+        left.toExp(this.args.a),
+        right.toExp(this.args.a),
       ],
     ), this)
   },
@@ -431,8 +423,8 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('-')),
       [
-        left.toExp(this.args.env, this.args.inLoop, this.args.inFn),
-        right.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+        left.toExp(this.args.a),
+        right.toExp(this.args.a),
       ],
     ), this)
   },
@@ -441,8 +433,8 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('=')),
       [
-        left.toExp(this.args.env, this.args.inLoop, this.args.inFn),
-        right.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+        left.toExp(this.args.a),
+        right.toExp(this.args.a),
       ],
     ), this)
   },
@@ -450,8 +442,8 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('!=')),
       [
-        left.toExp(this.args.env, this.args.inLoop, this.args.inFn),
-        right.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+        left.toExp(this.args.a),
+        right.toExp(this.args.a),
       ],
     ), this)
   },
@@ -459,8 +451,8 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('<')),
       [
-        left.toExp(this.args.env, this.args.inLoop, this.args.inFn),
-        right.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+        left.toExp(this.args.a),
+        right.toExp(this.args.a),
       ],
     ), this)
   },
@@ -468,8 +460,8 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('<=')),
       [
-        left.toExp(this.args.env, this.args.inLoop, this.args.inFn),
-        right.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+        left.toExp(this.args.a),
+        right.toExp(this.args.a),
       ],
     ), this)
   },
@@ -477,8 +469,8 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('>')),
       [
-        left.toExp(this.args.env, this.args.inLoop, this.args.inFn),
-        right.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+        left.toExp(this.args.a),
+        right.toExp(this.args.a),
       ],
     ), this)
   },
@@ -486,8 +478,8 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('>=')),
       [
-        left.toExp(this.args.env, this.args.inLoop, this.args.inFn),
-        right.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+        left.toExp(this.args.a),
+        right.toExp(this.args.a),
       ],
     ), this)
   },
@@ -496,8 +488,8 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('&')),
       [
-        left.toExp(this.args.env, this.args.inLoop, this.args.inFn),
-        right.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+        left.toExp(this.args.a),
+        right.toExp(this.args.a),
       ],
     ), this)
   },
@@ -505,8 +497,8 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('|')),
       [
-        left.toExp(this.args.env, this.args.inLoop, this.args.inFn),
-        right.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+        left.toExp(this.args.a),
+        right.toExp(this.args.a),
       ],
     ), this)
   },
@@ -514,8 +506,8 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('^')),
       [
-        left.toExp(this.args.env, this.args.inLoop, this.args.inFn),
-        right.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+        left.toExp(this.args.a),
+        right.toExp(this.args.a),
       ],
     ), this)
   },
@@ -523,8 +515,8 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('<<')),
       [
-        left.toExp(this.args.env, this.args.inLoop, this.args.inFn),
-        right.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+        left.toExp(this.args.a),
+        right.toExp(this.args.a),
       ],
     ), this)
   },
@@ -532,8 +524,8 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('>>')),
       [
-        left.toExp(this.args.env, this.args.inLoop, this.args.inFn),
-        right.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+        left.toExp(this.args.a),
+        right.toExp(this.args.a),
       ],
     ), this)
   },
@@ -541,8 +533,8 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
     return addLoc(new ArkCall(
       new ArkLiteral(intrinsics.get('>>>')),
       [
-        left.toExp(this.args.env, this.args.inLoop, this.args.inFn),
-        right.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+        left.toExp(this.args.a),
+        right.toExp(this.args.a),
       ],
     ), this)
   },
@@ -550,8 +542,8 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
   LogicExp_and(left, _and, right) {
     return addLoc(
       new ArkAnd(
-        left.toExp(this.args.env, this.args.inLoop, this.args.inFn),
-        right.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+        left.toExp(this.args.a),
+        right.toExp(this.args.a),
       ),
       this,
     )
@@ -559,16 +551,16 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
   LogicExp_or(left, _or, right) {
     return addLoc(
       new ArkOr(
-        left.toExp(this.args.env, this.args.inLoop, this.args.inFn),
-        right.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+        left.toExp(this.args.a),
+        right.toExp(this.args.a),
       ),
       this,
     )
   },
 
   AssignmentExp_ass(lvalue, _ass, value) {
-    const compiledLvalue = lvalue.toLval(this.args.env, this.args.inLoop, this.args.inFn)
-    const compiledValue = value.toExp(this.args.env, this.args.inLoop, this.args.inFn)
+    const compiledLvalue = lvalue.toLval(this.args.a)
+    const compiledValue = value.toExp(this.args.a)
     if (compiledLvalue instanceof ArkCall
       && compiledLvalue.fn instanceof ArkGet
       && compiledLvalue.fn.val instanceof ArkProperty
@@ -580,25 +572,25 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
   },
 
   Exp_break(_break, exp) {
-    if (!this.args.inLoop) {
+    if (!this.args.a.inLoop) {
       throw new UrsaCompilerError(_break.source, 'break used outside a loop')
     }
     return addLoc(new ArkBreak(
-      maybeVal(this.args.env, exp, this.args.inFn),
+      maybeVal(this.args.a, exp),
     ), this)
   },
   Exp_continue(_continue) {
-    if (!this.args.inLoop) {
+    if (!this.args.a.inLoop) {
       throw new UrsaCompilerError(_continue.source, 'continue used outside a loop')
     }
     return addLoc(new ArkContinue(), this)
   },
   Exp_return(_return, exp) {
-    if (!this.args.inFn) {
+    if (!this.args.a.inFn) {
       throw new UrsaCompilerError(_return.source, 'return used outside a function')
     }
     return addLoc(new ArkReturn(
-      maybeVal(this.args.env, exp, this.args.inFn),
+      maybeVal(this.args.a, exp),
     ), this)
   },
 
@@ -615,8 +607,8 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
     }
     const assignments = parsedLets.map(
       (l) => new ArkSet(
-        l.id.symref(this.args.env).value,
-        l.node.toExp(this.args.env, this.args.inLoop, this.args.inFn),
+        l.id.symref(this.args.a).value,
+        l.node.toExp(this.args.a),
       ),
     )
     const compiled = assignments.length > 1
@@ -631,9 +623,9 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
     // For path x.y.z, compile `let z = x.use(y.z)`
     const compiledUse = new ArkSequence([
       new ArkSet(
-        ident.symref(this.args.env).value,
+        ident.symref(this.args.a).value,
         new ArkCall(
-          new ArkGet(addLoc(new ArkProperty('use', new ArkGet(path[0].symref(this.args.env).value)), this)),
+          new ArkGet(addLoc(new ArkProperty('use', new ArkGet(path[0].symref(this.args.a).value)), this)),
           path.slice(1).map((id) => new ArkLiteral(ArkString(id.sourceString))),
         ),
       ),
@@ -642,7 +634,7 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
   },
 
   Block(_open, seq, _close) {
-    return addLoc(seq.toExp(this.args.env, this.args.inLoop, this.args.inFn), this)
+    return addLoc(seq.toExp(this.args.a), this)
   },
 
   // This rule is not used for symbol references, but for property and
@@ -674,23 +666,23 @@ semantics.addOperation<ArkExp>('toExp(env,inLoop,inFn)', {
   },
 })
 
-semantics.addOperation<ArkExp>('toLval(env,inLoop,inFn)', {
+semantics.addOperation<ArkExp>('toLval(a)', {
   PrimaryExp_ident(_sym) {
-    return addLoc(this.symref(this.args.env).value, this)
+    return addLoc(this.symref(this.args.a).value, this)
   },
 
   PropertyExp_index(object, _open, index, _close) {
     return indexExp(this, true, object, index)
   },
   PropertyExp_property(object, _dot, property) {
-    return makeProperty(this.args, object, property)
+    return makeProperty(this.args.a, object, property)
   },
 
   CallExp_index(object, _open, index, _close) {
     return indexExp(this, true, object, index)
   },
   CallExp_property(exp, _dot, ident) {
-    return makeProperty(this.args, exp, ident)
+    return makeProperty(this.args.a, exp, ident)
   },
 })
 
@@ -732,19 +724,19 @@ semantics.addAttribute<string[]>('boundVars', {
 
 function mergeFreeVars(env: Environment, children: Node[]): FreeVars {
   const freeVars = new FreeVars()
-  children.forEach((child) => freeVars.merge(child.freeVars(env)))
+  children.forEach((child) => freeVars.merge(child.freeVars({env})))
   return freeVars
 }
 
-semantics.addOperation<Map<string, unknown>>('freeVars(env)', {
+semantics.addOperation<Map<string, unknown>>('freeVars(a)', {
   _terminal() {
     return new FreeVars()
   },
   _nonterminal(...children) {
-    return mergeFreeVars(this.args.env, children)
+    return mergeFreeVars(this.args.a.env, children)
   },
   _iter(...children) {
-    return mergeFreeVars(this.args.env, children)
+    return mergeFreeVars(this.args.a.env, children)
   },
 
   Sequence(exps, _sc) {
@@ -752,38 +744,38 @@ semantics.addOperation<Map<string, unknown>>('freeVars(env)', {
     const boundVars: string[] = []
     exps.asIteration().children.forEach((exp) => {
       boundVars.push(...exp.boundVars)
-      freeVars.merge(exp.freeVars(this.args.env.push(boundVars)))
+      freeVars.merge(exp.freeVars({env: this.args.a.env.push(boundVars)}))
     })
     boundVars.forEach((b: string) => freeVars.delete(b))
     return freeVars
   },
 
   PropertyValue(_ident, _colon, value) {
-    return value.freeVars(this.args.env)
+    return value.freeVars(this.args.a)
   },
 
   PropertyExp_property(propertyExp, _dot, _ident) {
-    return propertyExp.freeVars(this.args.env)
+    return propertyExp.freeVars(this.args.a)
   },
 
   CallExp_property(propertyExp, _dot, _ident) {
-    return propertyExp.freeVars(this.args.env)
+    return propertyExp.freeVars(this.args.a)
   },
 
   Fn(_fn, _open, params, _maybeComma, _close, body) {
     const paramStrings = params.asIteration().children.map((x) => x.sourceString)
-    const innerEnv = this.args.env.pushFrame([[...paramStrings], []])
-    const freeVars = new FreeVars().merge(body.freeVars(innerEnv))
+    const innerEnv = this.args.a.env.pushFrame([[...paramStrings], []])
+    const freeVars = new FreeVars().merge(body.freeVars({env: innerEnv}))
     paramStrings.forEach((p) => freeVars.delete(p))
     return freeVars
   },
 
   Lets(lets) {
     const letIds = lets.asIteration().children.map((x) => x.children[1].sourceString)
-    const innerEnv = this.args.env.push(letIds)
+    const innerEnv = this.args.a.env.push(letIds)
     const freeVars = new FreeVars()
     for (const l of lets.asIteration().children) {
-      freeVars.merge((l.children[3] as Node).freeVars(innerEnv))
+      freeVars.merge((l.children[3] as Node).freeVars({env: innerEnv}))
     }
     for (const id of letIds) {
       freeVars.delete(id)
@@ -793,10 +785,10 @@ semantics.addOperation<Map<string, unknown>>('freeVars(env)', {
 
   For(_for, ident, _of, iterator, body) {
     const forVar = ident.sourceString
-    const innerEnv = this.args.env.push(['_for'])
+    const innerEnv = this.args.a.env.push(['_for'])
     const loopEnv = innerEnv.push([forVar])
-    const freeVars = new FreeVars().merge(iterator.freeVars(innerEnv))
-      .merge(body.freeVars(loopEnv))
+    const freeVars = new FreeVars().merge(iterator.freeVars({env: innerEnv}))
+      .merge(body.freeVars({env: loopEnv}))
     freeVars.delete(forVar)
     return freeVars
   },
@@ -804,24 +796,24 @@ semantics.addOperation<Map<string, unknown>>('freeVars(env)', {
   Use(_use, pathList) {
     const path = pathList.asIteration().children
     const ident = path[path.length - 1]
-    const innerEnv = this.args.env.push([ident.sourceString])
-    const freeVars = new FreeVars().merge(path[0].symref(innerEnv).freeVars)
+    const innerEnv = this.args.a.env.push([ident.sourceString])
+    const freeVars = new FreeVars().merge(path[0].symref({...this.args.a, env: innerEnv}).freeVars)
     freeVars.delete(ident.sourceString)
     return freeVars
   },
 
   ident(_ident) {
-    return this.symref(this.args.env).freeVars
+    return this.symref(this.args.a).freeVars
   },
 })
 
 // Ohm attributes can't take arguments, so memoize an operation.
 const symrefs = new Map<Node, CompiledArk>()
-semantics.addOperation<CompiledArk>('symref(env)', {
+semantics.addOperation<CompiledArk>('symref(a)', {
   ident(ident) {
     if (!symrefs.has(this)) {
       try {
-        symrefs.set(this, symRef(this.args.env, this.sourceString))
+        symrefs.set(this, symRef(this.args.a.env, this.sourceString))
       } catch (e) {
         if (!(e instanceof ArkCompilerError)) {
           throw e
@@ -843,8 +835,9 @@ export function compile(
     throw new Error(matchResult.message)
   }
   const ast = semantics(matchResult) as UrsaOperations
-  const compiled = ast.toExp(env, false, false)
-  const freeVars = ast.freeVars(env)
+  const args = {env, inLoop: false, inFn: false}
+  const compiled = ast.toExp(args)
+  const freeVars = ast.freeVars(args)
   env.externalSyms.properties.forEach((_val, id) => freeVars.delete(id))
   return new PartialCompiledArk(compiled, freeVars, ast.boundVars)
 }
