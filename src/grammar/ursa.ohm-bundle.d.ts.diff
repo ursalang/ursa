@@ -1,5 +1,5 @@
---- src/grammar/ursa.ohm-bundle.d.ts	2023-12-24 02:03:18.585589104 +0200
-+++ src/grammar/ursa.ohm-bundle.d.ts.bak	2023-12-24 02:03:17.685568450 +0200
+--- src/grammar/ursa.ohm-bundle.d.ts	2023-12-24 09:34:55.403520650 +0200
++++ src/grammar/ursa.ohm-bundle.d.ts.bak	2023-12-24 09:34:53.967487690 +0200
 @@ -4,14 +4,54 @@
  import {
    BaseActionDict,
@@ -20,7 +20,6 @@
 +
 +export type UrsaSemanticsArgs = {
 +  env: Environment;
-+  lval: boolean;
 +  inLoop: boolean;
 +  inFn: boolean;
 +  indent: number;
@@ -28,11 +27,12 @@
 +};
 +
 +export type UrsaOperations = {
-+  toAST(env: Environment, isLval: boolean, inLoop: boolean, inFn: boolean): ArkExp;
-+  toPropertyValue(env: Environment, isLval: boolean, inLoop: boolean, inFn: boolean): PropertyValue;
-+  toKeyValue(env: Environment, isLval: boolean, inLoop: boolean, inFn: boolean): KeyValue;
-+  toArguments(env: Environment, isLval: boolean, inLoop: boolean, inFn: boolean): Arguments;
-+  toLet(env: Environment, isLval: boolean, inLoop: boolean, inFn: boolean): SingleLet;
++  toAST(env: Environment, inLoop: boolean, inFn: boolean): ArkExp;
++  toLval(env: Environment, inLoop: boolean, inFn: boolean): ArkExp;
++  toPropertyValue(env: Environment, inLoop: boolean, inFn: boolean): PropertyValue;
++  toKeyValue(env: Environment, inLoop: boolean, inFn: boolean): KeyValue;
++  toArguments(env: Environment, inLoop: boolean, inFn: boolean): Arguments;
++  toLet(): SingleLet;
 +  freeVars(env: Environment): FreeVars;
 +  boundVars: string[];
 +  fmt(indent: number, indentSize: number): string;
