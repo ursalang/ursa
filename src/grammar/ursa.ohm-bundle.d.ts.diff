@@ -1,5 +1,5 @@
---- src/grammar/ursa.ohm-bundle.d.ts	2023-12-24 09:34:55.403520650 +0200
-+++ src/grammar/ursa.ohm-bundle.d.ts.bak	2023-12-24 09:34:53.967487690 +0200
+--- src/grammar/ursa.ohm-bundle.d.ts	2023-12-24 09:52:13.763353380 +0200
++++ src/grammar/ursa.ohm-bundle.d.ts.bak	2023-12-24 09:52:12.879333089 +0200
 @@ -4,14 +4,54 @@
  import {
    BaseActionDict,
@@ -13,7 +13,7 @@
    Semantics,
    TerminalNode
  } from 'ohm-js';
-
+ 
 +import {ArkExp} from '../ark/interpreter.js'
 +import {Environment, FreeVars, CompiledArk} from '../ark/compiler.js'
 +import {PropertyValue, KeyValue, Arguments, SingleLet} from '../ursa/compiler.js'
@@ -33,8 +33,8 @@
 +  toKeyValue(env: Environment, inLoop: boolean, inFn: boolean): KeyValue;
 +  toArguments(env: Environment, inLoop: boolean, inFn: boolean): Arguments;
 +  toLet(): SingleLet;
-+  freeVars(env: Environment): FreeVars;
 +  boundVars: string[];
++  freeVars(env: Environment): FreeVars;
 +  fmt(indent: number, indentSize: number): string;
 +  symref(env: Environment): CompiledArk;
 +};
@@ -61,7 +61,7 @@
 @@ -136,12 +176,13 @@
    unicodeSpaceSeparator?: (this: NonterminalNode, arg0: TerminalNode) => T;
  }
-
+ 
 -export interface UrsaSemantics extends Semantics {
 +interface UrsaSemanticsBase extends Semantics {
    addOperation<T>(name: string, actionDict: UrsaActionDict<T>): this;
@@ -70,11 +70,11 @@
    extendAttribute<T>(name: string, actionDict: UrsaActionDict<T>): this;
  }
 +export type UrsaSemantics = UrsaSemanticsBase & UrsaOperations;
-
+ 
  export interface UrsaGrammar extends Grammar {
    createSemantics(): UrsaSemantics;
 @@ -150,4 +191,3 @@
-
+ 
  declare const grammar: UrsaGrammar;
  export default grammar;
 -
