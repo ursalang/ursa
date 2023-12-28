@@ -22,9 +22,16 @@
                     "1": {
                       "0": "i",
                       "2": {
-                        "0": "l",
-                        "2": "len",
-                        "type": "PropertyExp_property"
+                        "0": {
+                          "0": "l",
+                          "2": "len",
+                          "type": "PropertyExp_property"
+                        },
+                        "1": {
+                          "1": [],
+                          "type": "Arguments"
+                        },
+                        "type": "CallExp_property_call"
                       },
                       "type": "CompareExp_eq"
                     },

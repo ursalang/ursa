@@ -535,6 +535,7 @@ export class ArkPropertyRef extends ArkRef {
 export class ArkList extends ArkClass {
   constructor(public list: ArkVal[]) {
     super(new Map([
+      ['len', new NativeFn(['len'], () => ArkNumber(this.list.length))],
       ['get', new NativeFn(['index'], (index: ArkVal) => this.list[toJs(index) as number])],
       ['set', new NativeFn(
         ['index', 'val'],
@@ -562,7 +563,6 @@ export class ArkList extends ArkClass {
         return new NativeFn([], () => generator.next().value)
       })],
     ]))
-    this.properties.set('len', ArkNumber(this.list.length))
   }
 }
 

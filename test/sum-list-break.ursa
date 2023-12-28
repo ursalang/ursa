@@ -2,7 +2,7 @@ let sum = fn(l) {
   let tot = 0;
   let i = 0;
   loop {
-    if i == l.len { break tot };
+    if i == l.len() { break tot };
     tot := tot + l[i];
     i := i + 1
   }
