@@ -1,47 +1,53 @@
 [
   [
     {
-      "1": "fac",
-      "3": {
-        "2": [
-          "n"
-        ],
-        "5": [
-          {
-            "2": [
-              "i"
-            ],
-            "5": [
-              {
-                "0": "n",
-                "2": {
+      "1": {
+        "0": "fac",
+        "2": {
+          "2": [
+            "n"
+          ],
+          "5": [
+            {
+              "2": [
+                "i"
+              ],
+              "5": [
+                {
                   "0": "n",
-                  "2": "i",
-                  "type": "SumExp_plus"
-                },
-                "type": "AssignmentExp_ass"
-              }
-            ],
-            "type": "Fn"
-          }
-        ],
-        "type": "Fn"
+                  "2": {
+                    "0": "n",
+                    "2": "i",
+                    "type": "SumExp_plus"
+                  },
+                  "type": "AssignmentExp_ass"
+                }
+              ],
+              "type": "Fn"
+            }
+          ],
+          "type": "Fn"
+        },
+        "type": "Definition"
       },
       "type": "Let"
     }
   ],
   [
     {
-      "1": "x",
-      "3": {
-        "0": "fac",
-        "1": {
-          "1": [
-            "1"
-          ],
-          "type": "Arguments"
+      "1": {
+        "0": "x",
+        "2": {
+          "0": "fac",
+          "1": {
+            "1": [
+              "1"
+            ],
+            "type": "Arguments"
+          },
+          "type": "CallExp_property_call"
         },
-        "type": "CallExp_property_call"
+        "type": "Definition"
       },
       "type": "Let"
     }

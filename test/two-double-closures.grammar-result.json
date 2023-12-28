@@ -1,98 +1,113 @@
 [
   [
     {
-      "1": "newAccums",
-      "3": {
-        "2": [],
-        "5": [
-          [
-            {
-              "1": "tot",
-              "3": "0",
-              "type": "Let"
-            }
-          ],
-          [
-            {
-              "1": "l",
-              "3": {
-                "1": [
-                  {
-                    "2": [
-                      "x"
-                    ],
-                    "5": [
+      "1": {
+        "0": "newAccums",
+        "2": {
+          "2": [],
+          "5": [
+            [
+              {
+                "1": {
+                  "0": "tot",
+                  "2": "0",
+                  "type": "Definition"
+                },
+                "type": "Let"
+              }
+            ],
+            [
+              {
+                "1": {
+                  "0": "l",
+                  "2": {
+                    "1": [
                       {
-                        "0": "tot",
-                        "2": {
-                          "0": "tot",
-                          "2": "x",
-                          "type": "SumExp_plus"
-                        },
-                        "type": "AssignmentExp_ass"
+                        "2": [
+                          "x"
+                        ],
+                        "5": [
+                          {
+                            "0": "tot",
+                            "2": {
+                              "0": "tot",
+                              "2": "x",
+                              "type": "SumExp_plus"
+                            },
+                            "type": "AssignmentExp_ass"
+                          }
+                        ],
+                        "type": "Fn"
+                      },
+                      {
+                        "2": [
+                          "x"
+                        ],
+                        "5": [
+                          {
+                            "0": "tot",
+                            "2": {
+                              "0": "tot",
+                              "2": "x",
+                              "type": "SumExp_plus"
+                            },
+                            "type": "AssignmentExp_ass"
+                          }
+                        ],
+                        "type": "Fn"
                       }
                     ],
-                    "type": "Fn"
+                    "type": "List"
                   },
-                  {
-                    "2": [
-                      "x"
-                    ],
-                    "5": [
-                      {
-                        "0": "tot",
-                        "2": {
-                          "0": "tot",
-                          "2": "x",
-                          "type": "SumExp_plus"
-                        },
-                        "type": "AssignmentExp_ass"
-                      }
-                    ],
-                    "type": "Fn"
-                  }
-                ],
-                "type": "List"
-              },
-              "type": "Let"
-            }
+                  "type": "Definition"
+                },
+                "type": "Let"
+              }
+            ],
+            {
+              "0": "tot",
+              "2": "2",
+              "type": "AssignmentExp_ass"
+            },
+            "l"
           ],
-          {
-            "0": "tot",
-            "2": "2",
-            "type": "AssignmentExp_ass"
+          "type": "Fn"
+        },
+        "type": "Definition"
+      },
+      "type": "Let"
+    }
+  ],
+  [
+    {
+      "1": {
+        "0": "accums",
+        "2": {
+          "0": "newAccums",
+          "1": {
+            "1": [],
+            "type": "Arguments"
           },
-          "l"
-        ],
-        "type": "Fn"
+          "type": "CallExp_property_call"
+        },
+        "type": "Definition"
       },
       "type": "Let"
     }
   ],
   [
     {
-      "1": "accums",
-      "3": {
-        "0": "newAccums",
-        "1": {
-          "1": [],
-          "type": "Arguments"
+      "1": {
+        "0": "accums2",
+        "2": {
+          "0": "newAccums",
+          "1": {
+            "1": [],
+            "type": "Arguments"
+          },
+          "type": "CallExp_property_call"
         },
-        "type": "CallExp_property_call"
-      },
-      "type": "Let"
-    }
-  ],
-  [
-    {
-      "1": "accums2",
-      "3": {
-        "0": "newAccums",
-        "1": {
-          "1": [],
-          "type": "Arguments"
-        },
-        "type": "CallExp_property_call"
+        "type": "Definition"
       },
       "type": "Let"
     }

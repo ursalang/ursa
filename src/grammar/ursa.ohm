@@ -25,15 +25,16 @@ Ursa {
     | number
     | ident             -- ident
     | List
-    | Object
     | Map
+    | Object
     | Block
     | "(" Exp ")"       -- paren
 
+  Definition = ident "=" Exp
+
   List = "[" ListOf<AssignmentExp, ","> #maybeCommaBracket "]"
 
-  Object = "{" ListOf<PropertyValue, ","> #maybeCommaBrace "}"
-  PropertyValue = ident "=" Exp
+  Object = "{" ListOf<Definition, #sc> #sc "}"
 
   Map = "{" ListOf<KeyValue, ","> #maybeCommaBrace "}"
   KeyValue = Exp ":" Exp
@@ -125,7 +126,7 @@ Ursa {
     | return Exp?     -- return
 
   Lets = NonemptyListOf<Let, and>
-  Let = let ident "=" Exp
+  Let = let Definition
 
   Use = use ListOf<ident, ".">
 

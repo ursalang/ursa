@@ -130,9 +130,9 @@ testGroup('loop and break', [
 ])
 
 testGroup('let', [
-  ['let a = 3; a', [[{1: 'a', 3: '3', type: 'Let'}], 'a']],
+  ['let a = 3; a', [[{1: {0: 'a', 2: '3', type: 'Definition'}, type: 'Let'}], 'a']],
   ['let b = 5; b := 7; b', [
-    [{1: 'b', 3: '5', type: 'Let'}],
+    [{1: {0: 'b', 2: '5', type: 'Definition'}, type: 'Let'}],
     {0: 'b', 2: '7', type: 'AssignmentExp_ass'},
     'b',
   ]],
@@ -142,11 +142,14 @@ testGroup('fn', [
   ['let f = fn(x) {x + 1}; f(1)', [
     [
       {
-        1: 'f',
-        3: {
-          2: ['x'],
-          5: [{0: 'x', 2: '1', type: 'SumExp_plus'}],
-          type: 'Fn',
+        1: {
+          0: 'f',
+          2: {
+            2: ['x'],
+            5: [{0: 'x', 2: '1', type: 'SumExp_plus'}],
+            type: 'Fn',
+          },
+          type: 'Definition',
         },
         type: 'Let',
       },
@@ -178,8 +181,11 @@ testGroup('Lists', [
   ['let l = [1, 2, 3]; l[1] := 4; l', [
     [
       {
-        1: 'l',
-        3: {1: ['1', '2', '3'], type: 'List'},
+        1: {
+          0: 'l',
+          2: {1: ['1', '2', '3'], type: 'List'},
+          type: 'Definition',
+        },
         type: 'Let',
       },
     ],
@@ -193,27 +199,29 @@ testGroup('Lists', [
 ])
 
 testGroup('Objects', [
-  ['{}', [{1: [], type: 'Object'}]],
-  ['{a = 1, b = 2, c=3}', [
+  ['{a = 1; b = 2; c=3}', [
     {
       1: [
-        {0: 'a', 2: '1', type: 'PropertyValue'},
-        {0: 'b', 2: '2', type: 'PropertyValue'},
-        {0: 'c', 2: '3', type: 'PropertyValue'},
+        {0: 'a', 2: '1', type: 'Definition'},
+        {0: 'b', 2: '2', type: 'Definition'},
+        {0: 'c', 2: '3', type: 'Definition'},
       ],
       type: 'Object',
     },
   ]],
-  ['let o = {a = 1, b = 2}; o.b := "abc"; o', [
+  ['let o = {a = 1; b = 2}; o.b := "abc"; o', [
     [
       {
-        1: 'o',
-        3: {
-          1: [
-            {0: 'a', 2: '1', type: 'PropertyValue'},
-            {0: 'b', 2: '2', type: 'PropertyValue'},
-          ],
-          type: 'Object',
+        1: {
+          0: 'o',
+          2: {
+            1: [
+              {0: 'a', 2: '1', type: 'Definition'},
+              {0: 'b', 2: '2', type: 'Definition'},
+            ],
+            type: 'Object',
+          },
+          type: 'Definition',
         },
         type: 'Let',
       },
@@ -225,16 +233,19 @@ testGroup('Objects', [
     },
     'o',
   ]],
-  ['let o = {a = 1, b = 2}; o.b := "abc"; o.c := 3; o', [
+  ['let o = {a = 1; b = 2}; o.b := "abc"; o.c := 3; o', [
     [
       {
-        1: 'o',
-        3: {
-          1: [
-            {0: 'a', 2: '1', type: 'PropertyValue'},
-            {0: 'b', 2: '2', type: 'PropertyValue'},
-          ],
-          type: 'Object',
+        1: {
+          0: 'o',
+          2: {
+            1: [
+              {0: 'a', 2: '1', type: 'Definition'},
+              {0: 'b', 2: '2', type: 'Definition'},
+            ],
+            type: 'Object',
+          },
+          type: 'Definition',
         },
         type: 'Let',
       },
@@ -254,6 +265,7 @@ testGroup('Objects', [
 ])
 
 testGroup('Maps', [
+  ['{}', [{1: [], type: 'Map'}]],
   ['{"a": 1, "b": 2 + 0, 3: 4}', [
     {
       1: [
@@ -271,18 +283,21 @@ testGroup('Maps', [
   ['let t = {"a": 1, "b": 2 + 0, 3: 4}; t["b"] := 1; t', [
     [
       {
-        1: 't',
-        3: {
-          1: [
-            {0: '"a"', 2: '1', type: 'KeyValue'},
-            {
-              0: '"b"',
-              2: {0: '2', 2: '0', type: 'SumExp_plus'},
-              type: 'KeyValue',
-            },
-            {0: '3', 2: '4', type: 'KeyValue'},
-          ],
-          type: 'Map',
+        1: {
+          0: 't',
+          2: {
+            1: [
+              {0: '"a"', 2: '1', type: 'KeyValue'},
+              {
+                0: '"b"',
+                2: {0: '2', 2: '0', type: 'SumExp_plus'},
+                type: 'KeyValue',
+              },
+              {0: '3', 2: '4', type: 'KeyValue'},
+            ],
+            type: 'Map',
+          },
+          type: 'Definition',
         },
         type: 'Let',
       },

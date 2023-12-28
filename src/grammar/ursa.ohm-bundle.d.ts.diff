@@ -1,6 +1,6 @@
---- src/grammar/ursa.ohm-bundle.d.ts	2023-12-24 22:55:10.839628783 +0200
-+++ src/grammar/ursa.ohm-bundle.d.ts.bak	2023-12-24 22:55:09.755537176 +0200
-@@ -4,14 +4,58 @@
+--- src/grammar/ursa.ohm-bundle.d.ts	2023-12-28 17:41:52.729303563 +0000
++++ src/grammar/ursa.ohm-bundle.d.ts.bak	2023-12-28 17:41:52.301302184 +0000
+@@ -4,14 +4,57 @@
  import {
    BaseActionDict,
    Grammar,
@@ -16,7 +16,7 @@
  
 +import {ArkExp} from '../ark/interpreter.js';
 +import {Environment, FreeVars, CompiledArk} from '../ark/compiler.js';
-+import {PropertyValue, KeyValue, Arguments, SingleLet} from '../ursa/compiler.js';
++import {Definition, KeyValue, Arguments} from '../ursa/compiler.js';
 +
 +export type UrsaActionArgs = {
 +  env: Environment;
@@ -33,10 +33,9 @@
 +export type UrsaOperations = {
 +  toExp(a: UrsaActionArgs): ArkExp;
 +  toLval(a: UrsaActionArgs): ArkExp;
-+  toPropertyValue(a: UrsaActionArgs): PropertyValue;
++  toDefinition(a: UrsaActionArgs): Definition;
 +  toKeyValue(a: UrsaActionArgs): KeyValue;
 +  toArguments(a: UrsaActionArgs): Arguments;
-+  toLet(): SingleLet;
 +  boundVars: string[];
 +  freeVars(a: UrsaActionArgs): FreeVars;
 +  fmt(indent: number, indentSize: number): string;
@@ -62,7 +61,7 @@
    Sequence?: (this: NonterminalNode, arg0: NonterminalNode, arg1: NonterminalNode) => T;
    sc?: (this: NonterminalNode, arg0: IterationNode | NonterminalNode, arg1: NonterminalNode | TerminalNode) => T;
    maybeCommaParen?: (this: NonterminalNode, arg0: IterationNode, arg1: TerminalNode) => T;
-@@ -136,12 +180,13 @@
+@@ -136,12 +179,13 @@
    unicodeSpaceSeparator?: (this: NonterminalNode, arg0: TerminalNode) => T;
  }
  
@@ -77,7 +76,7 @@
  
  export interface UrsaGrammar extends Grammar {
    createSemantics(): UrsaSemantics;
-@@ -150,4 +195,3 @@
+@@ -150,4 +194,3 @@
  
  declare const grammar: UrsaGrammar;
  export default grammar;

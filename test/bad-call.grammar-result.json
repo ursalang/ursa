@@ -1,47 +1,56 @@
 [
   [
     {
-      "1": "h",
-      "3": "3",
-      "type": "Let"
-    }
-  ],
-  [
-    {
-      "1": "g",
-      "3": {
-        "2": [],
-        "5": [
-          {
-            "0": "h",
-            "1": {
-              "1": [],
-              "type": "Arguments"
-            },
-            "type": "CallExp_property_call"
-          }
-        ],
-        "type": "Fn"
+      "1": {
+        "0": "h",
+        "2": "3",
+        "type": "Definition"
       },
       "type": "Let"
     }
   ],
   [
     {
-      "1": "f",
-      "3": {
-        "2": [],
-        "5": [
-          {
-            "0": "g",
-            "1": {
-              "1": [],
-              "type": "Arguments"
-            },
-            "type": "CallExp_property_call"
-          }
-        ],
-        "type": "Fn"
+      "1": {
+        "0": "g",
+        "2": {
+          "2": [],
+          "5": [
+            {
+              "0": "h",
+              "1": {
+                "1": [],
+                "type": "Arguments"
+              },
+              "type": "CallExp_property_call"
+            }
+          ],
+          "type": "Fn"
+        },
+        "type": "Definition"
+      },
+      "type": "Let"
+    }
+  ],
+  [
+    {
+      "1": {
+        "0": "f",
+        "2": {
+          "2": [],
+          "5": [
+            {
+              "0": "g",
+              "1": {
+                "1": [],
+                "type": "Arguments"
+              },
+              "type": "CallExp_property_call"
+            }
+          ],
+          "type": "Fn"
+        },
+        "type": "Definition"
       },
       "type": "Let"
     }

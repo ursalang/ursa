@@ -1,84 +1,90 @@
 [
   [
     {
-      "1": "double",
-      "3": {
-        "2": [
-          "l"
-        ],
-        "5": [
-          [
-            {
-              "1": "i",
-              "3": "0",
-              "type": "Let"
-            }
+      "1": {
+        "0": "double",
+        "2": {
+          "2": [
+            "l"
           ],
-          {
-            "1": [
+          "5": [
+            [
               {
-                "0": [
-                  {
-                    "1": {
-                      "0": "i",
-                      "2": {
-                        "0": {
-                          "0": "l",
-                          "2": "len",
-                          "type": "PropertyExp_property"
-                        },
-                        "1": {
-                          "1": [],
-                          "type": "Arguments"
-                        },
-                        "type": "CallExp_property_call"
-                      },
-                      "type": "CompareExp_eq"
-                    },
-                    "2": [
-                      {
-                        "1": "l",
-                        "type": "Exp_return"
-                      }
-                    ],
-                    "type": "If"
-                  }
-                ],
-                "1": null,
-                "2": null,
-                "type": "Ifs"
-              },
-              {
-                "0": {
-                  "0": "l",
-                  "2": "i",
-                  "type": "PropertyExp_index"
+                "1": {
+                  "0": "i",
+                  "2": "0",
+                  "type": "Definition"
                 },
-                "2": {
+                "type": "Let"
+              }
+            ],
+            {
+              "1": [
+                {
+                  "0": [
+                    {
+                      "1": {
+                        "0": "i",
+                        "2": {
+                          "0": {
+                            "0": "l",
+                            "2": "len",
+                            "type": "PropertyExp_property"
+                          },
+                          "1": {
+                            "1": [],
+                            "type": "Arguments"
+                          },
+                          "type": "CallExp_property_call"
+                        },
+                        "type": "CompareExp_eq"
+                      },
+                      "2": [
+                        {
+                          "1": "l",
+                          "type": "Exp_return"
+                        }
+                      ],
+                      "type": "If"
+                    }
+                  ],
+                  "1": null,
+                  "2": null,
+                  "type": "Ifs"
+                },
+                {
                   "0": {
                     "0": "l",
                     "2": "i",
                     "type": "PropertyExp_index"
                   },
-                  "2": "2",
-                  "type": "ProductExp_times"
+                  "2": {
+                    "0": {
+                      "0": "l",
+                      "2": "i",
+                      "type": "PropertyExp_index"
+                    },
+                    "2": "2",
+                    "type": "ProductExp_times"
+                  },
+                  "type": "AssignmentExp_ass"
                 },
-                "type": "AssignmentExp_ass"
-              },
-              {
-                "0": "i",
-                "2": {
+                {
                   "0": "i",
-                  "2": "1",
-                  "type": "SumExp_plus"
-                },
-                "type": "AssignmentExp_ass"
-              }
-            ],
-            "type": "Loop"
-          }
-        ],
-        "type": "Fn"
+                  "2": {
+                    "0": "i",
+                    "2": "1",
+                    "type": "SumExp_plus"
+                  },
+                  "type": "AssignmentExp_ass"
+                }
+              ],
+              "type": "Loop"
+            }
+          ],
+          "type": "Fn"
+        },
+        "type": "Definition"
       },
       "type": "Let"
     }

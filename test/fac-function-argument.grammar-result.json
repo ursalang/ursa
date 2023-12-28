@@ -1,53 +1,56 @@
 [
   [
     {
-      "1": "fac",
-      "3": {
-        "2": [
-          "self",
-          "x"
-        ],
-        "5": [
-          {
-            "0": [
-              {
-                "1": {
-                  "0": "x",
-                  "2": "0",
-                  "type": "CompareExp_eq"
-                },
-                "2": [
-                  "1"
-                ],
-                "type": "If"
-              }
-            ],
-            "1": "else",
-            "2": [
-              {
-                "0": "x",
-                "2": {
-                  "0": "self",
+      "1": {
+        "0": "fac",
+        "2": {
+          "2": [
+            "self",
+            "x"
+          ],
+          "5": [
+            {
+              "0": [
+                {
                   "1": {
-                    "1": [
-                      "self",
-                      {
-                        "0": "x",
-                        "2": "1",
-                        "type": "SumExp_minus"
-                      }
-                    ],
-                    "type": "Arguments"
+                    "0": "x",
+                    "2": "0",
+                    "type": "CompareExp_eq"
                   },
-                  "type": "CallExp_property_call"
-                },
-                "type": "ProductExp_times"
-              }
-            ],
-            "type": "Ifs"
-          }
-        ],
-        "type": "Fn"
+                  "2": [
+                    "1"
+                  ],
+                  "type": "If"
+                }
+              ],
+              "1": "else",
+              "2": [
+                {
+                  "0": "x",
+                  "2": {
+                    "0": "self",
+                    "1": {
+                      "1": [
+                        "self",
+                        {
+                          "0": "x",
+                          "2": "1",
+                          "type": "SumExp_minus"
+                        }
+                      ],
+                      "type": "Arguments"
+                    },
+                    "type": "CallExp_property_call"
+                  },
+                  "type": "ProductExp_times"
+                }
+              ],
+              "type": "Ifs"
+            }
+          ],
+          "type": "Fn"
+        },
+        "type": "Definition"
       },
       "type": "Let"
     }

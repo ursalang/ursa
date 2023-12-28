@@ -104,13 +104,14 @@ testGroup('Lists', [
 ])
 
 testGroup('Objects', [
-  ['{}', {}],
-  ['{a = 1, b = 2, c=3}', {a: 1, b: 2, c: 3}],
-  ['let o = {a = 1, b = 2}; o.b := 3; o', {a: 1, b: 3}],
-  ['let o = {a = 1, b = 2}; o.b := 3; o.c := "abc"; o', {a: 1, b: 3, c: 'abc'}],
+  ['{;}', {}],
+  ['{a = 1; b = 2; c=3}', {a: 1, b: 2, c: 3}],
+  ['let o = {a = 1; b = 2}; o.b := 3; o', {a: 1, b: 3}],
+  ['let o = {a = 1; b = 2}; o.b := 3; o.c := "abc"; o', {a: 1, b: 3, c: 'abc'}],
 ])
 
 testGroup('Maps', [
+  ['{}', new Map<unknown, unknown>()],
   ['{"a": 1, "b": 2 + 0, 3: 4}', new Map<unknown, unknown>([['a', 1], ['b', 2], [3, 4]])],
   ['let t = {"a": 1, "b": 2 + 0, 3: 4}; t["b"] := 1; t', new Map<unknown, unknown>([['a', 1], ['b', 1], [3, 4]])],
 ])

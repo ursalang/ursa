@@ -41,15 +41,12 @@ semantics.addOperation<string>('fmt(indent, indentSize)', {
     return `(${(exp.fmt as FmtAction)(this.args.indent, (this.args).indentSize)})`
   },
 
-  List(_open, elems, _maybeComma, _close) {
-    return `[${formatIter(this.args, elems).join(', ')}]`
+  Definition(ident, _equals, value) {
+    return `${(ident.fmt as FmtAction)((this.args).indent, (this.args).indentSize)} = ${(value.fmt as FmtAction)((this.args).indent, (this.args).indentSize)}`
   },
 
-  Object(_open, elems, _maybeComma, _close) {
-    return `{${formatIter(this.args, elems).join(', ')}}`
-  },
-  PropertyValue(ident, _colon, value) {
-    return `${(ident.fmt as FmtAction)((this.args).indent, (this.args).indentSize)}: ${(value.fmt as FmtAction)((this.args).indent, (this.args).indentSize)}`
+  List(_open, elems, _maybeComma, _close) {
+    return `[${formatIter(this.args, elems).join(', ')}]`
   },
 
   Map(_open, elems, _maybeComma, _close) {
@@ -57,6 +54,10 @@ semantics.addOperation<string>('fmt(indent, indentSize)', {
   },
   KeyValue(key, _colon, value) {
     return `${(key.fmt as FmtAction)((this.args).indent, (this.args).indentSize)}: ${(value.fmt as FmtAction)((this.args).indent, (this.args).indentSize)}`
+  },
+
+  Object(_open, elems, _maybeComma, _close) {
+    return `{${formatIter(this.args, elems).join(', ')}}`
   },
 
   PropertyExp_property(object, _dot, property) {
@@ -219,8 +220,8 @@ semantics.addOperation<string>('fmt(indent, indentSize)', {
   Lets(lets) {
     return formatIter(this.args, lets).join(' and ')
   },
-  Let(_let, ident, _eq, val) {
-    return `let ${(ident.fmt as FmtAction)((this.args).indent, (this.args).indentSize)} = ${(val.fmt as FmtAction)((this.args).indent, (this.args).indentSize)}`
+  Let(_let, definition) {
+    return `let ${(definition.fmt as FmtAction)((this.args).indent, (this.args).indentSize)}`
   },
 
   Use(_use, pathList) {

@@ -1,76 +1,91 @@
 [
   [
     {
-      "1": "newAccum",
-      "3": {
-        "2": [],
-        "5": [
-          [
+      "1": {
+        "0": "newAccum",
+        "2": {
+          "2": [],
+          "5": [
+            [
+              {
+                "1": {
+                  "0": "tot",
+                  "2": "0",
+                  "type": "Definition"
+                },
+                "type": "Let"
+              }
+            ],
+            [
+              {
+                "1": {
+                  "0": "f",
+                  "2": {
+                    "2": [
+                      "x"
+                    ],
+                    "5": [
+                      {
+                        "0": "tot",
+                        "2": {
+                          "0": "tot",
+                          "2": "x",
+                          "type": "SumExp_plus"
+                        },
+                        "type": "AssignmentExp_ass"
+                      }
+                    ],
+                    "type": "Fn"
+                  },
+                  "type": "Definition"
+                },
+                "type": "Let"
+              }
+            ],
             {
-              "1": "tot",
-              "3": "0",
-              "type": "Let"
-            }
+              "0": "tot",
+              "2": "2",
+              "type": "AssignmentExp_ass"
+            },
+            "f"
           ],
-          [
-            {
-              "1": "f",
-              "3": {
-                "2": [
-                  "x"
-                ],
-                "5": [
-                  {
-                    "0": "tot",
-                    "2": {
-                      "0": "tot",
-                      "2": "x",
-                      "type": "SumExp_plus"
-                    },
-                    "type": "AssignmentExp_ass"
-                  }
-                ],
-                "type": "Fn"
-              },
-              "type": "Let"
-            }
-          ],
-          {
-            "0": "tot",
-            "2": "2",
-            "type": "AssignmentExp_ass"
+          "type": "Fn"
+        },
+        "type": "Definition"
+      },
+      "type": "Let"
+    }
+  ],
+  [
+    {
+      "1": {
+        "0": "accum",
+        "2": {
+          "0": "newAccum",
+          "1": {
+            "1": [],
+            "type": "Arguments"
           },
-          "f"
-        ],
-        "type": "Fn"
+          "type": "CallExp_property_call"
+        },
+        "type": "Definition"
       },
       "type": "Let"
     }
   ],
   [
     {
-      "1": "accum",
-      "3": {
-        "0": "newAccum",
-        "1": {
-          "1": [],
-          "type": "Arguments"
+      "1": {
+        "0": "accum2",
+        "2": {
+          "0": "newAccum",
+          "1": {
+            "1": [],
+            "type": "Arguments"
+          },
+          "type": "CallExp_property_call"
         },
-        "type": "CallExp_property_call"
-      },
-      "type": "Let"
-    }
-  ],
-  [
-    {
-      "1": "accum2",
-      "3": {
-        "0": "newAccum",
-        "1": {
-          "1": [],
-          "type": "Arguments"
-        },
-        "type": "CallExp_property_call"
+        "type": "Definition"
       },
       "type": "Let"
     }

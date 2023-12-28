@@ -1,42 +1,48 @@
 [
   [
     {
-      "1": "s",
-      "3": {
-        "0": {
-          "0": "fs",
-          "2": "readFileSync",
-          "type": "PropertyExp_property"
+      "1": {
+        "0": "s",
+        "2": {
+          "0": {
+            "0": "fs",
+            "2": "readFileSync",
+            "type": "PropertyExp_property"
+          },
+          "1": {
+            "1": [
+              {
+                "0": "argv",
+                "2": "1",
+                "type": "PropertyExp_index"
+              },
+              "\"utf-8\""
+            ],
+            "type": "Arguments"
+          },
+          "type": "CallExp_property_call"
         },
-        "1": {
-          "1": [
-            {
-              "0": "argv",
-              "2": "1",
-              "type": "PropertyExp_index"
-            },
-            "\"utf-8\""
-          ],
-          "type": "Arguments"
-        },
-        "type": "CallExp_property_call"
+        "type": "Definition"
       },
       "type": "Let"
     }
   ],
   [
     {
-      "1": "regex",
-      "3": {
-        "0": "RegExp",
-        "1": {
-          "1": [
-            "\"\\\\p{L}+\"",
-            "\"ug\""
-          ],
-          "type": "Arguments"
+      "1": {
+        "0": "regex",
+        "2": {
+          "0": "RegExp",
+          "1": {
+            "1": [
+              "\"\\\\p{L}+\"",
+              "\"ug\""
+            ],
+            "type": "Arguments"
+          },
+          "type": "CallExp_property_call"
         },
-        "type": "CallExp_property_call"
+        "type": "Definition"
       },
       "type": "Let"
     }
@@ -45,20 +51,23 @@
     "1": [
       [
         {
-          "1": "m",
-          "3": {
-            "0": {
-              "0": "regex",
-              "2": "exec",
-              "type": "PropertyExp_property"
+          "1": {
+            "0": "m",
+            "2": {
+              "0": {
+                "0": "regex",
+                "2": "exec",
+                "type": "PropertyExp_property"
+              },
+              "1": {
+                "1": [
+                  "s"
+                ],
+                "type": "Arguments"
+              },
+              "type": "CallExp_property_call"
             },
-            "1": {
-              "1": [
-                "s"
-              ],
-              "type": "Arguments"
-            },
-            "type": "CallExp_property_call"
+            "type": "Definition"
           },
           "type": "Let"
         }

@@ -73,20 +73,14 @@ ${trace.map((s) => `  ${s}`).join('\n')}`
 // only during parsing.
 export class AST {}
 
-export class PropertyValue extends AST {
-  constructor(public key: string, public val: ArkExp) {
+export class Definition extends AST {
+  constructor(public ident: Node, public val: ArkExp) {
     super()
   }
 }
 
 export class KeyValue extends AST {
   constructor(public key: ArkExp, public val: ArkExp) {
-    super()
-  }
-}
-
-export class SingleLet extends AST {
-  constructor(public id: Node, public node: Node) {
     super()
   }
 }
@@ -143,12 +137,9 @@ function makeIfChain(ifs: ArkIf[]): ArkIf {
   return ifs[0]
 }
 
-semantics.addOperation<PropertyValue>('toPropertyValue(a)', {
-  PropertyValue(ident, _colon, value) {
-    return new PropertyValue(
-      ident.sourceString,
-      addLoc(value.toExp(this.args.a), value),
-    )
+semantics.addOperation<Definition>('toDefinition(a)', {
+  Definition(ident, _equals, value) {
+    return new Definition(ident, addLoc(value.toExp(this.args.a), value))
   },
 })
 
@@ -168,12 +159,6 @@ semantics.addOperation<Arguments>('toArguments(a)', {
         (x) => addLoc(x.toExp(this.args.a), x),
       ),
     )
-  },
-})
-
-semantics.addOperation<SingleLet>('toLet()', {
-  Let(_let, ident, _eq, val) {
-    return new SingleLet(ident, val)
   },
 })
 
@@ -223,15 +208,6 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     )
   },
 
-  Object(_open, elems, _maybeComma, _close) {
-    const inits = new Map<string, ArkExp>()
-    elems.asIteration().children.forEach((value) => {
-      const elem = value.toPropertyValue(this.args.a)
-      inits.set(elem.key, elem.val)
-    })
-    return addLoc(new ArkObjectLiteral(inits), this)
-  },
-
   Map(_open, elems, _maybeComma, _close) {
     const inits = new Map<ArkExp, ArkExp>()
     elems.asIteration().children.forEach((value) => {
@@ -239,6 +215,15 @@ semantics.addOperation<ArkExp>('toExp(a)', {
       inits.set(elem.key, elem.val)
     })
     return addLoc(new ArkMapLiteral(inits), this)
+  },
+
+  Object(_open, elems, _maybeComma, _close) {
+    const inits = new Map<string, ArkExp>()
+    elems.asIteration().children.forEach((value) => {
+      const elem = value.toDefinition(this.args.a)
+      inits.set(elem.ident.sourceString, elem.val)
+    })
+    return addLoc(new ArkObjectLiteral(inits), this)
   },
 
   PropertyExp_index(object, _open, index, _close) {
@@ -510,15 +495,15 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     const parsedLets = []
     const letIds: string[] = []
     for (const l of (lets.asIteration().children)) {
-      const parsedLet = l.toLet()
-      parsedLets.push(parsedLet)
-      if (letIds.includes(parsedLet.id.sourceString)) {
-        throw new UrsaCompilerError(this.source, `Duplicate identifier in let: ${parsedLet.id.sourceString}`)
+      const definition = (l.children[1] as Node).toDefinition(this.args.a)
+      parsedLets.push(definition)
+      if (letIds.includes(definition.ident.sourceString)) {
+        throw new UrsaCompilerError(this.source, `Duplicate identifier in let: ${definition.ident.sourceString}`)
       }
-      letIds.push(parsedLet.id.sourceString)
+      letIds.push(definition.ident.sourceString)
     }
     const assignments = parsedLets.map(
-      (l) => new ArkSet(l.id.symref(this.args.a).value, l.node.toExp(this.args.a)),
+      (l) => new ArkSet(l.ident.symref(this.args.a).value, l.val),
     )
     const compiled = assignments.length > 1
       ? new ArkSequence(assignments)
@@ -620,8 +605,8 @@ semantics.addAttribute<string[]>('boundVars', {
     return []
   },
 
-  Let(_let, ident, _eq, _val) {
-    return [ident.sourceString]
+  Let(_let, definition) {
+    return [definition.children[0].sourceString]
   },
 
   Use(_use, pathList) {
@@ -659,7 +644,7 @@ semantics.addOperation<Map<string, unknown>>('freeVars(a)', {
     return freeVars
   },
 
-  PropertyValue(_ident, _colon, value) {
+  Definition(_ident, _equals, value) {
     return value.freeVars(this.args.a)
   },
 
@@ -680,11 +665,11 @@ semantics.addOperation<Map<string, unknown>>('freeVars(a)', {
   },
 
   Lets(lets) {
-    const letIds = lets.asIteration().children.map((x) => x.children[1].sourceString)
+    const letIds = lets.asIteration().children.map((x) => x.children[1].children[0].sourceString)
     const innerEnv = this.args.a.env.push(letIds)
     const freeVars = new FreeVars()
     for (const l of lets.asIteration().children) {
-      freeVars.merge((l.children[3] as Node).freeVars({env: innerEnv}))
+      freeVars.merge((l.children[1].children[2] as Node).freeVars({env: innerEnv}))
     }
     for (const id of letIds) {
       freeVars.delete(id)

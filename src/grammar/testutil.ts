@@ -25,6 +25,7 @@ export function parse(
   // some redundant keywords.
   const ast = toAST(matchResult, {
     Sequence: 0,
+    Definition: {0: 0, 2: 2},
     List: {1: 1},
     Object: {1: 1},
     Map: {1: 1},
@@ -34,12 +35,12 @@ export function parse(
     Loop: {1: 1},
     Exp_break: {1: 1},
     Exp_return: {1: 1},
+    Let: {1: 1},
     // The following are to work around https://github.com/ohmjs/ohm/issues/463
     UnaryExp_not: {1: 1},
     UnaryExp_bitwise_not: {1: 1},
     UnaryExp_pos: {1: 1},
     UnaryExp_neg: {1: 1},
-    Let: {1: 1, 3: 3},
     Use: {1: 1},
   })
   if (process.env.DEBUG) {
