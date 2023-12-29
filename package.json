@@ -46,7 +46,7 @@
   "scripts": {
     "lint": "eslint . --ext .ts && depcheck",
     "prebuild": "node --print \"'export default \\'' + require('./package.json').version + '\\';'\" > src/version.ts && echo null > src/ark/prelude.json",
-    "build": "tsc --build && npm run compile-prelude && cp src/*/prelude.* lib/ursa/",
+    "build": "tsc --build && npm run compile-prelude && cp src/ark/prelude.json lib/ark/ && cp src/ursa/prelude.ursa lib/ursa/",
     "clean": "tsc --build --clean",
     "generate-only": "ohm generateBundles --withTypes --esm 'src/grammar/*.ohm'",
     "patch-ohm": "patch -p0 < src/grammar/ursa.ohm-bundle.d.ts.diff",
