@@ -25,8 +25,7 @@
 
 * Make main actions sub-commands of main command (`ursa run`, `ursa fmt`,
   `ursa compile` etc.).
-* Comprehensions: `loop [ … ]` and `loop {k : v}` (`k:v` being syntactic
-  sugar for a pair?).
+* Comprehensions: `loop [elem, …]` and `loop {k = v; …}`.
 * 100% test coverage.
 * Tail recursion elimination
 * Co-routines (copy Python?)
