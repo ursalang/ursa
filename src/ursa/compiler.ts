@@ -48,7 +48,7 @@ type ParserIterationNode = IterationNode<ParserOperations>
 type ParserThisNode = ThisNode<ParserArgs, ParserOperations>
 
 // eslint-disable-next-line max-len
-export const semantics = grammar.createSemantics<ParserNode, ParserNonterminalNode, ParserIterationNode, ParserThisNode, ParserOperations>()
+const semantics = grammar.createSemantics<ParserNode, ParserNonterminalNode, ParserIterationNode, ParserThisNode, ParserOperations>()
 
 class UrsaError extends Error {
   constructor(source: Interval, message: string) {

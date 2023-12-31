@@ -9,12 +9,12 @@ import grammar, {
   // eslint-disable-next-line import/extensions
 } from '../grammar/ursa.ohm-bundle.js'
 
-export type FormatterOperations = {
+type FormatterOperations = {
   fmt(a: FormatterArgs): Span
   hfmt(a: FormatterArgs): Span
 }
 
-export type FormatterArgs = {
+type FormatterArgs = {
   maxWidth: number
   indentString: string
   simpleExpDepth: number
@@ -26,7 +26,7 @@ type FormatterIterationNode = IterationNode<FormatterOperations>
 type FormatterThisNode = ThisNode<FormatterArgs, FormatterOperations>
 
 // eslint-disable-next-line max-len
-export const semantics = grammar.createSemantics<FormatterNode, FormatterNonterminalNode, FormatterIterationNode, FormatterThisNode, FormatterOperations>()
+const semantics = grammar.createSemantics<FormatterNode, FormatterNonterminalNode, FormatterIterationNode, FormatterThisNode, FormatterOperations>()
 
 function addSeparator(addTrailing: boolean, spans: (Span | string)[], sep: Span): Span[] {
   const res = spans.map((span) => sep.copy().prepend(span))
