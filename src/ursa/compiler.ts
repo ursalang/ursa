@@ -45,7 +45,7 @@ type ParserArgs = {
 type ParserNode = Node<ParserOperations>
 type ParserNonterminalNode = NonterminalNode<ParserOperations>
 type ParserIterationNode = IterationNode<ParserOperations>
-type ParserThisNode = ThisNode<ParserArgs, ParserOperations>
+type ParserThisNode = ThisNode<{a: ParserArgs}, ParserOperations>
 
 // eslint-disable-next-line max-len
 const semantics = grammar.createSemantics<ParserNode, ParserNonterminalNode, ParserIterationNode, ParserThisNode, ParserOperations>()

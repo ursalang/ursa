@@ -1,5 +1,5 @@
---- src/grammar/ursa.ohm-bundle.d.ts	2023-12-31 14:07:29.286305031 +0000
-+++ src/grammar/ursa.ohm-bundle.d.ts.bak	2023-12-31 14:07:28.862302856 +0000
+--- src/grammar/ursa.ohm-bundle.d.ts	2023-12-31 14:33:44.938194120 +0000
++++ src/grammar/ursa.ohm-bundle.d.ts.bak	2023-12-31 14:33:44.514192000 +0000
 @@ -4,150 +4,171 @@
  import {
    BaseActionDict,
@@ -155,7 +155,7 @@
 +
 +export type ThisNode<Args, Operations> = Node<Operations> & {
 +  // Only the `this` of semantics action routines has this member.
-+  args: {a: Args};
++  args: Args;
 +};
 +
 +export interface UrsaActionDict<T, Node, NonterminalNode, IterationNode, ThisNode> extends BaseActionDict<T> {

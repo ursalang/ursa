@@ -23,7 +23,7 @@ type FormatterArgs = {
 type FormatterNode = Node<FormatterOperations>
 type FormatterNonterminalNode = NonterminalNode<FormatterOperations>
 type FormatterIterationNode = IterationNode<FormatterOperations>
-type FormatterThisNode = ThisNode<FormatterArgs, FormatterOperations>
+type FormatterThisNode = ThisNode<{a: FormatterArgs}, FormatterOperations>
 
 // eslint-disable-next-line max-len
 const semantics = grammar.createSemantics<FormatterNode, FormatterNonterminalNode, FormatterIterationNode, FormatterThisNode, FormatterOperations>()
