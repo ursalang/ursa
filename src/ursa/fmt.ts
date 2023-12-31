@@ -123,7 +123,7 @@ function depth(node: FormatterNode): number {
     return 0
   }
   return Math.max(
-    ...node.children.map((node, _index, _array) => 1 + depth(node as FormatterNode)),
+    ...node.children.map((node, _index, _array) => 1 + depth(node)),
   )
 }
 
@@ -339,7 +339,7 @@ semantics.addOperation<Span>('hfmt(a)', {
 
   Block(_open, seq, _close) {
     if (seq.children[0].asIteration().children.length === 1) {
-      const exp = seq.children[0].asIteration().children[0] as FormatterNode
+      const exp = seq.children[0].asIteration().children[0]
       if (exp.ctorName === 'Exp' && depth(exp) < this.args.a.simpleExpDepth) {
         return TightSpan(['{', seq.hfmt(this.args.a), '}'])
       }

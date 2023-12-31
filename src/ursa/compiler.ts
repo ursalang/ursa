@@ -524,7 +524,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     const parsedLets = []
     const letIds: string[] = []
     for (const l of (lets.asIteration().children)) {
-      const definition = (l.children[1] as ParserNode).toDefinition(this.args.a)
+      const definition = l.children[1].toDefinition(this.args.a)
       parsedLets.push(definition)
       if (letIds.includes(definition.ident.sourceString)) {
         throw new UrsaCompilerError(this.source, `Duplicate identifier in let: ${definition.ident.sourceString}`)
@@ -698,7 +698,7 @@ semantics.addOperation<Map<string, unknown>>('freeVars(a)', {
     const innerEnv = this.args.a.env.push(letIds)
     const freeVars = new FreeVars()
     for (const l of lets.asIteration().children) {
-      freeVars.merge((l.children[1].children[2] as ParserNode).freeVars({env: innerEnv}))
+      freeVars.merge(l.children[1].children[2].freeVars({env: innerEnv}))
     }
     for (const id of letIds) {
       freeVars.delete(id)

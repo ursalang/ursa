@@ -1,12 +1,11 @@
---- src/grammar/ursa.ohm-bundle.d.ts	2023-12-31 12:31:45.699994794 +0000
-+++ src/grammar/ursa.ohm-bundle.d.ts.bak	2023-12-31 12:31:45.263992894 +0000
+--- src/grammar/ursa.ohm-bundle.d.ts	2023-12-31 13:39:50.960873751 +0000
++++ src/grammar/ursa.ohm-bundle.d.ts.bak	2023-12-31 13:39:50.520871644 +0000
 @@ -4,14 +4,33 @@
  import {
    BaseActionDict,
    Grammar,
 -  IterationNode,
 -  Node,
-+  IterationNode as IterationNodeBase,
 +  Node as NodeBase,
    NonterminalNode,
 +  NonterminalNode as NonterminalNodeBase,
@@ -15,20 +14,21 @@
  } from 'ohm-js';
  
 -export interface UrsaActionDict<T> extends BaseActionDict<T> {
-+export type Node<Operations> = NodeBase & Operations;
-+
-+interface IterationNodeI<Operations> extends IterationNodeBase {
++interface NodeI<Operations> extends NodeBase {
++  child(idx: number): Node<Operations>;
 +  children: Node<Operations>[];
++  asIteration(): IterationNode<Operations>;
 +}
-+export type IterationNode<Operations> = IterationNodeI<Operations> & Operations;
++export type Node<Operations> = NodeI<Operations> & Operations;
 +
-+export interface NonterminalNodeI<Args, Operations> extends NonterminalNodeBase {
++export type IterationNode<Operations> = Node<Operations>;
++
++interface NonterminalNodeI<Args, Operations> extends NodeI<Operations> {
 +  // A hack to enable type-checking of `.args`. This member is really only
 +  // present in `this` of semantics action routines.
 +  args: {a: Args};
-+  asIteration(): IterationNode<Operations>;
 +}
-+export type NonterminalNode<Args, Operations> = NonterminalNodeI<Args, Operations> & Operations
++export type NonterminalNode<Args, Operations> = NonterminalNodeI<Args, Operations> & Operations;
 +
 +export interface UrsaActionDict<T, Node, NonterminalNode, IterationNode> extends BaseActionDict<T> {
 +  _terminal?: (this: NonterminalNode) => T;
