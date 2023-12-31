@@ -686,6 +686,6 @@ export function format(
   if (matchResult.failed()) {
     throw new Error(matchResult.message)
   }
-  const ast = semantics(matchResult) as FormatterOperations
+  const ast = semantics(matchResult)
   return `${ast.fmt({maxWidth, indentString, simpleExpDepth})}\n`
 }

@@ -757,7 +757,7 @@ export function compile(
   if (matchResult.failed()) {
     throw new Error(matchResult.message)
   }
-  const ast = semantics(matchResult) as ParserOperations
+  const ast = semantics(matchResult)
   const args = {env, inLoop: false, inFn: false}
   const compiled = ast.toExp(args)
   const freeVars = ast.freeVars(args)
