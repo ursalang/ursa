@@ -115,7 +115,7 @@ class ArkDebugInfo {
   env: string | undefined
 }
 
-export class ArkVal extends Ark {}
+export class ArkVal extends Ark { }
 
 export class ArkExp extends Ark {
   constructor() {
@@ -170,9 +170,9 @@ export abstract class ArkConcreteVal<T> extends ArkClass {
   }
 }
 
-export class ArkNullClass extends ArkConcreteVal<null> {}
-export class ArkBooleanClass extends ArkConcreteVal<boolean> {}
-export class ArkNumberClass extends ArkConcreteVal<number> {}
+export class ArkNullClass extends ArkConcreteVal<null> { }
+export class ArkBooleanClass extends ArkConcreteVal<boolean> { }
+export class ArkNumberClass extends ArkConcreteVal<number> { }
 export class ArkStringClass extends ArkConcreteVal<string> {
   constructor(val: string) {
     super(val)
@@ -239,9 +239,9 @@ export class ArkNonLocalReturn extends Error {
   }
 }
 
-export class ArkBreakException extends ArkNonLocalReturn {}
-export class ArkReturnException extends ArkNonLocalReturn {}
-export class ArkContinueException extends ArkNonLocalReturn {}
+export class ArkBreakException extends ArkNonLocalReturn { }
+export class ArkReturnException extends ArkNonLocalReturn { }
+export class ArkContinueException extends ArkNonLocalReturn { }
 
 export class ArkBreak extends ArkExp {
   constructor(public val: ArkExp = new ArkLiteral(ArkNull())) {
@@ -463,7 +463,7 @@ export class ArkSet extends ArkExp {
   }
 }
 
-export class ArkObject extends ArkClass {}
+export class ArkObject extends ArkClass { }
 
 export class ArkObjectLiteral extends ArkExp {
   constructor(public properties: Map<string, ArkExp>) {
@@ -541,7 +541,7 @@ export class ArkList extends ArkClass {
         ['index', 'val'],
         (index: ArkVal, val: ArkVal) => {
           this.list[toJs(index) as number] = val
-          return val
+          return this
         },
       )],
       ['push', new NativeFn(['item'], (item: ArkVal) => {
@@ -588,7 +588,7 @@ export class ArkMap extends ArkClass {
         ['index', 'val'],
         (index: ArkVal, val: ArkVal) => {
           this.map.set(index, val)
-          return val
+          return this
         },
       )],
       ['get', new NativeFn(['index'], (index: ArkVal) => this.map.get(index) ?? ArkNull())],

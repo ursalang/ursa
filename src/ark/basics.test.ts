@@ -72,7 +72,7 @@ testGroup('Lists', [
   ['["list",1,2,3]', [1, 2, 3]],
   ['[["get",["prop","len",["list",1,2,3]]]]', 3],
   ['[["get",["prop","get",["list",4,5,6]]],1]', 5],
-  ['[["get",["prop","set",["list",4,5,6]]],1,2]', 2],
+  ['[["get",["prop","set",["list",4,5,6]]],1,2]', [4, 2, 6]],
 ])
 
 testGroup('Maps', [
