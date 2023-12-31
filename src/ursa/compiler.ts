@@ -7,8 +7,7 @@ import assert from 'assert'
 import {Interval} from 'ohm-js'
 
 import grammar, {
-  Node, IterationNode, UrsaSemantics, NonterminalNode,
-  UrsaOperations, UrsaActionArgs,
+  Node, NonterminalNode, IterationNode, UrsaSemantics,
   // eslint-disable-next-line import/extensions
 } from '../grammar/ursa.ohm-bundle.js'
 import {
@@ -26,8 +25,32 @@ import {
   CompiledArk, symRef, Environment, PartialCompiledArk, checkParamList,
 } from '../ark/compiler.js'
 
+type ParserOperations = {
+  toExp(a: ParserArgs): ArkExp
+  toLval(a: ParserArgs): ArkExp
+  toDefinition(a: ParserArgs): Definition
+  toKeyValue(a: ParserArgs): KeyValue
+  toArguments(a: ParserArgs): Arguments
+  boundVars: string[]
+  freeVars(a: ParserArgs): FreeVars
+  symref(a: ParserArgs): CompiledArk
+}
+
+type ParserArgs = {
+  env: Environment
+  inLoop?: boolean
+  inFn?: boolean
+}
+
+type ParserNode = Node<ParserOperations>
+
+type ParserNonterminalNode = NonterminalNode<ParserArgs, ParserOperations>
+
+type ParserIterationNode = IterationNode<ParserOperations>
+
 // Specify precise type so semantics can be precisely type-checked.
-export const semantics: UrsaSemantics = grammar.createSemantics()
+// eslint-disable-next-line max-len
+export const semantics: UrsaSemantics<ParserNode, ParserNonterminalNode, ParserIterationNode, ParserOperations> = grammar.createSemantics<ParserNode, ParserNonterminalNode, ParserIterationNode, ParserOperations>()
 
 class UrsaError extends Error {
   constructor(source: Interval, message: string) {
@@ -35,7 +58,7 @@ class UrsaError extends Error {
   }
 }
 
-export class UrsaCompilerError extends UrsaError {}
+export class UrsaCompilerError extends UrsaError { }
 
 class UrsaRuntimeError extends UrsaError {
   constructor(public ark: ArkState, source: Interval, message: string) {
@@ -71,10 +94,10 @@ ${trace.map((s) => `  ${s}`).join('\n')}`
 
 // Base class for parsing the language, extended directly by classes used
 // only during parsing.
-export class AST {}
+export class AST { }
 
 export class Definition extends AST {
-  constructor(public ident: Node, public val: ArkExp) {
+  constructor(public ident: ParserNode, public val: ArkExp) {
     super()
   }
 }
@@ -91,13 +114,13 @@ export class Arguments extends AST {
   }
 }
 
-function maybeVal(a: UrsaActionArgs, exp: IterationNode): ArkExp {
+function maybeVal(a: ParserArgs, exp: ParserIterationNode): ArkExp {
   return exp.children.length > 0
     ? exp.children[0].toExp(a)
     : new ArkLiteral(ArkNull())
 }
 
-function listNodeToParamList(listNode: Node): string[] {
+function listNodeToParamList(listNode: ParserNode): string[] {
   try {
     return checkParamList(listNode.asIteration().children.map((x) => x.sourceString))
   } catch (e) {
@@ -108,7 +131,7 @@ function listNodeToParamList(listNode: Node): string[] {
   }
 }
 
-function addLoc(val: ArkExp, node: Node) {
+function addLoc(val: ArkExp, node: ParserNode) {
   val.debug.sourceLoc = node.source
   return val
 }
@@ -116,10 +139,10 @@ function addLoc(val: ArkExp, node: Node) {
 // The first argument must be `this` from a Semantics operation, so it
 // contains `.args`.
 function indexExp(
-  expNode: NonterminalNode,
+  expNode: ParserNonterminalNode,
   isLval: boolean,
-  object: Node,
-  index: Node,
+  object: ParserNode,
+  index: ParserNode,
 ): ArkExp {
   const compiledObj = object.toExp(expNode.args.a)
   const compiledIndex = index.toExp(expNode.args.a)
@@ -132,7 +155,7 @@ function indexExp(
   )
 }
 
-function makeProperty(a: UrsaActionArgs, object: NonterminalNode, property: Node) {
+function makeProperty(a: ParserArgs, object: ParserNonterminalNode, property: ParserNode) {
   return addLoc(new ArkProperty(property.sourceString, object.toExp(a)), object)
 }
 
@@ -175,10 +198,10 @@ semantics.addOperation<ArkExp>('toExp(a)', {
       boundVars.push(...exp.boundVars)
     }
     const compiledExps = []
-    const innerEnv = this.args.a.env!.push(
+    const innerEnv = this.args.a.env.push(
       Array<undefined>(boundVars.length).fill(undefined),
     )
-    const outerLocals = this.args.a.env!.stack[0][0].length
+    const outerLocals = this.args.a.env.stack[0][0].length
     let nextLocal = 0
     for (const exp of exps.asIteration().children) {
       for (let i = 0; i < exp.boundVars.length; i += 1) {
@@ -278,7 +301,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
 
   Fn(_fn, _open, params, _maybeComma, _close, body) {
     const paramStrings = listNodeToParamList(params)
-    const innerEnv = this.args.a.env!.pushFrame([paramStrings, []])
+    const innerEnv = this.args.a.env.pushFrame([paramStrings, []])
     const bodyFreeVars = body.freeVars({...this.args.a, env: innerEnv})
     const compiledBody = body.toExp({env: innerEnv, inLoop: false, inFn: true})
     paramStrings.forEach((p) => bodyFreeVars.delete(p))
@@ -291,7 +314,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
 
   For(_for, ident, _of, iterator, body) {
     const forVar = ident.sourceString
-    const innerEnv = this.args.a.env!.push(['_for'])
+    const innerEnv = this.args.a.env.push(['_for'])
     const compiledIterator = iterator.toExp({...this.args.a, env: innerEnv})
     const loopEnv = innerEnv.push([forVar])
     const compiledForVar = symRef(loopEnv, forVar).value
@@ -501,7 +524,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     const parsedLets = []
     const letIds: string[] = []
     for (const l of (lets.asIteration().children)) {
-      const definition = (l.children[1] as Node).toDefinition(this.args.a)
+      const definition = (l.children[1] as ParserNode).toDefinition(this.args.a)
       parsedLets.push(definition)
       if (letIds.includes(definition.ident.sourceString)) {
         throw new UrsaCompilerError(this.source, `Duplicate identifier in let: ${definition.ident.sourceString}`)
@@ -586,7 +609,7 @@ semantics.addOperation<ArkExp>('toLval(a)', {
   },
 })
 
-function mergeBoundVars(children: Node[]): string[] {
+function mergeBoundVars(children: ParserNode[]): string[] {
   const boundVars: string[] = []
   children.forEach((child) => boundVars.push(...child.boundVars))
   return boundVars
@@ -622,7 +645,7 @@ semantics.addAttribute<string[]>('boundVars', {
   },
 })
 
-function mergeFreeVars(env: Environment, children: Node[]): FreeVars {
+function mergeFreeVars(env: Environment, children: ParserNode[]): FreeVars {
   const freeVars = new FreeVars()
   children.forEach((child) => freeVars.merge(child.freeVars({env})))
   return freeVars
@@ -633,10 +656,10 @@ semantics.addOperation<Map<string, unknown>>('freeVars(a)', {
     return new FreeVars()
   },
   _nonterminal(...children) {
-    return mergeFreeVars(this.args.a.env!, children)
+    return mergeFreeVars(this.args.a.env, children)
   },
   _iter(...children) {
-    return mergeFreeVars(this.args.a.env!, children)
+    return mergeFreeVars(this.args.a.env, children)
   },
 
   Sequence(exps, _sc) {
@@ -644,7 +667,7 @@ semantics.addOperation<Map<string, unknown>>('freeVars(a)', {
     const boundVars: string[] = []
     exps.asIteration().children.forEach((exp) => {
       boundVars.push(...exp.boundVars)
-      freeVars.merge(exp.freeVars({env: this.args.a.env!.push(boundVars)}))
+      freeVars.merge(exp.freeVars({env: this.args.a.env.push(boundVars)}))
     })
     boundVars.forEach((b: string) => freeVars.delete(b))
     return freeVars
@@ -664,7 +687,7 @@ semantics.addOperation<Map<string, unknown>>('freeVars(a)', {
 
   Fn(_fn, _open, params, _maybeComma, _close, body) {
     const paramStrings = params.asIteration().children.map((x) => x.sourceString)
-    const innerEnv = this.args.a.env!.pushFrame([[...paramStrings], []])
+    const innerEnv = this.args.a.env.pushFrame([[...paramStrings], []])
     const freeVars = new FreeVars().merge(body.freeVars({env: innerEnv}))
     paramStrings.forEach((p) => freeVars.delete(p))
     return freeVars
@@ -672,10 +695,10 @@ semantics.addOperation<Map<string, unknown>>('freeVars(a)', {
 
   Lets(lets) {
     const letIds = lets.asIteration().children.map((x) => x.children[1].children[0].sourceString)
-    const innerEnv = this.args.a.env!.push(letIds)
+    const innerEnv = this.args.a.env.push(letIds)
     const freeVars = new FreeVars()
     for (const l of lets.asIteration().children) {
-      freeVars.merge((l.children[1].children[2] as Node).freeVars({env: innerEnv}))
+      freeVars.merge((l.children[1].children[2] as ParserNode).freeVars({env: innerEnv}))
     }
     for (const id of letIds) {
       freeVars.delete(id)
@@ -685,7 +708,7 @@ semantics.addOperation<Map<string, unknown>>('freeVars(a)', {
 
   For(_for, ident, _of, iterator, body) {
     const forVar = ident.sourceString
-    const innerEnv = this.args.a.env!.push(['_for'])
+    const innerEnv = this.args.a.env.push(['_for'])
     const loopEnv = innerEnv.push([forVar])
     const freeVars = new FreeVars().merge(iterator.freeVars({env: innerEnv}))
       .merge(body.freeVars({env: loopEnv}))
@@ -696,7 +719,7 @@ semantics.addOperation<Map<string, unknown>>('freeVars(a)', {
   Use(_use, pathList) {
     const path = pathList.asIteration().children
     const ident = path[path.length - 1]
-    const innerEnv = this.args.a.env!.push([ident.sourceString])
+    const innerEnv = this.args.a.env.push([ident.sourceString])
     const freeVars = new FreeVars().merge(path[0].symref({...this.args.a, env: innerEnv}).freeVars)
     freeVars.delete(ident.sourceString)
     return freeVars
@@ -708,12 +731,12 @@ semantics.addOperation<Map<string, unknown>>('freeVars(a)', {
 })
 
 // Ohm attributes can't take arguments, so memoize an operation.
-const symrefs = new Map<Node, CompiledArk>()
+const symrefs = new Map<ParserNode, CompiledArk>()
 semantics.addOperation<CompiledArk>('symref(a)', {
   ident(ident) {
     if (!symrefs.has(this)) {
       try {
-        symrefs.set(this, symRef(this.args.a.env!, this.sourceString))
+        symrefs.set(this, symRef(this.args.a.env, this.sourceString))
       } catch (e) {
         if (!(e instanceof ArkCompilerError)) {
           throw e
@@ -734,7 +757,7 @@ export function compile(
   if (matchResult.failed()) {
     throw new Error(matchResult.message)
   }
-  const ast = semantics(matchResult) as UrsaOperations
+  const ast = semantics(matchResult) as ParserOperations
   const args = {env, inLoop: false, inFn: false}
   const compiled = ast.toExp(args)
   const freeVars = ast.freeVars(args)

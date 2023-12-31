@@ -1,91 +1,65 @@
---- src/grammar/ursa.ohm-bundle.d.ts	2023-12-30 18:35:56.474526995 +0000
-+++ src/grammar/ursa.ohm-bundle.d.ts.bak	2023-12-30 18:35:56.042524812 +0000
-@@ -4,14 +4,66 @@
+--- src/grammar/ursa.ohm-bundle.d.ts	2023-12-31 12:31:45.699994794 +0000
++++ src/grammar/ursa.ohm-bundle.d.ts.bak	2023-12-31 12:31:45.263992894 +0000
+@@ -4,14 +4,33 @@
  import {
    BaseActionDict,
    Grammar,
 -  IterationNode,
 -  Node,
--  NonterminalNode,
 +  IterationNode as IterationNodeBase,
 +  Node as NodeBase,
+   NonterminalNode,
 +  NonterminalNode as NonterminalNodeBase,
    Semantics,
    TerminalNode
  } from 'ohm-js';
  
-+import {ArkExp} from '../ark/interpreter.js';
-+import {Environment, FreeVars, CompiledArk} from '../ark/compiler.js';
-+import {Definition, KeyValue, Arguments, SingleLet} from '../ursa/compiler.js';
-+import {Span, HSpan, VSpan} from '../ursa/fmt.js';
+-export interface UrsaActionDict<T> extends BaseActionDict<T> {
++export type Node<Operations> = NodeBase & Operations;
 +
-+export type UrsaActionArgs = {
-+  // `toExp` etc. arguments
-+  env?: Environment;
-+  inLoop?: boolean;
-+  inFn?: boolean;
-+
-+  // `fmt` arguments
-+  maxWidth?: number;
-+  indentString?: string;
-+  simpleExpDepth?: number;
-+};
-+
-+export type UrsaSemanticsArgs = {
-+  a: UrsaActionArgs
++interface IterationNodeI<Operations> extends IterationNodeBase {
++  children: Node<Operations>[];
 +}
++export type IterationNode<Operations> = IterationNodeI<Operations> & Operations;
 +
-+export type UrsaOperations = {
-+  toExp(a: UrsaActionArgs): ArkExp;
-+  toLval(a: UrsaActionArgs): ArkExp;
-+  toDefinition(a: UrsaActionArgs): Definition;
-+  toKeyValue(a: UrsaActionArgs): KeyValue;
-+  toArguments(a: UrsaActionArgs): Arguments;
-+  toLet(): SingleLet;
-+  boundVars: string[];
-+  freeVars(a: UrsaActionArgs): FreeVars;
-+  fmt(a: UrsaActionArgs): Span;
-+  hfmt(a: UrsaActionArgs): Span;
-+  symref(a: UrsaActionArgs): CompiledArk;
-+};
-+
-+export type Node = NodeBase & UrsaOperations;
-+interface UrsaIterationNode extends IterationNodeBase {
-+  children: Node[];
-+}
-+export type IterationNode = UrsaIterationNode & UrsaOperations;
-+
-+interface UrsaNonterminalNode extends NonterminalNodeBase {
++export interface NonterminalNodeI<Args, Operations> extends NonterminalNodeBase {
 +  // A hack to enable type-checking of `.args`. This member is really only
 +  // present in `this` of semantics action routines.
-+  args: UrsaSemanticsArgs
-+  asIteration(): IterationNode;
++  args: {a: Args};
++  asIteration(): IterationNode<Operations>;
 +}
-+export type NonterminalNode = UrsaNonterminalNode & UrsaOperations;
++export type NonterminalNode<Args, Operations> = NonterminalNodeI<Args, Operations> & Operations
 +
- export interface UrsaActionDict<T> extends BaseActionDict<T> {
++export interface UrsaActionDict<T, Node, NonterminalNode, IterationNode> extends BaseActionDict<T> {
 +  _terminal?: (this: NonterminalNode) => T;
 +  _nonterminal?: (this: NonterminalNode, ...children: NonterminalNode[]) => T;
 +  _iter?: (this: NonterminalNode, ...children: NonterminalNode[]) => T;
    Sequence?: (this: NonterminalNode, arg0: NonterminalNode, arg1: NonterminalNode) => T;
    sc?: (this: NonterminalNode, arg0: IterationNode | NonterminalNode, arg1: NonterminalNode | TerminalNode) => T;
    maybeCommaParen?: (this: NonterminalNode, arg0: IterationNode, arg1: TerminalNode) => T;
-@@ -136,12 +188,13 @@
+@@ -136,18 +155,18 @@
    unicodeSpaceSeparator?: (this: NonterminalNode, arg0: TerminalNode) => T;
  }
  
 -export interface UrsaSemantics extends Semantics {
-+interface UrsaSemanticsBase extends Semantics {
-   addOperation<T>(name: string, actionDict: UrsaActionDict<T>): this;
-   extendOperation<T>(name: string, actionDict: UrsaActionDict<T>): this;
-   addAttribute<T>(name: string, actionDict: UrsaActionDict<T>): this;
-   extendAttribute<T>(name: string, actionDict: UrsaActionDict<T>): this;
+-  addOperation<T>(name: string, actionDict: UrsaActionDict<T>): this;
+-  extendOperation<T>(name: string, actionDict: UrsaActionDict<T>): this;
+-  addAttribute<T>(name: string, actionDict: UrsaActionDict<T>): this;
+-  extendAttribute<T>(name: string, actionDict: UrsaActionDict<T>): this;
++interface UrsaSemanticsBase<Node, NonterminalNode, IterationNode> extends Semantics {
++  addOperation<T>(name: string, actionDict: UrsaActionDict<T, Node, NonterminalNode, IterationNode>): this;
++  extendOperation<T>(name: string, actionDict: UrsaActionDict<T, Node, NonterminalNode, IterationNode>): this;
++  addAttribute<T>(name: string, actionDict: UrsaActionDict<T, Node, NonterminalNode, IterationNode>): this;
++  extendAttribute<T>(name: string, actionDict: UrsaActionDict<T, Node, NonterminalNode, IterationNode>): this;
  }
-+export type UrsaSemantics = UrsaSemanticsBase & UrsaOperations;
++export type UrsaSemantics<Node, NonterminalNode, IterationNode, Operations> = UrsaSemanticsBase<Node, NonterminalNode, IterationNode> & Operations;
  
  export interface UrsaGrammar extends Grammar {
-   createSemantics(): UrsaSemantics;
-@@ -150,4 +203,3 @@
+-  createSemantics(): UrsaSemantics;
+-  extendSemantics(superSemantics: UrsaSemantics): UrsaSemantics;
++  createSemantics<Node, NonterminalNode, IterationNode, Operations>(): UrsaSemantics<Node, NonterminalNode, IterationNode, Operations>;
++  extendSemantics<Node, NonterminalNode, IterationNode, Operations>(superSemantics: UrsaSemantics<Node, NonterminalNode, IterationNode, Operations>): UrsaSemantics<Node, NonterminalNode, IterationNode, Operations>;
+ }
  
  declare const grammar: UrsaGrammar;
  export default grammar;

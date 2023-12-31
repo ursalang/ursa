@@ -2,15 +2,33 @@
 // © Reuben Thomas 2023
 // Released under the GPL version 3, or (at your option) any later version.
 
-import {Node} from 'ohm-js'
-
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import {debug} from '../ark/interpreter.js'
 import grammar, {
-  NonterminalNode, UrsaActionArgs, UrsaOperations,
+  Node, NonterminalNode, IterationNode, UrsaSemantics,
   // eslint-disable-next-line import/extensions
 } from '../grammar/ursa.ohm-bundle.js'
-import {semantics} from './compiler.js'
+
+export type FormatterOperations = {
+  fmt(a: FormatterArgs): Span
+  hfmt(a: FormatterArgs): Span
+}
+
+export type FormatterArgs = {
+  maxWidth: number
+  indentString: string
+  simpleExpDepth: number
+}
+
+type FormatterNode = Node<FormatterOperations>
+
+type FormatterNonterminalNode = NonterminalNode<FormatterArgs, FormatterOperations>
+
+type FormatterIterationNode = IterationNode<FormatterOperations>
+
+// Specify precise type so semantics can be precisely type-checked.
+// eslint-disable-next-line max-len
+export const semantics: UrsaSemantics<FormatterNode, FormatterNonterminalNode, FormatterIterationNode, FormatterOperations> = grammar.createSemantics<FormatterNode, FormatterNonterminalNode, FormatterIterationNode, FormatterOperations>()
 
 function addSeparator(addTrailing: boolean, spans: (Span | string)[], sep: Span): Span[] {
   const res = spans.map((span) => sep.copy().prepend(span))
@@ -20,11 +38,11 @@ function addSeparator(addTrailing: boolean, spans: (Span | string)[], sep: Span)
   return res
 }
 
-function formatHIter(args: UrsaActionArgs, node: NonterminalNode): Span[] {
+function formatHIter(args: FormatterArgs, node: FormatterNonterminalNode): Span[] {
   return node.asIteration().children.map((child) => child.hfmt(args))
 }
 
-function formatIter(args: UrsaActionArgs, node: NonterminalNode): Span[] {
+function formatIter(args: FormatterArgs, node: FormatterNonterminalNode): Span[] {
   return node.asIteration().children.map((child) => child.fmt(args))
 }
 
@@ -94,14 +112,12 @@ export class VSpan extends Span {
   }
 }
 
-type FmtAction = (args: UrsaActionArgs) => Span
-
 function hfmtDelimitedList(
-  args: UrsaActionArgs,
+  args: FormatterArgs,
   openDelim: string,
   closeDelim: string,
   separator: Span,
-  listNode: NonterminalNode,
+  listNode: FormatterNonterminalNode,
 ) {
   return new Span([
     openDelim,
@@ -110,11 +126,13 @@ function hfmtDelimitedList(
   ])
 }
 
-function depth(node: Node): number {
+function depth(node: FormatterNode): number {
   if (/^[a-z]/.test(node.ctorName)) {
     return 0
   }
-  return Math.max(0, ...node.children.map((node: Node, _index, _array) => 1 + depth(node)))
+  return Math.max(
+    ...node.children.map((node, _index, _array) => 1 + depth(node as FormatterNode)),
+  )
 }
 
 semantics.addOperation<Span>('hfmt(a)', {
@@ -182,7 +200,7 @@ semantics.addOperation<Span>('hfmt(a)', {
   Ifs(ifs, _else, elseBlock) {
     const formattedIfs = formatHIter(this.args.a, ifs)
     if (elseBlock.children.length > 0) {
-      const formattedElse = (elseBlock.children[0].hfmt as FmtAction)(this.args.a)
+      const formattedElse = elseBlock.children[0].hfmt(this.args.a)
       formattedIfs.push(formattedElse)
     }
     return new HSpan(addSeparator(false, formattedIfs, new HSpan(['else'])))
@@ -329,14 +347,14 @@ semantics.addOperation<Span>('hfmt(a)', {
 
   Block(_open, seq, _close) {
     if (seq.children[0].asIteration().children.length === 1) {
-      const exp = seq.children[0].asIteration().children[0]
-      if (exp.ctorName === 'Exp' && depth(exp) < this.args.a.simpleExpDepth!) {
+      const exp = seq.children[0].asIteration().children[0] as FormatterNode
+      if (exp.ctorName === 'Exp' && depth(exp) < this.args.a.simpleExpDepth) {
         return new Span(['{', seq.hfmt(this.args.a), '}'])
       }
     }
     return new VSpan([
       '{',
-      new VSpan([seq.fmt(this.args.a)]).indent(this.args.a.indentString!),
+      new VSpan([seq.fmt(this.args.a)]).indent(this.args.a.indentString),
       '}',
     ])
   },
@@ -356,21 +374,21 @@ semantics.addOperation<Span>('hfmt(a)', {
 
 // The first argument must be `this` from a Semantics operation, so it
 // contains `.args`.
-function hfmt(node: NonterminalNode) {
+function hfmt(node: FormatterNonterminalNode) {
   const hRes = node.hfmt(node.args.a)
-  if (hRes.width() > node.args.a.maxWidth!) {
+  if (hRes.width() > node.args.a.maxWidth) {
     return undefined
   }
   return hRes
 }
 
-function narrowed(args: UrsaActionArgs): UrsaActionArgs {
-  return {...args, maxWidth: args.maxWidth! - args.indentString!.length}
+function narrowed(args: FormatterArgs): FormatterArgs {
+  return {...args, maxWidth: args.maxWidth - args.indentString.length}
 }
 
 function maybeVfmt(
-  args: UrsaActionArgs,
-  parentNode: NonterminalNode,
+  args: FormatterArgs,
+  parentNode: FormatterNonterminalNode,
   callback: () => Span,
 ) {
   const hRes = hfmt(parentNode)
@@ -378,19 +396,19 @@ function maybeVfmt(
     return hRes
   }
   const hvRes = callback()
-  if (hvRes.width() <= args.maxWidth!) {
+  if (hvRes.width() <= args.maxWidth) {
     return hvRes
   }
   return new VSpan(hvRes.content)
 }
 
 function vfmtDelimitedList(
-  args: UrsaActionArgs,
+  args: FormatterArgs,
   openDelim: string,
   closeDelim: string,
   separator: Span,
-  parentNode: NonterminalNode,
-  listNode: NonterminalNode,
+  parentNode: FormatterNonterminalNode,
+  listNode: FormatterNonterminalNode,
 ) {
   return maybeVfmt(
     args,
@@ -399,27 +417,27 @@ function vfmtDelimitedList(
       openDelim,
       new VSpan(
         addSeparator(true, formatIter(narrowed(args), listNode), separator),
-      ).indent(args.indentString!),
+      ).indent(args.indentString),
       closeDelim,
     ]),
   )
 }
 
 function fmtUnary(
-  args: UrsaActionArgs,
+  args: FormatterArgs,
   op: string,
-  parentNode: NonterminalNode,
-  node: NonterminalNode,
+  parentNode: FormatterNonterminalNode,
+  node: FormatterNonterminalNode,
 ) {
   return hfmt(parentNode) ?? new VSpan([new Span([op, '(']), node.fmt(args), ')'])
 }
 
 function fmtBinary(
-  args: UrsaActionArgs,
+  args: FormatterArgs,
   op: string,
-  parentNode: NonterminalNode,
-  left: NonterminalNode,
-  right: NonterminalNode,
+  parentNode: FormatterNonterminalNode,
+  left: FormatterNonterminalNode,
+  right: FormatterNonterminalNode,
 ) {
   return hfmt(parentNode) ?? new VSpan(['(', left.fmt(args), new HSpan([op, right.fmt(args)]), ')'])
 }
@@ -439,7 +457,7 @@ semantics.addOperation<Span>('fmt(a)', {
 
   PrimaryExp_paren(_open, exp, _close) {
     return hfmt(this)
-      ?? new VSpan(['(', new VSpan([exp.fmt(narrowed(this.args.a))]).indent(this.args.a.indentString!), ')'])
+      ?? new VSpan(['(', new VSpan([exp.fmt(narrowed(this.args.a))]).indent(this.args.a.indentString), ')'])
   },
 
   Definition(ident, _colon, value) {
@@ -495,7 +513,7 @@ semantics.addOperation<Span>('fmt(a)', {
     }
     const formattedIfs = formatIter(this.args.a, ifs)
     if (elseBlock.children.length > 0) {
-      const formattedElse = (elseBlock.children[0].fmt as FmtAction)(this.args.a)
+      const formattedElse = elseBlock.children[0].fmt(this.args.a)
       formattedIfs.push(formattedElse)
     }
     return new VSpan(addSeparator(false, formattedIfs, new VSpan(['else'])))
@@ -511,7 +529,7 @@ semantics.addOperation<Span>('fmt(a)', {
         true,
         formatIter(narrowed(this.args.a), params),
         new Span([',']),
-      )).indent(this.args.a.indentString!),
+      )).indent(this.args.a.indentString),
       ')',
       body.fmt(this.args.a),
     ])
@@ -618,7 +636,7 @@ semantics.addOperation<Span>('fmt(a)', {
     }
     const formattedBreak = new VSpan(['break'])
     if (exp.children.length > 0) {
-      formattedBreak.append((exp.children[0].fmt as FmtAction)(this.args.a))
+      formattedBreak.append(exp.children[0].fmt(this.args.a))
     }
     return formattedBreak
   },
@@ -632,7 +650,7 @@ semantics.addOperation<Span>('fmt(a)', {
     }
     const formattedReturn = new VSpan(['return'])
     if (exp.children.length > 0) {
-      formattedReturn.append((exp.children[0].fmt as FmtAction)(this.args.a))
+      formattedReturn.append(exp.children[0].fmt(this.args.a))
     }
     return formattedReturn
   },
@@ -649,7 +667,7 @@ semantics.addOperation<Span>('fmt(a)', {
   },
 
   Block(_open, seq, _close) {
-    return hfmt(this) ?? new VSpan(['{', new VSpan([seq.fmt(this.args.a)]).indent(this.args.a.indentString!), '}'])
+    return hfmt(this) ?? new VSpan(['{', new VSpan([seq.fmt(this.args.a)]).indent(this.args.a.indentString), '}'])
   },
 
   number(_) {
@@ -676,6 +694,6 @@ export function format(
   if (matchResult.failed()) {
     throw new Error(matchResult.message)
   }
-  const ast = semantics(matchResult) as UrsaOperations
+  const ast = semantics(matchResult) as FormatterOperations
   return `${ast.fmt({maxWidth, indentString, simpleExpDepth})}\n`
 }
