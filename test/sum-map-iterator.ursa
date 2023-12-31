@@ -4,7 +4,7 @@ let sum = fn(m) {
   loop {
     let l = it()
     if l == null { return tot }
-    let k = l[0] and let v = l[1]
+    let k = l.get(0) and let v = l.get(1)
     print(k)
     tot := tot + v
   }

@@ -99,8 +99,8 @@ testGroup('Lists', [
   ['[1, 2, 3]', [1, 2, 3]],
   ['[1, 2, 3].len()', 3],
   ['[1, 2].push(3).len()', 3],
-  ['[1, 2, 3][1]', 2],
-  ['let l = [1, 2, 3]; l[1] := 4; l', [1, 4, 3]],
+  ['[1, 2, 3].get(1)', 2],
+  ['let l = [1, 2, 3]; l.set(1, 4); l', [1, 4, 3]],
 ])
 
 testGroup('Objects', [
@@ -113,5 +113,5 @@ testGroup('Objects', [
 testGroup('Maps', [
   ['{}', new Map<unknown, unknown>()],
   ['{"a": 1, "b": 2 + 0, 3: 4}', new Map<unknown, unknown>([['a', 1], ['b', 2], [3, 4]])],
-  ['let t = {"a": 1, "b": 2 + 0, 3: 4}; t["b"] := 1; t', new Map<unknown, unknown>([['a', 1], ['b', 1], [3, 4]])],
+  ['let t = {"a": 1, "b": 2 + 0, 3: 4}; t.set("b", 1); t', new Map<unknown, unknown>([['a', 1], ['b', 1], [3, 4]])],
 ])

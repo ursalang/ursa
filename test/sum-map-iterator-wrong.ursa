@@ -3,7 +3,7 @@ let sum = fn(m) {
   let it = m.iter()
   loop {
     let l = it()
-    let k = l[0] and let v = l[1]
+    let k = l.get(0) and let v = l.get(1)
     if l == null { return tot }
     print(k)
     tot := tot + v

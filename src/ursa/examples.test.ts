@@ -83,7 +83,7 @@ d
 e`, `\
 Error: Line 6, col 13:
   5 |     let l = it()
-> 6 |     let k = l[0] and let v = l[1]
+> 6 |     let k = l.get(0) and let v = l.get(1)
                   ^
   7 |     if l == null { return tot }
 
@@ -94,7 +94,7 @@ Traceback (most recent call last)
     sum({"a": 10, "b": 30, "c": 50, "d": 5, "e": 5}), at top level`, undefined, `\
 Error: Line 6, col 17:
   5 |         let l = it()
-> 6 |         let k = l[0] and let v = l[1]
+> 6 |         let k = l.get(0) and let v = l.get(1)
                       ^
   7 |         if l == null {
 

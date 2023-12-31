@@ -14,6 +14,6 @@ let newAccums = fn() {
 let accums = newAccums()
 let accums2 = newAccums()
 [
-  [accums[0](1), accums[0](1), accums2[0](1)],
-  [accums[1](1), accums[1](1), accums2[1](1)],
+  [accums.get(0)(1), accums.get(0)(1), accums2.get(0)(1)],
+  [accums.get(1)(1), accums.get(1)(1), accums2.get(1)(1)],
 ]

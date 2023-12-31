@@ -2,7 +2,7 @@ let double = fn(l) {
   let i = 0;
   loop {
     if i == l.len() { return l };
-    l[i] := l[i] * 2;
+    l.set(i, l.get(i) * 2);
     i := i + 1
   }
 };

@@ -166,19 +166,29 @@ testGroup('Lists', [
   ['[1, 2, 3]', [{1: ['1', '2', '3'], type: 'List'}]],
   ['[1, 2, 3].len', [
     {
-      0: {1: ['1', '2', '3'], type: 'List'},
+      0: {
+        1: ['1', '2', '3'],
+        type: 'List',
+      },
       2: 'len',
       type: 'PropertyExp_property',
     },
   ]],
-  ['[1, 2, 3][1]', [
+  ['[1, 2, 3].get(1)', [
     {
-      0: {1: ['1', '2', '3'], type: 'List'},
-      2: '1',
-      type: 'PropertyExp_index',
+      0: {
+        0: {1: ['1', '2', '3'], type: 'List'},
+        2: 'get',
+        type: 'PropertyExp_property',
+      },
+      1: {
+        1: ['1'],
+        type: 'Arguments',
+      },
+      type: 'CallExp_property_call',
     },
   ]],
-  ['let l = [1, 2, 3]; l[1] := 4; l', [
+  ['let l = [1, 2, 3]; l.set(1, 4); l', [
     [
       {
         1: {
@@ -190,9 +200,12 @@ testGroup('Lists', [
       },
     ],
     {
-      0: {0: 'l', 2: '1', type: 'PropertyExp_index'},
-      2: '4',
-      type: 'AssignmentExp_ass',
+      0: {0: 'l', 2: 'set', type: 'PropertyExp_property'},
+      1: {
+        1: ['1', '4'],
+        type: 'Arguments',
+      },
+      type: 'CallExp_property_call',
     },
     'l',
   ]],
@@ -280,7 +293,7 @@ testGroup('Maps', [
       type: 'Map',
     },
   ]],
-  ['let t = {"a": 1, "b": 2 + 0, 3: 4}; t["b"] := 1; t', [
+  ['let t = {"a": 1, "b": 2 + 0, 3: 4}; t.set("b", 1); t', [
     [
       {
         1: {
@@ -303,9 +316,12 @@ testGroup('Maps', [
       },
     ],
     {
-      0: {0: 't', 2: '"b"', type: 'PropertyExp_index'},
-      2: '1',
-      type: 'AssignmentExp_ass',
+      0: {0: 't', 2: 'set', type: 'PropertyExp_property'},
+      1: {
+        1: ['"b"', '1'],
+        type: 'Arguments',
+      },
+      type: 'CallExp_property_call',
     },
     't',
   ]],

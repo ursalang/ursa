@@ -1,6 +1,6 @@
 --- src/grammar/ursa.ohm-bundle.d.ts	2023-12-31 16:03:51.540793741 +0000
 +++ src/grammar/ursa.ohm-bundle.d.ts.bak	2023-12-31 16:03:51.096791164 +0000
-@@ -4,150 +4,170 @@
+@@ -4,148 +4,168 @@
  import {
    BaseActionDict,
    Grammar,
@@ -12,7 +12,7 @@
    Semantics,
    TerminalNode
  } from 'ohm-js';
- 
+
 -export interface UrsaActionDict<T> extends BaseActionDict<T> {
 -  Sequence?: (this: NonterminalNode, arg0: NonterminalNode, arg1: NonterminalNode) => T;
 -  sc?: (this: NonterminalNode, arg0: IterationNode | NonterminalNode, arg1: NonterminalNode | TerminalNode) => T;
@@ -28,10 +28,8 @@
 -  Object?: (this: NonterminalNode, arg0: TerminalNode, arg1: NonterminalNode, arg2: NonterminalNode, arg3: TerminalNode) => T;
 -  Map?: (this: NonterminalNode, arg0: TerminalNode, arg1: NonterminalNode, arg2: NonterminalNode, arg3: TerminalNode) => T;
 -  KeyValue?: (this: NonterminalNode, arg0: NonterminalNode, arg1: TerminalNode, arg2: NonterminalNode) => T;
--  PropertyExp_index?: (this: NonterminalNode, arg0: NonterminalNode, arg1: TerminalNode, arg2: NonterminalNode, arg3: TerminalNode) => T;
 -  PropertyExp_property?: (this: NonterminalNode, arg0: NonterminalNode, arg1: TerminalNode, arg2: NonterminalNode) => T;
 -  PropertyExp?: (this: NonterminalNode, arg0: NonterminalNode) => T;
--  CallExp_index?: (this: NonterminalNode, arg0: NonterminalNode, arg1: TerminalNode, arg2: NonterminalNode, arg3: TerminalNode) => T;
 -  CallExp_property?: (this: NonterminalNode, arg0: NonterminalNode, arg1: TerminalNode, arg2: NonterminalNode) => T;
 -  CallExp_call?: (this: NonterminalNode, arg0: NonterminalNode, arg1: NonterminalNode) => T;
 -  CallExp_property_call?: (this: NonterminalNode, arg0: NonterminalNode, arg1: NonterminalNode) => T;
@@ -141,7 +139,7 @@
 +  children: Node<Operations>[];
 +  asIteration(): IterationNode<Operations>;
  }
- 
+
 -export interface UrsaSemantics extends Semantics {
 -  addOperation<T>(name: string, actionDict: UrsaActionDict<T>): this;
 -  extendOperation<T>(name: string, actionDict: UrsaActionDict<T>): this;
@@ -176,10 +174,8 @@
 +  Object?: (this: ThisNode, arg0: TerminalNode, arg1: NonterminalNode, arg2: NonterminalNode, arg3: TerminalNode) => T;
 +  Map?: (this: ThisNode, arg0: TerminalNode, arg1: NonterminalNode, arg2: NonterminalNode, arg3: TerminalNode) => T;
 +  KeyValue?: (this: ThisNode, arg0: NonterminalNode, arg1: TerminalNode, arg2: NonterminalNode) => T;
-+  PropertyExp_index?: (this: ThisNode, arg0: NonterminalNode, arg1: TerminalNode, arg2: NonterminalNode, arg3: TerminalNode) => T;
 +  PropertyExp_property?: (this: ThisNode, arg0: NonterminalNode, arg1: TerminalNode, arg2: NonterminalNode) => T;
 +  PropertyExp?: (this: ThisNode, arg0: NonterminalNode) => T;
-+  CallExp_index?: (this: ThisNode, arg0: NonterminalNode, arg1: TerminalNode, arg2: NonterminalNode, arg3: TerminalNode) => T;
 +  CallExp_property?: (this: ThisNode, arg0: NonterminalNode, arg1: TerminalNode, arg2: NonterminalNode) => T;
 +  CallExp_call?: (this: ThisNode, arg0: NonterminalNode, arg1: NonterminalNode) => T;
 +  CallExp_property_call?: (this: ThisNode, arg0: NonterminalNode, arg1: NonterminalNode) => T;
@@ -285,7 +281,7 @@
 +  whitespace?: (this: ThisNode, arg0: NonterminalNode | TerminalNode) => T;
 +  unicodeSpaceSeparator?: (this: ThisNode, arg0: TerminalNode) => T;
  }
- 
+
 +interface UrsaSemanticsI<Node, NonterminalNode, IterationNode, ThisNode, Operations> extends Semantics {
 +  (match: MatchResult): Operations;
 +  addOperation<T>(name: string, actionDict: UrsaActionDict<T, Node, NonterminalNode, IterationNode, ThisNode>): this;
@@ -301,7 +297,7 @@
 +  createSemantics<Node, NonterminalNode, IterationNode, ThisNode, Operations>(): UrsaSemantics<Node, NonterminalNode, IterationNode, ThisNode, Operations>;
 +  extendSemantics<Node, NonterminalNode, IterationNode, ThisNode, Operations>(superSemantics: UrsaSemantics<Node, NonterminalNode, IterationNode, ThisNode, Operations>): UrsaSemantics<Node, NonterminalNode, IterationNode, ThisNode, Operations>;
  }
- 
+
  declare const grammar: UrsaGrammar;
  export default grammar;
 -

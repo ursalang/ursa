@@ -3,7 +3,7 @@ let sum = fn(l) {
   let i = 0
   loop {
     if i == l.len() { return tot }
-    tot := tot + l[i]
+    tot := tot + l.get(i)
     i := i + 1
   }
 }

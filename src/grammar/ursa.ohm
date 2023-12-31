@@ -40,14 +40,12 @@ Ursa {
   KeyValue = Exp ":" Exp
 
   PropertyExp
-    = PropertyExp "[" Exp "]"           -- index
-    | PropertyExp "." ident             -- property
+    = PropertyExp "." ident             -- property
     | Fn
     | PrimaryExp
 
   CallExp
-    = CallExp "[" Exp "]"   -- index
-    | CallExp "." ident     -- property
+    = CallExp "." ident     -- property
     | CallExp Arguments     -- call
     | PropertyExp Arguments -- property_call
   Arguments = "(" ListOf<Exp, ","> #maybeCommaParen ")"

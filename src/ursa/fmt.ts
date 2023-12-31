@@ -167,13 +167,7 @@ semantics.addOperation<Span>('hfmt(a)', {
   PropertyExp_property(object, _dot, property) {
     return TightSpan([object.hfmt(this.args.a), '.', property.hfmt(this.args.a)])
   },
-  PropertyExp_index(object, _open, index, _close) {
-    return TightSpan([object.hfmt(this.args.a), '[', index.hfmt(this.args.a), ']'])
-  },
 
-  CallExp_index(object, _open, index, _close) {
-    return TightSpan([object.hfmt(this.args.a), '[', index.hfmt(this.args.a), ']'])
-  },
   CallExp_property(exp, _dot, ident) {
     return TightSpan([exp.hfmt(this.args.a), '.', ident.hfmt(this.args.a)])
   },
@@ -474,13 +468,7 @@ semantics.addOperation<Span>('fmt(a)', {
   PropertyExp_property(object, _dot, property) {
     return hfmt(this) ?? VSpan([object.fmt(this.args.a), TightSpan(['.', property.fmt(this.args.a)])])
   },
-  PropertyExp_index(object, _open, index, _close) {
-    return hfmt(this) ?? VSpan([TightSpan([object.fmt(this.args.a), '[']), index.fmt(this.args.a), ']'])
-  },
 
-  CallExp_index(object, _open, index, _close) {
-    return hfmt(this) ?? VSpan([TightSpan([object.fmt(this.args.a), '[']), index.fmt(this.args.a), ']'])
-  },
   CallExp_property(exp, _dot, ident) {
     return hfmt(this) ?? VSpan([exp.fmt(this.args.a), TightSpan(['.', ident.fmt(this.args.a)])])
   },

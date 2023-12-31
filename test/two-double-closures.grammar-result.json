@@ -118,9 +118,18 @@
         "1": [
           {
             "0": {
-              "0": "accums",
-              "2": "0",
-              "type": "PropertyExp_index"
+              "0": {
+                "0": "accums",
+                "2": "get",
+                "type": "PropertyExp_property"
+              },
+              "1": {
+                "1": [
+                  "0"
+                ],
+                "type": "Arguments"
+              },
+              "type": "CallExp_property_call"
             },
             "1": {
               "1": [
@@ -128,13 +137,22 @@
               ],
               "type": "Arguments"
             },
-            "type": "CallExp_property_call"
+            "type": "CallExp_call"
           },
           {
             "0": {
-              "0": "accums",
-              "2": "0",
-              "type": "PropertyExp_index"
+              "0": {
+                "0": "accums",
+                "2": "get",
+                "type": "PropertyExp_property"
+              },
+              "1": {
+                "1": [
+                  "0"
+                ],
+                "type": "Arguments"
+              },
+              "type": "CallExp_property_call"
             },
             "1": {
               "1": [
@@ -142,13 +160,22 @@
               ],
               "type": "Arguments"
             },
-            "type": "CallExp_property_call"
+            "type": "CallExp_call"
           },
           {
             "0": {
-              "0": "accums2",
-              "2": "0",
-              "type": "PropertyExp_index"
+              "0": {
+                "0": "accums2",
+                "2": "get",
+                "type": "PropertyExp_property"
+              },
+              "1": {
+                "1": [
+                  "0"
+                ],
+                "type": "Arguments"
+              },
+              "type": "CallExp_property_call"
             },
             "1": {
               "1": [
@@ -156,7 +183,7 @@
               ],
               "type": "Arguments"
             },
-            "type": "CallExp_property_call"
+            "type": "CallExp_call"
           }
         ],
         "type": "List"
@@ -165,9 +192,18 @@
         "1": [
           {
             "0": {
-              "0": "accums",
-              "2": "1",
-              "type": "PropertyExp_index"
+              "0": {
+                "0": "accums",
+                "2": "get",
+                "type": "PropertyExp_property"
+              },
+              "1": {
+                "1": [
+                  "1"
+                ],
+                "type": "Arguments"
+              },
+              "type": "CallExp_property_call"
             },
             "1": {
               "1": [
@@ -175,13 +211,22 @@
               ],
               "type": "Arguments"
             },
-            "type": "CallExp_property_call"
+            "type": "CallExp_call"
           },
           {
             "0": {
-              "0": "accums",
-              "2": "1",
-              "type": "PropertyExp_index"
+              "0": {
+                "0": "accums",
+                "2": "get",
+                "type": "PropertyExp_property"
+              },
+              "1": {
+                "1": [
+                  "1"
+                ],
+                "type": "Arguments"
+              },
+              "type": "CallExp_property_call"
             },
             "1": {
               "1": [
@@ -189,13 +234,22 @@
               ],
               "type": "Arguments"
             },
-            "type": "CallExp_property_call"
+            "type": "CallExp_call"
           },
           {
             "0": {
-              "0": "accums2",
-              "2": "1",
-              "type": "PropertyExp_index"
+              "0": {
+                "0": "accums2",
+                "2": "get",
+                "type": "PropertyExp_property"
+              },
+              "1": {
+                "1": [
+                  "1"
+                ],
+                "type": "Arguments"
+              },
+              "type": "CallExp_property_call"
             },
             "1": {
               "1": [
@@ -203,7 +257,7 @@
               ],
               "type": "Arguments"
             },
-            "type": "CallExp_property_call"
+            "type": "CallExp_call"
           }
         ],
         "type": "List"

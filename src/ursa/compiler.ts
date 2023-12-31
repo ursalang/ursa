@@ -134,23 +134,6 @@ function addLoc(val: ArkExp, node: ParserNode) {
   return val
 }
 
-function indexExp(
-  expNode: ParserThisNode,
-  isLval: boolean,
-  object: ParserNode,
-  index: ParserNode,
-): ArkExp {
-  const compiledObj = object.toExp(expNode.args.a)
-  const compiledIndex = index.toExp(expNode.args.a)
-  return addLoc(
-    new ArkCall(
-      new ArkGet(addLoc(new ArkProperty(isLval ? 'set' : 'get', compiledObj), object)),
-      [compiledIndex],
-    ),
-    expNode,
-  )
-}
-
 function makeProperty(a: ParserArgs, object: ParserNonterminalNode, property: ParserNode) {
   return addLoc(new ArkProperty(property.sourceString, object.toExp(a)), object)
 }
@@ -251,16 +234,10 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     return addLoc(new ArkObjectLiteral(inits), this)
   },
 
-  PropertyExp_index(object, _open, index, _close) {
-    return indexExp(this, false, object, index)
-  },
   PropertyExp_property(object, _dot, property) {
     return addLoc(new ArkGet(makeProperty(this.args.a, object, property)), this)
   },
 
-  CallExp_index(object, _open, index, _close) {
-    return indexExp(this, false, object, index)
-  },
   CallExp_property(exp, _dot, ident) {
     return addLoc(new ArkGet(makeProperty(this.args.a, exp, ident)), this)
   },
@@ -590,16 +567,10 @@ semantics.addOperation<ArkExp>('toLval(a)', {
     return addLoc(this.symref(this.args.a).value, this)
   },
 
-  PropertyExp_index(object, _open, index, _close) {
-    return indexExp(this, true, object, index)
-  },
   PropertyExp_property(object, _dot, property) {
     return makeProperty(this.args.a, object, property)
   },
 
-  CallExp_index(object, _open, index, _close) {
-    return indexExp(this, true, object, index)
-  },
   CallExp_property(exp, _dot, ident) {
     return makeProperty(this.args.a, exp, ident)
   },

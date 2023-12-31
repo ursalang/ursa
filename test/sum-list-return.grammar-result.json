@@ -67,9 +67,18 @@
                   "2": {
                     "0": "tot",
                     "2": {
-                      "0": "l",
-                      "2": "i",
-                      "type": "PropertyExp_index"
+                      "0": {
+                        "0": "l",
+                        "2": "get",
+                        "type": "PropertyExp_property"
+                      },
+                      "1": {
+                        "1": [
+                          "i"
+                        ],
+                        "type": "Arguments"
+                      },
+                      "type": "CallExp_property_call"
                     },
                     "type": "SumExp_plus"
                   },

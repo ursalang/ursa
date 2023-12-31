@@ -1,10 +1,10 @@
 // List symbols in input
 
-let s = fs.readFileSync(argv[1], "utf-8")
+let s = fs.readFileSync(argv.get(1), "utf-8")
 let regex = RegExp("\\p{L}+", "ug")
 
 loop {
     let m = regex.exec(s)
     if m == null { break }
-    print(m[0])
+    print(m.get(0))
 }

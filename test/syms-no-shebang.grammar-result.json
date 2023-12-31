@@ -12,9 +12,18 @@
           "1": {
             "1": [
               {
-                "0": "argv",
-                "2": "1",
-                "type": "PropertyExp_index"
+                "0": {
+                  "0": "argv",
+                  "2": "get",
+                  "type": "PropertyExp_property"
+                },
+                "1": {
+                  "1": [
+                    "1"
+                  ],
+                  "type": "Arguments"
+                },
+                "type": "CallExp_property_call"
               },
               "\"utf-8\""
             ],
@@ -98,9 +107,18 @@
         "1": {
           "1": [
             {
-              "0": "m",
-              "2": "0",
-              "type": "PropertyExp_index"
+              "0": {
+                "0": "m",
+                "2": "get",
+                "type": "PropertyExp_property"
+              },
+              "1": {
+                "1": [
+                  "0"
+                ],
+                "type": "Arguments"
+              },
+              "type": "CallExp_property_call"
             }
           ],
           "type": "Arguments"
