@@ -42,8 +42,7 @@ class FrameDebugInfo {
 }
 
 export class RuntimeStack {
-  constructor(public readonly stack: ArkFrame[] = [[[], [], new FrameDebugInfo()]]) {
-    assert(stack.length > 0)
+  constructor(public readonly stack: [ArkFrame, ...ArkFrame[]] = [[[], [], new FrameDebugInfo()]]) {
   }
 
   push(items: ArkRef[]) {

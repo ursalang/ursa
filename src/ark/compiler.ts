@@ -16,7 +16,7 @@ import {
   ArkFn, ArkReturn, ArkProperty, ArkLet, ArkCall, ArkLiteral, ArkObject,
 } from './interpreter.js'
 
-export class ArkCompilerError extends Error {}
+export class ArkCompilerError extends Error { }
 
 export class FreeVars extends Map<string, ArkStackRef> {
   merge(moreVars: FreeVars): FreeVars {
@@ -27,16 +27,16 @@ export class FreeVars extends Map<string, ArkStackRef> {
   }
 }
 
+type Frame = [(string | undefined)[], string[]]
+
 export class Environment {
   // Each stack frame consists of a pair of local variables and captures.
   // Local variable names are undefined between the point where they are
   // allocated and the point at which they are declared.
   constructor(
-    public stack: [(string | undefined)[], string[]][] = [[[], []]],
+    public stack: [Frame, ...Frame[]] = [[[], []]],
     public externalSyms: ArkObject = globals,
-  ) {
-    assert(stack.length > 0)
-  }
+  ) { }
 
   push(items: (string | undefined)[]) {
     return new Environment(
@@ -122,7 +122,7 @@ export function symRef(env: Environment, name: string): CompiledArk {
 }
 
 export class CompiledArk {
-  constructor(public value: ArkExp, public freeVars: FreeVars = new FreeVars()) {}
+  constructor(public value: ArkExp, public freeVars: FreeVars = new FreeVars()) { }
 }
 
 export class PartialCompiledArk extends CompiledArk {
