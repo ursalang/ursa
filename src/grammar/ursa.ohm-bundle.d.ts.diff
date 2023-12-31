@@ -1,13 +1,13 @@
---- src/grammar/ursa.ohm-bundle.d.ts	2023-12-31 14:33:44.938194120 +0000
-+++ src/grammar/ursa.ohm-bundle.d.ts.bak	2023-12-31 14:33:44.514192000 +0000
-@@ -4,150 +4,171 @@
+--- src/grammar/ursa.ohm-bundle.d.ts	2023-12-31 16:03:51.540793741 +0000
++++ src/grammar/ursa.ohm-bundle.d.ts.bak	2023-12-31 16:03:51.096791164 +0000
+@@ -4,150 +4,170 @@
  import {
    BaseActionDict,
    Grammar,
 -  IterationNode,
 -  Node,
+-  NonterminalNode,
 +  Node as NodeBase,
-   NonterminalNode,
 +  NonterminalNode as NonterminalNodeBase,
    Semantics,
    TerminalNode
