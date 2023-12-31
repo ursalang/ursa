@@ -5,7 +5,7 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import {debug} from '../ark/interpreter.js'
 import grammar, {
-  Node, NonterminalNode, IterationNode, UrsaSemantics,
+  Node, NonterminalNode, IterationNode, ThisNode,
   // eslint-disable-next-line import/extensions
 } from '../grammar/ursa.ohm-bundle.js'
 
@@ -21,14 +21,12 @@ export type FormatterArgs = {
 }
 
 type FormatterNode = Node<FormatterOperations>
-
-type FormatterNonterminalNode = NonterminalNode<FormatterArgs, FormatterOperations>
-
+type FormatterNonterminalNode = NonterminalNode<FormatterOperations>
 type FormatterIterationNode = IterationNode<FormatterOperations>
+type FormatterThisNode = ThisNode<FormatterArgs, FormatterOperations>
 
-// Specify precise type so semantics can be precisely type-checked.
 // eslint-disable-next-line max-len
-export const semantics: UrsaSemantics<FormatterNode, FormatterNonterminalNode, FormatterIterationNode, FormatterOperations> = grammar.createSemantics<FormatterNode, FormatterNonterminalNode, FormatterIterationNode, FormatterOperations>()
+export const semantics = grammar.createSemantics<FormatterNode, FormatterNonterminalNode, FormatterIterationNode, FormatterThisNode, FormatterOperations>()
 
 function addSeparator(addTrailing: boolean, spans: (Span | string)[], sep: Span): Span[] {
   const res = spans.map((span) => sep.copy().prepend(span))
@@ -364,9 +362,7 @@ semantics.addOperation<Span>('hfmt(a)', {
   },
 })
 
-// The first argument must be `this` from a Semantics operation, so it
-// contains `.args`.
-function hfmt(node: FormatterNonterminalNode) {
+function hfmt(node: FormatterThisNode) {
   const hRes = node.hfmt(node.args.a)
   if (hRes.width() > node.args.a.maxWidth) {
     return undefined
@@ -380,7 +376,7 @@ function narrowed(args: FormatterArgs): FormatterArgs {
 
 function maybeVfmt(
   args: FormatterArgs,
-  parentNode: FormatterNonterminalNode,
+  parentNode: FormatterThisNode,
   callback: () => Span,
 ) {
   const hRes = hfmt(parentNode)
@@ -399,7 +395,7 @@ function vfmtDelimitedList(
   openDelim: string,
   closeDelim: string,
   separator: Span,
-  parentNode: FormatterNonterminalNode,
+  parentNode: FormatterThisNode,
   listNode: FormatterNonterminalNode,
 ) {
   return maybeVfmt(
@@ -418,7 +414,7 @@ function vfmtDelimitedList(
 function fmtUnary(
   args: FormatterArgs,
   op: string,
-  parentNode: FormatterNonterminalNode,
+  parentNode: FormatterThisNode,
   node: FormatterNonterminalNode,
 ) {
   return hfmt(parentNode) ?? VSpan([TightSpan([op, '(']), node.fmt(args), ')'])
@@ -427,7 +423,7 @@ function fmtUnary(
 function fmtBinary(
   args: FormatterArgs,
   op: string,
-  parentNode: FormatterNonterminalNode,
+  parentNode: FormatterThisNode,
   left: FormatterNonterminalNode,
   right: FormatterNonterminalNode,
 ) {

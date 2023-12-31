@@ -7,7 +7,7 @@ import assert from 'assert'
 import {Interval} from 'ohm-js'
 
 import grammar, {
-  Node, NonterminalNode, IterationNode, UrsaSemantics,
+  Node, NonterminalNode, IterationNode, ThisNode,
   // eslint-disable-next-line import/extensions
 } from '../grammar/ursa.ohm-bundle.js'
 import {
@@ -43,14 +43,12 @@ type ParserArgs = {
 }
 
 type ParserNode = Node<ParserOperations>
-
-type ParserNonterminalNode = NonterminalNode<ParserArgs, ParserOperations>
-
+type ParserNonterminalNode = NonterminalNode<ParserOperations>
 type ParserIterationNode = IterationNode<ParserOperations>
+type ParserThisNode = ThisNode<ParserArgs, ParserOperations>
 
-// Specify precise type so semantics can be precisely type-checked.
 // eslint-disable-next-line max-len
-export const semantics: UrsaSemantics<ParserNode, ParserNonterminalNode, ParserIterationNode, ParserOperations> = grammar.createSemantics<ParserNode, ParserNonterminalNode, ParserIterationNode, ParserOperations>()
+export const semantics = grammar.createSemantics<ParserNode, ParserNonterminalNode, ParserIterationNode, ParserThisNode, ParserOperations>()
 
 class UrsaError extends Error {
   constructor(source: Interval, message: string) {
@@ -136,10 +134,8 @@ function addLoc(val: ArkExp, node: ParserNode) {
   return val
 }
 
-// The first argument must be `this` from a Semantics operation, so it
-// contains `.args`.
 function indexExp(
-  expNode: ParserNonterminalNode,
+  expNode: ParserThisNode,
   isLval: boolean,
   object: ParserNode,
   index: ParserNode,
