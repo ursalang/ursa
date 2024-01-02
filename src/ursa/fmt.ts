@@ -43,13 +43,9 @@ function narrowed(a: FormatterArgs): FormatterArgs {
   return {...a, maxWidth: a.maxWidth - a.indentString.length}
 }
 
+// FIXME: put optional args in an options object
 export class Span {
-  constructor(private content: SpanContent[], public stringSep: string = '', private indentString = '') {}
-
-  prepend(span: SpanContent) {
-    this.content.unshift(span)
-    return this
-  }
+  constructor(protected content: SpanContent[], public stringSep = '', protected indentString = '') {}
 
   copy(): Span {
     const res = []
@@ -64,12 +60,11 @@ export class Span {
   }
 
   toString(): string {
-    const indent = this.indentString ?? ''
     const res = this.content.map((elem) => elem.toString())
       .filter((s) => s !== '')
       .join(this.stringSep)
-      .replaceAll(this.stringSep, this.stringSep + indent)
-    return res === '' ? '' : indent + res
+      .replaceAll(this.stringSep, this.stringSep + this.indentString)
+    return res === '' ? '' : this.indentString + res
   }
 
   width(): number {
@@ -82,15 +77,33 @@ export class Span {
   }
 }
 
-function TightSpan(content: (string | Span)[]) {
+class ListSpan extends Span {
+  constructor(content: SpanContent[], private sep: string, private spanMaker: (content: SpanContent[]) => Span, stringSep?: string, indentString?: string, private addTrailingWhenVertical = false) {
+    super(content, stringSep, indentString)
+  }
+
+  toString() {
+    const newContent = []
+    for (const span of this.content) {
+      newContent.push(this.spanMaker([span, this.sep]))
+    }
+    if (this.content.length > 0 && !(this.addTrailingWhenVertical && this.stringSep === '\n')) {
+      newContent.pop()
+      newContent.push(this.content[this.content.length - 1])
+    }
+    return new Span(newContent, this.stringSep, this.indentString).toString()
+  }
+}
+
+function tightSpan(content: SpanContent[]) {
   return new Span(content)
 }
 
-function HSpan(content: (string | Span)[]) {
+function hSpan(content: SpanContent[]) {
   return new Span(content, ' ')
 }
 
-function VSpan(content: (string | Span)[]) {
+function vSpan(content: SpanContent[]) {
   return new Span(content, '\n')
 }
 
@@ -135,44 +148,28 @@ function tryFormatsExtraV(
   )
 }
 
-function fmtSeparatedList(
-  a: FormatterArgs,
-  sep: Span,
-  addTrailing: boolean,
-  node: FormatterNonterminalNode,
-): Span[] {
-  const res = []
-  let formattedChild
-  for (const child of node.asIteration().children) {
-    formattedChild = child.fmt(a)
-    res.push(sep.copy().prepend(child.fmt(a)))
-  }
-  if (!addTrailing && formattedChild) {
-    res.pop()
-    res.push(formattedChild)
-  }
-  return res
+function fmtIter(a: FormatterArgs, node: FormatterNonterminalNode): Span[] {
+  return node.asIteration().children.map((child) => child.fmt(a))
 }
 
 function fmtDelimitedList(
   a: FormatterArgs,
   openDelim: string,
   closeDelim: string,
-  separator: Span,
+  separator: string,
+  spanMaker: (content: SpanContent[]) => Span,
   listNode: FormatterNonterminalNode,
 ) {
   return tryFormatsExtraV(
     a,
-    () => TightSpan([
+    () => new Span([
       openDelim,
-      HSpan(fmtSeparatedList(a, separator, false, listNode)),
+      new ListSpan(fmtIter(a, listNode), separator, spanMaker, ' '),
       closeDelim,
     ]),
-    [() => TightSpan([
+    [() => new Span([
       openDelim,
-      VSpan(
-        fmtSeparatedList(narrowed(a), separator, true, listNode),
-      ).indent(a.indentString),
+      new ListSpan(fmtIter(narrowed(a), listNode), separator, spanMaker, '\n', a.indentString, true),
       closeDelim,
     ])],
   )
@@ -187,7 +184,7 @@ function fmtUnary(
   return tryFormats(
     a,
     () => spanMaker([op, node.fmt(a)]),
-    [(a) => VSpan([TightSpan([op, '(']), node.fmt(narrowed(a)).indent(a.indentString), ')'])],
+    [(a) => vSpan([new Span([op, '(']), node.fmt(narrowed(a)).indent(a.indentString), ')'])],
   )
 }
 
@@ -199,10 +196,10 @@ function fmtBinary(
 ): Span {
   return tryFormats(
     a,
-    () => HSpan([left.fmt(a), op, right.fmt(a)]),
-    [(a) => VSpan([
+    () => hSpan([left.fmt(a), op, right.fmt(a)]),
+    [(a) => vSpan([
       '(',
-      VSpan([left.fmt(narrowed(a)), HSpan([op, right.fmt(narrowed(a))])]).indent(a.indentString),
+      vSpan([left.fmt(narrowed(a)), hSpan([op, right.fmt(narrowed(a))])]).indent(a.indentString),
       ')',
     ])],
   )
@@ -212,13 +209,13 @@ function fmtIfs(
   a: FormatterArgs,
   ifs: FormatterNonterminalNode,
   elseBlock: FormatterNonterminalNode,
-): Span[] {
-  const formattedIfs = fmtSeparatedList(a, HSpan(['else']), false, ifs)
+): Span {
+  const formattedIfs = ifs.asIteration().children.map((child) => child.fmt(a))
   if (elseBlock.children.length > 0) {
     const formattedElse = elseBlock.children[0].fmt(a)
-    formattedIfs.push(HSpan(['else']), formattedElse)
+    formattedIfs.push(formattedElse)
   }
-  return formattedIfs
+  return new ListSpan(formattedIfs, 'else', hSpan, '\n')
 }
 
 function fmtKeywordMaybeExp(
@@ -227,142 +224,138 @@ function fmtKeywordMaybeExp(
   exp: FormatterNonterminalNode,
 ): Span {
   if (exp.children.length > 0) {
-    return HSpan([keyword, exp.children[0].fmt(a)])
+    return hSpan([keyword, exp.children[0].fmt(a)])
   }
-  return HSpan([keyword])
+  return hSpan([keyword])
 }
 
 semantics.addOperation<Span>('fmt(a)', {
   _terminal() {
-    return TightSpan([this.sourceString])
+    return new Span([this.sourceString])
   },
   identName(_start, _rest) {
-    return TightSpan([this.sourceString])
+    return new Span([this.sourceString])
   },
 
   // Horizontal output of short sequences is handled by the Block rule.
   Sequence(exps, _sc) {
-    return VSpan(exps.asIteration().children.map((child) => child.fmt(this.args.a)))
+    return vSpan(exps.asIteration().children.map((child) => child.fmt(this.args.a)))
   },
 
   PrimaryExp_paren(_open, exp, _close) {
     return tryFormats(
       this.args.a,
-      (a) => TightSpan(['(', HSpan([exp.fmt(a)]), ')']),
-      [(a) => VSpan(['(', VSpan([exp.fmt(narrowed(a))]).indent(a.indentString), ')'])],
+      (a) => new Span(['(', hSpan([exp.fmt(a)]), ')']),
+      [(a) => vSpan(['(', vSpan([exp.fmt(narrowed(a))]).indent(a.indentString), ')'])],
     )
   },
 
   Definition(ident, _colon, value) {
-    return HSpan([ident.fmt(this.args.a), '=', value.fmt(this.args.a)])
+    return hSpan([ident.fmt(this.args.a), '=', value.fmt(this.args.a)])
   },
 
   List(_open, elems, _maybeComma, _close) {
-    return fmtDelimitedList(this.args.a, '[', ']', TightSpan([',']), elems)
+    return fmtDelimitedList(this.args.a, '[', ']', ',', tightSpan, elems)
   },
 
   Map(_open, elems, _maybeComma, _close) {
-    return fmtDelimitedList(this.args.a, '{', '}', TightSpan([',']), elems)
+    return fmtDelimitedList(this.args.a, '{', '}', ',', tightSpan, elems)
   },
   KeyValue(key, _colon, value) {
     return tryFormats(
       this.args.a,
-      (a) => HSpan([TightSpan([key.fmt(a), ':']), value.fmt(a)]),
-      [(a) => VSpan([TightSpan([key.fmt(a), ':']), value.fmt(a)])],
+      (a) => hSpan([new Span([key.fmt(a), ':']), value.fmt(a)]),
+      [(a) => vSpan([new Span([key.fmt(a), ':']), value.fmt(a)])],
     )
   },
 
   Object(_open, elems, _maybeComma, _close) {
-    return fmtDelimitedList(this.args.a, '{', '}', TightSpan([';']), elems)
+    return fmtDelimitedList(this.args.a, '{', '}', ';', tightSpan, elems)
   },
 
   PropertyExp_property(object, _dot, property) {
     return tryFormats(
       this.args.a,
-      (a) => TightSpan([object.fmt(a), '.', property.fmt(a)]),
-      [(a) => VSpan([object.fmt(a), TightSpan(['.', property.fmt(a)])])],
+      (a) => new Span([object.fmt(a), '.', property.fmt(a)]),
+      [(a) => vSpan([object.fmt(a), new Span(['.', property.fmt(a)])])],
     )
   },
 
   CallExp_property(exp, _dot, ident) {
     return tryFormats(
       this.args.a,
-      (a) => TightSpan([exp.fmt(a), '.', ident.fmt(a)]),
-      [(a) => VSpan([exp.fmt(a), TightSpan(['.', ident.fmt(a)])])],
+      (a) => new Span([exp.fmt(a), '.', ident.fmt(a)]),
+      [(a) => vSpan([exp.fmt(a), new Span(['.', ident.fmt(a)])])],
     )
   },
   CallExp_call(exp, args) {
     return tryFormats(
       this.args.a,
-      (a) => TightSpan([exp.fmt(a), args.fmt(a)]),
-      [(a) => VSpan([exp.fmt(a), args.fmt(a)])],
+      (a) => new Span([exp.fmt(a), args.fmt(a)]),
+      [(a) => vSpan([exp.fmt(a), args.fmt(a)])],
     )
   },
   CallExp_property_call(exp, args) {
     return tryFormats(
       this.args.a,
-      (a) => TightSpan([exp.fmt(a), args.fmt(a)]),
-      [(a) => VSpan([exp.fmt(a), args.fmt(a)])],
+      (a) => new Span([exp.fmt(a), args.fmt(a)]),
+      [(a) => vSpan([exp.fmt(a), args.fmt(a)])],
     )
   },
   Arguments(_open, args, _maybeComma, _close) {
-    return fmtDelimitedList(this.args.a, '(', ')', TightSpan([',']), args)
+    return fmtDelimitedList(this.args.a, '(', ')', ',', tightSpan, args)
   },
 
   Ifs(ifs, _else, elseBlock) {
-    return tryFormats(
-      this.args.a,
-      (a) => HSpan(fmtIfs(a, ifs, elseBlock)),
-      [(a) => VSpan(fmtIfs(a, ifs, elseBlock))],
-    )
+    return fmtIfs(this.args.a, ifs, elseBlock)
   },
   If(_if, cond, thenBlock) {
     return tryFormats(
       this.args.a,
-      (a) => HSpan(['if', cond.fmt(a), thenBlock.fmt(a)]),
-      [(a) => VSpan(['if', cond.fmt(a), thenBlock.fmt(a)])],
+      (a) => hSpan(['if', cond.fmt(a), thenBlock.fmt(a)]),
+      [(a) => vSpan(['if', cond.fmt(a), thenBlock.fmt(a)])],
     )
   },
 
   Fn(_fn, _open, params, _maybeComma, _close, body) {
     return tryFormats(
       this.args.a,
-      (a) => HSpan([
-        TightSpan(['fn', fmtDelimitedList(a, '(', ')', TightSpan([',']), params)]),
+      (a) => hSpan([
+        new Span(['fn', fmtDelimitedList(a, '(', ')', ',', tightSpan, params)]),
         body.fmt(a),
       ]),
-      [(a) => VSpan([
-        TightSpan(['fn', fmtDelimitedList(a, '(', ')', TightSpan([',']), params)]),
+      [(a) => vSpan([
+        new Span(['fn', fmtDelimitedList(a, '(', ')', ',', tightSpan, params)]),
         body.fmt(a),
       ])],
     )
   },
 
   Loop(_loop, body) {
-    return HSpan(['loop', body.fmt(this.args.a)])
+    return hSpan(['loop', body.fmt(this.args.a)])
   },
 
   For(_for, ident, _of, iterator, body) {
     return tryFormats(
       this.args.a,
-      (a) => HSpan(['for', ident.fmt(a), 'of', iterator.fmt(a), body.fmt(a)]),
-      [(a) => VSpan([
-        HSpan(['for', ident.fmt(a), 'of', iterator.fmt(a)]),
-        VSpan([body.fmt(a)])])],
+      (a) => hSpan(['for', ident.fmt(a), 'of', iterator.fmt(a), body.fmt(a)]),
+      [(a) => vSpan([
+        hSpan(['for', ident.fmt(a), 'of', iterator.fmt(a)]),
+        vSpan([body.fmt(a)])])],
     )
   },
 
   UnaryExp_not(_not, exp) {
-    return fmtUnary(this.args.a, 'not', HSpan, exp)
+    return fmtUnary(this.args.a, 'not', hSpan, exp)
   },
   UnaryExp_bitwise_not(_not, exp) {
-    return fmtUnary(this.args.a, '~', TightSpan, exp)
+    return fmtUnary(this.args.a, '~', tightSpan, exp)
   },
   UnaryExp_pos(_plus, exp) {
-    return fmtUnary(this.args.a, '+', TightSpan, exp)
+    return fmtUnary(this.args.a, '+', tightSpan, exp)
   },
   UnaryExp_neg(_neg, exp) {
-    return fmtUnary(this.args.a, '-', TightSpan, exp)
+    return fmtUnary(this.args.a, '-', tightSpan, exp)
   },
 
   ExponentExp_power(left, _power, right) {
@@ -443,7 +436,7 @@ semantics.addOperation<Span>('fmt(a)', {
     )
   },
   Exp_continue(_continue) {
-    return HSpan(['continue'])
+    return hSpan(['continue'])
   },
   Exp_return(_return, exp) {
     return tryFormats(
@@ -456,26 +449,23 @@ semantics.addOperation<Span>('fmt(a)', {
   Lets(lets) {
     return tryFormats(
       this.args.a,
-      (a) => HSpan(fmtSeparatedList(a, HSpan(['and']), false, lets)),
-      [(a) => VSpan(fmtSeparatedList(a, HSpan(['and']), false, lets))],
+      (a) => new ListSpan(fmtIter(a, lets), 'and', hSpan, ' '),
+      [(a) => new ListSpan(fmtIter(a, lets), 'and', hSpan, ' ')],
     )
   },
   Let(_let, definition) {
     return tryFormats(
       this.args.a,
-      (a) => HSpan(['let', definition.fmt(a)]),
-      [(a) => VSpan(['let', definition.fmt(a)])],
+      (a) => hSpan(['let', definition.fmt(a)]),
+      [(a) => vSpan(['let', definition.fmt(a)])],
     )
   },
 
   Use(_use, pathList) {
     return tryFormats(
       this.args.a,
-      (a) => HSpan([
-        'use',
-        TightSpan(fmtSeparatedList(a, TightSpan(['.']), false, pathList)),
-      ]),
-      [(a) => VSpan(['use', ...fmtSeparatedList(a, TightSpan(['.']), false, pathList)])],
+      (a) => hSpan(['use', new ListSpan(fmtIter(a, pathList), '.', tightSpan)]),
+      [(a) => vSpan(['use', new ListSpan(fmtIter(a, pathList), '.', tightSpan)])],
     )
   },
 
@@ -483,22 +473,22 @@ semantics.addOperation<Span>('fmt(a)', {
     if (seq.children[0].asIteration().children.length === 1) {
       const exp = seq.children[0].asIteration().children[0]
       if (exp.ctorName === 'Exp' && depth(exp) < this.args.a.simpleExpDepth) {
-        return TightSpan(['{', seq.fmt(this.args.a), '}'])
+        return new Span(['{', seq.fmt(this.args.a), '}'])
       }
     }
-    return VSpan(['{', VSpan([seq.fmt(narrowed(this.args.a))]).indent(this.args.a.indentString), '}'])
+    return vSpan(['{', vSpan([seq.fmt(narrowed(this.args.a))]).indent(this.args.a.indentString), '}'])
   },
 
   number(_) {
-    return TightSpan([this.sourceString])
+    return new Span([this.sourceString])
   },
 
   string(_open, _str, _close) {
-    return TightSpan([this.sourceString])
+    return new Span([this.sourceString])
   },
 
   literalString(_open, _str, _close) {
-    return TightSpan([this.sourceString])
+    return new Span([this.sourceString])
   },
 })
 
