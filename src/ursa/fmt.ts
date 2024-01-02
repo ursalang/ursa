@@ -37,29 +37,21 @@ function depth(node: FormatterNode): number {
   )
 }
 
-function addSeparator(addTrailing: boolean, spans: (Span | string)[], sep: Span): Span[] {
-  const res = spans.map((span) => sep.copy().prepend(span))
-  if (!addTrailing && spans.length > 0) {
-    res[spans.length - 1].content.pop()
-  }
-  return res
-}
+type SpanContent = string | Span
 
-function formatIter(a: FormatterArgs, node: FormatterNonterminalNode): Span[] {
-  return node.asIteration().children.map((child) => child.fmt(a))
+function narrowed(a: FormatterArgs): FormatterArgs {
+  return {...a, maxWidth: a.maxWidth - a.indentString.length}
 }
 
 export class Span {
-  private indentString = ''
+  constructor(public content: SpanContent[], private stringSep: string = '', private indentString = '') {}
 
-  constructor(public content: (string | Span)[], protected stringSep: string = '') { }
-
-  prepend(span: Span | string) {
+  prepend(span: SpanContent) {
     this.content.unshift(span)
     return this
   }
 
-  append(span: Span | string) {
+  append(span: SpanContent) {
     this.content.push(span)
     return this
   }
@@ -107,8 +99,12 @@ function VSpan(content: (string | Span)[]) {
   return new Span(content, '\n')
 }
 
-function narrowed(a: FormatterArgs): FormatterArgs {
-  return {...a, maxWidth: a.maxWidth - a.indentString.length}
+function addSeparator(addTrailing: boolean, spans: SpanContent[], sep: Span): Span[] {
+  const res = spans.map((span) => sep.copy().prepend(span))
+  if (!addTrailing && spans.length > 0) {
+    res[spans.length - 1].content.pop()
+  }
+  return res
 }
 
 function tryFormats(
@@ -149,6 +145,10 @@ function tryFormatsExtraV(
   )
 }
 
+function fmtIter(a: FormatterArgs, node: FormatterNonterminalNode): Span[] {
+  return node.asIteration().children.map((child) => child.fmt(a))
+}
+
 function fmtDelimitedList(
   a: FormatterArgs,
   openDelim: string,
@@ -160,13 +160,13 @@ function fmtDelimitedList(
     a,
     () => TightSpan([
       openDelim,
-      HSpan([...addSeparator(false, formatIter(a, listNode), separator)]),
+      HSpan([...addSeparator(false, fmtIter(a, listNode), separator)]),
       closeDelim,
     ]),
     [() => TightSpan([
       openDelim,
       VSpan(
-        addSeparator(true, formatIter(narrowed(a), listNode), separator),
+        addSeparator(true, fmtIter(narrowed(a), listNode), separator),
       ).indent(a.indentString),
       closeDelim,
     ])],
@@ -208,7 +208,7 @@ function fmtIfs(
   ifs: FormatterNonterminalNode,
   elseBlock: FormatterNonterminalNode,
 ): Span[] {
-  const formattedIfs = formatIter(a, ifs)
+  const formattedIfs = fmtIter(a, ifs)
   if (elseBlock.children.length > 0) {
     const formattedElse = elseBlock.children[0].fmt(a)
     formattedIfs.push(formattedElse)
@@ -238,7 +238,7 @@ semantics.addOperation<Span>('fmt(a)', {
 
   // Horizontal output of short sequences is handled by the Block rule.
   Sequence(exps, _sc) {
-    return VSpan(formatIter(this.args.a, exps))
+    return VSpan(fmtIter(this.args.a, exps))
   },
 
   PrimaryExp_paren(_open, exp, _close) {
@@ -452,8 +452,8 @@ semantics.addOperation<Span>('fmt(a)', {
   Lets(lets) {
     return tryFormats(
       this.args.a,
-      (a) => HSpan(addSeparator(false, formatIter(a, lets), HSpan(['and']))),
-      [(a) => VSpan(addSeparator(false, formatIter(a, lets), VSpan(['and'])))],
+      (a) => HSpan(addSeparator(false, fmtIter(a, lets), HSpan(['and']))),
+      [(a) => VSpan(addSeparator(false, fmtIter(a, lets), VSpan(['and'])))],
     )
   },
   Let(_let, definition) {
@@ -469,9 +469,9 @@ semantics.addOperation<Span>('fmt(a)', {
       this.args.a,
       (a) => HSpan([
         'use',
-        TightSpan([...addSeparator(false, formatIter(a, pathList), TightSpan(['.']))]),
+        TightSpan([...addSeparator(false, fmtIter(a, pathList), TightSpan(['.']))]),
       ]),
-      [(a) => VSpan(['use', ...addSeparator(false, formatIter(a, pathList), TightSpan(['.']))])],
+      [(a) => VSpan(['use', ...addSeparator(false, fmtIter(a, pathList), TightSpan(['.']))])],
     )
   },
 
