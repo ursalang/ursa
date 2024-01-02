@@ -51,11 +51,6 @@ export class Span {
     return this
   }
 
-  append(span: SpanContent) {
-    this.content.push(span)
-    return this
-  }
-
   copy(): Span {
     const res = []
     for (const elem of this.content) {
@@ -231,11 +226,10 @@ function fmtKeywordMaybeExp(
   keyword: string,
   exp: FormatterNonterminalNode,
 ): Span {
-  const formattedReturn = HSpan([keyword])
   if (exp.children.length > 0) {
-    formattedReturn.append(exp.children[0].fmt(a))
+    return HSpan([keyword, exp.children[0].fmt(a)])
   }
-  return formattedReturn
+  return HSpan([keyword])
 }
 
 semantics.addOperation<Span>('fmt(a)', {
