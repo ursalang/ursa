@@ -43,28 +43,28 @@ function narrowed(a: FormatterArgs): FormatterArgs {
   return {...a, maxWidth: a.maxWidth - a.indentString.length}
 }
 
-// FIXME: put optional args in an options object
-export class Span {
-  constructor(protected content: SpanContent[], public stringSep = '', protected indentString = '') {}
+export type SpanOpts = {
+  stringSep: string
+  indentString: string
+}
 
-  copy(): Span {
-    const res = []
-    for (const elem of this.content) {
-      if (typeof elem === 'string') {
-        res.push(elem)
-      } else {
-        res.push(elem.copy())
-      }
+export class Span {
+  protected options: SpanOpts
+
+  constructor(protected content: SpanContent[], options: Partial<SpanOpts> = {}) {
+    this.options = {
+      stringSep: '',
+      indentString: '',
+      ...options,
     }
-    return new Span([...res], this.stringSep)
   }
 
   toString(): string {
     const res = this.content.map((elem) => elem.toString())
       .filter((s) => s !== '')
-      .join(this.stringSep)
-      .replaceAll(this.stringSep, this.stringSep + this.indentString)
-    return res === '' ? '' : this.indentString + res
+      .join(this.options.stringSep)
+      .replaceAll(this.options.stringSep, this.options.stringSep + this.options.indentString)
+    return res === '' ? '' : this.options.indentString + res
   }
 
   width(): number {
@@ -72,14 +72,29 @@ export class Span {
   }
 
   indent(indentString: string) {
-    this.indentString = indentString
+    this.options.indentString = indentString
     return this
   }
 }
 
+export type ListSpanOpts = {
+  addTrailingWhenVertical?: boolean
+}
+
 class ListSpan extends Span {
-  constructor(content: SpanContent[], private sep: string, private spanMaker: (content: SpanContent[]) => Span, stringSep?: string, indentString?: string, private addTrailingWhenVertical = false) {
-    super(content, stringSep, indentString)
+  protected listOptions: ListSpanOpts
+
+  constructor(
+    content: SpanContent[],
+    private sep: string,
+    private spanMaker: (content: SpanContent[]) => Span,
+    options: Partial<SpanOpts & ListSpanOpts> = {},
+  ) {
+    super(content, options)
+    this.listOptions = {
+      addTrailingWhenVertical: false,
+      ...options,
+    }
   }
 
   toString() {
@@ -87,11 +102,11 @@ class ListSpan extends Span {
     for (const span of this.content) {
       newContent.push(this.spanMaker([span, this.sep]))
     }
-    if (this.content.length > 0 && !(this.addTrailingWhenVertical && this.stringSep === '\n')) {
+    if (this.content.length > 0 && !(this.listOptions.addTrailingWhenVertical && this.options.stringSep === '\n')) {
       newContent.pop()
       newContent.push(this.content[this.content.length - 1])
     }
-    return new Span(newContent, this.stringSep, this.indentString).toString()
+    return new Span(newContent, this.options).toString()
   }
 }
 
@@ -100,11 +115,11 @@ function tightSpan(content: SpanContent[]) {
 }
 
 function hSpan(content: SpanContent[]) {
-  return new Span(content, ' ')
+  return new Span(content, {stringSep: ' '})
 }
 
 function vSpan(content: SpanContent[]) {
-  return new Span(content, '\n')
+  return new Span(content, {stringSep: '\n'})
 }
 
 function tryFormats(
@@ -127,27 +142,6 @@ function tryFormats(
   return res
 }
 
-// Call tryFormats, adding an additional fallback that replaces the
-// outermost Span of the vertical formatter's result, presumed to be
-// horizontal, with a VSpan.
-function tryFormatsExtraV(
-  a: FormatterArgs,
-  hFormatter: (a: FormatterArgs) => Span,
-  vFormatters: ((a: FormatterArgs, span: Span) => Span)[],
-) {
-  return tryFormats(
-    a,
-    hFormatter,
-    [
-      ...vFormatters,
-      (_a, span) => {
-        span.stringSep = '\n'
-        return span
-      },
-    ],
-  )
-}
-
 function fmtIter(a: FormatterArgs, node: FormatterNonterminalNode): Span[] {
   return node.asIteration().children.map((child) => child.fmt(a))
 }
@@ -160,18 +154,23 @@ function fmtDelimitedList(
   spanMaker: (content: SpanContent[]) => Span,
   listNode: FormatterNonterminalNode,
 ) {
-  return tryFormatsExtraV(
+  return tryFormats(
     a,
     () => new Span([
       openDelim,
-      new ListSpan(fmtIter(a, listNode), separator, spanMaker, ' '),
+      new ListSpan(fmtIter(a, listNode), separator, spanMaker, {stringSep: ' '}),
       closeDelim,
     ]),
     [() => new Span([
       openDelim,
-      new ListSpan(fmtIter(narrowed(a), listNode), separator, spanMaker, '\n', a.indentString, true),
+      new ListSpan(fmtIter(narrowed(a), listNode), separator, spanMaker, {stringSep: '\n', indentString: a.indentString, addTrailingWhenVertical: true}),
       closeDelim,
-    ])],
+    ]),
+    () => new Span([
+      openDelim,
+      new ListSpan(fmtIter(narrowed(a), listNode), separator, spanMaker, {stringSep: '\n', indentString: a.indentString, addTrailingWhenVertical: true}),
+      closeDelim,
+    ], {stringSep: '\n'})],
   )
 }
 
@@ -215,7 +214,7 @@ function fmtIfs(
     const formattedElse = elseBlock.children[0].fmt(a)
     formattedIfs.push(formattedElse)
   }
-  return new ListSpan(formattedIfs, 'else', hSpan, '\n')
+  return new ListSpan(formattedIfs, 'else', hSpan, {stringSep: '\n'})
 }
 
 function fmtKeywordMaybeExp(
@@ -449,8 +448,8 @@ semantics.addOperation<Span>('fmt(a)', {
   Lets(lets) {
     return tryFormats(
       this.args.a,
-      (a) => new ListSpan(fmtIter(a, lets), 'and', hSpan, ' '),
-      [(a) => new ListSpan(fmtIter(a, lets), 'and', hSpan, ' ')],
+      (a) => new ListSpan(fmtIter(a, lets), 'and', hSpan, {stringSep: ' '}),
+      [(a) => new ListSpan(fmtIter(a, lets), 'and', hSpan, {stringSep: ' '})],
     )
   },
   Let(_let, definition) {
