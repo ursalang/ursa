@@ -52,7 +52,7 @@
     "patch-ohm": "patch -p0 < src/grammar/ursa.ohm-bundle.d.ts.diff",
     "generate": "npm run generate-only && npm run patch-ohm && mkdir -p lib/grammar/ && cp src/grammar/*ohm-bundle.js src/grammar/*ohm-bundle.d.ts lib/grammar/",
     "update-ohm-patch": "cp src/grammar/ursa.ohm-bundle.d.ts src/grammar/ursa.ohm-bundle.d.ts.bak && npm run generate-only && diff -u src/grammar/ursa.ohm-bundle.d.ts src/grammar/ursa.ohm-bundle.d.ts.bak > src/grammar/ursa.ohm-bundle.d.ts.diff; npm run patch-ohm",
-    "compile-prelude": "./bin/run.js --compile --output=src/ark/prelude.json src/ursa/prelude.ursa",
+    "compile-prelude": "./bin/run.js compile --output=src/ark/prelude.json src/ursa/prelude.ursa",
     "test": "npm run generate && npm run build && ava",
     "test-ursa": "ava src/ursa/ursa.test.ts",
     "test-ark": "ava src/ark/ark.test.ts",

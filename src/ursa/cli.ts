@@ -2,7 +2,6 @@
 // © Reuben Thomas 2023
 // Released under the GPL version 3, or (at your option) any later version.
 
-import assert from 'assert'
 import path from 'path'
 import os from 'os'
 import fs, {PathOrFileDescriptor} from 'fs'
@@ -33,23 +32,12 @@ const parser = new ArgumentParser({
   description: 'The Ursa language.',
   formatter_class: RawDescriptionHelpFormatter,
   epilog: `\`-' given as a file name means standard input or output.
+
+If just one non-option argument is given, Ursa treats it as
+a FILE to be \`run'.
+
 Command line history is read from and saved to ~/.ursarc`,
 })
-const inputGroup = parser.add_mutually_exclusive_group()
-
-inputGroup.add_argument('module', {metavar: 'FILE', help: 'Ursa program to run', nargs: '?'})
-parser.add_argument('argument', {metavar: 'ARGUMENT', help: 'arguments to the Ursa program', nargs: '*'})
-inputGroup.add_argument('--eval', '-e', {metavar: 'EXPRESSION', help: 'execute the given expression'})
-
-parser.add_argument('--syntax', {
-  default: 'ursa', choices: ['ursa', 'json'], help: 'syntax to use [default: ursa]',
-})
-const actionGroup = parser.add_mutually_exclusive_group()
-actionGroup.add_argument('--compile', '-c', {action: 'store_true', help: 'compile input to JSON file'})
-actionGroup.add_argument('--format', {action: 'store_true', help: 'format input source'})
-parser.add_argument('--output', '-o', {metavar: 'FILE', help: 'JSON output file [default: standard output]'})
-parser.add_argument('--interactive', '-i', {action: 'store_true', help: 'enter interactive mode after running given code'})
-
 parser.add_argument('--version', {
   action: 'version',
   version: `%(prog)s ${programVersion}
@@ -58,9 +46,35 @@ https://github.com/ursalang/ursa
 Distributed under the GNU General Public License version 3, or (at
 your option) any later version. There is no warranty.`,
 })
+parser.add_argument('--syntax', {
+  default: 'ursa', choices: ['ursa', 'json'], help: 'syntax to use [default: ursa]',
+})
+
+const subparsers = parser.add_subparsers({description: 'action to take'})
+
+const runParser = subparsers.add_parser('run', {aliases: ['r'], description: 'Run Ursa program'})
+runParser.set_defaults({func: runCommand})
+runParser.add_argument('source', {metavar: 'FILE', help: 'Ursa program to run'})
+runParser.add_argument('argument', {metavar: 'ARGUMENT', help: 'arguments to the Ursa program', nargs: '*'})
+runParser.add_argument('--eval', '-e', {metavar: 'EXPRESSION', help: 'execute the given expression'})
+runParser.add_argument('--output', '-o', {metavar: 'FILE', help: 'JSON output file [default: standard output]'})
+runParser.add_argument('--interactive', '-i', {action: 'store_true', help: 'enter interactive mode after running given code'})
+
+const interactParser = subparsers.add_parser('interact', {aliases: ['i', 'repl', 'interactive'], description: 'Run in interactive mode'})
+interactParser.set_defaults({func: interactCommand})
+
+const compileParser = subparsers.add_parser('compile', {aliases: ['c'], description: 'Compile source code to JSON'})
+compileParser.set_defaults({func: compileCommand})
+compileParser.add_argument('source', {metavar: 'FILE', help: 'Ursa program to compile'})
+compileParser.add_argument('--output', '-o', {metavar: 'FILE', help: 'JSON output file [default: standard output]'})
+
+const fmtParser = subparsers.add_parser('fmt', {aliases: ['f', 'format'], description: 'Format source code'})
+fmtParser.set_defaults({func: fmtCommand})
+fmtParser.add_argument('source', {metavar: 'FILE', help: 'source code to format'})
+fmtParser.add_argument('--output', '-o', {metavar: 'FILE', help: 'output file [default: standard output]'})
 
 interface Args {
-  module: string
+  source: string
   eval: string
   syntax: string
   compile: boolean
@@ -68,10 +82,51 @@ interface Args {
   output: string | undefined
   interactive: boolean
   argument: string[]
+  func: (args: Args) => void
 }
-const args: Args = parser.parse_args() as Args
+
+// Utility routines.
+
+// Get output filename, if any
+type OutputFileResult<T extends boolean> =
+  T extends true ? PathOrFileDescriptor : (PathOrFileDescriptor | undefined)
+function getOutputFile<T extends boolean>(args: Args, useStdoutIfUndefined: T): OutputFileResult<T>
+function getOutputFile(
+  args: Args,
+  useStdoutIfUndefined: boolean,
+): OutputFileResult<typeof useStdoutIfUndefined> {
+  let outputFile: PathOrFileDescriptor | undefined = args.output
+  if (outputFile === '-' || (useStdoutIfUndefined && outputFile === undefined)) {
+    outputFile = process.stdout.fd
+  }
+  return outputFile
+}
+
+// Program name for argv[0]
+let prog: string
+
+// Use standard input if requested
+function getInputFile(args: Args) {
+  let inputFile: PathOrFileDescriptor = args.source
+  if (args.source !== '-') {
+    prog = inputFile
+  } else {
+    inputFile = process.stdin.fd
+    prog = '(stdin)'
+  }
+  return inputFile
+}
+
+function readSourceFile(inputFile: PathOrFileDescriptor) {
+  const source = fs.readFileSync(inputFile, {encoding: 'utf-8'})
+  if (source.startsWith('#!')) {
+    return source.substring(source.indexOf('\n'))
+  }
+  return source
+}
 
 function compile(
+  args: Args,
   exp: string,
   env: Environment = new Environment(),
   startRule?: string,
@@ -89,7 +144,7 @@ function compile(
   return compiled
 }
 
-async function repl(): Promise<ArkVal> {
+async function repl(args: Args): Promise<ArkVal> {
   console.log(`Welcome to Ursa ${programVersion}.`)
   const historyFile = path.join(os.homedir(), '.ursarc')
   let history: string[] = []
@@ -114,7 +169,7 @@ async function repl(): Promise<ArkVal> {
   let val: ArkVal = ArkNull()
   for await (const line of rl) {
     try {
-      let compiled = compile(line, env)
+      let compiled = compile(args, line, env)
       // Filter out already-declared bindings
       for (const id of env.stack[0][0]) {
         compiled.freeVars.delete(id!)
@@ -148,69 +203,36 @@ async function repl(): Promise<ArkVal> {
   return val
 }
 
-// Get output filename, if any
-let outputFile: PathOrFileDescriptor | undefined = args.output
-if (outputFile === '-' || ((args.compile || args.format) && outputFile === undefined)) {
-  outputFile = process.stdout.fd
-}
+// Sub-command action routines.
 
-// Program name for argv[0]
-let prog: string
-
-// Use standard input if requested
-let inputFile: PathOrFileDescriptor = args.module
-if (args.module === '-') {
-  inputFile = process.stdin.fd
-  prog = '(stdin)'
-} else {
-  prog = inputFile
-}
-
-async function main() {
+async function runCommand(args: Args) {
+  const outputFile = getOutputFile(args, args.compile)
   // Any otherwise uncaught exception is reported as an error.
   try {
     // Read input
-    let source: string | undefined
-    let output
+    let source: string
+    const inputFile = getInputFile(args)
     if (args.eval !== undefined) {
       prog = '(eval)'
       source = args.eval
-    } else if (inputFile !== undefined) {
-      source = fs.readFileSync(inputFile, {encoding: 'utf-8'})
-      if (source.startsWith('#!')) {
-        source = source.substring(source.indexOf('\n'))
-      }
+    } else {
+      source = readSourceFile(inputFile)
     }
     const ark = new ArkState()
-    if (args.compile || args.format) {
-      if (source === undefined) {
-        throw new Error('--compile given, but nothing to compile')
-      }
-      if (outputFile === undefined) {
-        throw new Error('--compile given with no input or output filename')
-      }
+    // Add command-line arguments.
+    globals.set('argv', new ArkValRef(new ArkList(
+      [ArkString(prog ?? process.argv[1]), ...args.argument.map((s) => ArkString(s))],
+    )))
+    // Run the program
+    let result: ArkVal | undefined
+    if (source !== undefined) {
+      result = await runWithTraceback(ark, compile(args, source))
     }
-    if (args.compile) {
-      output = serializeVal(compile(source!).value)
-    } else if (args.format) {
-      output = format(source!)
-    } else {
-      // Add command-line arguments.
-      globals.set('argv', new ArkValRef(new ArkList(
-        [ArkString(prog ?? process.argv[0]), ...args.argument.map((s) => ArkString(s))],
-      )))
-      // Run the program
-      let result: ArkVal | undefined
-      if (source !== undefined) {
-        result = await runWithTraceback(ark, compile(source))
-      }
-      if (source === undefined || args.interactive) {
-        result = await repl()
-      }
-      output = serializeVal(result ?? ArkNull()) ?? 'null'
+    if (source === undefined || args.interactive) {
+      result = await repl(args)
     }
+    const output = serializeVal(result ?? ArkNull()) ?? 'null'
     if (outputFile !== undefined) {
-      assert(outputFile)
       fs.writeFileSync(outputFile, output)
     }
   } catch (error) {
@@ -223,4 +245,52 @@ async function main() {
   }
 }
 
-await main()
+async function interactCommand(args: Args) {
+  await repl(args)
+}
+
+function compileCommand(args: Args) {
+  const outputFile = getOutputFile(args, true)
+  // Any otherwise uncaught exception is reported as an error.
+  try {
+    // Read input
+    const inputFile = getInputFile(args)
+    const source = readSourceFile(inputFile)
+    const output = serializeVal(compile(args, source).value)
+    fs.writeFileSync(outputFile, output)
+  } catch (error) {
+    if (process.env.DEBUG) {
+      console.error(error)
+    } else {
+      console.error(`${path.basename(process.argv[1])}: ${error}`)
+    }
+    process.exitCode = 1
+  }
+}
+
+function fmtCommand(args: Args) {
+  const outputFile = getOutputFile(args, true)
+  const inputFile = getInputFile(args)
+  const source = readSourceFile(inputFile)
+  const output = format(source)
+  fs.writeFileSync(outputFile, output)
+}
+
+// Execute given commands and options.
+if (process.argv.length === 3) {
+  // If we have only one argument and it's not a command or option, assume it's a file to run.
+  const filename = process.argv[2]
+  // The next line accesses a private field of subparsers to get the command names.
+  // eslint-disable-next-line max-len
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+  if (!filename.startsWith('-') && !new Set(Object.keys((subparsers as any).choices)).has(filename)) {
+    process.argv.splice(2, 0, 'run')
+  }
+}
+const args = parser.parse_args() as Args
+if (args.func) {
+  args.func(args)
+} else {
+  // If we have no sub-command, enter REPL.
+  await repl(args)
+}

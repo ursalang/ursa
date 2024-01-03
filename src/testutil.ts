@@ -20,6 +20,9 @@ import {format} from './ursa/fmt.js'
 const command = process.env.NODE_ENV === 'coverage' ? './bin/test-run.sh' : './bin/run.js'
 
 async function run(args: string[], inputFile?: string) {
+  if (process.env.DEBUG) {
+    console.log(`run ${command} ${args} ${inputFile}`)
+  }
   return execa(command, args, {inputFile})
 }
 
@@ -68,7 +71,7 @@ async function doCliTest(
   if (!useRepl) {
     tempFile = tmp.fileSync()
     t.teardown(() => tempFile.removeCallback())
-    args.push(`--output=${tempFile.name}`, inputFile)
+    args.push('run', `--output=${tempFile.name}`, inputFile)
   }
   try {
     const {stdout, stderr} = await run(

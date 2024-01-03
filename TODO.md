@@ -23,8 +23,6 @@
 
 ## Ursa MVP
 
-* Make main actions sub-commands of main command (`ursa run`, `ursa fmt`,
-  `ursa compile` etc.).
 * Comprehensions: `loop [elem, …]` and `loop {k = v; …}`.
 * 100% test coverage.
 * Tail recursion elimination
