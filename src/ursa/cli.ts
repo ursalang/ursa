@@ -72,17 +72,26 @@ const fmtParser = subparsers.add_parser('fmt', {aliases: ['f', 'format'], descri
 fmtParser.set_defaults({func: fmtCommand})
 fmtParser.add_argument('source', {metavar: 'FILE', help: 'source code to format'})
 fmtParser.add_argument('--output', '-o', {metavar: 'FILE', help: 'output file [default: standard output]'})
+fmtParser.add_argument('--width', {metavar: 'COLUMNS', help: 'maximum desired width of formatted code'})
+fmtParser.add_argument('--indent', {metavar: 'STRING', help: 'indent string'})
+fmtParser.add_argument('--onelineFactor', {metavar: 'NUMBER', help: 'factor governing when expressions are wrapped (bigger means try to fit more complex expressions on one line)'})
 
 interface Args {
-  source: string
-  eval: string
+  // Global arguments
   syntax: string
-  compile: boolean
-  format: boolean
+  func: (args: Args) => void
+
+  // Run/compile arguments
+  source: string
+  argument: string[]
+  eval: string
   output: string | undefined
   interactive: boolean
-  argument: string[]
-  func: (args: Args) => void
+
+  // Format arguments
+  width: number
+  indent: string
+  onelineFactor: number
 }
 
 // Utility routines.
@@ -206,7 +215,7 @@ async function repl(args: Args): Promise<ArkVal> {
 // Sub-command action routines.
 
 async function runCommand(args: Args) {
-  const outputFile = getOutputFile(args, args.compile)
+  const outputFile = getOutputFile(args, false)
   // Any otherwise uncaught exception is reported as an error.
   try {
     // Read input
@@ -272,7 +281,7 @@ function fmtCommand(args: Args) {
   const outputFile = getOutputFile(args, true)
   const inputFile = getInputFile(args)
   const source = readSourceFile(inputFile)
-  const output = format(source)
+  const output = format(source, args.width, args.indent, args.onelineFactor)
   fs.writeFileSync(outputFile, output)
 }
 
