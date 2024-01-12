@@ -1,4 +1,6 @@
-let fac = fn(self, x) {
+// TODO: write the type of `self` as an interface so that it can be
+// recursive.
+let fac = fn(self: TheTypeOfThisFunction, x: Int): Int {
   if x == 0 {1} else {x * self(self, x - 1)}
 }
 fac(fac, 6)

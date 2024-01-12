@@ -1,0 +1,1 @@
+let o = ABC {a = 1; b = 2}; o.b := "abc"; o.c := 3; o

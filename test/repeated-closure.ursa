@@ -1,5 +1,5 @@
 let tot = 0;
-let accum = fn(x) {
+let accum = fn(x: Int): Void {
   tot := tot + x
 };
 [accum(1), accum(1)]

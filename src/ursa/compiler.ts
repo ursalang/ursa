@@ -31,6 +31,9 @@ type ParserOperations = {
   toDefinition(a: ParserArgs): Definition
   toKeyValue(a: ParserArgs): KeyValue
   toArguments(a: ParserArgs): Arguments
+  toType(a: ParserArgs): void
+  toMethod(a: ParserArgs): string[]
+  toParam(a: ParserArgs): string
   boundVars: string[]
   freeVars(a: ParserArgs): FreeVars
   symref(a: ParserArgs): CompiledArk
@@ -94,19 +97,19 @@ ${trace.map((s) => `  ${s}`).join('\n')}`
 // only during parsing.
 export class AST { }
 
-export class Definition extends AST {
+class Definition extends AST {
   constructor(public ident: ParserNode, public val: ArkExp) {
     super()
   }
 }
 
-export class KeyValue extends AST {
+class KeyValue extends AST {
   constructor(public key: ArkExp, public val: ArkExp) {
     super()
   }
 }
 
-export class Arguments extends AST {
+class Arguments extends AST {
   constructor(public args: ArkExp[]) {
     super()
   }
@@ -116,17 +119,6 @@ function maybeVal(a: ParserArgs, exp: ParserIterationNode): ArkExp {
   return exp.children.length > 0
     ? exp.children[0].toExp(a)
     : new ArkLiteral(ArkNull())
-}
-
-function listNodeToParamList(listNode: ParserNode): string[] {
-  try {
-    return checkParamList(listNode.asIteration().children.map((x) => x.sourceString))
-  } catch (e) {
-    if (!(e instanceof ArkCompilerError)) {
-      throw e
-    }
-    throw new UrsaCompilerError(listNode.source, e.message)
-  }
 }
 
 function addLoc(val: ArkExp, node: ParserNode) {
@@ -167,6 +159,13 @@ semantics.addOperation<Arguments>('toArguments(a)', {
         (x) => addLoc(x.toExp(this.args.a), x),
       ),
     )
+  },
+})
+
+semantics.addOperation<string>('toParam(a)', {
+  Param(ident, _colon, type) {
+    type.toType(this.args.a)
+    return ident.sourceString
   },
 })
 
@@ -225,7 +224,9 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     return addLoc(new ArkMapLiteral(inits), this)
   },
 
-  Object(_open, elems, _maybeComma, _close) {
+  Object(type, _open, elems, _maybeComma, _close) {
+    // TODO: compile the type, add to ArkObjectLiteral
+    type.toType(this.args.a)
     const inits = new Map<string, ArkExp>()
     elems.asIteration().children.forEach((value) => {
       const elem = value.toDefinition(this.args.a)
@@ -272,12 +273,14 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     )
   },
 
-  Fn(_fn, _open, params, _maybeComma, _close, body) {
-    const paramStrings = listNodeToParamList(params)
+  Fn(type, body) {
+    const paramStrings = type.toMethod(this.args.a)
+    // TODO: Environment should contain typed params, not just strings
     const innerEnv = this.args.a.env.pushFrame([paramStrings, []])
     const bodyFreeVars = body.freeVars({...this.args.a, env: innerEnv})
     const compiledBody = body.toExp({env: innerEnv, inLoop: false, inFn: true})
     paramStrings.forEach((p) => bodyFreeVars.delete(p))
+    // TODO: ArkFn should be an ArkObject which contains one method.
     return addLoc(new ArkFn(paramStrings, [...bodyFreeVars.values()], compiledBody), this)
   },
 
@@ -562,6 +565,40 @@ semantics.addOperation<ArkExp>('toExp(a)', {
   },
 })
 
+// TODO: actually collect the type information.
+semantics.addOperation<void>('toType(a)', {
+  NamedType(_path, typeArgs) {
+    if (typeArgs.children.length > 0) {
+      typeArgs.children[0].children[1].asIteration().children.map(
+        (child) => child.toType(this.args.a),
+      )
+    }
+  },
+  Type_intersection(types) {
+    types.asIteration().children.map((child) => child.toType(this.args.a))
+  },
+  Type_fn(type) {
+    type.toMethod(this.args.a)
+  },
+})
+
+// TODO: return types along with parameter names, and return type.
+semantics.addOperation<string[]>('toMethod(a)', {
+  FnType(_fn, _open, params, _maybeComma, _close, _colon, type) {
+    const parsedParams = params.asIteration().children.map((p) => p.toParam(this.args.a))
+    try {
+      checkParamList(parsedParams)
+    } catch (e) {
+      if (!(e instanceof ArkCompilerError)) {
+        throw e
+      }
+      throw new UrsaCompilerError(params.source, e.message)
+    }
+    type.toType(this.args.a)
+    return parsedParams
+  },
+})
+
 semantics.addOperation<ArkExp>('toLval(a)', {
   PrimaryExp_ident(_sym) {
     return addLoc(this.symref(this.args.a).value, this)
@@ -594,10 +631,6 @@ semantics.addAttribute<string[]>('boundVars', {
   },
 
   Sequence(_exps, _sc) {
-    return []
-  },
-
-  Fn(_fn, _open, _params, _maybeComma, _close, _body) {
     return []
   },
 
@@ -652,8 +685,8 @@ semantics.addOperation<Map<string, unknown>>('freeVars(a)', {
     return propertyExp.freeVars(this.args.a)
   },
 
-  Fn(_fn, _open, params, _maybeComma, _close, body) {
-    const paramStrings = params.asIteration().children.map((x) => x.sourceString)
+  Fn(type, body) {
+    const paramStrings = type.toMethod(this.args.a)
     const innerEnv = this.args.a.env.pushFrame([[...paramStrings], []])
     const freeVars = new FreeVars().merge(body.freeVars({env: innerEnv}))
     paramStrings.forEach((p) => freeVars.delete(p))
@@ -690,6 +723,10 @@ semantics.addOperation<Map<string, unknown>>('freeVars(a)', {
     const freeVars = new FreeVars().merge(path[0].symref({...this.args.a, env: innerEnv}).freeVars)
     freeVars.delete(ident.sourceString)
     return freeVars
+  },
+
+  NamedType(_path, _typeArgs) {
+    return new FreeVars()
   },
 
   ident(_ident) {

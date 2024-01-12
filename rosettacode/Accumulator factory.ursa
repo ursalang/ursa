@@ -1,6 +1,6 @@
-let fac = fn(n) {
-  fn(i) {
-    n := n + i
+let fac = fn(n: Float): fn(f: Float): Void {
+  fn(f: Float): Void {
+    n := n + f
   }
 }
 

@@ -174,6 +174,16 @@ function fmtDelimitedList(
   )
 }
 
+function fmtIndented(
+  a: FormatterArgs,
+  listNode: FormatterNonterminalNode,
+): Span {
+  const narrowedA = narrowed(a)
+  return vSpan(
+    listNode.asIteration().children.map((child) => child.fmt(narrowedA)),
+  ).indent(a.indentString)
+}
+
 function fmtUnary(
   a: FormatterArgs,
   op: string,
@@ -217,15 +227,12 @@ function fmtIfs(
   return new ListSpan(formattedIfs, 'else', hSpan, {stringSep: '\n'})
 }
 
-function fmtKeywordMaybeExp(
-  a: FormatterArgs,
-  keyword: string,
-  exp: FormatterNonterminalNode,
-): Span {
-  if (exp.children.length > 0) {
-    return hSpan([keyword, exp.children[0].fmt(a)])
+// Return list of 0 or 1 Spans.
+function fmtOptional(a: FormatterArgs, maybeNode: FormatterNonterminalNode) {
+  if (maybeNode.children.length > 0) {
+    return [maybeNode.children[0].fmt(a)]
   }
-  return hSpan([keyword])
+  return []
 }
 
 semantics.addOperation<Span>('fmt(a)', {
@@ -268,8 +275,8 @@ semantics.addOperation<Span>('fmt(a)', {
     )
   },
 
-  Object(_open, elems, _maybeComma, _close) {
-    return fmtDelimitedList(this.args.a, '{', '}', ';', tightSpan, elems)
+  Object(type, _open, elems, _maybeComma, _close) {
+    return hSpan([type.fmt(this.args.a), fmtDelimitedList(this.args.a, '{', '}', ';', tightSpan, elems)])
   },
 
   PropertyExp_property(object, _dot, property) {
@@ -316,18 +323,28 @@ semantics.addOperation<Span>('fmt(a)', {
     )
   },
 
-  Fn(_fn, _open, params, _maybeComma, _close, body) {
+  Fn(type, body) {
+    return tryFormats(
+      this.args.a,
+      (a) => hSpan([type.fmt(a), body.fmt(a)]),
+      [(a) => vSpan([type.fmt(a), body.fmt(a)])],
+    )
+  },
+  FnType(_fn, _open, params, _maybeComma, _close, _colon, type) {
     return tryFormats(
       this.args.a,
       (a) => hSpan([
-        new Span(['fn', fmtDelimitedList(a, '(', ')', ',', tightSpan, params)]),
-        body.fmt(a),
+        new Span(['fn', fmtDelimitedList(a, '(', ')', ',', tightSpan, params), ':']),
+        type.fmt(this.args.a),
       ]),
       [(a) => vSpan([
-        new Span(['fn', fmtDelimitedList(a, '(', ')', ',', tightSpan, params)]),
-        body.fmt(a),
+        new Span(['fn', fmtDelimitedList(a, '(', ')', ',', tightSpan, params), ':']),
+        type.fmt(this.args.a),
       ])],
     )
+  },
+  Param(ident, _colon, type) {
+    return hSpan([ident.fmt(this.args.a), ':', type.fmt(this.args.a)])
   },
 
   Loop(_loop, body) {
@@ -430,8 +447,8 @@ semantics.addOperation<Span>('fmt(a)', {
   Exp_break(_break, exp) {
     return tryFormats(
       this.args.a,
-      (a) => fmtKeywordMaybeExp(a, 'break', exp),
-      [(a) => fmtKeywordMaybeExp(a, 'break', exp)],
+      (a) => hSpan(['break', ...fmtOptional(a, exp)]),
+      [(a) => hSpan(['break', ...fmtOptional(a, exp)])],
     )
   },
   Exp_continue(_continue) {
@@ -440,8 +457,8 @@ semantics.addOperation<Span>('fmt(a)', {
   Exp_return(_return, exp) {
     return tryFormats(
       this.args.a,
-      (a) => fmtKeywordMaybeExp(a, 'return', exp),
-      [(a) => fmtKeywordMaybeExp(a, 'return', exp)],
+      (a) => hSpan(['return', ...fmtOptional(a, exp)]),
+      [(a) => hSpan(['return', ...fmtOptional(a, exp)])],
     )
   },
 
@@ -460,11 +477,11 @@ semantics.addOperation<Span>('fmt(a)', {
     )
   },
 
-  Use(_use, pathList) {
+  Use(_use, path) {
     return tryFormats(
       this.args.a,
-      (a) => hSpan(['use', new ListSpan(fmtIter(a, pathList), '.', tightSpan)]),
-      [(a) => vSpan(['use', new ListSpan(fmtIter(a, pathList), '.', tightSpan)])],
+      (a) => hSpan(['use', path.fmt(a)]),
+      [(a) => vSpan(['use', path.fmt(a)])],
     )
   },
 
@@ -475,7 +492,89 @@ semantics.addOperation<Span>('fmt(a)', {
         return new Span(['{', seq.fmt(this.args.a), '}'])
       }
     }
-    return vSpan(['{', vSpan([seq.fmt(narrowed(this.args.a))]).indent(this.args.a.indentString), '}'])
+    return vSpan(['{', fmtIndented(this.args.a, seq.children[0]), '}'])
+  },
+
+  NamedType(path, maybeTypeArgs) {
+    return hSpan([path.fmt(this.args.a), ...fmtOptional(this.args.a, maybeTypeArgs)])
+  },
+  Type_intersection(typeList) {
+    return tryFormats(
+      this.args.a,
+      (a) => new ListSpan(fmtIter(a, typeList), '+', hSpan),
+      [(a) => new ListSpan(fmtIter(a, typeList), '+', vSpan)],
+    )
+  },
+  TypeParams(_open, params, _maybeCommaAngle, _close) {
+    return fmtDelimitedList(this.args.a, '<', '>', ',', hSpan, params)
+  },
+  TypeParam(ident, _colon, type) {
+    return hSpan([ident.fmt(this.args.a), ':', type.fmt(this.args.a)])
+  },
+  TypeArgs(_open, args, _maybeComma, _close) {
+    return fmtDelimitedList(this.args.a, '<', '>', ',', hSpan, args)
+  },
+
+  Class(_class, ident, typeParams, _colon, type, _open, members, _sc, _close) {
+    return hSpan([
+      'class',
+      ident.fmt(this.args.a),
+      typeParams.fmt(this.args.a),
+      ':',
+      type.fmt(this.args.a),
+      vSpan(['{', fmtIndented(this.args.a, members), '}']),
+    ])
+  },
+  ClassField(maybePub, maybeStatic, maybeVar, ident, _colon, type, maybeInit) {
+    return hSpan([
+      ...fmtOptional(this.args.a, maybePub),
+      ...fmtOptional(this.args.a, maybeStatic),
+      ...fmtOptional(this.args.a, maybeVar),
+      ident.fmt(this.args.a),
+      ':',
+      type.fmt(this.args.a),
+      ...fmtOptional(this.args.a, maybeInit),
+    ])
+  },
+  ClassMethod(maybePub, maybeStatic, ident, maybeTypeParams, _eq, fn) {
+    return hSpan([
+      ...fmtOptional(this.args.a, maybePub),
+      ...fmtOptional(this.args.a, maybeStatic),
+      ident.fmt(this.args.a),
+      ...fmtOptional(this.args.a, maybeTypeParams),
+      '=',
+      fn.fmt(this.args.a),
+    ])
+  },
+
+  Trait(_trait, ident, typeParams, _colon, type, _open, members, _sc, _close) {
+    return hSpan([
+      'class',
+      ident.fmt(this.args.a),
+      typeParams.fmt(this.args.a),
+      ':',
+      type.fmt(this.args.a),
+      vSpan(['{', fmtIndented(this.args.a, members), '}']),
+    ])
+  },
+  TraitField(maybeVar, ident, _colon, type) {
+    const spans = []
+    if (maybeVar.children.length > 0) {
+      spans.push('var')
+    }
+    return hSpan([...spans, ident.fmt(this.args.a), ':', type.fmt(this.args.a)])
+  },
+  TraitMethod(ident, maybeTypeParams, _colon, fnType) {
+    return hSpan([
+      ident.fmt(this.args.a),
+      ...fmtOptional(this.args.a, maybeTypeParams),
+      ':',
+      fnType.fmt(this.args.a),
+    ])
+  },
+
+  Path(pathList) {
+    return new ListSpan(fmtIter(this.args.a, pathList), '.', tightSpan)
   },
 
   number(_) {

@@ -29,3 +29,8 @@ test('Ackermann function', 'rosettacode/Ackermann function')
 test('Conditional structures', 'rosettacode/Conditional structures')
 test('Hello world-Text', 'rosettacode/Hello world-Text')
 test('Integer sequence', 'rosettacode/Integer sequence')
+
+// Tests
+test('Object literal 1', 'test/grammar/object-test-1')
+test('Object literal 2', 'test/grammar/object-test-2')
+test('Object literal 3', 'test/grammar/object-test-3')

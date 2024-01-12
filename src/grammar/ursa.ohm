@@ -13,6 +13,7 @@ Ursa {
      | spacesNoNL (lineTerminator | &"}")
 
   // Optional final comma for comma-separated lists.
+  maybeCommaAngle = space* ("," | &">")
   maybeCommaParen = space* ("," | &")")
   maybeCommaBracket = space* ("," | &"]")
   maybeCommaBrace = space* ("," | &"}")
@@ -23,18 +24,19 @@ Ursa {
     | string
     | literalString
     | number
+    | Object
     | ident             -- ident
     | List
     | Map
-    | Object
     | Block
     | "(" Exp ")"       -- paren
 
   Definition = ident "=" Exp
+  Initializer = "=" Exp // TODO: Use this in Definition
 
   List = "[" ListOf<AssignmentExp, ","> #maybeCommaBracket "]"
 
-  Object = "{" ListOf<Definition, #sc> #sc "}"
+  Object = NamedType "{" ListOf<Definition, #sc> #sc "}"
 
   Map = "{" ListOf<KeyValue, ","> #maybeCommaBrace "}"
   KeyValue = Exp ":" Exp
@@ -57,7 +59,9 @@ Ursa {
   Ifs = NonemptyListOf<If, else> (else Block)?
   If = if Exp Block
 
-  Fn = fn "(" ListOf<ident, ","> #maybeCommaParen ")" Block
+  Fn = FnType Block
+  FnType = fn "(" ListOf<Param, ","> #maybeCommaParen ")" ":" Type
+  Param = ident ":" Type
 
   Loop = loop Block
 
@@ -126,27 +130,55 @@ Ursa {
   Lets = NonemptyListOf<Let, and>
   Let = let Definition
 
-  Use = use ListOf<ident, ".">
+  Use = use Path
 
   Block = "{" Sequence "}"
+
+  // Types
+  NamedType = Path TypeArgs?
+  Type
+    = NonemptyListOf<NamedType, "+"> -- intersection
+    | FnType                 -- fn
+  TypeParams = "<" ListOf<TypeParam, ","> #maybeCommaAngle ">"
+  TypeParam = ident ":" Type
+  TypeArgs
+    = "<" ListOf<Type, ","> #maybeCommaAngle ">"
+
+  // Classes
+  Class = class ident TypeParams ":" NamedType "{" ListOf<ClassMember, #sc> #sc "}"
+  ClassMember = ClassField | ClassMethod
+  ClassField = pub? static? var? ident ":" Type Initializer?
+  ClassMethod = pub? static? ident TypeParams? "=" Fn
+
+  // Traits
+  Trait = trait ident TypeParams ":" NamedType "{" ListOf<TraitMember, #sc> #sc "}"
+  TraitMember = TraitField | TraitMethod
+  TraitField = var? ident ":" Type
+  TraitMethod = ident TypeParams? ":" FnType
 
   // Convenience rules for parsing keyword tokens.
   and = "and" ~identifierPart
   break = "break" ~identifierPart
+  class = "class" ~identifierPart
   continue = "continue" ~identifierPart
   else = "else" ~identifierPart
-  for = "for" ~identifierPart
   fn = "fn" ~identifierPart
+  for = "for" ~identifierPart
   if = "if" ~identifierPart
   let = "let" ~identifierPart
   loop = "loop" ~identifierPart
+  not = "not" ~identifierPart
   of = "of" ~identifierPart
   or = "or" ~identifierPart
-  not = "not" ~identifierPart
+  pub = "pub" ~identifierPart
   return = "return" ~identifierPart
+  static = "static" ~identifierPart
+  trait = "trait" ~identifierPart
   use = "use" ~identifierPart
+  var = "var" ~identifierPart
 
-  keyword = and | break | continue | else | for | fn | if | let | loop | of | or | not | return | use
+  keyword = and | break | class | continue | else | fn | for | if | let | loop
+    | not | of | or | pub | return | static | trait | use | var
 
   reservedWord = bool | null | keyword
 
@@ -155,6 +187,8 @@ Ursa {
   identName = ~reservedWord identifierStart identifierPart*
   identifierStart = letter | "_"
   identifierPart = identifierStart | digit
+
+  Path = NonemptyListOf<ident, ".">
 
   null = "null" ~identifierPart
 

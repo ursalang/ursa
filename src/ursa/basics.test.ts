@@ -83,7 +83,7 @@ Line 1, col 1:
       ^~~~~~
 
 return used outside a function`)
-  t.is(toJs(await new ArkState().run(compile('fn () { return 3 }()'))), 3)
+  t.is(toJs(await new ArkState().run(compile('fn (): Int { return 3 }()'))), 3)
 })
 
 testGroup('let', [
@@ -92,7 +92,7 @@ testGroup('let', [
 ])
 
 testGroup('fn', [
-  ['let f = fn(x) {x + 1}; f(1)', 2],
+  ['let f = fn(x: Int): Int {x + 1}; f(1)', 2],
 ])
 
 testGroup('Lists', [
@@ -104,10 +104,10 @@ testGroup('Lists', [
 ])
 
 testGroup('Objects', [
-  ['{;}', {}],
-  ['{a = 1; b = 2; c=3}', {a: 1, b: 2, c: 3}],
-  ['let o = {a = 1; b = 2}; o.b := 3; o', {a: 1, b: 3}],
-  ['let o = {a = 1; b = 2}; o.b := 3; o.c := "abc"; o', {a: 1, b: 3, c: 'abc'}],
+  ['Object {;}', {}],
+  ['ABC {a = 1; b = 2; c=3}', {a: 1, b: 2, c: 3}],
+  ['let o = ABC {a = 1; b = 2}; o.b := 3; o', {a: 1, b: 3}],
+  ['let o = ABC {a = 1; b = 2}; o.b := 3; o.c := "abc"; o', {a: 1, b: 3, c: 'abc'}],
 ])
 
 testGroup('Maps', [

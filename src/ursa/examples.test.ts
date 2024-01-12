@@ -48,30 +48,30 @@ many`)
 ursaDirTest('fs', 'test/fs', 'test/fs.result')
 
 ursaTest('Test error on bad function call', 'test/bad-call', [], undefined, `\
-Error: Line 2, col 14:
+Error: Line 2, col 19:
   1 | let h = 3
-> 2 | let g = fn() { h() }
-                   ^~~~~~~
-  3 | let f = fn() { g() }
+> 2 | let g = fn(): Int { h() }
+                        ^~~~~~~
+  3 | let f = fn(): Int { g() }
 
 Invalid call
 
 Traceback (most recent call last)
   line 3
-    let f = fn() { g() }, in f
+    let f = fn(): Int { g() }, in f
   line 4
     f(), at top level`, undefined, `\
-Error: Line 2, col 14:
+Error: Line 2, col 19:
   1 | let h = 3
-> 2 | let g = fn() {
-                   ^
+> 2 | let g = fn(): Int {
+                        ^
   3 |     h()
 
 Invalid call
 
 Traceback (most recent call last)
   line 5
-    let f = fn() {, in f
+    let f = fn(): Int {, in f
   line 8
     f(), at top level`)
 

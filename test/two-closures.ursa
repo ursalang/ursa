@@ -1,6 +1,6 @@
-let newAccum = fn() {
+let newAccum = fn(): fn(x: Int): Void {
   let tot = 0
-  let f = fn(x) {
+  let f = fn(x: Int): Void {
     tot := tot + x
   }
   tot := 2

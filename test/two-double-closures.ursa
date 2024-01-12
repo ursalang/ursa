@@ -1,10 +1,10 @@
-let newAccums = fn() {
+let newAccums = fn(): List<fn(x: Int): Void> {
   let tot = 0
   let l = [
-    fn(x) {
+    fn(x: Int): Void {
       tot := tot + x
     },
-    fn(x) {
+    fn(x: Int): Void {
       tot := tot + x
     },
   ]

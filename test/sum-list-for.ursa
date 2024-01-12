@@ -1,4 +1,4 @@
-let sum = fn(l) {
+let sum = fn(l: List<Int>): Int {
   let tot = 0
   for e of l.iter() {
     tot := tot + e

@@ -342,6 +342,27 @@ export class ArkFn extends ArkExp {
   }
 }
 
+// export class ArkType extends Ark {
+//   constructor(
+//     public superTraits: ArkType[],
+//     public members: Map<string, ArkFieldType | ArkMethodType>,
+//   ) {
+//     super()
+//   }
+// }
+
+// export class ArkFieldType extends Ark {
+//   constructor(public var_: boolean, public type: ArkType) {
+//     super()
+//   }
+// }
+
+// export class ArkMethodType extends Ark {
+//   constructor(public params: [string, ArkType][], public returnType: ArkType) {
+//     super()
+//   }
+// }
+
 export class ArkCall extends ArkExp {
   constructor(public fn: ArkExp, public args: ArkExp[]) {
     super()

@@ -139,14 +139,36 @@ testGroup('let', [
 ])
 
 testGroup('fn', [
-  ['let f = fn(x) {x + 1}; f(1)', [
+  ['let f = fn(x: Int): Int {x + 1}; f(1)', [
     [
       {
         1: {
           0: 'f',
           2: {
-            2: ['x'],
-            5: [{0: 'x', 2: '1', type: 'SumExp_plus'}],
+            0: {
+              2: [
+                {
+                  0: 'x',
+                  2: [
+                    {
+                      0: ['Int'],
+                      1: null,
+                      type: 'NamedType',
+                    },
+                  ],
+                  type: 'Param',
+                },
+              ],
+              6: [
+                {
+                  0: ['Int'],
+                  1: null,
+                  type: 'NamedType',
+                },
+              ],
+              type: 'FnType',
+            },
+            1: [{0: 'x', 2: '1', type: 'SumExp_plus'}],
             type: 'Fn',
           },
           type: 'Definition',
@@ -208,72 +230,6 @@ testGroup('Lists', [
       type: 'CallExp_property_call',
     },
     'l',
-  ]],
-])
-
-testGroup('Objects', [
-  ['{a = 1; b = 2; c=3}', [
-    {
-      1: [
-        {0: 'a', 2: '1', type: 'Definition'},
-        {0: 'b', 2: '2', type: 'Definition'},
-        {0: 'c', 2: '3', type: 'Definition'},
-      ],
-      type: 'Object',
-    },
-  ]],
-  ['let o = {a = 1; b = 2}; o.b := "abc"; o', [
-    [
-      {
-        1: {
-          0: 'o',
-          2: {
-            1: [
-              {0: 'a', 2: '1', type: 'Definition'},
-              {0: 'b', 2: '2', type: 'Definition'},
-            ],
-            type: 'Object',
-          },
-          type: 'Definition',
-        },
-        type: 'Let',
-      },
-    ],
-    {
-      0: {0: 'o', 2: 'b', type: 'PropertyExp_property'},
-      2: '"abc"',
-      type: 'AssignmentExp_ass',
-    },
-    'o',
-  ]],
-  ['let o = {a = 1; b = 2}; o.b := "abc"; o.c := 3; o', [
-    [
-      {
-        1: {
-          0: 'o',
-          2: {
-            1: [
-              {0: 'a', 2: '1', type: 'Definition'},
-              {0: 'b', 2: '2', type: 'Definition'},
-            ],
-            type: 'Object',
-          },
-          type: 'Definition',
-        },
-        type: 'Let',
-      },
-    ],
-    {
-      0: {0: 'o', 2: 'b', type: 'PropertyExp_property'},
-      2: '"abc"',
-      type: 'AssignmentExp_ass',
-    },
-    {
-      0: {0: 'o', 2: 'c', type: 'PropertyExp_property'},
-      2: '3',
-      type: 'AssignmentExp_ass',
-    },
-    'o',
   ]],
 ])
 

@@ -1,4 +1,4 @@
-let keysToList = fn(m) {
+let keysToList = fn(m: Map<String, Int>): List<String> {
   let l = []
   for k of m.keys() {
     l.push(k)

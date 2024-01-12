@@ -1,6 +1,6 @@
 --- src/grammar/ursa.ohm-bundle.d.ts	2023-12-31 16:03:51.540793741 +0000
 +++ src/grammar/ursa.ohm-bundle.d.ts.bak	2023-12-31 16:03:51.096791164 +0000
-@@ -4,148 +4,168 @@
+@@ -4,172 +4,193 @@
  import {
    BaseActionDict,
    Grammar,
@@ -16,6 +16,7 @@
 -export interface UrsaActionDict<T> extends BaseActionDict<T> {
 -  Sequence?: (this: NonterminalNode, arg0: NonterminalNode, arg1: NonterminalNode) => T;
 -  sc?: (this: NonterminalNode, arg0: IterationNode | NonterminalNode, arg1: NonterminalNode | TerminalNode) => T;
+-  maybeCommaAngle?: (this: NonterminalNode, arg0: IterationNode, arg1: TerminalNode) => T;
 -  maybeCommaParen?: (this: NonterminalNode, arg0: IterationNode, arg1: TerminalNode) => T;
 -  maybeCommaBracket?: (this: NonterminalNode, arg0: IterationNode, arg1: TerminalNode) => T;
 -  maybeCommaBrace?: (this: NonterminalNode, arg0: IterationNode, arg1: TerminalNode) => T;
@@ -24,8 +25,9 @@
 -  PrimaryExp_paren?: (this: NonterminalNode, arg0: TerminalNode, arg1: NonterminalNode, arg2: TerminalNode) => T;
 -  PrimaryExp?: (this: NonterminalNode, arg0: NonterminalNode) => T;
 -  Definition?: (this: NonterminalNode, arg0: NonterminalNode, arg1: TerminalNode, arg2: NonterminalNode) => T;
+-  Initializer?: (this: NonterminalNode, arg0: TerminalNode, arg1: NonterminalNode) => T;
 -  List?: (this: NonterminalNode, arg0: TerminalNode, arg1: NonterminalNode, arg2: NonterminalNode, arg3: TerminalNode) => T;
--  Object?: (this: NonterminalNode, arg0: TerminalNode, arg1: NonterminalNode, arg2: NonterminalNode, arg3: TerminalNode) => T;
+-  Object?: (this: NonterminalNode, arg0: NonterminalNode, arg1: TerminalNode, arg2: NonterminalNode, arg3: NonterminalNode, arg4: TerminalNode) => T;
 -  Map?: (this: NonterminalNode, arg0: TerminalNode, arg1: NonterminalNode, arg2: NonterminalNode, arg3: TerminalNode) => T;
 -  KeyValue?: (this: NonterminalNode, arg0: NonterminalNode, arg1: TerminalNode, arg2: NonterminalNode) => T;
 -  PropertyExp_property?: (this: NonterminalNode, arg0: NonterminalNode, arg1: TerminalNode, arg2: NonterminalNode) => T;
@@ -38,7 +40,9 @@
 -  LvalueExp?: (this: NonterminalNode, arg0: NonterminalNode) => T;
 -  Ifs?: (this: NonterminalNode, arg0: NonterminalNode, arg1: IterationNode, arg2: IterationNode) => T;
 -  If?: (this: NonterminalNode, arg0: NonterminalNode, arg1: NonterminalNode, arg2: NonterminalNode) => T;
--  Fn?: (this: NonterminalNode, arg0: NonterminalNode, arg1: TerminalNode, arg2: NonterminalNode, arg3: NonterminalNode, arg4: TerminalNode, arg5: NonterminalNode) => T;
+-  Fn?: (this: NonterminalNode, arg0: NonterminalNode, arg1: NonterminalNode) => T;
+-  FnType?: (this: NonterminalNode, arg0: NonterminalNode, arg1: TerminalNode, arg2: NonterminalNode, arg3: NonterminalNode, arg4: TerminalNode, arg5: TerminalNode, arg6: NonterminalNode) => T;
+-  Param?: (this: NonterminalNode, arg0: NonterminalNode, arg1: TerminalNode, arg2: NonterminalNode) => T;
 -  Loop?: (this: NonterminalNode, arg0: NonterminalNode, arg1: NonterminalNode) => T;
 -  For?: (this: NonterminalNode, arg0: NonterminalNode, arg1: NonterminalNode, arg2: NonterminalNode, arg3: NonterminalNode, arg4: NonterminalNode) => T;
 -  UnaryExp_not?: (this: NonterminalNode, arg0: NonterminalNode, arg1: NonterminalNode) => T;
@@ -82,26 +86,47 @@
 -  Let?: (this: NonterminalNode, arg0: NonterminalNode, arg1: NonterminalNode) => T;
 -  Use?: (this: NonterminalNode, arg0: NonterminalNode, arg1: NonterminalNode) => T;
 -  Block?: (this: NonterminalNode, arg0: TerminalNode, arg1: NonterminalNode, arg2: TerminalNode) => T;
+-  NamedType?: (this: NonterminalNode, arg0: NonterminalNode, arg1: IterationNode) => T;
+-  Type_intersection?: (this: NonterminalNode, arg0: NonterminalNode) => T;
+-  Type_fn?: (this: NonterminalNode, arg0: NonterminalNode) => T;
+-  Type?: (this: NonterminalNode, arg0: NonterminalNode) => T;
+-  TypeParams?: (this: NonterminalNode, arg0: TerminalNode, arg1: NonterminalNode, arg2: NonterminalNode, arg3: TerminalNode) => T;
+-  TypeParam?: (this: NonterminalNode, arg0: NonterminalNode, arg1: TerminalNode, arg2: NonterminalNode) => T;
+-  TypeArgs?: (this: NonterminalNode, arg0: TerminalNode, arg1: NonterminalNode, arg2: NonterminalNode, arg3: TerminalNode) => T;
+-  Class?: (this: NonterminalNode, arg0: NonterminalNode, arg1: NonterminalNode, arg2: NonterminalNode, arg3: TerminalNode, arg4: NonterminalNode, arg5: TerminalNode, arg6: NonterminalNode, arg7: NonterminalNode, arg8: TerminalNode) => T;
+-  ClassMember?: (this: NonterminalNode, arg0: NonterminalNode) => T;
+-  ClassField?: (this: NonterminalNode, arg0: IterationNode, arg1: IterationNode, arg2: IterationNode, arg3: NonterminalNode, arg4: TerminalNode, arg5: NonterminalNode, arg6: IterationNode) => T;
+-  ClassMethod?: (this: NonterminalNode, arg0: IterationNode, arg1: IterationNode, arg2: NonterminalNode, arg3: IterationNode, arg4: TerminalNode, arg5: NonterminalNode) => T;
+-  Trait?: (this: NonterminalNode, arg0: NonterminalNode, arg1: NonterminalNode, arg2: NonterminalNode, arg3: TerminalNode, arg4: NonterminalNode, arg5: TerminalNode, arg6: NonterminalNode, arg7: NonterminalNode, arg8: TerminalNode) => T;
+-  TraitMember?: (this: NonterminalNode, arg0: NonterminalNode) => T;
+-  TraitField?: (this: NonterminalNode, arg0: IterationNode, arg1: NonterminalNode, arg2: TerminalNode, arg3: NonterminalNode) => T;
+-  TraitMethod?: (this: NonterminalNode, arg0: NonterminalNode, arg1: IterationNode, arg2: TerminalNode, arg3: NonterminalNode) => T;
 -  and?: (this: NonterminalNode, arg0: TerminalNode) => T;
 -  break?: (this: NonterminalNode, arg0: TerminalNode) => T;
+-  class?: (this: NonterminalNode, arg0: TerminalNode) => T;
 -  continue?: (this: NonterminalNode, arg0: TerminalNode) => T;
 -  else?: (this: NonterminalNode, arg0: TerminalNode) => T;
--  for?: (this: NonterminalNode, arg0: TerminalNode) => T;
 -  fn?: (this: NonterminalNode, arg0: TerminalNode) => T;
+-  for?: (this: NonterminalNode, arg0: TerminalNode) => T;
 -  if?: (this: NonterminalNode, arg0: TerminalNode) => T;
 -  let?: (this: NonterminalNode, arg0: TerminalNode) => T;
 -  loop?: (this: NonterminalNode, arg0: TerminalNode) => T;
+-  not?: (this: NonterminalNode, arg0: TerminalNode) => T;
 -  of?: (this: NonterminalNode, arg0: TerminalNode) => T;
 -  or?: (this: NonterminalNode, arg0: TerminalNode) => T;
--  not?: (this: NonterminalNode, arg0: TerminalNode) => T;
+-  pub?: (this: NonterminalNode, arg0: TerminalNode) => T;
 -  return?: (this: NonterminalNode, arg0: TerminalNode) => T;
+-  static?: (this: NonterminalNode, arg0: TerminalNode) => T;
+-  trait?: (this: NonterminalNode, arg0: TerminalNode) => T;
 -  use?: (this: NonterminalNode, arg0: TerminalNode) => T;
+-  var?: (this: NonterminalNode, arg0: TerminalNode) => T;
 -  keyword?: (this: NonterminalNode, arg0: NonterminalNode) => T;
 -  reservedWord?: (this: NonterminalNode, arg0: NonterminalNode) => T;
 -  ident?: (this: NonterminalNode, arg0: NonterminalNode) => T;
 -  identName?: (this: NonterminalNode, arg0: NonterminalNode, arg1: IterationNode) => T;
 -  identifierStart?: (this: NonterminalNode, arg0: NonterminalNode | TerminalNode) => T;
 -  identifierPart?: (this: NonterminalNode, arg0: NonterminalNode) => T;
+-  Path?: (this: NonterminalNode, arg0: NonterminalNode) => T;
 -  null?: (this: NonterminalNode, arg0: TerminalNode) => T;
 -  bool?: (this: NonterminalNode, arg0: TerminalNode) => T;
 -  number_fract?: (this: NonterminalNode, arg0: IterationNode, arg1: TerminalNode, arg2: IterationNode) => T;
@@ -162,6 +187,7 @@
 +  _iter?: (this: ThisNode, ...children: NonterminalNode[]) => T;
 +  Sequence?: (this: ThisNode, arg0: NonterminalNode, arg1: NonterminalNode) => T;
 +  sc?: (this: ThisNode, arg0: IterationNode | NonterminalNode, arg1: NonterminalNode | TerminalNode) => T;
++  maybeCommaAngle?: (this: ThisNode, arg0: IterationNode, arg1: TerminalNode) => T;
 +  maybeCommaParen?: (this: ThisNode, arg0: IterationNode, arg1: TerminalNode) => T;
 +  maybeCommaBracket?: (this: ThisNode, arg0: IterationNode, arg1: TerminalNode) => T;
 +  maybeCommaBrace?: (this: ThisNode, arg0: IterationNode, arg1: TerminalNode) => T;
@@ -170,8 +196,9 @@
 +  PrimaryExp_paren?: (this: ThisNode, arg0: TerminalNode, arg1: NonterminalNode, arg2: TerminalNode) => T;
 +  PrimaryExp?: (this: ThisNode, arg0: NonterminalNode) => T;
 +  Definition?: (this: ThisNode, arg0: NonterminalNode, arg1: TerminalNode, arg2: NonterminalNode) => T;
++  Initializer?: (this: ThisNode, arg0: TerminalNode, arg1: NonterminalNode) => T;
 +  List?: (this: ThisNode, arg0: TerminalNode, arg1: NonterminalNode, arg2: NonterminalNode, arg3: TerminalNode) => T;
-+  Object?: (this: ThisNode, arg0: TerminalNode, arg1: NonterminalNode, arg2: NonterminalNode, arg3: TerminalNode) => T;
++  Object?: (this: ThisNode, arg0: NonterminalNode, arg1: TerminalNode, arg2: NonterminalNode, arg3: NonterminalNode, arg4: TerminalNode) => T;
 +  Map?: (this: ThisNode, arg0: TerminalNode, arg1: NonterminalNode, arg2: NonterminalNode, arg3: TerminalNode) => T;
 +  KeyValue?: (this: ThisNode, arg0: NonterminalNode, arg1: TerminalNode, arg2: NonterminalNode) => T;
 +  PropertyExp_property?: (this: ThisNode, arg0: NonterminalNode, arg1: TerminalNode, arg2: NonterminalNode) => T;
@@ -184,7 +211,9 @@
 +  LvalueExp?: (this: ThisNode, arg0: NonterminalNode) => T;
 +  Ifs?: (this: ThisNode, arg0: NonterminalNode, arg1: IterationNode, arg2: IterationNode) => T;
 +  If?: (this: ThisNode, arg0: NonterminalNode, arg1: NonterminalNode, arg2: NonterminalNode) => T;
-+  Fn?: (this: ThisNode, arg0: NonterminalNode, arg1: TerminalNode, arg2: NonterminalNode, arg3: NonterminalNode, arg4: TerminalNode, arg5: NonterminalNode) => T;
++  Fn?: (this: ThisNode, arg0: NonterminalNode, arg1: NonterminalNode) => T;
++  FnType?: (this: ThisNode, arg0: NonterminalNode, arg1: TerminalNode, arg2: NonterminalNode, arg3: NonterminalNode, arg4: TerminalNode, arg5: TerminalNode, arg6: NonterminalNode) => T;
++  Param?: (this: ThisNode, arg0: NonterminalNode, arg1: TerminalNode, arg2: NonterminalNode) => T;
 +  Loop?: (this: ThisNode, arg0: NonterminalNode, arg1: NonterminalNode) => T;
 +  For?: (this: ThisNode, arg0: NonterminalNode, arg1: NonterminalNode, arg2: NonterminalNode, arg3: NonterminalNode, arg4: NonterminalNode) => T;
 +  UnaryExp_not?: (this: ThisNode, arg0: NonterminalNode, arg1: NonterminalNode) => T;
@@ -228,26 +257,47 @@
 +  Let?: (this: ThisNode, arg0: NonterminalNode, arg1: NonterminalNode) => T;
 +  Use?: (this: ThisNode, arg0: NonterminalNode, arg1: NonterminalNode) => T;
 +  Block?: (this: ThisNode, arg0: TerminalNode, arg1: NonterminalNode, arg2: TerminalNode) => T;
++  NamedType?: (this: ThisNode, arg0: NonterminalNode, arg1: IterationNode) => T;
++  Type_intersection?: (this: ThisNode, arg0: NonterminalNode) => T;
++  Type_fn?: (this: ThisNode, arg0: NonterminalNode) => T;
++  Type?: (this: ThisNode, arg0: NonterminalNode) => T;
++  TypeParams?: (this: ThisNode, arg0: TerminalNode, arg1: NonterminalNode, arg2: NonterminalNode, arg3: TerminalNode) => T;
++  TypeParam?: (this: ThisNode, arg0: NonterminalNode, arg1: TerminalNode, arg2: NonterminalNode) => T;
++  TypeArgs?: (this: ThisNode, arg0: TerminalNode, arg1: NonterminalNode, arg2: NonterminalNode, arg3: TerminalNode) => T;
++  Class?: (this: ThisNode, arg0: NonterminalNode, arg1: NonterminalNode, arg2: NonterminalNode, arg3: TerminalNode, arg4: NonterminalNode, arg5: TerminalNode, arg6: NonterminalNode, arg7: NonterminalNode, arg8: TerminalNode) => T;
++  ClassMember?: (this: ThisNode, arg0: NonterminalNode) => T;
++  ClassField?: (this: ThisNode, arg0: IterationNode, arg1: IterationNode, arg2: IterationNode, arg3: NonterminalNode, arg4: TerminalNode, arg5: NonterminalNode, arg6: IterationNode) => T;
++  ClassMethod?: (this: ThisNode, arg0: IterationNode, arg1: IterationNode, arg2: NonterminalNode, arg3: IterationNode, arg4: TerminalNode, arg5: NonterminalNode) => T;
++  Trait?: (this: ThisNode, arg0: NonterminalNode, arg1: NonterminalNode, arg2: NonterminalNode, arg3: TerminalNode, arg4: NonterminalNode, arg5: TerminalNode, arg6: NonterminalNode, arg7: NonterminalNode, arg8: TerminalNode) => T;
++  TraitMember?: (this: ThisNode, arg0: NonterminalNode) => T;
++  TraitField?: (this: ThisNode, arg0: IterationNode, arg1: NonterminalNode, arg2: TerminalNode, arg3: NonterminalNode) => T;
++  TraitMethod?: (this: ThisNode, arg0: NonterminalNode, arg1: IterationNode, arg2: TerminalNode, arg3: NonterminalNode) => T;
 +  and?: (this: ThisNode, arg0: TerminalNode) => T;
 +  break?: (this: ThisNode, arg0: TerminalNode) => T;
++  class?: (this: ThisNode, arg0: TerminalNode) => T;
 +  continue?: (this: ThisNode, arg0: TerminalNode) => T;
 +  else?: (this: ThisNode, arg0: TerminalNode) => T;
-+  for?: (this: ThisNode, arg0: TerminalNode) => T;
 +  fn?: (this: ThisNode, arg0: TerminalNode) => T;
++  for?: (this: ThisNode, arg0: TerminalNode) => T;
 +  if?: (this: ThisNode, arg0: TerminalNode) => T;
 +  let?: (this: ThisNode, arg0: TerminalNode) => T;
 +  loop?: (this: ThisNode, arg0: TerminalNode) => T;
++  not?: (this: ThisNode, arg0: TerminalNode) => T;
 +  of?: (this: ThisNode, arg0: TerminalNode) => T;
 +  or?: (this: ThisNode, arg0: TerminalNode) => T;
-+  not?: (this: ThisNode, arg0: TerminalNode) => T;
++  pub?: (this: ThisNode, arg0: TerminalNode) => T;
 +  return?: (this: ThisNode, arg0: TerminalNode) => T;
++  static?: (this: ThisNode, arg0: TerminalNode) => T;
++  trait?: (this: ThisNode, arg0: TerminalNode) => T;
 +  use?: (this: ThisNode, arg0: TerminalNode) => T;
++  var?: (this: ThisNode, arg0: TerminalNode) => T;
 +  keyword?: (this: ThisNode, arg0: NonterminalNode) => T;
 +  reservedWord?: (this: ThisNode, arg0: NonterminalNode) => T;
 +  ident?: (this: ThisNode, arg0: NonterminalNode) => T;
 +  identName?: (this: ThisNode, arg0: NonterminalNode, arg1: IterationNode) => T;
 +  identifierStart?: (this: ThisNode, arg0: NonterminalNode | TerminalNode) => T;
 +  identifierPart?: (this: ThisNode, arg0: NonterminalNode) => T;
++  Path?: (this: ThisNode, arg0: NonterminalNode) => T;
 +  null?: (this: ThisNode, arg0: TerminalNode) => T;
 +  bool?: (this: ThisNode, arg0: TerminalNode) => T;
 +  number_fract?: (this: ThisNode, arg0: IterationNode, arg1: TerminalNode, arg2: IterationNode) => T;

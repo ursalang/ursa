@@ -4,20 +4,86 @@
       "1": {
         "0": "fac",
         "2": {
-          "2": [
-            "n"
-          ],
-          "5": [
-            {
+          "0": {
+            "2": [
+              {
+                "0": "n",
+                "2": [
+                  {
+                    "0": [
+                      "Float"
+                    ],
+                    "1": null,
+                    "type": "NamedType"
+                  }
+                ],
+                "type": "Param"
+              }
+            ],
+            "6": {
               "2": [
-                "i"
+                {
+                  "0": "f",
+                  "2": [
+                    {
+                      "0": [
+                        "Float"
+                      ],
+                      "1": null,
+                      "type": "NamedType"
+                    }
+                  ],
+                  "type": "Param"
+                }
               ],
-              "5": [
+              "6": [
+                {
+                  "0": [
+                    "Void"
+                  ],
+                  "1": null,
+                  "type": "NamedType"
+                }
+              ],
+              "type": "FnType"
+            },
+            "type": "FnType"
+          },
+          "1": [
+            {
+              "0": {
+                "2": [
+                  {
+                    "0": "f",
+                    "2": [
+                      {
+                        "0": [
+                          "Float"
+                        ],
+                        "1": null,
+                        "type": "NamedType"
+                      }
+                    ],
+                    "type": "Param"
+                  }
+                ],
+                "6": [
+                  {
+                    "0": [
+                      "Void"
+                    ],
+                    "1": null,
+                    "type": "NamedType"
+                  }
+                ],
+                "type": "FnType"
+              },
+              "1": [
                 {
                   "0": "n",
                   "2": {
                     "0": "n",
-                    "2": "i",
+                    "2": "f",
                     "type": "SumExp_plus"
                   },
                   "type": "AssignmentExp_ass"

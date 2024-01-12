@@ -9,7 +9,7 @@ use js.RegExp
 use js.document
 use js.console
 
-{
+Object {
   // Basic facilities
   print = console.log
 
@@ -29,9 +29,9 @@ use js.console
   tan = Math.tan
 
   // Range iterator
-  range = fn(n) {
+  range = fn(n: Int): fn(): Maybe<Int> {
     let i = 0
-    fn() {
+    fn(): Maybe<Int> {
       i := i + 1
       if i <= n { i - 1 } else { null }
     }

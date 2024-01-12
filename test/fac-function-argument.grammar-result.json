@@ -4,11 +4,47 @@
       "1": {
         "0": "fac",
         "2": {
-          "2": [
-            "self",
-            "x"
-          ],
-          "5": [
+          "0": {
+            "2": [
+              {
+                "0": "self",
+                "2": [
+                  {
+                    "0": [
+                      "TheTypeOfThisFunction"
+                    ],
+                    "1": null,
+                    "type": "NamedType"
+                  }
+                ],
+                "type": "Param"
+              },
+              {
+                "0": "x",
+                "2": [
+                  {
+                    "0": [
+                      "Int"
+                    ],
+                    "1": null,
+                    "type": "NamedType"
+                  }
+                ],
+                "type": "Param"
+              }
+            ],
+            "6": [
+              {
+                "0": [
+                  "Int"
+                ],
+                "1": null,
+                "type": "NamedType"
+              }
+            ],
+            "type": "FnType"
+          },
+          "1": [
             {
               "0": [
                 {
