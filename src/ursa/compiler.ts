@@ -1,8 +1,6 @@
 // Ursa compiler.
-// © Reuben Thomas 2023
+// © Reuben Thomas 2023-2024
 // Released under the GPL version 3, or (at your option) any later version.
-
-import assert from 'assert'
 
 import {Interval} from 'ohm-js'
 
@@ -59,7 +57,7 @@ class UrsaError extends Error {
   }
 }
 
-export class UrsaCompilerError extends UrsaError { }
+export class UrsaCompilerError extends UrsaError {}
 
 class UrsaRuntimeError extends UrsaError {
   constructor(public ark: ArkState, source: Interval, message: string) {
@@ -95,7 +93,7 @@ ${trace.map((s) => `  ${s}`).join('\n')}`
 
 // Base class for parsing the language, extended directly by classes used
 // only during parsing.
-export class AST { }
+export class AST {}
 
 class Definition extends AST {
   constructor(public ident: ParserNode, public val: ArkExp) {
@@ -169,34 +167,32 @@ semantics.addOperation<string>('toParam(a)', {
   },
 })
 
+function makeSequence(a: ParserArgs, exps: ParserNode[]): ArkExp {
+  const res = []
+  for (const [i, exp] of exps.entries()) {
+    const compiledExp = exp.toExp(a)
+    if (compiledExp instanceof ArkLet) {
+      const innerEnv = a.env.push(compiledExp.boundVars)
+      let letBody = compiledExp.body
+      if (i < exps.length - 1) {
+        const compiledRest = makeSequence({...a, env: innerEnv}, exps.slice(i + 1))
+        letBody = new ArkSequence([compiledExp.body, compiledRest])
+      }
+      res.push(new ArkLet(compiledExp.boundVars, letBody))
+      break
+    } else {
+      res.push(compiledExp)
+    }
+  }
+  if (res.length === 1) {
+    return res[0]
+  }
+  return new ArkSequence(res)
+}
+
 semantics.addOperation<ArkExp>('toExp(a)', {
   Sequence(exps, _sc) {
-    const boundVars = []
-    for (const exp of exps.asIteration().children) {
-      boundVars.push(...exp.boundVars)
-    }
-    const compiledExps = []
-    const innerEnv = this.args.a.env.push(
-      Array<undefined>(boundVars.length).fill(undefined),
-    )
-    const outerLocals = this.args.a.env.stack[0][0].length
-    let nextLocal = 0
-    for (const exp of exps.asIteration().children) {
-      for (let i = 0; i < exp.boundVars.length; i += 1) {
-        innerEnv.stack[0][0][outerLocals + nextLocal] = boundVars[nextLocal]
-        nextLocal += 1
-      }
-      const compiledExp = exp.toExp({...this.args.a, env: innerEnv})
-      compiledExps.push(compiledExp)
-    }
-    assert(nextLocal === boundVars.length)
-    const compiledSeqBody = compiledExps.length === 1
-      ? compiledExps[0]
-      : new ArkSequence(compiledExps)
-    const compiledSeq = boundVars.length > 0
-      ? new ArkLet(boundVars, compiledSeqBody)
-      : compiledSeqBody
-    return addLoc(compiledSeq, this)
+    return addLoc(makeSequence(this.args.a, exps.asIteration().children), this)
   },
 
   PrimaryExp_ident(_sym) {
@@ -497,38 +493,43 @@ semantics.addOperation<ArkExp>('toExp(a)', {
   },
 
   Lets(lets) {
-    const parsedLets = []
     const letIds: string[] = []
     for (const l of (lets.asIteration().children)) {
-      const definition = l.children[1].toDefinition(this.args.a)
-      parsedLets.push(definition)
-      if (letIds.includes(definition.ident.sourceString)) {
-        throw new UrsaCompilerError(this.source, `Duplicate identifier in let: ${definition.ident.sourceString}`)
+      const ident = l.children[1].children[0].sourceString
+      if (letIds.includes(ident)) {
+        throw new UrsaCompilerError(this.source, `Duplicate identifier in let: ${ident}`)
       }
-      letIds.push(definition.ident.sourceString)
+      letIds.push(ident)
+    }
+    const innerEnv = this.args.a.env.push(letIds)
+    const parsedLets = []
+    for (const l of (lets.asIteration().children)) {
+      const definition = l.children[1].toDefinition({...this.args.a, env: innerEnv})
+      parsedLets.push(definition)
     }
     const assignments = parsedLets.map(
-      (l) => new ArkSet(l.ident.symref(this.args.a).value, l.val),
+      (l) => new ArkSet(l.ident.symref({...this.args.a, env: innerEnv}).value, l.val),
     )
     const compiled = assignments.length > 1
       ? new ArkSequence(assignments)
       : assignments[0]
-    return addLoc(compiled, this)
+    return addLoc(new ArkLet(letIds, compiled), this)
   },
 
   Use(_use, pathList) {
     const path = pathList.asIteration().children
     const ident = path[path.length - 1]
     // For path x.y.z, compile `let z = x.use(y.z)`
-    const compiledUse = new ArkSequence([
+    const innerEnv = this.args.a.env.push([ident.sourceString])
+    const compiledUse = new ArkLet([ident.sourceString], new ArkSequence([
       new ArkSet(
-        ident.symref(this.args.a).value,
+        ident.symref({...this.args.a, env: innerEnv}).value,
         new ArkCall(
-          new ArkGet(addLoc(new ArkProperty('use', new ArkGet(path[0].symref(this.args.a).value)), this)),
+          new ArkGet(addLoc(new ArkProperty('use', new ArkGet(path[0].symref({...this.args.a, env: innerEnv}).value)), this)),
           path.slice(1).map((id) => new ArkLiteral(ArkString(id.sourceString))),
         ),
       ),
-    ])
+    ]))
     return addLoc(compiledUse, this)
   },
 
@@ -690,19 +691,6 @@ semantics.addOperation<Map<string, unknown>>('freeVars(a)', {
     const innerEnv = this.args.a.env.pushFrame([[...paramStrings], []])
     const freeVars = new FreeVars().merge(body.freeVars({env: innerEnv}))
     paramStrings.forEach((p) => freeVars.delete(p))
-    return freeVars
-  },
-
-  Lets(lets) {
-    const letIds = lets.asIteration().children.map((x) => x.children[1].children[0].sourceString)
-    const innerEnv = this.args.a.env.push(letIds)
-    const freeVars = new FreeVars()
-    for (const l of lets.asIteration().children) {
-      freeVars.merge(l.children[1].children[2].freeVars({env: innerEnv}))
-    }
-    for (const id of letIds) {
-      freeVars.delete(id)
-    }
     return freeVars
   },
 
