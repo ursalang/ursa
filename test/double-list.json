@@ -1,41 +1,30 @@
 [
   "let",
-  [ "params", "double" ],
-  [
-    "seq",
-    [
-      "set",
-      "double",
-      [
+  [ [ "double", [
         "fn",
-        [ "params", "l" ],
+        [ "l" ],
         [
           "let",
-          [ "params", "i" ],
+          [ [ "i", 0 ] ],
           [
-            "seq",
-            [ "set", "i", 0 ],
+            "loop",
             [
-              "loop",
+              "seq",
               [
-                "seq",
-                [
-                  "if",
-                  [ "=", [ "get", "i" ], [ [ "get", [ "prop", "len", [ "get", "l" ] ] ] ] ],
-                  [ "return", [ "get", "l" ] ]
-                ],
-                [
-                  [ "get", [ "prop", "set", [ "get", "l" ] ] ],
-                  [ "get", "i" ],
-                  [ "*", [ [ "get", [ "prop", "get", [ "get", "l" ] ] ], [ "get", "i" ] ], 2 ]
-                ],
-                [ "set", "i", [ "+", [ "get", "i" ], 1 ] ]
-              ]
+                "if",
+                [ "=", [ "get", "i" ], [ [ "get", [ "prop", "len", [ "get", "l" ] ] ] ] ],
+                [ "return", [ "get", "l" ] ]
+              ],
+              [
+                [ "get", [ "prop", "set", [ "get", "l" ] ] ],
+                [ "get", "i" ],
+                [ "*", [ [ "get", [ "prop", "get", [ "get", "l" ] ] ], [ "get", "i" ] ], 2 ]
+              ],
+              [ "set", "i", [ "+", [ "get", "i" ], 1 ] ]
             ]
           ]
         ]
       ]
-    ],
-    [ [ "get", "double" ], [ "list", 1, 2, 3 ] ]
-  ]
+    ] ],
+  [ [ "get", "double" ], [ "list", 1, 2, 3 ] ]
 ]

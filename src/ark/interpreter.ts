@@ -1,5 +1,5 @@
 // Ark interpreter.
-// © Reuben Thomas 2023
+// © Reuben Thomas 2023-2024
 // Released under the MIT license.
 
 import assert from 'assert'
@@ -31,7 +31,7 @@ class Namespace<T extends ArkVal> extends Map<string, T> {
   }
 }
 
-// Each stack frame consists of a pair of local vars and captures, plus
+// Each stack frame consists of a tuple of local vars, captures, and
 // debug info.
 type ArkFrame = [ArkRef[], ArkRef[], FrameDebugInfo]
 
@@ -667,13 +667,17 @@ export class ArkMapLiteral extends ArkExp {
 }
 
 export class ArkLet extends ArkExp {
-  constructor(public boundVars: string[], public body: ArkExp) {
+  constructor(public boundVars: [string, ArkExp][], public body: ArkExp) {
     super()
   }
 
   async eval(ark: ArkState): Promise<ArkVal> {
-    const lets = bindArgsToParams(this.boundVars, [])
+    const lets = bindArgsToParams(this.boundVars.map((bv) => bv[0]), [])
     ark.stack.push(lets)
+    const vals = await Promise.all(this.boundVars.map((bv) => bv[1].eval(ark)))
+    for (let i = 0; i < lets.length; i += 1) {
+      lets[i].set(ark.stack, vals[i])
+    }
     let res: ArkVal
     try {
       res = await this.body.eval(ark)

@@ -1,5 +1,5 @@
 // Serialize Ark code to JSON.
-// © Reuben Thomas 2023
+// © Reuben Thomas 2023-2024
 // Released under the MIT license.
 
 import {FreeVars, PartialCompiledArk} from './compiler.js'
@@ -40,7 +40,7 @@ export function valToJs(val: ArkVal): unknown {
   } else if (val instanceof ArkGet) {
     return ['get', valToJs(val.val)]
   } else if (val instanceof ArkFn) {
-    return ['fn', ['params', ...val.params], valToJs(val.body)]
+    return ['fn', [...val.params], valToJs(val.body)]
   } else if (val instanceof ArkObject || val instanceof ArkObjectLiteral) {
     const obj = {}
     for (const [k, v] of val.properties) {
@@ -56,7 +56,7 @@ export function valToJs(val: ArkVal): unknown {
     }
     return obj
   } else if (val instanceof ArkLet) {
-    return ['let', ['params', ...val.boundVars], valToJs(val.body)]
+    return ['let', [...val.boundVars.map((bv) => [bv[0], valToJs(bv[1])])], valToJs(val.body)]
   } else if (val instanceof ArkCall) {
     return [valToJs(val.fn), ...val.args.map(valToJs)]
   } else if (val instanceof ArkSet) {

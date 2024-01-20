@@ -1,5 +1,5 @@
 // Ark tests of basics using inline source snippets.
-// © Reuben Thomas 2023
+// © Reuben Thomas 2023-2024
 // Released under the MIT license.
 
 import test from 'ava'
@@ -61,7 +61,7 @@ testGroup('loop and break', [
 ])
 
 testGroup('let', [
-  ['["let",["params","a"],["seq",["set","a",3],["get","a"]]]', 3],
+  ['["let",[["a", 3]],["get","a"]]', 3],
 ])
 
 testGroup('Objects', [

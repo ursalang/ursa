@@ -1,22 +1,17 @@
 [
   "let",
-  [ "params", "total", "i" ],
+  [ [ "total", 0 ], [ "i", 0 ] ],
   [
-    "seq",
-    [ "set", "total", 0 ],
-    [ "set", "i", 0 ],
+    "loop",
     [
-      "loop",
+      "seq",
+      [ "set", "i", [ "+", [ "get", "i" ], 1 ] ],
       [
-        "seq",
-        [ "set", "i", [ "+", [ "get", "i" ], 1 ] ],
-        [
-          "set",
-          "total",
-          [ "+", [ "get", "total" ], [ "get", "i" ] ]
-        ],
-        [ "if", [ "=", [ "get", "i" ], 10 ], [ "break", [ "get", "total" ] ] ]
-      ]
+        "set",
+        "total",
+        [ "+", [ "get", "total" ], [ "get", "i" ] ]
+      ],
+      [ "if", [ "=", [ "get", "i" ], 10 ], [ "break", [ "get", "total" ] ] ]
     ]
   ]
 ]

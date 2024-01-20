@@ -1,5 +1,5 @@
 // Ursa command-line front-end and REPL.
-// © Reuben Thomas 2023
+// © Reuben Thomas 2023-2024
 // Released under the GPL version 3, or (at your option) any later version.
 
 import path from 'path'
@@ -10,7 +10,7 @@ import * as readline from 'node:readline'
 import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
 
 import {
-  debug, ArkState, ArkUndefined, ArkNull, ArkList,
+  debug, ArkState, ArkNull, ArkList,
   ArkLet, ArkVal, ArkValRef, ArkString, globals,
 } from '../ark/interpreter.js'
 import {
@@ -184,16 +184,15 @@ async function repl(args: Args): Promise<ArkVal> {
         compiled.freeVars.delete(id!)
       }
       // Handle new let bindings
+      // FIXME: Use same code as in ArkLet.eval.
       if (compiled instanceof PartialCompiledArk && compiled.value instanceof ArkLet) {
-        env = env.push(compiled.value.boundVars)
-        ark.stack.push(Array<ArkValRef>(compiled.value.boundVars.length).fill(
-          new ArkValRef(ArkUndefined),
-        ))
-        compiled = new PartialCompiledArk(
-          compiled.value.body,
-          compiled.freeVars,
-          compiled.value.boundVars,
+        env = env.push(compiled.value.boundVars.map((bv) => bv[0]))
+        ark.stack.push(
+          await Promise.all(
+            compiled.value.boundVars.map(async (bv) => new ArkValRef(await bv[1].eval(ark))),
+          ),
         )
+        compiled = new CompiledArk(compiled.value.body, compiled.freeVars)
       }
       val = await runWithTraceback(ark, compiled)
       debug(toJs(val))

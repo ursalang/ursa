@@ -16,7 +16,7 @@ import {
   ArkSequence, ArkIf, ArkLoop, ArkAnd, ArkOr,
   ArkObjectLiteral, ArkListLiteral, ArkMapLiteral,
   ArkCall, ArkLet, ArkFn, ArkProperty, ArkGet, ArkSet, ArkReturn,
-  ArkBreak, ArkContinue,
+  ArkBreak, ArkContinue, ArkNullClass,
 } from '../ark/interpreter.js'
 import {
   ArkCompilerError, FreeVars,
@@ -57,7 +57,7 @@ class UrsaError extends Error {
   }
 }
 
-export class UrsaCompilerError extends UrsaError {}
+export class UrsaCompilerError extends UrsaError { }
 
 class UrsaRuntimeError extends UrsaError {
   constructor(public ark: ArkState, source: Interval, message: string) {
@@ -93,7 +93,7 @@ ${trace.map((s) => `  ${s}`).join('\n')}`
 
 // Base class for parsing the language, extended directly by classes used
 // only during parsing.
-export class AST {}
+export class AST { }
 
 class Definition extends AST {
   constructor(public ident: ParserNode, public val: ArkExp) {
@@ -172,11 +172,18 @@ function makeSequence(a: ParserArgs, exps: ParserNode[]): ArkExp {
   for (const [i, exp] of exps.entries()) {
     const compiledExp = exp.toExp(a)
     if (compiledExp instanceof ArkLet) {
-      const innerEnv = a.env.push(compiledExp.boundVars)
+      const innerEnv = a.env.push(compiledExp.boundVars.map((bv) => bv[0]))
       let letBody = compiledExp.body
       if (i < exps.length - 1) {
-        const compiledRest = makeSequence({...a, env: innerEnv}, exps.slice(i + 1))
-        letBody = new ArkSequence([compiledExp.body, compiledRest])
+        const seqBody = []
+        // FIXME: add an AST class for compiling Lets, rather than producing
+        // an ArkLet and then having to take it apart like this.
+        if (!(compiledExp.body instanceof ArkLiteral
+          && compiledExp.body.val instanceof ArkNullClass)) {
+          seqBody.push(compiledExp.body)
+        }
+        seqBody.push(makeSequence({...a, env: innerEnv}, exps.slice(i + 1)))
+        letBody = new ArkSequence(seqBody)
       }
       res.push(new ArkLet(compiledExp.boundVars, letBody))
       break
@@ -292,9 +299,8 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     const compiledForVar = symRef(loopEnv, forVar).value
     const compiledForBody = body.toExp({...this.args.a, env: loopEnv, inLoop: true})
     const loopBody = new ArkLet(
-      [forVar],
+      [[forVar, new ArkCall(new ArkGet(symRef(loopEnv, '_for').value), [])]],
       new ArkSequence([
-        new ArkSet(compiledForVar, new ArkCall(new ArkGet(symRef(loopEnv, '_for').value), [])),
         new ArkIf(
           new ArkCall(new ArkLiteral(intrinsics.get('=')), [new ArkGet(compiledForVar), new ArkLiteral(ArkNull())]),
           new ArkBreak(),
@@ -302,11 +308,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
         compiledForBody,
       ]),
     )
-    const letBody = new ArkSequence([
-      new ArkSet(symRef(innerEnv, '_for').value, compiledIterator),
-      new ArkLoop(loopBody),
-    ])
-    return new ArkLet(['_for'], letBody)
+    return new ArkLet([['_for', compiledIterator]], new ArkLoop(loopBody))
   },
 
   UnaryExp_not(_not, exp) {
@@ -503,17 +505,17 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     }
     const innerEnv = this.args.a.env.push(letIds)
     const parsedLets = []
-    for (const l of (lets.asIteration().children)) {
+    for (const l of lets.asIteration().children) {
       const definition = l.children[1].toDefinition({...this.args.a, env: innerEnv})
       parsedLets.push(definition)
     }
-    const assignments = parsedLets.map(
-      (l) => new ArkSet(l.ident.symref({...this.args.a, env: innerEnv}).value, l.val),
+    return addLoc(
+      new ArkLet(
+        parsedLets.map((def) => [def.ident.sourceString, def.val]),
+        new ArkLiteral(ArkNull()),
+      ),
+      this,
     )
-    const compiled = assignments.length > 1
-      ? new ArkSequence(assignments)
-      : assignments[0]
-    return addLoc(new ArkLet(letIds, compiled), this)
   },
 
   Use(_use, pathList) {
@@ -521,15 +523,10 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     const ident = path[path.length - 1]
     // For path x.y.z, compile `let z = x.use(y.z)`
     const innerEnv = this.args.a.env.push([ident.sourceString])
-    const compiledUse = new ArkLet([ident.sourceString], new ArkSequence([
-      new ArkSet(
-        ident.symref({...this.args.a, env: innerEnv}).value,
-        new ArkCall(
-          new ArkGet(addLoc(new ArkProperty('use', new ArkGet(path[0].symref({...this.args.a, env: innerEnv}).value)), this)),
-          path.slice(1).map((id) => new ArkLiteral(ArkString(id.sourceString))),
-        ),
-      ),
-    ]))
+    const compiledUse = new ArkLet([[ident.sourceString, new ArkCall(
+      new ArkGet(addLoc(new ArkProperty('use', new ArkGet(path[0].symref({...this.args.a, env: innerEnv}).value)), this)),
+      path.slice(1).map((id) => new ArkLiteral(ArkString(id.sourceString))),
+    )]], new ArkLiteral(ArkNull()))
     return addLoc(compiledUse, this)
   },
 

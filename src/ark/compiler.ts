@@ -1,5 +1,5 @@
 // Compile JSON into Ark code.
-// © Reuben Thomas 2023
+// © Reuben Thomas 2023-2024
 // Released under the MIT license.
 
 import assert from 'assert'
@@ -77,16 +77,26 @@ export function checkParamList(params: string[]): string[] {
 }
 
 export function arkParamList(params: string[]): string[] {
-  if (params.length === 0 || params[0] !== 'params') {
-    throw new ArkCompilerError('Invalid parameter list')
-  }
-  const paramList = params.slice(1)
-  for (const param of paramList) {
+  for (const param of params) {
     if (typeof param !== 'string') {
-      throw new ArkCompilerError('Bad type in list')
+      throw new ArkCompilerError('Bad type in parameter list')
     }
   }
-  return checkParamList(paramList)
+  return checkParamList(params)
+}
+
+export function arkBindingList(env: Environment, params: [string, unknown][]): [string, ArkExp][] {
+  const bindings: [string, ArkExp][] = []
+  for (const p of params) {
+    if (!(p instanceof Array) || p.length !== 2 || typeof p[0] !== 'string') {
+      throw new ArkCompilerError("invalid 'let' variable binding")
+    }
+  }
+  const paramNames = arkParamList(params.map((p) => p[0]))
+  for (const p of params) {
+    bindings.push([p[0], doCompile(env.push(paramNames), p[1]).value])
+  }
+  return bindings
 }
 
 function listToVals(env: Environment, l: unknown[]): [ArkExp[], FreeVars] {
@@ -160,9 +170,9 @@ function doCompile(env: Environment, value: unknown): CompiledArk {
           if (value.length !== 3 || !(value[1] instanceof Array)) {
             throw new ArkCompilerError("Invalid 'let'")
           }
-          const params = arkParamList(value[1] as string[])
-          const compiled = doCompile(env.push(params), value[2])
-          params.forEach((p) => compiled.freeVars.delete(p))
+          const params = arkBindingList(env, value[1] as [string, unknown][])
+          const compiled = doCompile(env.push(params.map((p) => p[0])), value[2])
+          params.forEach((p) => compiled.freeVars.delete(p[0]))
           return new CompiledArk(new ArkLet(params, compiled.value), compiled.freeVars)
         }
         case 'fn': {

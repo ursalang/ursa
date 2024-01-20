@@ -1,42 +1,30 @@
 [
   "let",
-  [ "params", "sum" ],
-  [
-    "seq",
-    [
-      "set",
-      "sum",
-      [
+  [ [ "sum", [
         "fn",
-        [ "params", "l" ],
+        [ "l" ],
         [
           "let",
-          [ "params", "tot", "i" ],
+          [ [ "tot", 0 ], [ "i", 0 ] ],
           [
-            "seq",
-            [ "set", "tot", 0 ],
-            [ "set", "i", 0 ],
+            "loop",
             [
-              "loop",
+              "seq",
               [
-                "seq",
-                [
-                  "if",
-                  [ "=", [ "get", "i" ], [ [ "get", [ "prop", "len", [ "get", "l" ] ] ] ] ],
-                  [ "break", [ "get", "tot" ] ]
-                ],
-                [
-                  "set",
-                  "tot",
-                  [ "+", [ "get", "tot" ], [ [ "get", [ "prop", "get", [ "get", "l" ] ] ], [ "get", "i" ] ] ]
-                ],
-                [ "set", "i", [ "+", [ "get", "i" ], 1 ] ]
-              ]
+                "if",
+                [ "=", [ "get", "i" ], [ [ "get", [ "prop", "len", [ "get", "l" ] ] ] ] ],
+                [ "break", [ "get", "tot" ] ]
+              ],
+              [
+                "set",
+                "tot",
+                [ "+", [ "get", "tot" ], [ [ "get", [ "prop", "get", [ "get", "l" ] ] ], [ "get", "i" ] ] ]
+              ],
+              [ "set", "i", [ "+", [ "get", "i" ], 1 ] ]
             ]
           ]
         ]
       ]
-    ],
-    [ [ "get", "sum" ], [ "list", 10, 30, 50, 5, 5 ] ]
-  ]
+    ] ],
+  [ [ "get", "sum" ], [ "list", 10, 30, 50, 5, 5 ] ]
 ]

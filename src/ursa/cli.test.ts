@@ -1,6 +1,6 @@
 /* eslint-disable no-useless-concat */
 // Ursa REPL tests.
-// © Reuben Thomas 2023
+// © Reuben Thomas 2023-2024
 // Released under the GPL version 3, or (at your option) any later version.
 
 import version from '../version.js'
@@ -14,7 +14,7 @@ Welcome to Ursa ${version}.
 
 ursaTest('Test let followed by reference', 'test/repl-let-val', [], `\
 Welcome to Ursa ${version}.
-> 1
+> null
 > 3
 > `, undefined, true)
 

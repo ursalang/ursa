@@ -1,14 +1,8 @@
 [
   "let",
-  [ "params", "fac" ],
-  [
-    "seq",
-    [
-      "set",
-      "fac",
-      [
+  [ [ "fac", [
         "fn",
-        [ "params", "self", "x" ],
+        [ "self", "x" ],
         [
           "if",
           [ "=", [ "get", "x" ], 0 ],
@@ -20,7 +14,6 @@
           ]
         ]
       ]
-    ],
-    [ [ "get", "fac" ], [ "get", "fac" ], 6 ]
-  ]
+    ] ],
+  [ [ "get", "fac" ], [ "get", "fac" ], 6 ]
 ]
