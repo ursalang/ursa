@@ -69,7 +69,7 @@ export function arkBindingList(env: Environment, params: [string, unknown][]): [
   const bindings: [string, ArkExp][] = []
   for (const p of params) {
     if (!(p instanceof Array) || p.length !== 2 || typeof p[0] !== 'string') {
-      throw new ArkCompilerError("invalid 'let' variable binding")
+      throw new ArkCompilerError('invalid let variable binding')
     }
   }
   const paramNames = arkParamList(params.map((p) => p[0]))
