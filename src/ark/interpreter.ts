@@ -247,17 +247,15 @@ export class ArkBreak extends ArkExp {
     super()
   }
 
-  async eval(ark: ArkState) {
+  async eval(ark: ArkState): Promise<never> {
     throw new ArkBreakException(await this.val.eval(ark))
-    return Promise.resolve(ArkNull())
   }
 }
 
 export class ArkContinue extends ArkExp {
   // eslint-disable-next-line class-methods-use-this
-  eval(_ark: ArkState) {
+  eval(_ark: ArkState): Promise<never> {
     throw new ArkContinueException()
-    return Promise.resolve(ArkNull())
   }
 }
 
@@ -266,9 +264,8 @@ export class ArkReturn extends ArkExp {
     super()
   }
 
-  async eval(ark: ArkState) {
+  async eval(ark: ArkState): Promise<never> {
     throw new ArkReturnException(await this.val.eval(ark))
-    return Promise.resolve(ArkNull())
   }
 }
 
