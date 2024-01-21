@@ -11,7 +11,7 @@ import {
   ArkState, ArkExp, ArkValRef, intrinsics, globals,
   ArkIf, ArkAnd, ArkOr, ArkSequence, ArkLoop, ArkBreak, ArkContinue,
   ArkNull, ArkBoolean, ArkNumber, ArkString,
-  ArkGet, ArkSet, ArkRef, ArkStackRef, ArkCaptureRef,
+  ArkGet, ArkSet, ArkStackRef, ArkCaptureRef,
   ArkListLiteral, ArkObjectLiteral, ArkMapLiteral,
   ArkFn, ArkReturn, ArkProperty, ArkLet, ArkCall, ArkLiteral, ArkObject,
 } from './interpreter.js'
@@ -46,26 +46,6 @@ export class Environment {
 
   pushFrame(frame: [string[], string[]]) {
     return new Environment([frame, ...this.stack.slice()])
-  }
-
-  getIndex(sym: string): ArkRef {
-    let ref
-    for (let i = this.stack.length - 1; i >= 0; i -= 1) {
-      const j = this.stack[i][0].lastIndexOf(sym)
-      if (j !== -1) {
-        ref = new ArkStackRef(i, j)
-        break
-      }
-    }
-    if (ref === undefined) {
-      ref = this.externalSyms.get(sym)
-      if (ref === undefined) {
-        throw new ArkCompilerError(`Undefined symbol ${sym}`)
-      }
-    }
-    ref.debug.name = sym
-    ref.debug.env = JSON.stringify(this)
-    return ref as ArkRef
   }
 }
 
@@ -115,19 +95,36 @@ export function symRef(env: Environment, name: string): CompiledArk {
   if (val !== undefined) {
     return new CompiledArk(new ArkLiteral(val))
   }
-  let ref = env.getIndex(name)
-  const freeVars = new FreeVars(ref instanceof ArkStackRef ? [[name, ref]] : [])
-  const i = env.stack[0][1].lastIndexOf(name)
-  if (i !== -1) {
-    ref = new ArkCaptureRef(i)
+  let ref
+  for (let i = 0; i < env.stack.length; i += 1) {
+    const j = env.stack[i][0].lastIndexOf(name)
+    if (j !== -1) {
+      ref = new ArkStackRef(i, j)
+      break
+    }
+    if (i === 0) {
+      const k = env.stack[0][1].lastIndexOf(name)
+      if (k !== -1) {
+        ref = new ArkCaptureRef(k)
+        break
+      }
+    }
   }
+  const freeVars = new FreeVars(ref instanceof ArkStackRef ? [[name, ref]] : [])
   if (ref instanceof ArkStackRef && ref.level > 0) {
     // Reference to outer stack level: capture it.
     const k = env.stack[0][1].length
     ref = new ArkCaptureRef(k)
     env.stack[0][1].push(name)
   }
+  if (ref === undefined) {
+    ref = env.externalSyms.get(name)
+    if (ref === undefined) {
+      throw new ArkCompilerError(`Undefined symbol ${name}`)
+    }
+  }
   ref.debug.name = name
+  ref.debug.env = JSON.stringify(env)
   return new CompiledArk(new ArkLiteral(ref), freeVars)
 }
 
