@@ -281,7 +281,7 @@ function pushLocals(names: string[], vals: ArkVal[]): ArkRef[] {
 }
 
 abstract class ArkCallable extends ArkVal {
-  constructor(public params: string[], public freeVars: ArkRef[]) {
+  constructor(public params: string[], public captures: ArkRef[]) {
     super()
   }
 
@@ -289,8 +289,8 @@ abstract class ArkCallable extends ArkVal {
 }
 
 class ArkClosure extends ArkCallable {
-  constructor(params: string[], freeVars: ArkRef[], public body: ArkExp) {
-    super(params, freeVars)
+  constructor(params: string[], captures: ArkRef[], public body: ArkExp) {
+    super(params, captures)
   }
 
   async call(ark: ArkState): Promise<ArkVal> {
@@ -328,17 +328,17 @@ export class NativeAsyncFn extends ArkCallable {
 }
 
 export class ArkFn extends ArkExp {
-  constructor(public params: string[], public boundFreeVars: ArkStackRef[], public body: ArkExp) {
+  constructor(public params: string[], public capturedVars: ArkStackRef[], public body: ArkExp) {
     super()
   }
 
   eval(ark: ArkState): Promise<ArkVal> {
-    const freeVarsFrame: ArkRef[] = []
-    for (const loc of this.boundFreeVars) {
+    const captures: ArkRef[] = []
+    for (const loc of this.capturedVars) {
       const ref = ark.stack.stack[loc.level - 1][0][loc.index]
-      freeVarsFrame.push(ref)
+      captures.push(ref)
     }
-    return Promise.resolve(new ArkClosure(this.params, freeVarsFrame, this.body))
+    return Promise.resolve(new ArkClosure(this.params, captures, this.body))
   }
 }
 
@@ -387,7 +387,7 @@ export class ArkCall extends ArkExp {
     const debugInfo = new FrameDebugInfo()
     debugInfo.source = this
     debugInfo.name = sym
-    ark.stack.pushFrame([frame, fnVal.freeVars, debugInfo])
+    ark.stack.pushFrame([frame, fnVal.captures, debugInfo])
     const res = await fnVal.call(ark)
     ark.stack.popFrame()
     return res
