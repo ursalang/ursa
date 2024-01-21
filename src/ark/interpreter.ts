@@ -272,10 +272,10 @@ export class ArkReturn extends ArkExp {
   }
 }
 
-function bindArgsToParams(params: string[], args: ArkVal[]): ArkRef[] {
-  const frame: ArkValRef[] = params.map((_val, index) => new ArkValRef(args[index] ?? ArkUndefined))
-  if (args.length > params.length) {
-    frame.push(...args.slice(params.length).map((val) => new ArkValRef(val)))
+function pushLocals(names: string[], vals: ArkVal[]): ArkRef[] {
+  const frame: ArkValRef[] = names.map((_val, index) => new ArkValRef(vals[index] ?? ArkUndefined))
+  if (vals.length > names.length) {
+    frame.push(...vals.slice(names.length).map((val) => new ArkValRef(val)))
   }
   return frame
 }
@@ -383,7 +383,7 @@ export class ArkCall extends ArkExp {
       // eslint-disable-next-line no-await-in-loop
       evaluatedArgs.push(await arg.eval(ark))
     }
-    const frame = bindArgsToParams(fnVal.params, evaluatedArgs)
+    const frame = pushLocals(fnVal.params, evaluatedArgs)
     const debugInfo = new FrameDebugInfo()
     debugInfo.source = this
     debugInfo.name = sym
@@ -672,7 +672,7 @@ export class ArkLet extends ArkExp {
   }
 
   async eval(ark: ArkState): Promise<ArkVal> {
-    const lets = bindArgsToParams(this.boundVars.map((bv) => bv[0]), [])
+    const lets = pushLocals(this.boundVars.map((bv) => bv[0]), [])
     ark.stack.push(lets)
     const vals = await Promise.all(this.boundVars.map((bv) => bv[1].eval(ark)))
     for (let i = 0; i < lets.length; i += 1) {
