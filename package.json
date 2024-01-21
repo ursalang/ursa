@@ -74,6 +74,7 @@
       },
       "compile": "tsc"
     },
+    "timeout": "20s",
     "workerThreads": false
   },
   "pre-push": [
