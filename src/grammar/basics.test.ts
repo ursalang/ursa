@@ -4,8 +4,6 @@
 
 import {testGroup} from './testutil.js'
 
-Error.stackTraceLimit = Infinity
-
 testGroup('Comments', [
   ['// Comment', []],
   ['// Comment\n3', ['3']],

@@ -66,7 +66,8 @@
   },
   "ava": {
     "nodeArguments": [
-      "--no-warnings"
+      "--no-warnings",
+      "--stack-trace-limit=1000"
     ],
     "typescript": {
       "rewritePaths": {

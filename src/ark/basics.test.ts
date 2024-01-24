@@ -14,8 +14,6 @@ import {compile} from './compiler.js'
 
 import {testArkGroup as testGroup} from '../testutil.js'
 
-Error.stackTraceLimit = Infinity
-
 testGroup('Concrete values', [
   ['4', 4],
   ['["str","hello é"]', 'hello é'],
