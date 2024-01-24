@@ -27,25 +27,40 @@ export class FreeVars extends Map<string, ArkStackRef> {
   }
 }
 
-type Frame = [(string | undefined)[], string[]]
+export class Frame {
+  constructor(
+    // Local variable names are undefined between the point where they are
+    // allocated and the point at which they are declared.
+    public locals: (string | undefined)[],
+    public captures: string[],
+  ) { }
+}
 
 export class Environment {
-  // Each stack frame consists of a pair of local variables and captures.
-  // Local variable names are undefined between the point where they are
-  // allocated and the point at which they are declared.
   constructor(
-    public stack: [Frame, ...Frame[]] = [[[], []]],
+    public stack: [Frame, ...Frame[]] = [new Frame([], [])],
     public externalSyms: ArkObject = globals,
   ) {}
 
+  top() {
+    return this.stack[0]
+  }
+
   push(items: (string | undefined)[]) {
     return new Environment(
-      [[[...this.stack[0][0].slice(), ...items], this.stack[0][1]], ...this.stack.slice(1)],
+      [
+        new Frame(
+          [...this.top().locals, ...items],
+          this.top().captures,
+        ),
+        ...this.stack.slice(1),
+      ],
+      this.externalSyms,
     )
   }
 
-  pushFrame(frame: [string[], string[]]) {
-    return new Environment([frame, ...this.stack.slice()])
+  pushFrame(frame: Frame) {
+    return new Environment([frame, ...this.stack], this.externalSyms)
   }
 }
 
@@ -97,13 +112,13 @@ export function symRef(env: Environment, name: string): CompiledArk {
   }
   let ref
   for (let i = 0; i < env.stack.length; i += 1) {
-    const j = env.stack[i][0].lastIndexOf(name)
+    const j = env.stack[i].locals.lastIndexOf(name)
     if (j !== -1) {
       ref = new ArkStackRef(i, j)
       break
     }
     if (i === 0) {
-      const k = env.stack[0][1].lastIndexOf(name)
+      const k = env.top().captures.lastIndexOf(name)
       if (k !== -1) {
         ref = new ArkCaptureRef(k)
         break
@@ -113,9 +128,9 @@ export function symRef(env: Environment, name: string): CompiledArk {
   const freeVars = new FreeVars(ref instanceof ArkStackRef ? [[name, ref]] : [])
   if (ref instanceof ArkStackRef && ref.level > 0) {
     // Reference to outer stack level: capture it.
-    const k = env.stack[0][1].length
+    const k = env.top().captures.length
     ref = new ArkCaptureRef(k)
-    env.stack[0][1].push(name)
+    env.top().captures.push(name)
   }
   if (ref === undefined) {
     ref = env.externalSyms.get(name)
@@ -177,7 +192,7 @@ function doCompile(env: Environment, value: unknown): CompiledArk {
             throw new ArkCompilerError("Invalid 'fn'")
           }
           const params = arkParamList(value[1] as string[])
-          const compiled = doCompile(env.pushFrame([params, []]), value[2])
+          const compiled = doCompile(env.pushFrame(new Frame(params, [])), value[2])
           params.forEach((p) => compiled.freeVars.delete(p))
           return new CompiledArk(
             new ArkFn(params, [...compiled.freeVars.values()], compiled.value),

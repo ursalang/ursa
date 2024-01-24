@@ -20,7 +20,7 @@ import {
 } from '../ark/interpreter.js'
 import {
   ArkCompilerError, FreeVars,
-  CompiledArk, symRef, Environment, PartialCompiledArk, checkParamList,
+  CompiledArk, symRef, Frame, Environment, PartialCompiledArk, checkParamList,
 } from '../ark/compiler.js'
 
 type ParserOperations = {
@@ -279,7 +279,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
   Fn(type, body) {
     const paramStrings = type.toMethod(this.args.a)
     // TODO: Environment should contain typed params, not just strings
-    const innerEnv = this.args.a.env.pushFrame([paramStrings, []])
+    const innerEnv = this.args.a.env.pushFrame(new Frame(paramStrings, []))
     const bodyFreeVars = body.freeVars({...this.args.a, env: innerEnv})
     const compiledBody = body.toExp({env: innerEnv, inLoop: false, inFn: true})
     paramStrings.forEach((p) => bodyFreeVars.delete(p))
@@ -678,7 +678,7 @@ semantics.addOperation<Map<string, unknown>>('freeVars(a)', {
 
   Fn(type, body) {
     const paramStrings = type.toMethod(this.args.a)
-    const innerEnv = this.args.a.env.pushFrame([[...paramStrings], []])
+    const innerEnv = this.args.a.env.pushFrame(new Frame([...paramStrings], []))
     const freeVars = new FreeVars().merge(body.freeVars({env: innerEnv}))
     paramStrings.forEach((p) => freeVars.delete(p))
     return freeVars

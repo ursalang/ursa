@@ -180,7 +180,7 @@ async function repl(args: Args): Promise<ArkVal> {
     try {
       let compiled = compile(args, line, env)
       // Filter out already-declared bindings
-      for (const id of env.stack[0][0]) {
+      for (const id of env.top().locals) {
         compiled.freeVars.delete(id!)
       }
       // Handle new let bindings
