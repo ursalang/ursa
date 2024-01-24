@@ -16,7 +16,7 @@ import {
   ArkFn, ArkReturn, ArkProperty, ArkLet, ArkCall, ArkLiteral, ArkObject,
 } from './interpreter.js'
 
-export class ArkCompilerError extends Error { }
+export class ArkCompilerError extends Error {}
 
 export class FreeVars extends Map<string, ArkStackRef> {
   merge(moreVars: FreeVars): FreeVars {
@@ -36,7 +36,7 @@ export class Environment {
   constructor(
     public stack: [Frame, ...Frame[]] = [[[], []]],
     public externalSyms: ArkObject = globals,
-  ) { }
+  ) {}
 
   push(items: (string | undefined)[]) {
     return new Environment(
@@ -129,7 +129,7 @@ export function symRef(env: Environment, name: string): CompiledArk {
 }
 
 export class CompiledArk {
-  constructor(public value: ArkExp, public freeVars: FreeVars = new FreeVars()) { }
+  constructor(public value: ArkExp, public freeVars: FreeVars = new FreeVars()) {}
 }
 
 export class PartialCompiledArk extends CompiledArk {
@@ -180,7 +180,7 @@ function doCompile(env: Environment, value: unknown): CompiledArk {
           const compiled = doCompile(env.pushFrame([params, []]), value[2])
           params.forEach((p) => compiled.freeVars.delete(p))
           return new CompiledArk(
-            new ArkFn(params, [...compiled.freeVars.values()].flat(), compiled.value),
+            new ArkFn(params, [...compiled.freeVars.values()], compiled.value),
             compiled.freeVars,
           )
         }
