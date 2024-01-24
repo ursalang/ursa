@@ -36,9 +36,10 @@ class Namespace<T extends ArkVal> extends Map<string, T> {
 type ArkFrame = [ArkRef[], ArkRef[], FrameDebugInfo]
 
 class FrameDebugInfo {
-  public name: ArkRef | undefined
-
-  public source: ArkVal | undefined
+  constructor(
+    public name: ArkRef | undefined = undefined,
+    public source: ArkVal | undefined = undefined,
+  ) { }
 }
 
 export class RuntimeStack {
@@ -381,9 +382,7 @@ export class ArkCall extends ArkExp {
       evaluatedArgs.push(await arg.eval(ark))
     }
     const frame = pushLocals(fnVal.params, evaluatedArgs)
-    const debugInfo = new FrameDebugInfo()
-    debugInfo.source = this
-    debugInfo.name = sym
+    const debugInfo = new FrameDebugInfo(sym, this)
     ark.stack.pushFrame([frame, fnVal.captures, debugInfo])
     const res = await fnVal.call(ark)
     ark.stack.popFrame()
