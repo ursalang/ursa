@@ -57,7 +57,7 @@ class UrsaError extends Error {
   }
 }
 
-export class UrsaCompilerError extends UrsaError { }
+export class UrsaCompilerError extends UrsaError {}
 
 class UrsaRuntimeError extends UrsaError {
   constructor(public ark: ArkState, source: Interval, message: string) {
@@ -93,7 +93,7 @@ ${trace.map((s) => `  ${s}`).join('\n')}`
 
 // Base class for parsing the language, extended directly by classes used
 // only during parsing.
-export class AST { }
+export class AST {}
 
 class Definition extends AST {
   constructor(public ident: ParserNode, public val: ArkExp) {
@@ -465,13 +465,6 @@ semantics.addOperation<ArkExp>('toExp(a)', {
   AssignmentExp_ass(lvalue, _ass, value) {
     const compiledLvalue = lvalue.toLval(this.args.a)
     const compiledValue = value.toExp(this.args.a)
-    if (compiledLvalue instanceof ArkCall
-      && compiledLvalue.fn instanceof ArkGet
-      && compiledLvalue.fn.val instanceof ArkProperty
-      && compiledLvalue.fn.val.prop === 'set') {
-      compiledLvalue.args.push(compiledValue)
-      return compiledLvalue
-    }
     return addLoc(new ArkSet(compiledLvalue, compiledValue), this)
   },
 
