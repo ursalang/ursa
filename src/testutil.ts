@@ -10,8 +10,8 @@ import test, {ExecutionContext, Macro} from 'ava'
 import {ExecaReturnValue, execa} from 'execa'
 import {compareSync, Difference} from 'dir-compare'
 
-import {ArkState, debug} from './ark/interpreter.js'
-import {compile as doArkCompile, CompiledArk} from './ark/compiler.js'
+import {ArkExp, ArkState, debug} from './ark/interpreter.js'
+import {compile as doArkCompile} from './ark/compiler.js'
 import {toJs} from './ark/ffi.js'
 import {valToJs} from './ark/serialize.js'
 import {compile as ursaCompile} from './ursa/compiler.js'
@@ -32,7 +32,7 @@ function arkCompile(source: string) {
 
 function doTestGroup(
   title: string,
-  compile: (expr: string) => CompiledArk,
+  compile: (expr: string) => ArkExp,
   tests: [string, unknown][],
 ) {
   test(title, async (t) => {
@@ -86,7 +86,7 @@ async function doCliTest(
     if (syntax === 'json') {
       const source = fs.readFileSync(inputFile, {encoding: 'utf-8'})
       const compiled = arkCompile(source)
-      t.deepEqual(valToJs(compiled.value), JSON.parse(source))
+      t.deepEqual(valToJs(compiled), JSON.parse(source))
     }
     if (expectedStdout !== undefined) {
       t.is(stdout, expectedStdout)

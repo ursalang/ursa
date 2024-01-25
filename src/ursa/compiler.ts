@@ -19,8 +19,7 @@ import {
   ArkBreak, ArkContinue, ArkNullClass,
 } from '../ark/interpreter.js'
 import {
-  ArkCompilerError, FreeVars,
-  CompiledArk, symRef, Frame, Environment, PartialCompiledArk, checkParamList,
+  ArkCompilerError, symRef, Frame, Environment, checkParamList,
 } from '../ark/compiler.js'
 
 type ParserOperations = {
@@ -33,8 +32,7 @@ type ParserOperations = {
   toMethod(a: ParserArgs): string[]
   toParam(a: ParserArgs): string
   boundVars: string[]
-  freeVars(a: ParserArgs): FreeVars
-  symref(a: ParserArgs): CompiledArk
+  symref(a: ParserArgs): ArkExp
 }
 
 type ParserArgs = {
@@ -203,7 +201,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
   },
 
   PrimaryExp_ident(_sym) {
-    return addLoc(new ArkGet(this.symref(this.args.a).value), this)
+    return addLoc(new ArkGet(this.symref(this.args.a)), this)
   },
   PrimaryExp_paren(_open, exp, _close) {
     return addLoc(exp.toExp(this.args.a), this)
@@ -280,11 +278,13 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     const paramStrings = type.toMethod(this.args.a)
     // TODO: Environment should contain typed params, not just strings
     const innerEnv = this.args.a.env.pushFrame(new Frame(paramStrings, []))
-    const bodyFreeVars = body.freeVars({...this.args.a, env: innerEnv})
     const compiledBody = body.toExp({env: innerEnv, inLoop: false, inFn: true})
-    paramStrings.forEach((p) => bodyFreeVars.delete(p))
     // TODO: ArkFn should be an ArkObject which contains one method.
-    return addLoc(new ArkFn(paramStrings, [...bodyFreeVars.values()], compiledBody), this)
+    return addLoc(new ArkFn(
+      paramStrings,
+      innerEnv.stack[0].captures.map((c) => symRef(this.args.a.env, c)),
+      compiledBody,
+    ), this)
   },
 
   Loop(_loop, body) {
@@ -296,10 +296,10 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     const innerEnv = this.args.a.env.push(['_for'])
     const compiledIterator = iterator.toExp({...this.args.a, env: innerEnv})
     const loopEnv = innerEnv.push([forVar])
-    const compiledForVar = symRef(loopEnv, forVar).value
+    const compiledForVar = symRef(loopEnv, forVar)
     const compiledForBody = body.toExp({...this.args.a, env: loopEnv, inLoop: true})
     const loopBody = new ArkLet(
-      [[forVar, new ArkCall(new ArkGet(symRef(loopEnv, '_for').value), [])]],
+      [[forVar, new ArkCall(new ArkGet(symRef(loopEnv, '_for')), [])]],
       new ArkSequence([
         new ArkIf(
           new ArkCall(new ArkLiteral(intrinsics.get('=')), [new ArkGet(compiledForVar), new ArkLiteral(ArkNull())]),
@@ -517,7 +517,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     // For path x.y.z, compile `let z = x.use(y.z)`
     const innerEnv = this.args.a.env.push([ident.sourceString])
     const compiledUse = new ArkLet([[ident.sourceString, new ArkCall(
-      new ArkGet(addLoc(new ArkProperty('use', new ArkGet(path[0].symref({...this.args.a, env: innerEnv}).value)), this)),
+      new ArkGet(addLoc(new ArkProperty('use', new ArkGet(path[0].symref({...this.args.a, env: innerEnv}))), this)),
       path.slice(1).map((id) => new ArkLiteral(ArkString(id.sourceString))),
     )]], new ArkLiteral(ArkNull()))
     return addLoc(compiledUse, this)
@@ -592,7 +592,7 @@ semantics.addOperation<string[]>('toMethod(a)', {
 
 semantics.addOperation<ArkExp>('toLval(a)', {
   PrimaryExp_ident(_sym) {
-    return addLoc(this.symref(this.args.a).value, this)
+    return addLoc(this.symref(this.args.a), this)
   },
 
   PropertyExp_property(object, _dot, property) {
@@ -636,85 +636,9 @@ semantics.addAttribute<string[]>('boundVars', {
   },
 })
 
-function mergeFreeVars(env: Environment, children: ParserNode[]): FreeVars {
-  const freeVars = new FreeVars()
-  children.forEach((child) => freeVars.merge(child.freeVars({env})))
-  return freeVars
-}
-
-semantics.addOperation<Map<string, unknown>>('freeVars(a)', {
-  _terminal() {
-    return new FreeVars()
-  },
-  _nonterminal(...children) {
-    return mergeFreeVars(this.args.a.env, children)
-  },
-  _iter(...children) {
-    return mergeFreeVars(this.args.a.env, children)
-  },
-
-  Sequence(exps, _sc) {
-    const freeVars = new FreeVars()
-    const boundVars: string[] = []
-    exps.asIteration().children.forEach((exp) => {
-      boundVars.push(...exp.boundVars)
-      freeVars.merge(exp.freeVars({env: this.args.a.env.push(boundVars)}))
-    })
-    boundVars.forEach((b: string) => freeVars.delete(b))
-    return freeVars
-  },
-
-  Definition(_ident, _equals, value) {
-    return value.freeVars(this.args.a)
-  },
-
-  PropertyExp_property(propertyExp, _dot, _ident) {
-    return propertyExp.freeVars(this.args.a)
-  },
-
-  CallExp_property(propertyExp, _dot, _ident) {
-    return propertyExp.freeVars(this.args.a)
-  },
-
-  Fn(type, body) {
-    const paramStrings = type.toMethod(this.args.a)
-    const innerEnv = this.args.a.env.pushFrame(new Frame([...paramStrings], []))
-    const freeVars = new FreeVars().merge(body.freeVars({env: innerEnv}))
-    paramStrings.forEach((p) => freeVars.delete(p))
-    return freeVars
-  },
-
-  For(_for, ident, _of, iterator, body) {
-    const forVar = ident.sourceString
-    const innerEnv = this.args.a.env.push(['_for'])
-    const loopEnv = innerEnv.push([forVar])
-    const freeVars = new FreeVars().merge(iterator.freeVars({env: innerEnv}))
-      .merge(body.freeVars({env: loopEnv}))
-    freeVars.delete(forVar)
-    return freeVars
-  },
-
-  Use(_use, pathList) {
-    const path = pathList.asIteration().children
-    const ident = path[path.length - 1]
-    const innerEnv = this.args.a.env.push([ident.sourceString])
-    const freeVars = new FreeVars().merge(path[0].symref({...this.args.a, env: innerEnv}).freeVars)
-    freeVars.delete(ident.sourceString)
-    return freeVars
-  },
-
-  NamedType(_path, _typeArgs) {
-    return new FreeVars()
-  },
-
-  ident(_ident) {
-    return this.symref(this.args.a).freeVars
-  },
-})
-
 // Ohm attributes can't take arguments, so memoize an operation.
-const symrefs = new Map<ParserNode, CompiledArk>()
-semantics.addOperation<CompiledArk>('symref(a)', {
+const symrefs = new Map<ParserNode, ArkExp>()
+semantics.addOperation<ArkExp>('symref(a)', {
   ident(ident) {
     if (!symrefs.has(this)) {
       try {
@@ -734,20 +658,17 @@ export function compile(
   expr: string,
   env: Environment = new Environment(),
   startRule?: string,
-): PartialCompiledArk {
+): ArkExp {
   const matchResult = grammar.match(expr, startRule)
   if (matchResult.failed()) {
     throw new Error(matchResult.message)
   }
   const ast = semantics(matchResult)
   const args = {env, inLoop: false, inFn: false}
-  const compiled = ast.toExp(args)
-  const freeVars = ast.freeVars(args)
-  env.externalSyms.properties.forEach((_val, id) => freeVars.delete(id))
-  return new PartialCompiledArk(compiled, freeVars, ast.boundVars)
+  return ast.toExp(args)
 }
 
-export async function runWithTraceback(ark: ArkState, compiledVal: CompiledArk): Promise<ArkVal> {
+export async function runWithTraceback(ark: ArkState, compiledVal: ArkExp): Promise<ArkVal> {
   try {
     return await ark.run(compiledVal)
   } catch (e) {

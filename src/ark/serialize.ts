@@ -2,7 +2,6 @@
 // © Reuben Thomas 2023-2024
 // Released under the MIT license.
 
-import {FreeVars, PartialCompiledArk} from './compiler.js'
 import {
   ArkVal, ArkValRef, ArkConcreteVal,
   ArkUndefined, ArkNull, ArkSequence,
@@ -10,7 +9,7 @@ import {
   ArkGet, ArkSet, ArkLet, ArkCall, ArkFn, ArkReturn,
   NativeObject, ArkObject, ArkList, ArkMap, ArkProperty, ArkPropertyRef,
   ArkLiteral, ArkListLiteral, ArkMapLiteral, ArkObjectLiteral,
-  ArkStackRef, ArkCaptureRef,
+  ArkLocalRef, ArkCaptureRef,
 } from './interpreter.js'
 
 export function valToJs(val: ArkVal): unknown {
@@ -33,7 +32,7 @@ export function valToJs(val: ArkVal): unknown {
     return valToJs(val.val)
   } else if (val instanceof ArkPropertyRef) {
     return ['ref', ['prop', valToJs(val.obj), val.prop]]
-  } else if (val instanceof ArkStackRef || val instanceof ArkCaptureRef) {
+  } else if (val instanceof ArkLocalRef || val instanceof ArkCaptureRef) {
     return 'foo'
   } else if (val instanceof ArkValRef) {
     return ['ref', valToJs(val.val)]
@@ -98,20 +97,4 @@ export function valToJs(val: ArkVal): unknown {
 
 export function serializeVal(val: ArkVal) {
   return JSON.stringify(valToJs(val))
-}
-
-function freeVarsToJs(freeVars: FreeVars) {
-  const obj: {[key: string]: unknown} = {}
-  for (const [sym, ref] of freeVars) {
-    obj[sym] = valToJs(ref)
-  }
-  return obj
-}
-
-export function serializeCompiledArk(compiled: PartialCompiledArk): string {
-  return JSON.stringify([
-    valToJs(compiled.value),
-    freeVarsToJs(compiled.freeVars),
-    compiled.boundVars,
-  ])
 }

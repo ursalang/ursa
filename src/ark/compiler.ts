@@ -11,21 +11,12 @@ import {
   ArkState, ArkExp, ArkValRef, intrinsics, globals,
   ArkIf, ArkAnd, ArkOr, ArkSequence, ArkLoop, ArkBreak, ArkContinue,
   ArkNull, ArkBoolean, ArkNumber, ArkString,
-  ArkGet, ArkSet, ArkStackRef, ArkCaptureRef,
+  ArkGet, ArkSet, ArkLocalRef, ArkCaptureRef,
   ArkListLiteral, ArkObjectLiteral, ArkMapLiteral,
   ArkFn, ArkReturn, ArkProperty, ArkLet, ArkCall, ArkLiteral, ArkObject,
 } from './interpreter.js'
 
 export class ArkCompilerError extends Error {}
-
-export class FreeVars extends Map<string, ArkStackRef> {
-  merge(moreVars: FreeVars): FreeVars {
-    for (const [name, symref] of moreVars) {
-      this.set(name, symref)
-    }
-    return this
-  }
-}
 
 export class Frame {
   constructor(
@@ -33,7 +24,7 @@ export class Frame {
     // allocated and the point at which they are declared.
     public locals: (string | undefined)[],
     public captures: string[],
-  ) { }
+  ) {}
 }
 
 export class Environment {
@@ -89,49 +80,46 @@ export function arkBindingList(env: Environment, params: [string, unknown][]): [
   }
   const paramNames = arkParamList(params.map((p) => p[0]))
   for (const p of params) {
-    bindings.push([p[0], doCompile(env.push(paramNames), p[1]).value])
+    bindings.push([p[0], doCompile(env.push(paramNames), p[1])])
   }
   return bindings
 }
 
-function listToVals(env: Environment, l: unknown[]): [ArkExp[], FreeVars] {
-  const vals = []
-  const freeVars = new FreeVars()
-  for (const v of l) {
-    const compiled = doCompile(env, v)
-    vals.push(compiled.value)
-    freeVars.merge(compiled.freeVars)
-  }
-  return [vals, freeVars]
+function listToVals(env: Environment, l: unknown[]): ArkExp[] {
+  return l.map((elem) => doCompile(env, elem))
 }
 
-export function symRef(env: Environment, name: string): CompiledArk {
+export function symRef(env: Environment, name: string): ArkExp {
+  // Check whether the symbol is an intrinsic.
   const val = intrinsics.get(name)
   if (val !== undefined) {
-    return new CompiledArk(new ArkLiteral(val))
+    return new ArkLiteral(val)
   }
   let ref
-  for (let i = 0; i < env.stack.length; i += 1) {
-    const j = env.stack[i].locals.lastIndexOf(name)
-    if (j !== -1) {
-      ref = new ArkStackRef(i, j)
-      break
-    }
-    if (i === 0) {
-      const k = env.top().captures.lastIndexOf(name)
-      if (k !== -1) {
-        ref = new ArkCaptureRef(k)
-        break
+  // Check whether the symbol is a local.
+  const j = env.top().locals.lastIndexOf(name)
+  if (j !== -1) {
+    ref = new ArkLocalRef(j)
+  } else {
+    // Otherwise, check if it's a capture.
+    // Check whether we already have this capture.
+    const k = env.top().captures.lastIndexOf(name)
+    if (k !== -1) {
+      ref = new ArkCaptureRef(k)
+    } else {
+      // If not, see if it's on the stack to be captured.
+      for (let i = 0; i < env.stack.length; i += 1) {
+        const j = env.stack[i].locals.lastIndexOf(name)
+        if (j !== -1) {
+          const k = env.top().captures.length
+          ref = new ArkCaptureRef(k)
+          env.top().captures.push(name)
+          break
+        }
       }
     }
   }
-  const freeVars = new FreeVars(ref instanceof ArkStackRef ? [[name, ref]] : [])
-  if (ref instanceof ArkStackRef && ref.level > 0) {
-    // Reference to outer stack level: capture it.
-    const k = env.top().captures.length
-    ref = new ArkCaptureRef(k)
-    env.top().captures.push(name)
-  }
+  // Finally, see if it's a global, and if not, error.
   if (ref === undefined) {
     ref = env.externalSyms.get(name)
     if (ref === undefined) {
@@ -140,32 +128,18 @@ export function symRef(env: Environment, name: string): CompiledArk {
   }
   ref.debug.name = name
   ref.debug.env = JSON.stringify(env)
-  return new CompiledArk(new ArkLiteral(ref), freeVars)
+  return new ArkLiteral(ref)
 }
 
-export class CompiledArk {
-  constructor(public value: ArkExp, public freeVars: FreeVars = new FreeVars()) {}
-}
-
-export class PartialCompiledArk extends CompiledArk {
-  constructor(
-    public value: ArkExp,
-    public freeVars: FreeVars = new FreeVars(),
-    public boundVars: string[] = [],
-  ) {
-    super(value, freeVars)
-  }
-}
-
-function doCompile(env: Environment, value: unknown): CompiledArk {
+function doCompile(env: Environment, value: unknown): ArkExp {
   if (value === null) {
-    return new CompiledArk(new ArkLiteral(ArkNull()))
+    return new ArkLiteral(ArkNull())
   }
   if (typeof value === 'boolean') {
-    return new CompiledArk(new ArkLiteral(ArkBoolean(value)))
+    return new ArkLiteral(ArkBoolean(value))
   }
   if (typeof value === 'number') {
-    return new CompiledArk(new ArkLiteral(ArkNumber(value)))
+    return new ArkLiteral(ArkNumber(value))
   }
   if (typeof value === 'string') {
     return symRef(env, value)
@@ -177,48 +151,44 @@ function doCompile(env: Environment, value: unknown): CompiledArk {
           if (value.length !== 2 || typeof value[1] !== 'string') {
             throw new ArkCompilerError(`Invalid 'str' ${value}`)
           }
-          return new CompiledArk(new ArkLiteral(ArkString(value[1])))
+          return new ArkLiteral(ArkString(value[1]))
         case 'let': {
           if (value.length !== 3 || !(value[1] instanceof Array)) {
             throw new ArkCompilerError("Invalid 'let'")
           }
           const params = arkBindingList(env, value[1] as [string, unknown][])
           const compiled = doCompile(env.push(params.map((p) => p[0])), value[2])
-          params.forEach((p) => compiled.freeVars.delete(p[0]))
-          return new CompiledArk(new ArkLet(params, compiled.value), compiled.freeVars)
+          return new ArkLet(params, compiled)
         }
         case 'fn': {
           if (value.length !== 3 || !(value[1] instanceof Array)) {
             throw new ArkCompilerError("Invalid 'fn'")
           }
           const params = arkParamList(value[1] as string[])
-          const compiled = doCompile(env.pushFrame(new Frame(params, [])), value[2])
-          params.forEach((p) => compiled.freeVars.delete(p))
-          return new CompiledArk(
-            new ArkFn(params, [...compiled.freeVars.values()], compiled.value),
-            compiled.freeVars,
-          )
+          const innerEnv = env.pushFrame(new Frame(params, []))
+          const compiled = doCompile(innerEnv, value[2])
+          return new ArkFn(params, innerEnv.stack[0].captures.map((c) => symRef(env, c)), compiled)
         }
         case 'prop': {
           if (value.length !== 3 || typeof value[1] !== 'string') {
             throw new ArkCompilerError("Invalid 'prop'")
           }
           const compiled = doCompile(env, value[2])
-          return new CompiledArk(new ArkProperty(value[1], compiled.value), compiled.freeVars)
+          return new ArkProperty(value[1], compiled)
         }
         case 'ref': {
           if (value.length !== 2) {
             throw new ArkCompilerError("Invalid 'ref'")
           }
           const compiled = doCompile(env, value[1])
-          return new CompiledArk(new ArkLiteral(compiled.value), compiled.freeVars)
+          return new ArkLiteral(compiled)
         }
         case 'get': {
           if (value.length !== 2) {
             throw new ArkCompilerError("Invalid 'get'")
           }
           const compiled = doCompile(env, value[1])
-          return new CompiledArk(new ArkGet(compiled.value), compiled.freeVars)
+          return new ArkGet(compiled)
         }
         case 'set': {
           if (value.length !== 3) {
@@ -226,32 +196,28 @@ function doCompile(env: Environment, value: unknown): CompiledArk {
           }
           const compiledRef = doCompile(env, value[1])
           const compiledVal = doCompile(env, value[2])
-          const freeVars = new FreeVars(compiledVal.freeVars).merge(compiledRef.freeVars)
-          return new CompiledArk(new ArkSet(compiledRef.value, compiledVal.value), freeVars)
+          return new ArkSet(compiledRef, compiledVal)
         }
         case 'list': {
-          const [elems, elemsFreeVars] = listToVals(env, value.slice(1))
-          return new CompiledArk(new ArkListLiteral(elems), elemsFreeVars)
+          const elems = listToVals(env, value.slice(1))
+          return new ArkListLiteral(elems)
         }
         case 'map': {
           const inits = new Map<ArkExp, ArkExp>()
-          const initsFreeVars = new FreeVars()
           for (const pair of value.slice(1)) {
             assert(pair instanceof Array && pair.length === 2)
             const compiledKey = doCompile(env, pair[0])
             const compiledVal = doCompile(env, pair[1])
-            inits.set(compiledKey.value, compiledVal.value)
-            initsFreeVars.merge(compiledKey.freeVars)
-            initsFreeVars.merge(compiledVal.freeVars)
+            inits.set(compiledKey, compiledVal)
           }
-          return new CompiledArk(new ArkMapLiteral(inits), initsFreeVars)
+          return new ArkMapLiteral(inits)
         }
         case 'seq': {
           if (value.length === 2) {
             return doCompile(env, value[1])
           }
-          const [elems, elemsFreeVars] = listToVals(env, value.slice(1))
-          return new CompiledArk(new ArkSequence(elems), elemsFreeVars)
+          const elems = listToVals(env, value.slice(1))
+          return new ArkSequence(elems)
         }
         case 'if': {
           if (value.length < 3 || value.length > 4) {
@@ -259,17 +225,11 @@ function doCompile(env: Environment, value: unknown): CompiledArk {
           }
           const compiledCond = doCompile(env, value[1])
           const compiledThen = doCompile(env, value[2])
-          const freeVars = new FreeVars(compiledCond.freeVars).merge(compiledThen.freeVars)
           let compiledElse
           if (value.length === 4) {
             compiledElse = doCompile(env, value[3])
-            freeVars.merge(compiledElse.freeVars)
           }
-          return new CompiledArk(new ArkIf(
-            compiledCond.value,
-            compiledThen.value,
-            compiledElse ? compiledElse.value : undefined,
-          ), freeVars)
+          return new ArkIf(compiledCond, compiledThen, compiledElse)
         }
         case 'and': {
           if (value.length !== 3) {
@@ -277,8 +237,7 @@ function doCompile(env: Environment, value: unknown): CompiledArk {
           }
           const compiledLeft = doCompile(env, value[1])
           const compiledRight = doCompile(env, value[2])
-          const freeVars = new FreeVars(compiledLeft.freeVars).merge(compiledRight.freeVars)
-          return new CompiledArk(new ArkAnd(compiledLeft.value, compiledRight.value), freeVars)
+          return new ArkAnd(compiledLeft, compiledRight)
         }
         case 'or': {
           if (value.length !== 3) {
@@ -286,15 +245,14 @@ function doCompile(env: Environment, value: unknown): CompiledArk {
           }
           const compiledLeft = doCompile(env, value[1])
           const compiledRight = doCompile(env, value[2])
-          const freeVars = new FreeVars(compiledLeft.freeVars).merge(compiledRight.freeVars)
-          return new CompiledArk(new ArkOr(compiledLeft.value, compiledRight.value), freeVars)
+          return new ArkOr(compiledLeft, compiledRight)
         }
         case 'loop': {
           if (value.length !== 2) {
             throw new ArkCompilerError("Invalid 'loop'")
           }
           const compiledBody = doCompile(env, value[1])
-          return new CompiledArk(new ArkLoop(compiledBody.value), compiledBody.freeVars)
+          return new ArkLoop(compiledBody)
         }
         case 'break': {
           if (value.length < 1 || value.length > 2) {
@@ -302,15 +260,15 @@ function doCompile(env: Environment, value: unknown): CompiledArk {
           }
           if (value.length === 2) {
             const compiledBody = doCompile(env, value[1])
-            return new CompiledArk(new ArkBreak(compiledBody.value), compiledBody.freeVars)
+            return new ArkBreak(compiledBody)
           }
-          return new CompiledArk(new ArkBreak())
+          return new ArkBreak()
         }
         case 'continue': {
           if (value.length !== 2) {
             throw new ArkCompilerError("Invalid 'continue'")
           }
-          return new CompiledArk(new ArkContinue())
+          return new ArkContinue()
         }
         case 'return': {
           if (value.length < 1 || value.length > 2) {
@@ -318,47 +276,39 @@ function doCompile(env: Environment, value: unknown): CompiledArk {
           }
           if (value.length === 2) {
             const compiledBody = doCompile(env, value[1])
-            return new CompiledArk(new ArkReturn(compiledBody.value), compiledBody.freeVars)
+            return new ArkReturn(compiledBody)
           }
-          return new CompiledArk(new ArkReturn())
+          return new ArkReturn()
         }
         default: {
           const compiledFn = doCompile(env, value[0])
-          const [args, argsFreeVars] = listToVals(env, value.slice(1))
-          const freeVars = argsFreeVars.merge(compiledFn.freeVars)
-          return new CompiledArk(new ArkCall(compiledFn.value, args), freeVars)
+          const args = listToVals(env, value.slice(1))
+          return new ArkCall(compiledFn, args)
         }
       }
     }
   }
   if (typeof value === 'object') {
     const inits = new Map<string, ArkExp>()
-    const initsFreeVars = new FreeVars()
     for (const key in value) {
       if (Object.hasOwn(value, key)) {
         const compiled = doCompile(env, (value as {[key: string]: unknown})[key])
-        inits.set(key, compiled.value)
-        initsFreeVars.merge(compiled.freeVars)
+        inits.set(key, compiled)
       }
     }
-    return new CompiledArk(new ArkObjectLiteral(inits), initsFreeVars)
+    return new ArkObjectLiteral(inits)
   }
   throw new ArkCompilerError(`Invalid value ${value}`)
 }
 
-export function compile(
-  expr: unknown,
-  env: Environment = new Environment(),
-): CompiledArk {
-  const compiled = doCompile(env, expr)
-  env.externalSyms.properties.forEach((_val, id) => compiled.freeVars.delete(id))
-  return compiled
+export function compile(expr: unknown, env = new Environment()): ArkExp {
+  return doCompile(env, expr)
 }
 
 // Compile the prelude and add its values to the globals
 const ark = new ArkState()
 const prelude = compile(preludeJson)
-const preludeObj = await prelude.value.eval(ark) as ArkObject
+const preludeObj = await prelude.eval(ark) as ArkObject
 for (const [sym, val] of preludeObj.properties) {
   globals.set(sym, new ArkValRef(val))
 }

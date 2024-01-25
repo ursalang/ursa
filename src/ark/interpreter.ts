@@ -6,7 +6,6 @@ import assert from 'assert'
 import util from 'util'
 
 import programVersion from '../version.js'
-import {CompiledArk} from './compiler.js'
 import {ArkFromJsError, fromJs, toJs} from './ffi.js'
 import {FsMap} from './fsmap.js'
 
@@ -39,7 +38,7 @@ class FrameDebugInfo {
   constructor(
     public name: ArkRef | undefined = undefined,
     public source: ArkVal | undefined = undefined,
-  ) { }
+  ) {}
 }
 
 export class RuntimeStack {
@@ -71,15 +70,8 @@ export class RuntimeStack {
 export class ArkState {
   readonly stack = new RuntimeStack()
 
-  async run(compiledVal: CompiledArk): Promise<ArkVal> {
-    if (compiledVal.freeVars.size !== 0) {
-      throw new ArkRuntimeError(
-        `Undefined symbols ${[...compiledVal.freeVars.keys()].join(', ')}`,
-        compiledVal.value,
-      )
-    }
-    const res = await compiledVal.value.eval(this)
-    return res
+  async run(compiledVal: ArkExp): Promise<ArkVal> {
+    return compiledVal.eval(this)
   }
 }
 
@@ -115,7 +107,7 @@ class ArkDebugInfo {
   env: string | undefined
 }
 
-export class ArkVal extends Ark { }
+export class ArkVal extends Ark {}
 
 export class ArkExp extends Ark {
   constructor() {
@@ -170,9 +162,9 @@ export abstract class ArkConcreteVal<T> extends ArkClass {
   }
 }
 
-export class ArkNullClass extends ArkConcreteVal<null> { }
-export class ArkBooleanClass extends ArkConcreteVal<boolean> { }
-export class ArkNumberClass extends ArkConcreteVal<number> { }
+export class ArkNullClass extends ArkConcreteVal<null> {}
+export class ArkBooleanClass extends ArkConcreteVal<boolean> {}
+export class ArkNumberClass extends ArkConcreteVal<number> {}
 export class ArkStringClass extends ArkConcreteVal<string> {
   constructor(val: string) {
     super(val)
@@ -239,9 +231,9 @@ export class ArkNonLocalReturn extends Error {
   }
 }
 
-export class ArkBreakException extends ArkNonLocalReturn { }
-export class ArkReturnException extends ArkNonLocalReturn { }
-export class ArkContinueException extends ArkNonLocalReturn { }
+export class ArkBreakException extends ArkNonLocalReturn {}
+export class ArkReturnException extends ArkNonLocalReturn {}
+export class ArkContinueException extends ArkNonLocalReturn {}
 
 export class ArkBreak extends ArkExp {
   constructor(public val: ArkExp = new ArkLiteral(ArkNull())) {
@@ -326,17 +318,16 @@ export class NativeAsyncFn extends ArkCallable {
 }
 
 export class ArkFn extends ArkExp {
-  constructor(public params: string[], public capturedVars: ArkStackRef[], public body: ArkExp) {
+  constructor(public params: string[], public capturedVars: ArkExp[], public body: ArkExp) {
     super()
   }
 
-  eval(ark: ArkState): Promise<ArkVal> {
-    const captures: ArkRef[] = []
-    for (const loc of this.capturedVars) {
-      const ref = ark.stack.stack[loc.level - 1][0][loc.index]
-      captures.push(ref)
-    }
-    return Promise.resolve(new ArkClosure(this.params, captures, this.body))
+  async eval(ark: ArkState): Promise<ArkVal> {
+    const captures = this.capturedVars.map(
+      async (exp) => ((await exp.eval(ark)) as ArkLocalRef).ref(ark.stack),
+    )
+    const captureVals = await Promise.all(captures)
+    return new ArkClosure(this.params, captureVals, this.body)
   }
 }
 
@@ -411,17 +402,21 @@ export class ArkValRef extends ArkRef {
   }
 }
 
-export class ArkStackRef extends ArkRef {
-  constructor(public level: number, public index: number) {
+export class ArkLocalRef extends ArkRef {
+  constructor(public index: number) {
     super()
   }
 
+  ref(stack: RuntimeStack): ArkRef {
+    return stack.stack[0][0][this.index]
+  }
+
   get(stack: RuntimeStack): ArkVal {
-    return stack.stack[this.level][0][this.index].get(stack)
+    return stack.stack[0][0][this.index].get(stack)
   }
 
   set(stack: RuntimeStack, val: ArkVal) {
-    stack.stack[this.level][0][this.index].set(stack, val)
+    stack.stack[0][0][this.index].set(stack, val)
     return val
   }
 }
@@ -479,7 +474,7 @@ export class ArkSet extends ArkExp {
   }
 }
 
-export class ArkObject extends ArkClass { }
+export class ArkObject extends ArkClass {}
 
 export class ArkObjectLiteral extends ArkExp {
   constructor(public properties: Map<string, ArkExp>) {

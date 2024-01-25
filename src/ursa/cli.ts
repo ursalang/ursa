@@ -11,11 +11,9 @@ import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
 
 import {
   debug, ArkState, ArkNull, ArkList,
-  ArkLet, ArkVal, ArkValRef, ArkString, globals,
+  ArkLet, ArkVal, ArkValRef, ArkString, globals, ArkExp,
 } from '../ark/interpreter.js'
-import {
-  Environment, CompiledArk, PartialCompiledArk, compile as arkCompile,
-} from '../ark/compiler.js'
+import {Environment, compile as arkCompile} from '../ark/compiler.js'
 import {toJs} from '../ark/ffi.js'
 import {serializeVal} from '../ark/serialize.js'
 
@@ -139,8 +137,8 @@ function compile(
   exp: string,
   env: Environment = new Environment(),
   startRule?: string,
-): CompiledArk {
-  let compiled: CompiledArk
+): ArkExp {
+  let compiled: ArkExp
   if (args.syntax === 'json') {
     compiled = arkCompile(JSON.parse(exp), env)
   } else {
@@ -178,21 +176,16 @@ async function repl(args: Args): Promise<ArkVal> {
   let val: ArkVal = ArkNull()
   for await (const line of rl) {
     try {
-      let compiled = compile(args, line, env)
-      // Filter out already-declared bindings
-      for (const id of env.top().locals) {
-        compiled.freeVars.delete(id!)
-      }
+      const compiled = compile(args, line, env)
       // Handle new let bindings
       // FIXME: Use same code as in ArkLet.eval.
-      if (compiled instanceof PartialCompiledArk && compiled.value instanceof ArkLet) {
-        env = env.push(compiled.value.boundVars.map((bv) => bv[0]))
+      if (compiled instanceof ArkLet) {
+        env = env.push(compiled.boundVars.map((bv) => bv[0]))
         ark.stack.push(
           await Promise.all(
-            compiled.value.boundVars.map(async (bv) => new ArkValRef(await bv[1].eval(ark))),
+            compiled.boundVars.map(async (bv) => new ArkValRef(await bv[1].eval(ark))),
           ),
         )
-        compiled = new CompiledArk(compiled.value.body, compiled.freeVars)
       }
       val = await runWithTraceback(ark, compiled)
       debug(toJs(val))
@@ -264,7 +257,7 @@ function compileCommand(args: Args) {
     // Read input
     const inputFile = getInputFile(args)
     const source = readSourceFile(inputFile)
-    const output = serializeVal(compile(args, source).value)
+    const output = serializeVal(compile(args, source))
     fs.writeFileSync(outputFile, output)
   } catch (error) {
     if (process.env.DEBUG) {

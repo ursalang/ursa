@@ -46,8 +46,6 @@ export function parse(
   if (process.env.DEBUG) {
     console.log(stringifyAST(ast))
   }
-  // FIXME: const freeVars = ast.freeVars(env)
-  // FIXME: also check boundVars
   return ast
 }
 
