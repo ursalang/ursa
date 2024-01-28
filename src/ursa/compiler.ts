@@ -181,7 +181,7 @@ function makeSequence(a: ParserArgs, exps: ParserNode[]): ArkExp {
           seqBody.push(compiledExp.body)
         }
         seqBody.push(makeSequence({...a, env: innerEnv}, exps.slice(i + 1)))
-        letBody = new ArkSequence(seqBody)
+        letBody = seqBody.length === 1 ? seqBody[0] : new ArkSequence(seqBody)
       }
       res.push(new ArkLet(compiledExp.boundVars, letBody))
       break
