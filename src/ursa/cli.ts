@@ -181,11 +181,10 @@ async function repl(args: Args): Promise<ArkVal> {
       // FIXME: Use same code as in ArkLet.eval.
       if (compiled instanceof ArkLet) {
         env = env.push(compiled.boundVars.map((bv) => bv[0]))
-        ark.stack.push(
-          await Promise.all(
-            compiled.boundVars.map(async (bv) => new ArkValRef(await bv[1].eval(ark))),
-          ),
-        )
+        for (const bv of compiled.boundVars) {
+          // eslint-disable-next-line no-await-in-loop
+          ark.stack.push([new ArkValRef(await bv[1].eval(ark))])
+        }
       }
       val = await runWithTraceback(ark, compiled)
       debug(toJs(val))

@@ -185,9 +185,7 @@
         "type": "Definition"
       },
       "type": "Let"
-    }
-  ],
-  [
+    },
     {
       "1": {
         "0": "accums2",

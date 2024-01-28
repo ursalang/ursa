@@ -11,8 +11,7 @@ let newAccums = fn(): List<fn(x: Int): Void> {
   tot := 2
   l
 }
-let accums = newAccums()
-// FIXME: if the next let is preceded by 'and' the test fails.
+let accums = newAccums() and
 let accums2 = newAccums()
 [
   [accums.get(0)(1), accums.get(0)(1), accums2.get(0)(1)],

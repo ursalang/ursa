@@ -89,6 +89,8 @@ export class Ark {
   static nextId = 0
 
   constructor() {
+    // FIXME: Do this more efficiently?
+    // Object.defineProperty(this, 'debug', {enumerable: process.env.ARK_DEBUG !== undefined})
     Object.defineProperty(this, 'debug', {enumerable: false})
     this.debug.uid = Ark.nextId
     Ark.nextId += 1
@@ -321,11 +323,12 @@ export class ArkFn extends ArkExp {
   }
 
   async eval(ark: ArkState): Promise<ArkVal> {
-    const captures = this.capturedVars.map(
-      async (exp) => ((await exp.eval(ark)) as ArkLocalRef).ref(ark.stack),
-    )
-    const captureVals = await Promise.all(captures)
-    return new ArkClosure(this.params, captureVals, this.body)
+    const captures = []
+    for (const exp of this.capturedVars) {
+      // eslint-disable-next-line no-await-in-loop
+      captures.push((await exp.eval(ark) as ArkLocalRef).ref(ark.stack))
+    }
+    return new ArkClosure(this.params, captures, this.body)
   }
 }
 
@@ -663,7 +666,11 @@ export class ArkLet extends ArkExp {
   async eval(ark: ArkState): Promise<ArkVal> {
     const lets = makeLocals(this.boundVars.map((bv) => bv[0]), [])
     ark.stack.push(lets)
-    const vals = await Promise.all(this.boundVars.map((bv) => bv[1].eval(ark)))
+    const vals = []
+    for (const bv of this.boundVars) {
+      // eslint-disable-next-line no-await-in-loop
+      vals.push(await bv[1].eval(ark))
+    }
     for (let i = 0; i < lets.length; i += 1) {
       lets[i].set(ark.stack, vals[i])
     }
