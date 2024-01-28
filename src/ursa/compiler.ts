@@ -644,10 +644,10 @@ semantics.addOperation<ArkExp>('symref(a)', {
       try {
         symrefs.set(this, symRef(this.args.a.env, this.sourceString))
       } catch (e) {
-        if (!(e instanceof ArkCompilerError)) {
-          throw e
+        if (e instanceof ArkCompilerError) {
+          throw new UrsaCompilerError(ident.source, e.message)
         }
-        throw new UrsaCompilerError(ident.source, e.message)
+        throw e
       }
     }
     return symrefs.get(this)!
