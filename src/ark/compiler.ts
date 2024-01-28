@@ -176,13 +176,6 @@ function doCompile(env: Environment, value: unknown): ArkExp {
           const compiled = doCompile(env, value[2])
           return new ArkProperty(value[1], compiled)
         }
-        case 'ref': {
-          if (value.length !== 2) {
-            throw new ArkCompilerError("Invalid 'ref'")
-          }
-          const compiled = doCompile(env, value[1])
-          return new ArkLiteral(compiled)
-        }
         case 'get': {
           if (value.length !== 2) {
             throw new ArkCompilerError("Invalid 'get'")

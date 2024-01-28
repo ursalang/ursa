@@ -3,16 +3,14 @@
 // Released under the MIT license.
 
 import {
-  ArkVal, ArkValRef, ArkConcreteVal,
-  ArkUndefined, ArkNull, ArkSequence,
+  Ark, ArkConcreteVal, ArkUndefined, ArkNull, ArkSequence,
   ArkAnd, ArkOr, ArkIf, ArkLoop, ArkBreak, ArkContinue,
   ArkGet, ArkSet, ArkLet, ArkCall, ArkFn, ArkReturn,
-  NativeObject, ArkObject, ArkList, ArkMap, ArkProperty, ArkPropertyRef,
+  NativeObject, ArkObject, ArkList, ArkMap, ArkProperty,
   ArkLiteral, ArkListLiteral, ArkMapLiteral, ArkObjectLiteral,
-  ArkLocalRef, ArkCaptureRef,
 } from './interpreter.js'
 
-export function valToJs(val: ArkVal): unknown {
+export function valToJs(val: Ark): unknown {
   if (val instanceof NativeObject) {
     return val.obj
   }
@@ -30,12 +28,6 @@ export function valToJs(val: ArkVal): unknown {
     return val.val
   } else if (val instanceof ArkLiteral) {
     return valToJs(val.val)
-  } else if (val instanceof ArkPropertyRef) {
-    return ['ref', ['prop', valToJs(val.obj), val.prop]]
-  } else if (val instanceof ArkLocalRef || val instanceof ArkCaptureRef) {
-    return 'foo'
-  } else if (val instanceof ArkValRef) {
-    return ['ref', valToJs(val.val)]
   } else if (val instanceof ArkGet) {
     return ['get', valToJs(val.val)]
   } else if (val instanceof ArkFn) {
@@ -95,6 +87,6 @@ export function valToJs(val: ArkVal): unknown {
   return val.toString()
 }
 
-export function serializeVal(val: ArkVal) {
+export function serializeVal(val: Ark) {
   return JSON.stringify(valToJs(val))
 }

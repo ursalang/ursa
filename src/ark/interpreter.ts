@@ -37,7 +37,7 @@ type ArkFrame = [ArkRef[], ArkRef[], FrameDebugInfo]
 class FrameDebugInfo {
   constructor(
     public name: ArkRef | undefined = undefined,
-    public source: ArkVal | undefined = undefined,
+    public source: Ark | undefined = undefined,
   ) {}
 }
 
@@ -78,7 +78,7 @@ export class ArkState {
 export class ArkRuntimeError extends Error {
   sourceLoc: unknown
 
-  constructor(public message: string, public val: ArkVal) {
+  constructor(public message: string, public val: Ark) {
     super()
     this.sourceLoc = val.debug.sourceLoc
   }
@@ -107,20 +107,18 @@ class ArkDebugInfo {
   env: string | undefined
 }
 
-export class ArkVal extends Ark {}
-
-export class ArkExp extends Ark {
+export class ArkVal extends Ark {
   constructor() {
     super()
-    // Make this class incompatible with ArkVal.
-    Object.defineProperty(this, '_arkexp', {enumerable: false})
+    // Make this class incompatible with ArkExp.
+    Object.defineProperty(this, '_arkval', {enumerable: false})
   }
 
-  _arkexp: undefined
+  _arkval: undefined
+}
 
-  eval(_ark: ArkState): Promise<ArkVal> {
-    return Promise.resolve(this)
-  }
+export abstract class ArkExp extends Ark {
+  abstract eval(ark: ArkState): Promise<ArkVal>
 }
 
 export class ArkLiteral extends ArkExp {
