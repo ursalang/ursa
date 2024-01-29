@@ -6,7 +6,7 @@ import assert from 'assert'
 import util from 'util'
 
 import programVersion from '../version.js'
-import {ArkFromJsError, fromJs, toJs} from './ffi.js'
+import {fromJs, toJs} from './ffi.js'
 import {FsMap} from './fsmap.js'
 
 class Namespace<T extends ArkVal> extends Map<string, T> {
@@ -41,34 +41,22 @@ class FrameDebugInfo {
   ) {}
 }
 
-export class RuntimeStack {
-  constructor(public readonly stack: [ArkFrame, ...ArkFrame[]] = [[[], [], new FrameDebugInfo()]]) {
-  }
+export class ArkState {
+  constructor(
+    public readonly frame: ArkFrame = [[], [], new FrameDebugInfo()],
+    public readonly outerState?: ArkState,
+  ) {}
 
   push(items: ArkRef[]) {
-    this.stack[0][0].push(...items)
+    this.frame[0].push(...items)
     return this
   }
 
   pop(nItems: number) {
     for (let i = 0; i < nItems; i += 1) {
-      this.stack[0][0].pop()
+      this.frame[0].pop()
     }
   }
-
-  pushFrame(frame: ArkFrame) {
-    this.stack.unshift(frame)
-    return this
-  }
-
-  popFrame() {
-    this.stack.shift()
-    return this
-  }
-}
-
-export class ArkState {
-  readonly stack = new RuntimeStack()
 
   async run(compiledVal: ArkExp): Promise<ArkVal> {
     return compiledVal.eval(this)
@@ -78,7 +66,7 @@ export class ArkState {
 export class ArkRuntimeError extends Error {
   sourceLoc: unknown
 
-  constructor(public message: string, public val: Ark) {
+  constructor(public ark: ArkState, public message: string, public val: Ark) {
     super()
     this.sourceLoc = val.debug.sourceLoc
   }
@@ -301,7 +289,7 @@ export class NativeFn extends ArkCallable {
   }
 
   async call(ark: ArkState): Promise<ArkVal> {
-    const args = ark.stack.stack[0][0].map((ref) => ref.get(ark.stack))
+    const args = ark.frame[0].map((ref) => ref.get(ark))
     return Promise.resolve(this.body(...args))
   }
 }
@@ -312,7 +300,7 @@ export class NativeAsyncFn extends ArkCallable {
   }
 
   async call(ark: ArkState): Promise<ArkVal> {
-    const args = ark.stack.stack[0][0].map((ref) => ref.get(ark.stack))
+    const args = ark.frame[0].map((ref) => ref.get(ark))
     return this.body(...args)
   }
 }
@@ -326,7 +314,7 @@ export class ArkFn extends ArkExp {
     const captures = []
     for (const exp of this.capturedVars) {
       // eslint-disable-next-line no-await-in-loop
-      captures.push((await exp.eval(ark) as ArkLocalRef).ref(ark.stack))
+      captures.push((await exp.eval(ark) as ArkLocalRef).ref(ark))
     }
     return new ArkClosure(this.params, captures, this.body)
   }
@@ -366,7 +354,7 @@ export class ArkCall extends ArkExp {
     }
     const fnVal = await fn.eval(ark)
     if (!(fnVal instanceof ArkCallable)) {
-      throw new ArkRuntimeError('Invalid call', this)
+      throw new ArkRuntimeError(ark, 'Invalid call', this)
     }
     const evaluatedArgs = []
     for (const arg of this.args) {
@@ -375,17 +363,14 @@ export class ArkCall extends ArkExp {
     }
     const frame = makeLocals(fnVal.params, evaluatedArgs)
     const debugInfo = new FrameDebugInfo(sym, this)
-    ark.stack.pushFrame([frame, fnVal.captures, debugInfo])
-    const res = await fnVal.call(ark)
-    ark.stack.popFrame()
-    return res
+    return fnVal.call(new ArkState([frame, fnVal.captures, debugInfo], ark))
   }
 }
 
 export abstract class ArkRef extends ArkVal {
-  abstract get(stack: RuntimeStack): ArkVal
+  abstract get(ark: ArkState): ArkVal
 
-  abstract set(stack: RuntimeStack, val: ArkVal): ArkVal
+  abstract set(ark: ArkState, val: ArkVal): ArkVal
 }
 
 export class ArkValRef extends ArkRef {
@@ -393,11 +378,11 @@ export class ArkValRef extends ArkRef {
     super()
   }
 
-  get(_stack: RuntimeStack): ArkVal {
+  get(_ark: ArkState): ArkVal {
     return this.val
   }
 
-  set(_stack: RuntimeStack, val: ArkVal): ArkVal {
+  set(_ark: ArkState, val: ArkVal): ArkVal {
     this.val = val
     return val
   }
@@ -408,16 +393,16 @@ export class ArkLocalRef extends ArkRef {
     super()
   }
 
-  ref(stack: RuntimeStack): ArkRef {
-    return stack.stack[0][0][this.index]
+  ref(ark: ArkState): ArkRef {
+    return ark.frame[0][this.index]
   }
 
-  get(stack: RuntimeStack): ArkVal {
-    return stack.stack[0][0][this.index].get(stack)
+  get(ark: ArkState): ArkVal {
+    return ark.frame[0][this.index].get(ark)
   }
 
-  set(stack: RuntimeStack, val: ArkVal) {
-    stack.stack[0][0][this.index].set(stack, val)
+  set(ark: ArkState, val: ArkVal) {
+    ark.frame[0][this.index].set(ark, val)
     return val
   }
 }
@@ -427,13 +412,13 @@ export class ArkCaptureRef extends ArkRef {
     super()
   }
 
-  get(stack: RuntimeStack): ArkVal {
-    return stack.stack[0][1][this.index].get(stack)
+  get(ark: ArkState): ArkVal {
+    return ark.frame[1][this.index].get(ark)
   }
 
-  set(stack: RuntimeStack, val: ArkVal) {
-    const ref = stack.stack[0][1][this.index]
-    ref.set(stack, val)
+  set(ark: ArkState, val: ArkVal) {
+    const ref = ark.frame[1][this.index]
+    ref.set(ark, val)
     return val
   }
 }
@@ -445,9 +430,9 @@ export class ArkGet extends ArkExp {
 
   async eval(ark: ArkState): Promise<ArkVal> {
     const ref = await (this.val.eval(ark) as Promise<ArkRef>)
-    const val = ref.get(ark.stack)
+    const val = ref.get(ark)
     if (val === ArkUndefined) {
-      throw new ArkRuntimeError(`Uninitialized symbol ${this.val.debug.name}`, this)
+      throw new ArkRuntimeError(ark, `Uninitialized symbol ${this.val.debug.name}`, this)
     }
     return val
   }
@@ -462,15 +447,15 @@ export class ArkSet extends ArkExp {
     const ref = await this.ref.eval(ark)
     const res = await this.val.eval(ark)
     if (!(ref instanceof ArkRef)) {
-      throw new ArkRuntimeError('Assignment to non-reference', this)
+      throw new ArkRuntimeError(ark, 'Assignment to non-reference', this)
     }
-    const oldVal = ref.get(ark.stack)
+    const oldVal = ref.get(ark)
     if (oldVal !== ArkUndefined
       && oldVal.constructor !== ArkNullClass
       && res.constructor !== oldVal.constructor) {
-      throw new ArkRuntimeError('Assignment to different type', this)
+      throw new ArkRuntimeError(ark, 'Assignment to different type', this)
     }
-    ref.set(ark.stack, res)
+    ref.set(ark, res)
     return res
   }
 }
@@ -498,14 +483,7 @@ export class NativeObject extends ArkAbstractClass {
   }
 
   get(prop: string): ArkVal | undefined {
-    try {
-      return fromJs((this.obj as {[key: string]: unknown})[prop], this.obj)
-    } catch (e) {
-      if (e instanceof ArkFromJsError) {
-        throw new ArkRuntimeError(e.message, this)
-      }
-      throw e
-    }
+    return fromJs((this.obj as {[key: string]: unknown})[prop], this.obj)
   }
 
   set(prop: string, val: ArkVal) {
@@ -523,7 +501,7 @@ export class ArkProperty extends ArkExp {
     const obj = await this.obj.eval(ark)
     // FIXME: This is ad-hoc. See ArkAbstractClass.
     if (!(obj instanceof ArkAbstractClass) || obj instanceof ArkNullClass) {
-      throw new ArkRuntimeError('Attempt to read property of non-object', this)
+      throw new ArkRuntimeError(ark, 'Attempt to read property of non-object', this)
     }
     return new ArkPropertyRef(obj, this.prop)
   }
@@ -534,11 +512,11 @@ export class ArkPropertyRef extends ArkRef {
     super()
   }
 
-  get(_stack: RuntimeStack) {
+  get(_ark: ArkState) {
     return this.obj.get(this.prop) ?? ArkNull()
   }
 
-  set(_stack: RuntimeStack, val: ArkVal) {
+  set(_ark: ArkState, val: ArkVal) {
     this.obj.set(this.prop, val)
     return val
   }
@@ -665,25 +643,25 @@ export class ArkLet extends ArkExp {
 
   async eval(ark: ArkState): Promise<ArkVal> {
     const lets = makeLocals(this.boundVars.map((bv) => bv[0]), [])
-    ark.stack.push(lets)
+    ark.push(lets)
     const vals = []
     for (const bv of this.boundVars) {
       // eslint-disable-next-line no-await-in-loop
       vals.push(await bv[1].eval(ark))
     }
     for (let i = 0; i < lets.length; i += 1) {
-      lets[i].set(ark.stack, vals[i])
+      lets[i].set(ark, vals[i])
     }
     let res: ArkVal
     try {
       res = await this.body.eval(ark)
     } catch (e) {
       if (e instanceof ArkNonLocalReturn) {
-        ark.stack.pop(lets.length)
+        ark.pop(lets.length)
       }
       throw e
     }
-    ark.stack.pop(lets.length)
+    ark.pop(lets.length)
     return res
   }
 }

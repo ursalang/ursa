@@ -62,11 +62,11 @@ class UrsaRuntimeError extends UrsaError {
     super(source, message)
     const trace = []
     // Exclude top level stack frame from trace-back.
-    for (let i = 0; i < ark.stack.stack.length - 1; i += 1) {
-      const callInfo = ark.stack.stack[i][2].source
+    for (let state: ArkState = ark; state.outerState !== undefined; state = state.outerState) {
+      const callInfo = state.frame[2].source
       let fnName
-      if (i < ark.stack.stack.length - 2) {
-        const fnNameInfo = ark.stack.stack[i + 1][2].name
+      if (state.outerState.outerState !== undefined) {
+        const fnNameInfo = state.outerState.frame[2].name
         if (fnNameInfo !== undefined) {
           fnName = fnNameInfo.debug.name
         }
@@ -74,7 +74,6 @@ class UrsaRuntimeError extends UrsaError {
       } else {
         fnName = 'at top level'
       }
-      // 'at top level'
       if (callInfo !== undefined) {
         const line = (callInfo.debug.sourceLoc as Interval).getLineAndColumn()
         trace.push(`line ${line.lineNum}\n    ${line.line}, ${fnName}`)
@@ -673,7 +672,7 @@ export async function runWithTraceback(ark: ArkState, compiledVal: ArkExp): Prom
     return await ark.run(compiledVal)
   } catch (e) {
     if (e instanceof ArkRuntimeError) {
-      throw new UrsaRuntimeError(ark, e.sourceLoc as Interval, e.message)
+      throw new UrsaRuntimeError(e.ark, e.sourceLoc as Interval, e.message)
     }
     throw e
   }

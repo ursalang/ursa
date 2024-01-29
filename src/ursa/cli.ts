@@ -183,7 +183,7 @@ async function repl(args: Args): Promise<ArkVal> {
         env = env.push(compiled.boundVars.map((bv) => bv[0]))
         for (const bv of compiled.boundVars) {
           // eslint-disable-next-line no-await-in-loop
-          ark.stack.push([new ArkValRef(await bv[1].eval(ark))])
+          ark.push([new ArkValRef(await bv[1].eval(ark))])
         }
       }
       val = await runWithTraceback(ark, compiled)
