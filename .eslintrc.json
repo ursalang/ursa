@@ -14,7 +14,7 @@
     "airbnb-typescript/base",
     "plugin:@typescript-eslint/recommended-type-checked"
   ],
-  "ignorePatterns": [ "*.ohm-bundle.d.ts" ],
+  "ignorePatterns": [ "*.ohm-bundle.d.ts", "*.ohm-bundle.d.part-patched.ts" ],
   "rules": {
     "max-classes-per-file": "off",
     "no-cond-assign": [

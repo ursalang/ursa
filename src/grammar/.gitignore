@@ -1,3 +1,4 @@
 *.ohm-bundle.d.ts
 *.ohm-bundle.d.ts.bak
+*.ohm-bundle.d.part-patched.ts
 *.ohm-bundle.js
