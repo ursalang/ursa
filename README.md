@@ -2,8 +2,8 @@
 
 ![logo](mascot/ursula.svg)
 
-© 2023-2024 Reuben Thomas <rrt@sc3d.org>  
-https://ursalang.github.io  
+© 2023–2024 Reuben Thomas <rrt@sc3d.org>  
+https://ursalang.github.io
 
 Ursa is intended to be a friendly, stable general-purpose programming
 language and runtime: the sort of language you can easily start writing code
