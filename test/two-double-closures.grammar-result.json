@@ -5,7 +5,7 @@
         "0": "newAccums",
         "2": {
           "0": {
-            "2": [],
+            "2": [ ],
             "5": [
               {
                 "0": [
@@ -41,7 +41,7 @@
                       "type": "FnType"
                     }
                   ],
-                  "2": "",
+                  "2": null,
                   "type": "TypeArgs"
                 },
                 "type": "NamedType"
@@ -177,7 +177,7 @@
         "2": {
           "0": "newAccums",
           "1": {
-            "1": [],
+            "1": [ ],
             "type": "Arguments"
           },
           "type": "CallExp_property_call"
@@ -192,7 +192,7 @@
         "2": {
           "0": "newAccums",
           "1": {
-            "1": [],
+            "1": [ ],
             "type": "Arguments"
           },
           "type": "CallExp_property_call"

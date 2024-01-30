@@ -1,5 +1,5 @@
---- src/grammar/ursa.ohm-bundle.d.ts	2024-01-30 20:29:41.093805597 +0000
-+++ src/grammar/ursa.ohm-bundle.d.part-patched.ts	2024-01-30 20:29:41.333806724 +0000
+--- src/grammar/ursa.ohm-bundle.d.ts	2024-01-30 21:16:08.011594061 +0000
++++ src/grammar/ursa.ohm-bundle.d.part-patched.ts	2024-01-30 21:16:08.255595234 +0000
 @@ -4,14 +4,33 @@
  import {
    BaseActionDict,
@@ -37,8 +37,8 @@
 +  _iter?: (this: ThisNode, ...children: NonterminalNode[]) => T;
    Sequence?: (this: NonterminalNode, arg0: NonterminalNode, arg1: NonterminalNode) => T;
    sc?: (this: NonterminalNode, arg0: IterationNode | NonterminalNode, arg1: NonterminalNode | TerminalNode) => T;
-   maybeCommaAngle?: (this: NonterminalNode, arg0: IterationNode, arg1: TerminalNode) => T;
-@@ -163,18 +182,19 @@
+   PrimaryExp_null?: (this: NonterminalNode, arg0: NonterminalNode) => T;
+@@ -159,18 +178,19 @@
    unicodeSpaceSeparator?: (this: NonterminalNode, arg0: TerminalNode) => T;
  }
  

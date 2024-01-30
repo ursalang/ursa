@@ -12,12 +12,6 @@ Ursa {
   sc = space* (";" | end)
      | spacesNoNL (lineTerminator | &"}")
 
-  // Optional final comma for comma-separated lists.
-  maybeCommaAngle = space* ("," | &">")
-  maybeCommaParen = space* ("," | &")")
-  maybeCommaBracket = space* ("," | &"]")
-  maybeCommaBrace = space* ("," | &"}")
-
   PrimaryExp
     = null              -- null
     | bool
@@ -34,11 +28,11 @@ Ursa {
   Definition = ident "=" Exp
   Initializer = "=" Exp // TODO: Use this in Definition
 
-  List = "[" ListOf<AssignmentExp, ","> #maybeCommaBracket "]"
+  List = "[" ListOf<AssignmentExp, ","> ","? "]"
 
   Object = NamedType "{" ListOf<Definition, #sc> #sc "}"
 
-  Map = "{" ListOf<KeyValue, ","> #maybeCommaBrace "}"
+  Map = "{" ListOf<KeyValue, ","> ","? "}"
   KeyValue = Exp ":" Exp
 
   PropertyExp
@@ -50,7 +44,7 @@ Ursa {
     = CallExp "." ident     -- property
     | CallExp Arguments     -- call
     | PropertyExp Arguments -- property_call
-  Arguments = "(" ListOf<Exp, ","> #maybeCommaParen ")"
+  Arguments = "(" ListOf<Exp, ","> ","? ")"
 
   LvalueExp
     = CallExp
@@ -60,7 +54,7 @@ Ursa {
   If = if Exp Block
 
   Fn = FnType Block
-  FnType = fn "(" ListOf<Param, ","> #maybeCommaParen ")" TypeAnnotation?
+  FnType = fn "(" ListOf<Param, ","> ","? ")" TypeAnnotation?
   Param = ident TypeAnnotation?
 
   Loop = loop Block
@@ -142,10 +136,10 @@ Ursa {
   Type
     = NonemptyListOf<NamedType, "+"> -- intersection
     | FnType                         -- fn
-  TypeParams = "<" ListOf<TypeParam, ","> #maybeCommaAngle ">"
+  TypeParams = "<" ListOf<TypeParam, ","> ","? ">"
   TypeParam = ident TypeAnnotation
   TypeArgs
-    = "<" ListOf<Type, ","> #maybeCommaAngle ">"
+    = "<" ListOf<Type, ","> ","? ">"
   NamedTypeAnnotation = ":" NamedType
   TypeAnnotation = ":" Type
   FnTypeAnnotation = ":" FnType
