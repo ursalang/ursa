@@ -50,13 +50,21 @@ parser.add_argument('--syntax', {
 
 const subparsers = parser.add_subparsers({description: 'action to take'})
 
+function addExecArgs(parser: ArgumentParser) {
+  parser.add_argument('argument', {metavar: 'ARGUMENT', help: 'arguments to the Ursa program', nargs: '*'})
+  parser.add_argument('--output', '-o', {metavar: 'FILE', help: 'JSON output file [default: standard output]'})
+  parser.add_argument('--interactive', '-i', {action: 'store_true', help: 'enter interactive mode after running given code'})
+}
+
 const runParser = subparsers.add_parser('run', {aliases: ['r'], description: 'Run Ursa program'})
 runParser.set_defaults({func: runCommand})
 runParser.add_argument('source', {metavar: 'FILE', help: 'Ursa program to run'})
-runParser.add_argument('argument', {metavar: 'ARGUMENT', help: 'arguments to the Ursa program', nargs: '*'})
-runParser.add_argument('--eval', '-e', {metavar: 'EXPRESSION', help: 'execute the given expression'})
-runParser.add_argument('--output', '-o', {metavar: 'FILE', help: 'JSON output file [default: standard output]'})
-runParser.add_argument('--interactive', '-i', {action: 'store_true', help: 'enter interactive mode after running given code'})
+addExecArgs(runParser)
+
+const evalParser = subparsers.add_parser('eval', {aliases: ['e'], description: 'Evaluate Ursa expression'})
+evalParser.set_defaults({func: evalCommand})
+evalParser.add_argument('source', {metavar: 'CODE', help: 'Ursa code to evaluate'})
+addExecArgs(evalParser)
 
 const interactParser = subparsers.add_parser('interact', {aliases: ['i', 'repl', 'interactive'], description: 'Run in interactive mode'})
 interactParser.set_defaults({func: interactCommand})
@@ -77,12 +85,11 @@ fmtParser.add_argument('--onelineFactor', {metavar: 'NUMBER', help: 'factor gove
 interface Args {
   // Global arguments
   syntax: string
-  func: (args: Args) => void
+  func: (args: Args) => Promise<void>
 
-  // Run/compile arguments
+  // Run/compile/eval arguments
   source: string
   argument: string[]
-  eval: string
   output: string | undefined
   interactive: boolean
 
@@ -205,44 +212,36 @@ async function repl(args: Args): Promise<ArkVal> {
 
 // Sub-command action routines.
 
-async function runCommand(args: Args) {
+async function runCode(source: string, args: Args) {
   const outputFile = getOutputFile(args, false)
   // Any otherwise uncaught exception is reported as an error.
-  try {
-    // Read input
-    let source: string
-    const inputFile = getInputFile(args)
-    if (args.eval !== undefined) {
-      prog = '(eval)'
-      source = args.eval
-    } else {
-      source = readSourceFile(inputFile)
-    }
-    const ark = new ArkState()
-    // Add command-line arguments.
-    globals.set('argv', new ArkValRef(new ArkList(
-      [ArkString(prog ?? process.argv[1]), ...args.argument.map((s) => ArkString(s))],
-    )))
-    // Run the program
-    let result: ArkVal | undefined
-    if (source !== undefined) {
-      result = await runWithTraceback(ark, compile(args, source))
-    }
-    if (source === undefined || args.interactive) {
-      result = await repl(args)
-    }
-    const output = serializeVal(result ?? ArkNull()) ?? 'null'
-    if (outputFile !== undefined) {
-      fs.writeFileSync(outputFile, output)
-    }
-  } catch (error) {
-    if (process.env.DEBUG) {
-      console.error(error)
-    } else {
-      console.error(`${path.basename(process.argv[1])}: ${error}`)
-    }
-    process.exitCode = 1
+  const ark = new ArkState()
+  // Add command-line arguments.
+  globals.set('argv', new ArkValRef(new ArkList(
+    [ArkString(prog ?? process.argv[1]), ...args.argument.map((s) => ArkString(s))],
+  )))
+  // Run the program
+  let result: ArkVal | undefined
+  if (source !== undefined) {
+    result = await runWithTraceback(ark, compile(args, source))
   }
+  if (source === undefined || args.interactive) {
+    result = await repl(args)
+  }
+  const output = serializeVal(result ?? ArkNull()) ?? 'null'
+  if (outputFile !== undefined) {
+    fs.writeFileSync(outputFile, output)
+  }
+}
+
+async function evalCommand(args: Args) {
+  prog = '(eval)'
+  await runCode(args.source, args)
+}
+
+async function runCommand(args: Args) {
+  const inputFile = getInputFile(args)
+  await runCode(readSourceFile(inputFile), args)
 }
 
 async function interactCommand(args: Args) {
@@ -252,20 +251,12 @@ async function interactCommand(args: Args) {
 function compileCommand(args: Args) {
   const outputFile = getOutputFile(args, true)
   // Any otherwise uncaught exception is reported as an error.
-  try {
-    // Read input
-    const inputFile = getInputFile(args)
-    const source = readSourceFile(inputFile)
-    const output = serializeVal(compile(args, source))
-    fs.writeFileSync(outputFile, output)
-  } catch (error) {
-    if (process.env.DEBUG) {
-      console.error(error)
-    } else {
-      console.error(`${path.basename(process.argv[1])}: ${error}`)
-    }
-    process.exitCode = 1
-  }
+  // Read input
+  const inputFile = getInputFile(args)
+  const source = readSourceFile(inputFile)
+  const output = serializeVal(compile(args, source))
+  fs.writeFileSync(outputFile, output)
+  return Promise.resolve()
 }
 
 function fmtCommand(args: Args) {
@@ -274,6 +265,7 @@ function fmtCommand(args: Args) {
   const source = readSourceFile(inputFile)
   const output = format(source, args.width, args.indent, args.onelineFactor)
   fs.writeFileSync(outputFile, output)
+  return Promise.resolve()
 }
 
 // Execute given commands and options.
@@ -287,10 +279,21 @@ if (process.argv.length === 3) {
     process.argv.splice(2, 0, 'run')
   }
 }
-const args = parser.parse_args() as Args
-if (args.func) {
-  args.func(args)
-} else {
-  // If we have no sub-command, enter REPL.
-  await repl(args)
+
+// Any otherwise uncaught exception is reported as an error.
+try {
+  const args = parser.parse_args() as Args
+  if (args.func) {
+    await args.func(args)
+  } else {
+    // If we have no sub-command, enter REPL.
+    await repl(args)
+  }
+} catch (error) {
+  if (process.env.DEBUG) {
+    console.error(error)
+  } else {
+    console.error(`${path.basename(process.argv[1])}: ${error}`)
+  }
+  process.exitCode = 1
 }
