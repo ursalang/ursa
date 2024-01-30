@@ -60,8 +60,8 @@ Ursa {
   If = if Exp Block
 
   Fn = FnType Block
-  FnType = fn "(" ListOf<Param, ","> #maybeCommaParen ")" ":" Type
-  Param = ident ":" Type
+  FnType = fn "(" ListOf<Param, ","> #maybeCommaParen ")" TypeAnnotation?
+  Param = ident TypeAnnotation?
 
   Loop = loop Block
 
@@ -138,23 +138,26 @@ Ursa {
   NamedType = Path TypeArgs?
   Type
     = NonemptyListOf<NamedType, "+"> -- intersection
-    | FnType                 -- fn
+    | FnType                         -- fn
   TypeParams = "<" ListOf<TypeParam, ","> #maybeCommaAngle ">"
-  TypeParam = ident ":" Type
+  TypeParam = ident TypeAnnotation
   TypeArgs
     = "<" ListOf<Type, ","> #maybeCommaAngle ">"
+  NamedTypeAnnotation = ":" NamedType
+  TypeAnnotation = ":" Type
+  FnTypeAnnotation = ":" FnType
 
   // Classes
-  Class = class ident TypeParams ":" NamedType "{" ListOf<ClassMember, #sc> #sc "}"
+  Class = class ident TypeParams NamedTypeAnnotation "{" ListOf<ClassMember, #sc> #sc "}"
   ClassMember = ClassField | ClassMethod
-  ClassField = pub? static? var? ident ":" Type Initializer?
+  ClassField = pub? static? var? ident TypeAnnotation? Initializer?
   ClassMethod = pub? static? ident TypeParams? "=" Fn
 
   // Traits
-  Trait = trait ident TypeParams ":" NamedType "{" ListOf<TraitMember, #sc> #sc "}"
+  Trait = trait ident TypeParams NamedTypeAnnotation "{" ListOf<TraitMember, #sc> #sc "}"
   TraitMember = TraitField | TraitMethod
-  TraitField = var? ident ":" Type
-  TraitMethod = ident TypeParams? ":" FnType
+  TraitField = var? ident TypeAnnotation?
+  TraitMethod = ident TypeParams? FnTypeAnnotation
 
   // Convenience rules for parsing keyword tokens.
   and = "and" ~identifierPart

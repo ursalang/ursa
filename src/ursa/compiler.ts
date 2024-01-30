@@ -158,8 +158,10 @@ semantics.addOperation<Arguments>('toArguments(a)', {
 })
 
 semantics.addOperation<string>('toParam(a)', {
-  Param(ident, _colon, type) {
-    type.toType(this.args.a)
+  Param(ident, maybeType) {
+    if (maybeType.children.length > 0) {
+      maybeType.children[0].children[1].toType(this.args.a)
+    }
     return ident.sourceString
   },
 })
@@ -574,7 +576,7 @@ semantics.addOperation<void>('toType(a)', {
 
 // TODO: return types along with parameter names, and return type.
 semantics.addOperation<string[]>('toMethod(a)', {
-  FnType(_fn, _open, params, _maybeComma, _close, _colon, type) {
+  FnType(_fn, _open, params, _maybeComma, _close, maybeType) {
     const parsedParams = params.asIteration().children.map((p) => p.toParam(this.args.a))
     try {
       checkParamList(parsedParams)
@@ -584,7 +586,9 @@ semantics.addOperation<string[]>('toMethod(a)', {
       }
       throw new UrsaCompilerError(params.source, e.message)
     }
-    type.toType(this.args.a)
+    if (maybeType.children.length > 0) {
+      maybeType.children[0].children[1].toType(this.args.a)
+    }
     return parsedParams
   },
 })

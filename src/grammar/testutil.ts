@@ -31,7 +31,7 @@ export function parse(
     Map: {1: 1},
     Arguments: {1: 1},
     If: {1: 1, 2: 2},
-    FnType: {2: 2, 6: 6},
+    FnType: {2: 2, 5: 5},
     Loop: {1: 1},
     Exp_break: {1: 1},
     Exp_return: {1: 1},

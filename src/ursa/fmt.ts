@@ -235,6 +235,21 @@ function fmtOptional(a: FormatterArgs, maybeNode: FormatterNonterminalNode) {
   return []
 }
 
+function fmtMaybeType(
+  a: FormatterArgs,
+  innerSpans: SpanContent[],
+  maybeType: FormatterIterationNode,
+) {
+  if (maybeType.children.length > 0) {
+    innerSpans.push(':')
+  }
+  const outerSpans = [new Span(innerSpans)]
+  if (maybeType.children.length > 0) {
+    outerSpans.push(maybeType.children[0].children[1].fmt(a))
+  }
+  return outerSpans
+}
+
 semantics.addOperation<Span>('fmt(a)', {
   _terminal() {
     return new Span([this.sourceString])
@@ -330,21 +345,28 @@ semantics.addOperation<Span>('fmt(a)', {
       [(a) => vSpan([type.fmt(a), body.fmt(a)])],
     )
   },
-  FnType(_fn, _open, params, _maybeComma, _close, _colon, type) {
+  FnType(_fn, _open, params, _maybeComma, _close, maybeType) {
     return tryFormats(
       this.args.a,
-      (a) => hSpan([
-        new Span(['fn', fmtDelimitedList(a, '(', ')', ',', tightSpan, params), ':']),
-        type.fmt(this.args.a),
-      ]),
-      [(a) => vSpan([
-        new Span(['fn', fmtDelimitedList(a, '(', ')', ',', tightSpan, params), ':']),
-        type.fmt(this.args.a),
-      ])],
+      (a) => hSpan(fmtMaybeType(
+        a,
+        ['fn', fmtDelimitedList(a, '(', ')', ',', tightSpan, params)],
+        maybeType,
+      )),
+      [(a) => vSpan(fmtMaybeType(
+        a,
+        ['fn', fmtDelimitedList(a, '(', ')', ',', tightSpan, params)],
+        maybeType,
+      )),
+      ],
     )
   },
-  Param(ident, _colon, type) {
-    return hSpan([ident.fmt(this.args.a), ':', type.fmt(this.args.a)])
+  Param(ident, maybeType) {
+    return hSpan(fmtMaybeType(
+      this.args.a,
+      [ident.fmt(this.args.a)],
+      maybeType,
+    ))
   },
 
   Loop(_loop, body) {
@@ -508,31 +530,32 @@ semantics.addOperation<Span>('fmt(a)', {
   TypeParams(_open, params, _maybeCommaAngle, _close) {
     return fmtDelimitedList(this.args.a, '<', '>', ',', hSpan, params)
   },
-  TypeParam(ident, _colon, type) {
-    return hSpan([ident.fmt(this.args.a), ':', type.fmt(this.args.a)])
+  TypeParam(ident, maybeType) {
+    return hSpan(fmtMaybeType(
+      this.args.a,
+      [ident.fmt(this.args.a)],
+      maybeType,
+    ))
   },
   TypeArgs(_open, args, _maybeComma, _close) {
     return fmtDelimitedList(this.args.a, '<', '>', ',', hSpan, args)
   },
 
-  Class(_class, ident, typeParams, _colon, type, _open, members, _sc, _close) {
+  Class(_class, ident, typeParams, type, _open, members, _sc, _close) {
     return hSpan([
       'class',
       ident.fmt(this.args.a),
-      typeParams.fmt(this.args.a),
-      ':',
-      type.fmt(this.args.a),
+      new Span([typeParams.fmt(this.args.a), ':']),
+      type.children[1].fmt(this.args.a),
       vSpan(['{', fmtIndented(this.args.a, members), '}']),
     ])
   },
-  ClassField(maybePub, maybeStatic, maybeVar, ident, _colon, type, maybeInit) {
+  ClassField(maybePub, maybeStatic, maybeVar, ident, maybeType, maybeInit) {
     return hSpan([
       ...fmtOptional(this.args.a, maybePub),
       ...fmtOptional(this.args.a, maybeStatic),
       ...fmtOptional(this.args.a, maybeVar),
-      ident.fmt(this.args.a),
-      ':',
-      type.fmt(this.args.a),
+      ...fmtMaybeType(this.args.a, [ident.fmt(this.args.a)], maybeType),
       ...fmtOptional(this.args.a, maybeInit),
     ])
   },
@@ -547,28 +570,27 @@ semantics.addOperation<Span>('fmt(a)', {
     ])
   },
 
-  Trait(_trait, ident, typeParams, _colon, type, _open, members, _sc, _close) {
+  Trait(_trait, ident, typeParams, type, _open, members, _sc, _close) {
     return hSpan([
-      'class',
+      'trait',
       ident.fmt(this.args.a),
       typeParams.fmt(this.args.a),
       ':',
-      type.fmt(this.args.a),
+      type.children[1].fmt(this.args.a),
       vSpan(['{', fmtIndented(this.args.a, members), '}']),
     ])
   },
-  TraitField(maybeVar, ident, _colon, type) {
+  TraitField(maybeVar, ident, type) {
     const spans = []
     if (maybeVar.children.length > 0) {
       spans.push('var')
     }
-    return hSpan([...spans, ident.fmt(this.args.a), ':', type.fmt(this.args.a)])
+    return hSpan([...spans, ident.fmt(this.args.a), type.fmt(this.args.a)])
   },
-  TraitMethod(ident, maybeTypeParams, _colon, fnType) {
+  TraitMethod(ident, maybeTypeParams, fnType) {
     return hSpan([
       ident.fmt(this.args.a),
-      ...fmtOptional(this.args.a, maybeTypeParams),
-      ':',
+      new Span([hSpan(fmtOptional(this.args.a, maybeTypeParams)), ':']),
       fnType.fmt(this.args.a),
     ])
   },

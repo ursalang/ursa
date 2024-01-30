@@ -147,7 +147,7 @@ testGroup('fn', [
               2: [
                 {
                   0: 'x',
-                  2: [
+                  1: [
                     {
                       0: ['Int'],
                       1: null,
@@ -157,7 +157,7 @@ testGroup('fn', [
                   type: 'Param',
                 },
               ],
-              6: [
+              5: [
                 {
                   0: ['Int'],
                   1: null,

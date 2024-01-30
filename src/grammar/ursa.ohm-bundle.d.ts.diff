@@ -1,5 +1,5 @@
---- src/grammar/ursa.ohm-bundle.d.ts	2024-01-29 20:45:56.065217694 +0000
-+++ src/grammar/ursa.ohm-bundle.d.part-patched.ts	2024-01-29 20:37:34.135078822 +0000
+--- src/grammar/ursa.ohm-bundle.d.ts	2024-01-29 23:02:30.600542917 +0000
++++ src/grammar/ursa.ohm-bundle.d.part-patched.ts	2024-01-29 23:02:30.844543956 +0000
 @@ -4,14 +4,33 @@
  import {
    BaseActionDict,
@@ -12,7 +12,7 @@
    Semantics,
    TerminalNode
  } from 'ohm-js';
-
+ 
 -export interface UrsaActionDict<T> extends BaseActionDict<T> {
 +interface NodeI<Operations> extends NodeBase {
 +  child(idx: number): Node<Operations>;
@@ -38,10 +38,10 @@
    Sequence?: (this: NonterminalNode, arg0: NonterminalNode, arg1: NonterminalNode) => T;
    sc?: (this: NonterminalNode, arg0: IterationNode | NonterminalNode, arg1: NonterminalNode | TerminalNode) => T;
    maybeCommaAngle?: (this: NonterminalNode, arg0: IterationNode, arg1: TerminalNode) => T;
-@@ -159,18 +178,19 @@
+@@ -162,18 +181,19 @@
    unicodeSpaceSeparator?: (this: NonterminalNode, arg0: TerminalNode) => T;
  }
-
+ 
 -export interface UrsaSemantics extends Semantics {
 -  addOperation<T>(name: string, actionDict: UrsaActionDict<T>): this;
 -  extendOperation<T>(name: string, actionDict: UrsaActionDict<T>): this;
@@ -55,14 +55,14 @@
 +  extendAttribute<T>(name: string, actionDict: UrsaActionDict<T, Node, NonterminalNode, IterationNode, ThisNode>): this;
  }
 +export type UrsaSemantics<Node, NonterminalNode, IterationNode, ThisNode, Operations> = UrsaSemanticsI<Node, NonterminalNode, IterationNode, ThisNode, Operations> & Operations;
-
+ 
  export interface UrsaGrammar extends Grammar {
 -  createSemantics(): UrsaSemantics;
 -  extendSemantics(superSemantics: UrsaSemantics): UrsaSemantics;
 +  createSemantics<Node, NonterminalNode, IterationNode, ThisNode, Operations>(): UrsaSemantics<Node, NonterminalNode, IterationNode, ThisNode, Operations>;
 +  extendSemantics<Node, NonterminalNode, IterationNode, ThisNode, Operations>(superSemantics: UrsaSemantics<Node, NonterminalNode, IterationNode, ThisNode, Operations>): UrsaSemantics<Node, NonterminalNode, IterationNode, ThisNode, Operations>;
  }
-
+ 
  declare const grammar: UrsaGrammar;
  export default grammar;
 -
