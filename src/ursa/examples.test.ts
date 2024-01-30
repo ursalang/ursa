@@ -30,6 +30,7 @@ import {ursaTest, ursaDirTest} from '../testutil.js'
   ['Literal string', 'test/literal-string'],
 ].map(([title, file]) => ursaTest(title, file))
 
+ursaTest('Advent of Code 2023 day 25', 'test/advent-of-code-2023-day-25', ['./test/advent-of-code-2023-day-25-input.txt'], '547080')
 ursaTest('Test I/O', 'test/print', [], 'Hello, world!')
 ursaTest('use jslib.fs', 'test/use-jslib-fs', [], 'foo')
 ursaTest('Find symbols in input', 'test/syms', ['./test/use-jslib-fs.ursa'], 'use\njslib\nfs\nfs\nwriteSync\nfoo\nis\nstdout')
