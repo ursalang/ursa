@@ -241,8 +241,8 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     return addLoc(new ArkGet(makeProperty(this.args.a, object, property)), this)
   },
 
-  CallExp_property(exp, _dot, ident) {
-    return addLoc(new ArkGet(makeProperty(this.args.a, exp, ident)), this)
+  CallExp_property(exp, _dot, property) {
+    return addLoc(new ArkGet(makeProperty(this.args.a, exp, property)), this)
   },
   CallExp_call(exp, args) {
     return addLoc(
@@ -553,8 +553,8 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     return addLoc(new ArkLiteral(ArkString(eval(this.sourceString) as string)), this)
   },
 
-  literalString(_open, _str, _close) {
-    return addLoc(new ArkLiteral(ArkString(_str.sourceString)), this)
+  literalString(_open, str, _close) {
+    return addLoc(new ArkLiteral(ArkString(str.sourceString)), this)
   },
 })
 
@@ -672,9 +672,9 @@ export function compile(
   return ast.toExp(args)
 }
 
-export async function runWithTraceback(ark: ArkState, compiledVal: ArkExp): Promise<ArkVal> {
+export async function runWithTraceback(ark: ArkState, compiledExp: ArkExp): Promise<ArkVal> {
   try {
-    return await ark.run(compiledVal)
+    return await ark.run(compiledExp)
   } catch (e) {
     if (e instanceof ArkRuntimeError) {
       throw new UrsaRuntimeError(e.ark, e.sourceLoc as Interval, e.message)
