@@ -32,7 +32,13 @@ class Namespace<T extends ArkVal> extends Map<string, T> {
 
 // Each stack frame consists of a tuple of local vars, captures, and
 // debug info.
-type ArkFrame = [ArkRef[], ArkRef[], FrameDebugInfo]
+class ArkFrame {
+  constructor(
+    public locals: ArkRef[] = [],
+    public captures: ArkRef[] = [],
+    public debug: FrameDebugInfo = new FrameDebugInfo(),
+  ) {}
+}
 
 class FrameDebugInfo {
   constructor(
@@ -43,18 +49,18 @@ class FrameDebugInfo {
 
 export class ArkState {
   constructor(
-    public readonly frame: ArkFrame = [[], [], new FrameDebugInfo()],
+    public readonly frame = new ArkFrame(),
     public readonly outerState?: ArkState,
   ) {}
 
   push(items: ArkRef[]) {
-    this.frame[0].push(...items)
+    this.frame.locals.push(...items)
     return this
   }
 
   pop(nItems: number) {
     for (let i = 0; i < nItems; i += 1) {
-      this.frame[0].pop()
+      this.frame.locals.pop()
     }
   }
 
@@ -289,7 +295,7 @@ export class NativeFn extends ArkCallable {
   }
 
   async call(ark: ArkState): Promise<ArkVal> {
-    const args = ark.frame[0].map((ref) => ref.get(ark))
+    const args = ark.frame.locals.map((ref) => ref.get(ark))
     return Promise.resolve(this.body(...args))
   }
 }
@@ -300,7 +306,7 @@ export class NativeAsyncFn extends ArkCallable {
   }
 
   async call(ark: ArkState): Promise<ArkVal> {
-    const args = ark.frame[0].map((ref) => ref.get(ark))
+    const args = ark.frame.locals.map((ref) => ref.get(ark))
     return this.body(...args)
   }
 }
@@ -363,7 +369,7 @@ export class ArkCall extends ArkExp {
     }
     const frame = makeLocals(fnVal.params, evaluatedArgs)
     const debugInfo = new FrameDebugInfo(sym, this)
-    return fnVal.call(new ArkState([frame, fnVal.captures, debugInfo], ark))
+    return fnVal.call(new ArkState(new ArkFrame(frame, fnVal.captures, debugInfo), ark))
   }
 }
 
@@ -394,15 +400,15 @@ export class ArkLocalRef extends ArkRef {
   }
 
   ref(ark: ArkState): ArkRef {
-    return ark.frame[0][this.index]
+    return ark.frame.locals[this.index]
   }
 
   get(ark: ArkState): ArkVal {
-    return ark.frame[0][this.index].get(ark)
+    return ark.frame.locals[this.index].get(ark)
   }
 
   set(ark: ArkState, val: ArkVal) {
-    ark.frame[0][this.index].set(ark, val)
+    ark.frame.locals[this.index].set(ark, val)
     return val
   }
 }
@@ -413,11 +419,11 @@ export class ArkCaptureRef extends ArkRef {
   }
 
   get(ark: ArkState): ArkVal {
-    return ark.frame[1][this.index].get(ark)
+    return ark.frame.captures[this.index].get(ark)
   }
 
   set(ark: ArkState, val: ArkVal) {
-    const ref = ark.frame[1][this.index]
+    const ref = ark.frame.captures[this.index]
     ref.set(ark, val)
     return val
   }

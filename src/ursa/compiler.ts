@@ -63,10 +63,10 @@ class UrsaRuntimeError extends UrsaError {
     const trace = []
     // Exclude top level stack frame from trace-back.
     for (let state: ArkState = ark; state.outerState !== undefined; state = state.outerState) {
-      const callInfo = state.frame[2].source
+      const callInfo = state.frame.debug.source
       let fnName
       if (state.outerState.outerState !== undefined) {
-        const fnNameInfo = state.outerState.frame[2].name
+        const fnNameInfo = state.outerState.frame.debug.name
         if (fnNameInfo !== undefined) {
           fnName = fnNameInfo.debug.name
         }
