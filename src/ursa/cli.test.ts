@@ -28,7 +28,7 @@ Welcome to Ursa ${version}.
   `Line 1, col 4:
 > 1 | 4 +
          ^
-Expected "(", "{", "[", "_", a letter, a digit, ".", "r####\\"", "r###\\"", "r##\\"", "r#\\"", "r\\"", "\\"", "true", "false", "null", "fn", "-", "+", "~", or "not"`,
+Expected "(", "{", "[", "_", a letter, a digit, ".", "r####\\"", "r###\\"", "r##\\"", "r#\\"", "r\\"", "\\"", "true", "false", "null", "fn", "-", "+", or "~"`,
   true,
   undefined,
   true,

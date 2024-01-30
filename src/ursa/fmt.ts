@@ -383,9 +383,6 @@ semantics.addOperation<Span>('fmt(a)', {
     )
   },
 
-  UnaryExp_not(_not, exp) {
-    return fmtUnary(this.args.a, 'not', hSpan, exp)
-  },
   UnaryExp_bitwise_not(_not, exp) {
     return fmtUnary(this.args.a, '~', tightSpan, exp)
   },
@@ -453,6 +450,10 @@ semantics.addOperation<Span>('fmt(a)', {
   },
   BitwiseExp_lrshift(left, _lrshift, right) {
     return fmtBinary(this.args.a, '>>>', left, right)
+  },
+
+  LogicNotExp_not(_not, exp) {
+    return fmtUnary(this.args.a, 'not', hSpan, exp)
   },
 
   LogicExp_and(left, _and, right) {

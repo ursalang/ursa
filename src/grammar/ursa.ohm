@@ -68,8 +68,7 @@ Ursa {
   For = for ident of Exp Block
 
   UnaryExp
-    = not Exp         -- not
-    | "~" UnaryExp    -- bitwise_not
+    = "~" UnaryExp    -- bitwise_not
     | "+" UnaryExp    -- pos
     | "-" UnaryExp    -- neg
     | LvalueExp
@@ -107,10 +106,14 @@ Ursa {
     | BitwiseExp ">>>" CompareExp -- lrshift
     | CompareExp
 
-  LogicExp
-    = LogicExp and BitwiseExp -- and
-    | LogicExp or BitwiseExp  -- or
+  LogicNotExp
+    = not BitwiseExp          -- not
     | BitwiseExp
+
+  LogicExp
+    = LogicExp and LogicNotExp -- and
+    | LogicExp or LogicNotExp  -- or
+    | LogicNotExp
 
   AssignmentExp
     = LvalueExp ":=" AssignmentExp -- ass

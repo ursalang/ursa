@@ -32,7 +32,7 @@ testGroup('Intrinsics', [
       type: 'CompareExp_eq',
     },
   ]],
-  ['not 2', [{1: '2', type: 'UnaryExp_not'}]],
+  ['not 2', [{1: '2', type: 'LogicNotExp_not'}]],
   ['~2', [{1: '2', type: 'UnaryExp_bitwise_not'}]],
   ['34 & 48', [{0: '34', 2: '48', type: 'BitwiseExp_and'}]],
   ['34 | 48', [{0: '34', 2: '48', type: 'BitwiseExp_or'}]],

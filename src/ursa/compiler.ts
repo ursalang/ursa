@@ -312,12 +312,6 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     return new ArkLet([['_for', compiledIterator]], new ArkLoop(loopBody))
   },
 
-  UnaryExp_not(_not, exp) {
-    return addLoc(
-      new ArkCall(new ArkLiteral(intrinsics.get('not')), [exp.toExp(this.args.a)]),
-      this,
-    )
-  },
   UnaryExp_bitwise_not(_not, exp) {
     return addLoc(
       new ArkCall(new ArkLiteral(intrinsics.get('~')), [exp.toExp(this.args.a)]),
@@ -446,6 +440,13 @@ semantics.addOperation<ArkExp>('toExp(a)', {
   BitwiseExp_lrshift(left, _lrshift, right) {
     return addLoc(
       new ArkCall(new ArkLiteral(intrinsics.get('>>>')), [left.toExp(this.args.a), right.toExp(this.args.a)]),
+      this,
+    )
+  },
+
+  LogicNotExp_not(_not, exp) {
+    return addLoc(
+      new ArkCall(new ArkLiteral(intrinsics.get('not')), [exp.toExp(this.args.a)]),
       this,
     )
   },

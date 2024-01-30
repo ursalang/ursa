@@ -37,7 +37,7 @@ export function parse(
     Exp_return: {1: 1},
     Let: {1: 1},
     // The following are to work around https://github.com/ohmjs/ohm/issues/463
-    UnaryExp_not: {1: 1},
+    LogicNotExp_not: {1: 1},
     UnaryExp_bitwise_not: {1: 1},
     UnaryExp_pos: {1: 1},
     UnaryExp_neg: {1: 1},
