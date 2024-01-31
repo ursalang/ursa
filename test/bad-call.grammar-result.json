@@ -34,7 +34,7 @@
                 "1": [],
                 "type": "Arguments"
               },
-              "type": "CallExp_property_call"
+              "type": "PostfixExp_call"
             }
           ],
           "type": "Fn"
@@ -69,7 +69,7 @@
                 "1": [],
                 "type": "Arguments"
               },
-              "type": "CallExp_property_call"
+              "type": "PostfixExp_call"
             }
           ],
           "type": "Fn"
@@ -85,6 +85,6 @@
       "1": [],
       "type": "Arguments"
     },
-    "type": "CallExp_property_call"
+    "type": "PostfixExp_call"
   }
 ]

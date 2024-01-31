@@ -60,7 +60,7 @@
                     ],
                     "type": "Arguments"
                   },
-                  "type": "CallExp_property_call"
+                  "type": "PostfixExp_call"
                 }
               ],
               "type": "Ifs"
@@ -132,7 +132,7 @@
                     ],
                     "type": "Arguments"
                   },
-                  "type": "CallExp_property_call"
+                  "type": "PostfixExp_call"
                 }
               ],
               "type": "Ifs"
@@ -155,7 +155,7 @@
           ],
           "type": "Arguments"
         },
-        "type": "CallExp_property_call"
+        "type": "PostfixExp_call"
       },
       {
         "0": "is_even",
@@ -165,7 +165,7 @@
           ],
           "type": "Arguments"
         },
-        "type": "CallExp_property_call"
+        "type": "PostfixExp_call"
       },
       {
         "0": "is_odd",
@@ -175,7 +175,7 @@
           ],
           "type": "Arguments"
         },
-        "type": "CallExp_property_call"
+        "type": "PostfixExp_call"
       },
       {
         "0": "is_odd",
@@ -185,7 +185,7 @@
           ],
           "type": "Arguments"
         },
-        "type": "CallExp_property_call"
+        "type": "PostfixExp_call"
       }
     ],
     "type": "List"

@@ -120,7 +120,7 @@
             "1": [],
             "type": "Arguments"
           },
-          "type": "CallExp_property_call"
+          "type": "PostfixExp_call"
         },
         "type": "Definition"
       },
@@ -137,7 +137,7 @@
             "1": [],
             "type": "Arguments"
           },
-          "type": "CallExp_property_call"
+          "type": "PostfixExp_call"
         },
         "type": "Definition"
       },
@@ -154,7 +154,7 @@
           ],
           "type": "Arguments"
         },
-        "type": "CallExp_property_call"
+        "type": "PostfixExp_call"
       },
       {
         "0": "accum",
@@ -164,7 +164,7 @@
           ],
           "type": "Arguments"
         },
-        "type": "CallExp_property_call"
+        "type": "PostfixExp_call"
       },
       {
         "0": "accum2",
@@ -174,7 +174,7 @@
           ],
           "type": "Arguments"
         },
-        "type": "CallExp_property_call"
+        "type": "PostfixExp_call"
       }
     ],
     "type": "List"

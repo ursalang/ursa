@@ -297,29 +297,14 @@ semantics.addOperation<Span>('fmt(a)', {
     return hSpan([type.fmt(this.args.a), fmtDelimitedList(this.args.a, '{', '}', ';', tightSpan, elems)])
   },
 
-  PropertyExp_property(object, _dot, property) {
-    return tryFormats(
-      this.args.a,
-      (a) => new Span([object.fmt(a), '.', property.fmt(a)]),
-      [(a) => vSpan([object.fmt(a), new Span(['.', property.fmt(a)])])],
-    )
-  },
-
-  CallExp_property(exp, _dot, ident) {
+  PostfixExp_property(exp, _dot, ident) {
     return tryFormats(
       this.args.a,
       (a) => new Span([exp.fmt(a), '.', ident.fmt(a)]),
       [(a) => vSpan([exp.fmt(a), new Span(['.', ident.fmt(a)])])],
     )
   },
-  CallExp_call(exp, args) {
-    return tryFormats(
-      this.args.a,
-      (a) => new Span([exp.fmt(a), args.fmt(a)]),
-      [(a) => vSpan([exp.fmt(a), args.fmt(a)])],
-    )
-  },
-  CallExp_property_call(exp, args) {
+  PostfixExp_call(exp, args) {
     return tryFormats(
       this.args.a,
       (a) => new Span([exp.fmt(a), args.fmt(a)]),

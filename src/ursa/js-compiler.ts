@@ -92,17 +92,10 @@ semantics.addOperation<string>('toExp(a)', {
     return `{${makeInits(this.args.a, elems, '', ': ', ',')}}`
   },
 
-  PropertyExp_property(object, _dot, property) {
-    return `${object.toExp(this.args.a)}.${property.toExp(this.args.a)}`
-  },
-
-  CallExp_property(exp, _dot, ident) {
+  PostfixExp_property(exp, _dot, ident) {
     return `${exp.toExp(this.args.a)}.${ident.sourceString}`
   },
-  CallExp_call(exp, args) {
-    return `${exp.toExp(this.args.a)}${args.toExp(this.args.a)}`
-  },
-  CallExp_property_call(exp, args) {
+  PostfixExp_call(exp, args) {
     return `${exp.toExp(this.args.a)}${args.toExp(this.args.a)}`
   },
   Arguments(_open, args, _maybeComma, _close) {

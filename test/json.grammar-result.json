@@ -6,7 +6,7 @@
           "0": {
             "0": "JSON",
             "2": "parse",
-            "type": "PropertyExp_property"
+            "type": "PostfixExp_property"
           },
           "1": {
             "1": [
@@ -14,7 +14,7 @@
             ],
             "type": "Arguments"
           },
-          "type": "CallExp_property_call"
+          "type": "PostfixExp_call"
         },
         "2": "2",
         "type": "SumExp_plus"
@@ -24,7 +24,7 @@
           "0": {
             "0": "JSON",
             "2": "stringify",
-            "type": "PropertyExp_property"
+            "type": "PostfixExp_property"
           },
           "1": {
             "1": [
@@ -39,7 +39,7 @@
             ],
             "type": "Arguments"
           },
-          "type": "CallExp_property_call"
+          "type": "PostfixExp_call"
         },
         "2": "\"[1,2,3]\"",
         "type": "CompareExp_eq"

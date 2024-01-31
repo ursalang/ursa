@@ -23,6 +23,7 @@ Ursa {
     | List
     | Map
     | Block
+    | Fn
     | "(" Exp ")"       -- paren
 
   Definition = ident Initializer
@@ -35,20 +36,12 @@ Ursa {
   Map = "{" ListOf<KeyValue, ","> ","? "}"
   KeyValue = Exp ":" Exp
 
-  PropertyExp
-    = PropertyExp "." ident             -- property
-    | Fn
+  PostfixExp
+    = PostfixExp "." ident     -- property
+    | PostfixExp Arguments     -- call
     | PrimaryExp
 
-  CallExp
-    = CallExp "." ident     -- property
-    | CallExp Arguments     -- call
-    | PropertyExp Arguments -- property_call
   Arguments = "(" ListOf<Exp, ","> ","? ")"
-
-  LvalueExp
-    = CallExp
-    | PropertyExp
 
   Ifs = NonemptyListOf<If, else> (else Block)?
   If = if Exp Block
@@ -65,7 +58,7 @@ Ursa {
     = "~" UnaryExp    -- bitwise_not
     | "+" UnaryExp    -- pos
     | "-" UnaryExp    -- neg
-    | LvalueExp
+    | PostfixExp
 
   ExponentExp
     = UnaryExp "**" ExponentExp  -- power
@@ -110,7 +103,7 @@ Ursa {
     | LogicNotExp
 
   AssignmentExp
-    = LvalueExp ":=" AssignmentExp -- ass
+    = PostfixExp ":=" AssignmentExp -- ass
     | LogicExp
 
   Exp

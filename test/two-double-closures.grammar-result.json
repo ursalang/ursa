@@ -180,7 +180,7 @@
             "1": [],
             "type": "Arguments"
           },
-          "type": "CallExp_property_call"
+          "type": "PostfixExp_call"
         },
         "type": "Definition"
       },
@@ -195,7 +195,7 @@
             "1": [],
             "type": "Arguments"
           },
-          "type": "CallExp_property_call"
+          "type": "PostfixExp_call"
         },
         "type": "Definition"
       },
@@ -211,7 +211,7 @@
               "0": {
                 "0": "accums",
                 "2": "get",
-                "type": "PropertyExp_property"
+                "type": "PostfixExp_property"
               },
               "1": {
                 "1": [
@@ -219,7 +219,7 @@
                 ],
                 "type": "Arguments"
               },
-              "type": "CallExp_property_call"
+              "type": "PostfixExp_call"
             },
             "1": {
               "1": [
@@ -227,14 +227,14 @@
               ],
               "type": "Arguments"
             },
-            "type": "CallExp_call"
+            "type": "PostfixExp_call"
           },
           {
             "0": {
               "0": {
                 "0": "accums",
                 "2": "get",
-                "type": "PropertyExp_property"
+                "type": "PostfixExp_property"
               },
               "1": {
                 "1": [
@@ -242,7 +242,7 @@
                 ],
                 "type": "Arguments"
               },
-              "type": "CallExp_property_call"
+              "type": "PostfixExp_call"
             },
             "1": {
               "1": [
@@ -250,14 +250,14 @@
               ],
               "type": "Arguments"
             },
-            "type": "CallExp_call"
+            "type": "PostfixExp_call"
           },
           {
             "0": {
               "0": {
                 "0": "accums2",
                 "2": "get",
-                "type": "PropertyExp_property"
+                "type": "PostfixExp_property"
               },
               "1": {
                 "1": [
@@ -265,7 +265,7 @@
                 ],
                 "type": "Arguments"
               },
-              "type": "CallExp_property_call"
+              "type": "PostfixExp_call"
             },
             "1": {
               "1": [
@@ -273,7 +273,7 @@
               ],
               "type": "Arguments"
             },
-            "type": "CallExp_call"
+            "type": "PostfixExp_call"
           }
         ],
         "type": "List"
@@ -285,7 +285,7 @@
               "0": {
                 "0": "accums",
                 "2": "get",
-                "type": "PropertyExp_property"
+                "type": "PostfixExp_property"
               },
               "1": {
                 "1": [
@@ -293,7 +293,7 @@
                 ],
                 "type": "Arguments"
               },
-              "type": "CallExp_property_call"
+              "type": "PostfixExp_call"
             },
             "1": {
               "1": [
@@ -301,14 +301,14 @@
               ],
               "type": "Arguments"
             },
-            "type": "CallExp_call"
+            "type": "PostfixExp_call"
           },
           {
             "0": {
               "0": {
                 "0": "accums",
                 "2": "get",
-                "type": "PropertyExp_property"
+                "type": "PostfixExp_property"
               },
               "1": {
                 "1": [
@@ -316,7 +316,7 @@
                 ],
                 "type": "Arguments"
               },
-              "type": "CallExp_property_call"
+              "type": "PostfixExp_call"
             },
             "1": {
               "1": [
@@ -324,14 +324,14 @@
               ],
               "type": "Arguments"
             },
-            "type": "CallExp_call"
+            "type": "PostfixExp_call"
           },
           {
             "0": {
               "0": {
                 "0": "accums2",
                 "2": "get",
-                "type": "PropertyExp_property"
+                "type": "PostfixExp_property"
               },
               "1": {
                 "1": [
@@ -339,7 +339,7 @@
                 ],
                 "type": "Arguments"
               },
-              "type": "CallExp_property_call"
+              "type": "PostfixExp_call"
             },
             "1": {
               "1": [
@@ -347,7 +347,7 @@
               ],
               "type": "Arguments"
             },
-            "type": "CallExp_call"
+            "type": "PostfixExp_call"
           }
         ],
         "type": "List"

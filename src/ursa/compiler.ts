@@ -240,26 +240,16 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     return addLoc(new ArkObjectLiteral(inits), this)
   },
 
-  PropertyExp_property(object, _dot, property) {
-    return addLoc(new ArkGet(makeProperty(this.args.a, object, property)), this)
-  },
-
-  CallExp_property(exp, _dot, property) {
+  PostfixExp_property(exp, _dot, property) {
     return addLoc(new ArkGet(makeProperty(this.args.a, exp, property)), this)
   },
-  CallExp_call(exp, args) {
+  PostfixExp_call(exp, args) {
     return addLoc(
       new ArkCall(exp.toExp(this.args.a), args.toArguments(this.args.a).args),
       this,
     )
   },
-  CallExp_property_call(exp, args) {
-    return addLoc(
-      new ArkCall(exp.toExp(this.args.a), args.toArguments(this.args.a).args),
-      this,
-    )
-  },
-
+  
   Ifs(ifs, _else, elseBlock) {
     const compiledIfs: ArkIf[] = (ifs.asIteration().children).map(
       (x) => addLoc(x.toExp(this.args.a), x) as ArkIf,
@@ -597,17 +587,21 @@ semantics.addOperation<string[]>('toMethod(a)', {
   },
 })
 
+function badLvalue(node: ParserNode): never {
+  throw new UrsaCompilerError(node.source, 'Bad lvalue')
+}
+
 semantics.addOperation<ArkExp>('toLval(a)', {
+  _terminal() {
+    badLvalue(this)
+  },
+
   PrimaryExp_ident(_sym) {
     return addLoc(this.symref(this.args.a), this)
   },
 
-  PropertyExp_property(object, _dot, property) {
-    return makeProperty(this.args.a, object, property)
-  },
-
-  CallExp_property(exp, _dot, ident) {
-    return makeProperty(this.args.a, exp, ident)
+  PostfixExp_property(exp, _dot, property) {
+    return makeProperty(this.args.a, exp, property)
   },
 })
 

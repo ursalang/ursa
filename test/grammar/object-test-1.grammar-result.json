@@ -34,7 +34,7 @@
     "0": {
       "0": "o",
       "2": "b",
-      "type": "PropertyExp_property"
+      "type": "PostfixExp_property"
     },
     "2": "\"abc\"",
     "type": "AssignmentExp_ass"

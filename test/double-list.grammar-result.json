@@ -81,13 +81,13 @@
                           "0": {
                             "0": "l",
                             "2": "len",
-                            "type": "PropertyExp_property"
+                            "type": "PostfixExp_property"
                           },
                           "1": {
                             "1": [],
                             "type": "Arguments"
                           },
-                          "type": "CallExp_property_call"
+                          "type": "PostfixExp_call"
                         },
                         "type": "CompareExp_eq"
                       },
@@ -108,7 +108,7 @@
                   "0": {
                     "0": "l",
                     "2": "set",
-                    "type": "PropertyExp_property"
+                    "type": "PostfixExp_property"
                   },
                   "1": {
                     "1": [
@@ -118,7 +118,7 @@
                           "0": {
                             "0": "l",
                             "2": "get",
-                            "type": "PropertyExp_property"
+                            "type": "PostfixExp_property"
                           },
                           "1": {
                             "1": [
@@ -126,7 +126,7 @@
                             ],
                             "type": "Arguments"
                           },
-                          "type": "CallExp_property_call"
+                          "type": "PostfixExp_call"
                         },
                         "2": "2",
                         "type": "ProductExp_times"
@@ -134,7 +134,7 @@
                     ],
                     "type": "Arguments"
                   },
-                  "type": "CallExp_property_call"
+                  "type": "PostfixExp_call"
                 },
                 {
                   "0": "i",
@@ -171,6 +171,6 @@
       ],
       "type": "Arguments"
     },
-    "type": "CallExp_property_call"
+    "type": "PostfixExp_call"
   }
 ]

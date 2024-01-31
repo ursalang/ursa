@@ -111,7 +111,7 @@
             ],
             "type": "Arguments"
           },
-          "type": "CallExp_property_call"
+          "type": "PostfixExp_call"
         },
         "type": "Definition"
       },
@@ -126,7 +126,7 @@
       ],
       "type": "Arguments"
     },
-    "type": "CallExp_property_call"
+    "type": "PostfixExp_call"
   },
   {
     "0": "fac",
@@ -136,7 +136,7 @@
       ],
       "type": "Arguments"
     },
-    "type": "CallExp_property_call"
+    "type": "PostfixExp_call"
   },
   {
     "0": "print",
@@ -150,11 +150,11 @@
             ],
             "type": "Arguments"
           },
-          "type": "CallExp_property_call"
+          "type": "PostfixExp_call"
         }
       ],
       "type": "Arguments"
     },
-    "type": "CallExp_property_call"
+    "type": "PostfixExp_call"
   }
 ]

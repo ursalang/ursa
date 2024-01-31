@@ -53,6 +53,6 @@
       ],
       "type": "Arguments"
     },
-    "type": "CallExp_property_call"
+    "type": "PostfixExp_call"
   }
 ]

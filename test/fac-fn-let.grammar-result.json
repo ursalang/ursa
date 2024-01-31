@@ -62,7 +62,7 @@
                       ],
                       "type": "Arguments"
                     },
-                    "type": "CallExp_property_call"
+                    "type": "PostfixExp_call"
                   },
                   "type": "ProductExp_times"
                 }
@@ -85,6 +85,6 @@
       ],
       "type": "Arguments"
     },
-    "type": "CallExp_property_call"
+    "type": "PostfixExp_call"
   }
 ]

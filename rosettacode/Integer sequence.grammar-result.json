@@ -19,7 +19,7 @@
           ],
           "type": "Arguments"
         },
-        "type": "CallExp_property_call"
+        "type": "PostfixExp_call"
       },
       {
         "0": "i",

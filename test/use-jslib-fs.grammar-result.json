@@ -10,7 +10,7 @@
     "0": {
       "0": "fs",
       "2": "writeSync",
-      "type": "PropertyExp_property"
+      "type": "PostfixExp_property"
     },
     "1": {
       "1": [
@@ -19,6 +19,6 @@
       ],
       "type": "Arguments"
     },
-    "type": "CallExp_property_call"
+    "type": "PostfixExp_call"
   }
 ]

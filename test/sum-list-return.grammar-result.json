@@ -77,13 +77,13 @@
                           "0": {
                             "0": "l",
                             "2": "len",
-                            "type": "PropertyExp_property"
+                            "type": "PostfixExp_property"
                           },
                           "1": {
                             "1": [],
                             "type": "Arguments"
                           },
-                          "type": "CallExp_property_call"
+                          "type": "PostfixExp_call"
                         },
                         "type": "CompareExp_eq"
                       },
@@ -108,7 +108,7 @@
                       "0": {
                         "0": "l",
                         "2": "get",
-                        "type": "PropertyExp_property"
+                        "type": "PostfixExp_property"
                       },
                       "1": {
                         "1": [
@@ -116,7 +116,7 @@
                         ],
                         "type": "Arguments"
                       },
-                      "type": "CallExp_property_call"
+                      "type": "PostfixExp_call"
                     },
                     "type": "SumExp_plus"
                   },
@@ -159,6 +159,6 @@
       ],
       "type": "Arguments"
     },
-    "type": "CallExp_property_call"
+    "type": "PostfixExp_call"
   }
 ]

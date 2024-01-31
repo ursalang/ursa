@@ -36,7 +36,7 @@
     "0": {
       "0": "t",
       "2": "set",
-      "type": "PropertyExp_property"
+      "type": "PostfixExp_property"
     },
     "1": {
       "1": [
@@ -45,7 +45,7 @@
       ],
       "type": "Arguments"
     },
-    "type": "CallExp_property_call"
+    "type": "PostfixExp_call"
   },
   "t"
 ]
