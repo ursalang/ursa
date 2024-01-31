@@ -32,7 +32,6 @@ type ParserOperations = {
   toMethod(a: ParserArgs): string[]
   toParam(a: ParserArgs): string
   boundVars: string[]
-  symref(a: ParserArgs): ArkExp
 }
 
 type ParserArgs = {
@@ -506,7 +505,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
   Use(_use, pathList) {
     const path = pathList.asIteration().children
     const ident = path[path.length - 1]
-    // For path x.y.z, compile `let z = x.use(y.z)`
+    // For path x.y.z, compile `let z = x.use("y", "z")`
     const innerEnv = this.args.a.env.push([ident.sourceString])
     const compiledUse = new ArkLet([[ident.sourceString, new ArkCall(
       new ArkGet(addLoc(new ArkProperty(path[0].toExp({...this.args.a, env: innerEnv}), 'use'), this)),
@@ -519,8 +518,8 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     return addLoc(seq.toExp(this.args.a), this)
   },
 
-  ident(_ident) {
-    return addLoc(new ArkGet(this.symref(this.args.a)), this)
+  ident(ident) {
+    return addLoc(new ArkGet(symRef(this.args.a.env, ident.sourceString)), this)
   },
 
   null(_null) {
@@ -598,8 +597,8 @@ semantics.addOperation<ArkExp>('toLval(a)', {
   PrimaryExp(exp) {
     return exp.toLval(this.args.a)
   },
-  PrimaryExp_ident(_sym) {
-    return addLoc(this.symref(this.args.a), this)
+  PrimaryExp_ident(sym) {
+    return addLoc(symRef(this.args.a.env, sym.sourceString), this)
   },
 
   PostfixExp(exp) {
@@ -642,24 +641,6 @@ semantics.addAttribute<string[]>('boundVars', {
     const path = pathList.asIteration().children
     const ident = path[path.length - 1]
     return [ident.sourceString]
-  },
-})
-
-// Ohm attributes can't take arguments, so memoize an operation.
-const symrefs = new Map<ParserNode, ArkExp>()
-semantics.addOperation<ArkExp>('symref(a)', {
-  ident(ident) {
-    if (!symrefs.has(this)) {
-      try {
-        symrefs.set(this, symRef(this.args.a.env, this.sourceString))
-      } catch (e) {
-        if (e instanceof ArkCompilerError) {
-          throw new UrsaCompilerError(ident.source, e.message)
-        }
-        throw e
-      }
-    }
-    return symrefs.get(this)!
   },
 })
 
