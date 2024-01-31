@@ -16,7 +16,7 @@ import {
   ArkSequence, ArkIf, ArkLoop, ArkAnd, ArkOr,
   ArkObjectLiteral, ArkListLiteral, ArkMapLiteral,
   ArkCall, ArkLet, ArkFn, ArkProperty, ArkGet, ArkSet, ArkReturn,
-  ArkBreak, ArkContinue, ArkNullClass,
+  ArkBreak, ArkContinue, ArkNullVal,
 } from '../ark/interpreter.js'
 import {
   ArkCompilerError, symRef, Frame, Environment, checkParamList,
@@ -181,7 +181,7 @@ function makeSequence(a: ParserArgs, exps: ParserNode[]): ArkExp {
         // FIXME: add an AST class for compiling Lets, rather than producing
         // an ArkLet and then having to take it apart like this.
         if (!(compiledExp.body instanceof ArkLiteral
-          && compiledExp.body.val instanceof ArkNullClass)) {
+          && compiledExp.body.val instanceof ArkNullVal)) {
           seqBody.push(compiledExp.body)
         }
         seqBody.push(makeSequence({...a, env: innerEnv}, exps.slice(i + 1)))

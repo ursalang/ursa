@@ -129,13 +129,13 @@ export class ArkLiteral extends ArkExp {
 
 // FIXME: Need to differentiate "indexable" (List, string) from "has
 // properties" (List, Object).
-abstract class ArkAbstractClass extends ArkVal {
+abstract class ArkAbstractObjectBase extends ArkVal {
   abstract get(prop: string): ArkVal | undefined
 
   abstract set(prop: string, val: ArkVal): ArkVal
 }
 
-export class ArkClass extends ArkAbstractClass {
+export class ArkObjectBase extends ArkAbstractObjectBase {
   constructor(public properties: Map<string, ArkVal> = new Map()) {
     super()
   }
@@ -150,16 +150,16 @@ export class ArkClass extends ArkAbstractClass {
   }
 }
 
-export abstract class ArkConcreteVal<T> extends ArkClass {
+export abstract class ArkConcreteVal<T> extends ArkObjectBase {
   constructor(public val: T) {
     super()
   }
 }
 
-export class ArkNullClass extends ArkConcreteVal<null> {}
-export class ArkBooleanClass extends ArkConcreteVal<boolean> {}
-export class ArkNumberClass extends ArkConcreteVal<number> {}
-export class ArkStringClass extends ArkConcreteVal<string> {
+export class ArkNullVal extends ArkConcreteVal<null> {}
+export class ArkBooleanVal extends ArkConcreteVal<boolean> {}
+export class ArkNumberVal extends ArkConcreteVal<number> {}
+export class ArkStringVal extends ArkConcreteVal<string> {
   constructor(val: string) {
     super(val)
     this.properties = new Map([
@@ -207,16 +207,16 @@ class ConcreteInterned {
 export const ArkUndefined = new ArkVal()
 ArkUndefined.debug.name = 'Undefined'
 export function ArkNull() {
-  return ConcreteInterned.value<ArkNullClass, null>(ArkNullClass, null)
+  return ConcreteInterned.value<ArkNullVal, null>(ArkNullVal, null)
 }
 export function ArkBoolean(b: boolean) {
-  return ConcreteInterned.value<ArkBooleanClass, boolean>(ArkBooleanClass, b)
+  return ConcreteInterned.value<ArkBooleanVal, boolean>(ArkBooleanVal, b)
 }
 export function ArkNumber(n: number) {
-  return ConcreteInterned.value<ArkNumberClass, number>(ArkNumberClass, n)
+  return ConcreteInterned.value<ArkNumberVal, number>(ArkNumberVal, n)
 }
 export function ArkString(s: string) {
-  return ConcreteInterned.value<ArkStringClass, string>(ArkStringClass, s)
+  return ConcreteInterned.value<ArkStringVal, string>(ArkStringVal, s)
 }
 
 export class ArkNonLocalReturn extends Error {
@@ -457,7 +457,7 @@ export class ArkSet extends ArkExp {
     }
     const oldVal = ref.get(ark)
     if (oldVal !== ArkUndefined
-      && oldVal.constructor !== ArkNullClass
+      && oldVal.constructor !== ArkNullVal
       && res.constructor !== oldVal.constructor) {
       throw new ArkRuntimeError(ark, 'Assignment to different type', this)
     }
@@ -466,7 +466,7 @@ export class ArkSet extends ArkExp {
   }
 }
 
-export class ArkObject extends ArkClass {}
+export class ArkObject extends ArkObjectBase {}
 
 export class ArkObjectLiteral extends ArkExp {
   constructor(public properties: Map<string, ArkExp>) {
@@ -483,7 +483,7 @@ export class ArkObjectLiteral extends ArkExp {
   }
 }
 
-export class NativeObject extends ArkAbstractClass {
+export class NativeObject extends ArkAbstractObjectBase {
   constructor(public obj: object) {
     super()
   }
@@ -505,8 +505,8 @@ export class ArkProperty extends ArkExp {
 
   async eval(ark: ArkState): Promise<ArkVal> {
     const obj = await this.obj.eval(ark)
-    // FIXME: This is ad-hoc. See ArkAbstractClass.
-    if (!(obj instanceof ArkAbstractClass) || obj instanceof ArkNullClass) {
+    // FIXME: This is ad-hoc. See ArkAbstractObjectBase.
+    if (!(obj instanceof ArkAbstractObjectBase) || obj instanceof ArkNullVal) {
       throw new ArkRuntimeError(ark, 'Attempt to read property of non-object', this)
     }
     return new ArkPropertyRef(obj, this.prop)
@@ -514,7 +514,7 @@ export class ArkProperty extends ArkExp {
 }
 
 export class ArkPropertyRef extends ArkRef {
-  constructor(public obj: ArkAbstractClass, public prop: string) {
+  constructor(public obj: ArkAbstractObjectBase, public prop: string) {
     super()
   }
 
@@ -528,7 +528,7 @@ export class ArkPropertyRef extends ArkRef {
   }
 }
 
-export class ArkList extends ArkClass {
+export class ArkList extends ArkObjectBase {
   constructor(public list: ArkVal[]) {
     super(new Map([
       ['len', new NativeFn(['len'], () => ArkNumber(this.list.length))],
@@ -577,7 +577,7 @@ export class ArkListLiteral extends ArkExp {
   }
 }
 
-export class ArkMap extends ArkClass {
+export class ArkMap extends ArkObjectBase {
   constructor(public map: Map<ArkVal, ArkVal>) {
     super(new Map([
       ['set', new NativeFn(
