@@ -174,7 +174,7 @@ function doCompile(env: Environment, value: unknown): ArkExp {
             throw new ArkCompilerError("Invalid 'prop'")
           }
           const compiled = doCompile(env, value[2])
-          return new ArkProperty(value[1], compiled)
+          return new ArkProperty(compiled, value[1])
         }
         case 'get': {
           if (value.length !== 2) {

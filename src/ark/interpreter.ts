@@ -499,7 +499,7 @@ export class NativeObject extends ArkAbstractObjectBase {
 }
 
 export class ArkProperty extends ArkExp {
-  constructor(public prop: string, public obj: ArkExp) {
+  constructor(public obj: ArkExp, public prop: string) {
     super()
   }
 

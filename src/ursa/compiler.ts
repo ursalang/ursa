@@ -122,7 +122,7 @@ function addLoc(val: ArkExp, node: ParserNode) {
 }
 
 function makeProperty(a: ParserArgs, object: ParserNonterminalNode, property: ParserNode) {
-  return addLoc(new ArkProperty(property.sourceString, object.toExp(a)), object)
+  return addLoc(new ArkProperty(object.toExp(a), property.sourceString), object)
 }
 
 function makeIfChain(ifs: ArkIf[]): ArkIf {
@@ -512,7 +512,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     // For path x.y.z, compile `let z = x.use(y.z)`
     const innerEnv = this.args.a.env.push([ident.sourceString])
     const compiledUse = new ArkLet([[ident.sourceString, new ArkCall(
-      new ArkGet(addLoc(new ArkProperty('use', new ArkGet(path[0].symref({...this.args.a, env: innerEnv}))), this)),
+      new ArkGet(addLoc(new ArkProperty(new ArkGet(path[0].symref({...this.args.a, env: innerEnv})), 'use'), this)),
       path.slice(1).map((id) => new ArkLiteral(ArkString(id.sourceString))),
     )]], new ArkLiteral(ArkNull()))
     return addLoc(compiledUse, this)
