@@ -9,16 +9,16 @@ import * as readline from 'node:readline'
 
 import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
 
+import programVersion from '../version.js'
 import {
   debug, ArkState, ArkNull, ArkList,
   ArkLet, ArkVal, ArkValRef, ArkString, globals, ArkExp,
 } from '../ark/interpreter.js'
 import {Environment, compile as arkCompile} from '../ark/compiler.js'
-import {toJs} from '../ark/ffi.js'
+import {fromJs, toJs} from '../ark/ffi.js'
 import {serializeVal} from '../ark/serialize.js'
-
-import programVersion from '../version.js'
 import {runWithTraceback, compile as ursaCompile} from './compiler.js'
+import {compile as jsCompile} from './js-compiler.js'
 import {format} from './fmt.js'
 
 if (process.env.DEBUG) {
@@ -46,6 +46,9 @@ your option) any later version. There is no warranty.`,
 })
 parser.add_argument('--syntax', {
   default: 'ursa', choices: ['ursa', 'json'], help: 'syntax to use [default: ursa]',
+})
+parser.add_argument('--target', {
+  default: 'ark', choices: ['ark', 'js'], help: 'compile target to use [default: ark]',
 })
 
 const subparsers = parser.add_subparsers({description: 'action to take'})
@@ -92,6 +95,7 @@ interface Args {
   argument: string[]
   output: string | undefined
   interactive: boolean
+  target: string
 
   // Format arguments
   width: number
@@ -223,7 +227,12 @@ async function runCode(source: string, args: Args) {
   // Run the program
   let result: ArkVal | undefined
   if (source !== undefined) {
-    result = await runWithTraceback(ark, compile(args, source))
+    if (args.target === 'ark') {
+      result = await runWithTraceback(ark, compile(args, source))
+    } else {
+      // eslint-disable-next-line no-eval
+      result = fromJs(eval(jsCompile(source)))
+    }
   }
   if (source === undefined || args.interactive) {
     result = await repl(args)
@@ -254,7 +263,7 @@ function compileCommand(args: Args) {
   // Read input
   const inputFile = getInputFile(args)
   const source = readSourceFile(inputFile)
-  const output = serializeVal(compile(args, source))
+  const output = args.target === 'ark' ? serializeVal(compile(args, source)) : jsCompile(source)
   fs.writeFileSync(outputFile, output)
   return Promise.resolve()
 }
