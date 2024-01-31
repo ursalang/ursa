@@ -133,8 +133,11 @@ function makeIfChain(ifs: ArkIf[]): ArkIf {
 }
 
 semantics.addOperation<Definition>('toDefinition(a)', {
-  Definition(ident, _equals, value) {
-    return new Definition(ident, addLoc(value.toExp(this.args.a), value))
+  Definition(ident, initializer) {
+    return new Definition(
+      ident,
+      addLoc(initializer.children[1].toExp(this.args.a), initializer),
+    )
   },
 })
 

@@ -3,7 +3,7 @@
     {
       "1": {
         "0": "sum",
-        "2": {
+        "1": {
           "0": {
             "2": [
               {
@@ -50,7 +50,7 @@
               {
                 "1": {
                   "0": "tot",
-                  "2": "0",
+                  "1": "0",
                   "type": "Definition"
                 },
                 "type": "Let"
@@ -60,7 +60,7 @@
               {
                 "1": {
                   "0": "i",
-                  "2": "0",
+                  "1": "0",
                   "type": "Definition"
                 },
                 "type": "Let"
@@ -80,7 +80,7 @@
                             "type": "PropertyExp_property"
                           },
                           "1": {
-                            "1": [ ],
+                            "1": [],
                             "type": "Arguments"
                           },
                           "type": "CallExp_property_call"

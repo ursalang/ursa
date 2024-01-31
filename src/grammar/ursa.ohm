@@ -25,8 +25,8 @@ Ursa {
     | Block
     | "(" Exp ")"       -- paren
 
-  Definition = ident "=" Exp
-  Initializer = "=" Exp // TODO: Use this in Definition
+  Definition = ident Initializer
+  Initializer = "=" Exp
 
   List = "[" ListOf<AssignmentExp, ","> ","? "]"
 

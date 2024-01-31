@@ -25,7 +25,6 @@ export function parse(
   // some redundant keywords.
   const ast = toAST(matchResult, {
     Sequence: 0,
-    Definition: {0: 0, 2: 2},
     List: {1: 1},
     Object: {0: 0, 2: 2},
     Map: {1: 1},

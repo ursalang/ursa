@@ -30,7 +30,10 @@ test('Conditional structures', 'rosettacode/Conditional structures')
 test('Hello world-Text', 'rosettacode/Hello world-Text')
 test('Integer sequence', 'rosettacode/Integer sequence')
 
-// Tests
+// Grammar tests
+test('Function', 'test/grammar/fn')
+test('List', 'test/grammar/list')
+test('Map', 'test/grammar/map')
 test('Object literal 1', 'test/grammar/object-test-1')
 test('Object literal 2', 'test/grammar/object-test-2')
 test('Object literal 3', 'test/grammar/object-test-3')

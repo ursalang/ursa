@@ -54,8 +54,8 @@ function makeIfChain(ifs: string[]): string {
 const semantics = grammar.createSemantics<ParserNode, ParserNonterminalNode, ParserIterationNode, ParserThisNode, ParserOperations>()
 
 semantics.addOperation<[string, string]>('toDefinition(a)', {
-  Definition(ident, _equals, value) {
-    return [ident.sourceString, value.toExp(this.args.a)]
+  Definition(ident, initializer) {
+    return [ident.sourceString, initializer.children[1].toExp(this.args.a)]
   },
 })
 
@@ -72,8 +72,8 @@ semantics.addOperation<string>('toExp(a)', {
     return `(${exp.toExp(this.args.a)})`
   },
 
-  Definition(ident, _equals, value) {
-    return `${ident.sourceString} = ${value.toExp(this.args.a)}`
+  Definition(ident, initializer) {
+    return `${ident.sourceString} = ${initializer.children[1].toExp(this.args.a)}`
   },
 
   List(_open, elems, _maybeComma, _close) {

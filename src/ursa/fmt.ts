@@ -271,8 +271,11 @@ semantics.addOperation<Span>('fmt(a)', {
     )
   },
 
-  Definition(ident, _colon, value) {
-    return hSpan([ident.fmt(this.args.a), '=', value.fmt(this.args.a)])
+  Definition(ident, initializer) {
+    return hSpan([ident.fmt(this.args.a), initializer.fmt(this.args.a)])
+  },
+  Initializer(_equals, value) {
+    return hSpan(['=', value.fmt(this.args.a)])
   },
 
   List(_open, elems, _maybeComma, _close) {

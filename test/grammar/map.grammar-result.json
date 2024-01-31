@@ -1,0 +1,51 @@
+[
+  [
+    {
+      "1": {
+        "0": "t",
+        "1": {
+          "1": [
+            {
+              "0": "\"a\"",
+              "2": "1",
+              "type": "KeyValue"
+            },
+            {
+              "0": "\"b\"",
+              "2": {
+                "0": "2",
+                "2": "0",
+                "type": "SumExp_plus"
+              },
+              "type": "KeyValue"
+            },
+            {
+              "0": "3",
+              "2": "4",
+              "type": "KeyValue"
+            }
+          ],
+          "type": "Map"
+        },
+        "type": "Definition"
+      },
+      "type": "Let"
+    }
+  ],
+  {
+    "0": {
+      "0": "t",
+      "2": "set",
+      "type": "PropertyExp_property"
+    },
+    "1": {
+      "1": [
+        "\"b\"",
+        "1"
+      ],
+      "type": "Arguments"
+    },
+    "type": "CallExp_property_call"
+  },
+  "t"
+]

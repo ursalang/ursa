@@ -1,0 +1,35 @@
+[
+  [
+    {
+      "1": {
+        "0": "l",
+        "1": {
+          "1": [
+            "1",
+            "2",
+            "3"
+          ],
+          "type": "List"
+        },
+        "type": "Definition"
+      },
+      "type": "Let"
+    }
+  ],
+  {
+    "0": {
+      "0": "l",
+      "2": "set",
+      "type": "PropertyExp_property"
+    },
+    "1": {
+      "1": [
+        "1",
+        "4"
+      ],
+      "type": "Arguments"
+    },
+    "type": "CallExp_property_call"
+  },
+  "l"
+]

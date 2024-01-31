@@ -128,57 +128,11 @@ testGroup('loop and break', [
 ])
 
 testGroup('let', [
-  ['let a = 3; a', [[{1: {0: 'a', 2: '3', type: 'Definition'}, type: 'Let'}], 'a']],
+  ['let a = 3; a', [[{1: {0: 'a', 1: '3', type: 'Definition'}, type: 'Let'}], 'a']],
   ['let b = 5; b := 7; b', [
-    [{1: {0: 'b', 2: '5', type: 'Definition'}, type: 'Let'}],
+    [{1: {0: 'b', 1: '5', type: 'Definition'}, type: 'Let'}],
     {0: 'b', 2: '7', type: 'AssignmentExp_ass'},
     'b',
-  ]],
-])
-
-testGroup('fn', [
-  ['let f = fn(x: Int): Int {x + 1}; f(1)', [
-    [
-      {
-        1: {
-          0: 'f',
-          2: {
-            0: {
-              2: [
-                {
-                  0: 'x',
-                  1: [
-                    {
-                      0: ['Int'],
-                      1: null,
-                      type: 'NamedType',
-                    },
-                  ],
-                  type: 'Param',
-                },
-              ],
-              5: [
-                {
-                  0: ['Int'],
-                  1: null,
-                  type: 'NamedType',
-                },
-              ],
-              type: 'FnType',
-            },
-            1: [{0: 'x', 2: '1', type: 'SumExp_plus'}],
-            type: 'Fn',
-          },
-          type: 'Definition',
-        },
-        type: 'Let',
-      },
-    ],
-    {
-      0: 'f',
-      1: {1: ['1'], type: 'Arguments'},
-      type: 'CallExp_property_call',
-    },
   ]],
 ])
 
@@ -208,27 +162,6 @@ testGroup('Lists', [
       type: 'CallExp_property_call',
     },
   ]],
-  ['let l = [1, 2, 3]; l.set(1, 4); l', [
-    [
-      {
-        1: {
-          0: 'l',
-          2: {1: ['1', '2', '3'], type: 'List'},
-          type: 'Definition',
-        },
-        type: 'Let',
-      },
-    ],
-    {
-      0: {0: 'l', 2: 'set', type: 'PropertyExp_property'},
-      1: {
-        1: ['1', '4'],
-        type: 'Arguments',
-      },
-      type: 'CallExp_property_call',
-    },
-    'l',
-  ]],
 ])
 
 testGroup('Maps', [
@@ -246,37 +179,5 @@ testGroup('Maps', [
       ],
       type: 'Map',
     },
-  ]],
-  ['let t = {"a": 1, "b": 2 + 0, 3: 4}; t.set("b", 1); t', [
-    [
-      {
-        1: {
-          0: 't',
-          2: {
-            1: [
-              {0: '"a"', 2: '1', type: 'KeyValue'},
-              {
-                0: '"b"',
-                2: {0: '2', 2: '0', type: 'SumExp_plus'},
-                type: 'KeyValue',
-              },
-              {0: '3', 2: '4', type: 'KeyValue'},
-            ],
-            type: 'Map',
-          },
-          type: 'Definition',
-        },
-        type: 'Let',
-      },
-    ],
-    {
-      0: {0: 't', 2: 'set', type: 'PropertyExp_property'},
-      1: {
-        1: ['"b"', '1'],
-        type: 'Arguments',
-      },
-      type: 'CallExp_property_call',
-    },
-    't',
   ]],
 ])
