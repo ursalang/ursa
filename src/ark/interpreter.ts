@@ -781,27 +781,27 @@ export const intrinsics = new Namespace([
   ['>>>', new NativeFn(['left', 'right'], (left: ArkVal, right: ArkVal) => ArkNumber((toJs(left) as number) >>> (toJs(right) as number)))],
 ])
 
-export const globals = new ArkObject(new Map([
+export const globals = new ArkObject(new Map<string, ArkVal>([
   // Ursa's prelude (see also prelude.ursa).
-  ['version', new ArkValRef(ArkString(programVersion))],
-  ['debug', new ArkValRef(new NativeFn(['obj'], (obj: ArkVal) => {
+  ['version', ArkString(programVersion)],
+  ['debug', new NativeFn(['obj'], (obj: ArkVal) => {
     debug(obj)
     return ArkNull()
-  }))],
-  ['fs', new ArkValRef(new NativeFn(['path'], (path: ArkVal) => new NativeObject(new FsMap(toJs(path) as string))))],
+  })],
+  ['fs', new NativeFn(['path'], (path: ArkVal) => new NativeObject(new FsMap(toJs(path) as string)))],
 
   // JavaScript bindings—imported libraries (with "use").
-  ['js', new ArkValRef(new ArkObject(new Map([[
+  ['js', new ArkObject(new Map([[
     'use', new NativeFn([], (arg: ArkVal) => {
       const name = toJs(arg)
       // eslint-disable-next-line max-len
       // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
       return fromJs((globalThis as any)[name as string])
     }),
-  ]])))],
+  ]]))],
 
   // JavaScript bindings—imported libraries (with "use").
-  ['jslib', new ArkValRef(new ArkObject(new Map([[
+  ['jslib', new ArkObject(new Map([[
     'use', new NativeAsyncFn([], async (...args: ArkVal[]) => {
       const importPath = (args.map(toJs).join('.'))
       const module: unknown = await import(importPath)
@@ -813,7 +813,7 @@ export const globals = new ArkObject(new Map([
       }
       return new ArkObject(wrappedModule)
     }),
-  ]])))],
+  ]]))],
 ]))
 
 export function debug(x: unknown, depth: number | null = 1) {

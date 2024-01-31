@@ -8,6 +8,7 @@ import {
   ArkGet, ArkSet, ArkLet, ArkCall, ArkFn, ArkReturn,
   NativeObject, ArkObject, ArkList, ArkMap, ArkProperty,
   ArkLiteral, ArkListLiteral, ArkMapLiteral, ArkObjectLiteral,
+  globals,
 } from './interpreter.js'
 
 export function valToJs(val: Ark): unknown {
@@ -53,6 +54,10 @@ export function valToJs(val: Ark): unknown {
   } else if (val instanceof ArkSet) {
     return ['set', valToJs(val.ref), valToJs(val.val)]
   } else if (val instanceof ArkProperty) {
+    if (val.obj instanceof ArkLiteral && val.obj.val === globals) {
+      // Serialize globals as simply their name.
+      return val.prop
+    }
     return ['prop', val.prop, valToJs(val.obj)]
   } else if (val instanceof ArkSequence) {
     return ['seq', ...val.exps.map(valToJs)]

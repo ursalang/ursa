@@ -8,7 +8,7 @@ import preludeJson from './prelude.json' assert {type: 'json'}
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  ArkState, ArkExp, ArkValRef, intrinsics, globals,
+  ArkState, ArkExp, intrinsics, globals,
   ArkIf, ArkAnd, ArkOr, ArkSequence, ArkLoop, ArkBreak, ArkContinue,
   ArkNull, ArkBoolean, ArkNumber, ArkString,
   ArkGet, ArkSet, ArkLocalRef, ArkCaptureRef,
@@ -30,6 +30,7 @@ export class Frame {
 export class Environment {
   constructor(
     public stack: [Frame, ...Frame[]] = [new Frame([], [])],
+    // TODO: Always use externalSyms, not globals.
     public externalSyms: ArkObject = globals,
   ) {}
 
@@ -121,10 +122,10 @@ export function symRef(env: Environment, name: string): ArkExp {
   }
   // Finally, see if it's a global, and if not, error.
   if (ref === undefined) {
-    ref = env.externalSyms.get(name)
-    if (ref === undefined) {
+    if (env.externalSyms.get(name) === undefined) {
       throw new ArkCompilerError(`Undefined symbol ${name}`)
     }
+    return new ArkProperty(new ArkLiteral(env.externalSyms), name)
   }
   ref.debug.name = name
   ref.debug.env = JSON.stringify(env)
@@ -303,5 +304,5 @@ const ark = new ArkState()
 const prelude = compile(preludeJson)
 const preludeObj = await prelude.eval(ark) as ArkObject
 for (const [sym, val] of preludeObj.properties) {
-  globals.set(sym, new ArkValRef(val))
+  globals.set(sym, val)
 }

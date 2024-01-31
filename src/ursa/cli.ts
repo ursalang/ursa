@@ -221,9 +221,9 @@ async function runCode(source: string, args: Args) {
   // Any otherwise uncaught exception is reported as an error.
   const ark = new ArkState()
   // Add command-line arguments.
-  globals.set('argv', new ArkValRef(new ArkList(
+  globals.set('argv', new ArkList(
     [ArkString(prog ?? process.argv[1]), ...args.argument.map((s) => ArkString(s))],
-  )))
+  ))
   // Run the program
   let result: ArkVal | undefined
   if (source !== undefined) {
