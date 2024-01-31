@@ -204,9 +204,6 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     return addLoc(makeSequence(this.args.a, exps.asIteration().children), this)
   },
 
-  PrimaryExp_ident(_sym) {
-    return addLoc(new ArkGet(this.symref(this.args.a)), this)
-  },
   PrimaryExp_paren(_open, exp, _close) {
     return addLoc(exp.toExp(this.args.a), this)
   },
@@ -512,7 +509,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     // For path x.y.z, compile `let z = x.use(y.z)`
     const innerEnv = this.args.a.env.push([ident.sourceString])
     const compiledUse = new ArkLet([[ident.sourceString, new ArkCall(
-      new ArkGet(addLoc(new ArkProperty(new ArkGet(path[0].symref({...this.args.a, env: innerEnv})), 'use'), this)),
+      new ArkGet(addLoc(new ArkProperty(path[0].toExp({...this.args.a, env: innerEnv}), 'use'), this)),
       path.slice(1).map((id) => new ArkLiteral(ArkString(id.sourceString))),
     )]], new ArkLiteral(ArkNull()))
     return addLoc(compiledUse, this)
@@ -522,10 +519,8 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     return addLoc(seq.toExp(this.args.a), this)
   },
 
-  // This rule is not used for symbol references, but for property and
-  // parameter names.
   ident(_ident) {
-    return addLoc(new ArkLiteral(ArkString(this.sourceString)), this)
+    return addLoc(new ArkGet(this.symref(this.args.a)), this)
   },
 
   null(_null) {
