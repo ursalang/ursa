@@ -51,6 +51,26 @@ testGroup('Sequences', [
   ['{ pi; 3+4; }', 7],
 ])
 
+test('Assignment', async (t) => {
+  const error1 = t.throws(() => new ArkState().run(compile('4 := 5')), {instanceOf: UrsaCompilerError})
+  assert(error1 !== undefined)
+  t.is(error1.message, `\
+Line 1, col 1:
+> 1 | 4 := 5
+      ^
+
+Bad lvalue`)
+  const error2 = t.throws(() => new ArkState().run(compile('range(1) := 5')), {instanceOf: UrsaCompilerError})
+  assert(error2 !== undefined)
+  t.is(error2.message, `\
+Line 1, col 1:
+> 1 | range(1) := 5
+      ^~~~~~~~
+
+Bad lvalue`)
+  t.is(toJs(await new ArkState().run(compile('pi := 3'))), 3)
+})
+
 testGroup('Conditionals', [
   ['if true {3} else {4}', 3],
   ['if false {3} else {4}', 4],

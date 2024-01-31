@@ -249,7 +249,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
       this,
     )
   },
-  
+
   Ifs(ifs, _else, elseBlock) {
     const compiledIfs: ArkIf[] = (ifs.asIteration().children).map(
       (x) => addLoc(x.toExp(this.args.a), x) as ArkIf,
@@ -591,17 +591,30 @@ function badLvalue(node: ParserNode): never {
   throw new UrsaCompilerError(node.source, 'Bad lvalue')
 }
 
+// The node passed to toLval is always a PostfixExp or PrimaryExp.
 semantics.addOperation<ArkExp>('toLval(a)', {
   _terminal() {
     badLvalue(this)
   },
+  _nonterminal() {
+    badLvalue(this)
+  },
 
+  PrimaryExp(exp) {
+    return exp.toLval(this.args.a)
+  },
   PrimaryExp_ident(_sym) {
     return addLoc(this.symref(this.args.a), this)
   },
 
+  PostfixExp(exp) {
+    return exp.toLval(this.args.a)
+  },
   PostfixExp_property(exp, _dot, property) {
     return makeProperty(this.args.a, exp, property)
+  },
+  PostfixExp_primary(exp) {
+    return exp.toLval(this.args.a)
   },
 })
 

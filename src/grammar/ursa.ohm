@@ -39,7 +39,7 @@ Ursa {
   PostfixExp
     = PostfixExp "." ident     -- property
     | PostfixExp Arguments     -- call
-    | PrimaryExp
+    | PrimaryExp               -- primary
 
   Arguments = "(" ListOf<Exp, ","> ","? ")"
 
