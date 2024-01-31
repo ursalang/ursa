@@ -23,6 +23,7 @@ import {ursaTest, ursaDirTest} from '../testutil.js'
   ['Repeated closure', 'test/repeated-closure'],
   ['Two closures', 'test/two-closures'],
   ['Two double closures', 'test/two-double-closures'],
+  ['Closure with object', 'test/mutated-capture'],
   ['Test JSON', 'test/json'],
   ['Test mixed lets and exps', 'test/mixed-lets-and-exps'],
   ['Mutual recursion', 'test/mutual-recursion'],

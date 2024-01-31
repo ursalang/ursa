@@ -1,0 +1,15 @@
+let f = fn(initial) {
+  let state = 0
+  let ret = Object {
+    set = fn(y) { state := y }
+    get = fn() { state }
+  }
+  state := initial
+  ret
+}
+
+let foo = f(42)
+let result1 = foo.get()
+foo.set(41)
+let result2 = foo.get()
+[result1, result2]
