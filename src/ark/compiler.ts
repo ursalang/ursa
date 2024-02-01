@@ -30,7 +30,6 @@ export class Frame {
 export class Environment {
   constructor(
     public stack: [Frame, ...Frame[]] = [new Frame([], [])],
-    // TODO: Always use externalSyms, not globals.
     public externalSyms: ArkObject = globals,
   ) {}
 
