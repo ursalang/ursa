@@ -224,8 +224,12 @@ async function runCode(source: string, args: Args) {
   let result: ArkVal | undefined
   if (source !== undefined) {
     if (args.target === 'ark') {
-      // FIXME: Don't call runWithTraceback when --syntax=json
-      result = await runWithTraceback(ark, compile(args, source))
+      const exp = compile(args, source)
+      if (args.syntax === 'ursa') {
+        result = await runWithTraceback(ark, exp)
+      } else {
+        result = await ark.run(exp)
+      }
     } else {
       // eslint-disable-next-line no-eval
       result = fromJs(eval(jsCompile(source)))
