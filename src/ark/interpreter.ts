@@ -621,32 +621,36 @@ export class ArkMapLiteral extends ArkExp {
   }
 }
 
+export async function pushLets(ark: ArkState, boundVars: [string, ArkExp][]) {
+  const lets = makeLocals(boundVars.map((bv) => bv[0]), [])
+  ark.push(lets)
+  const vals: ArkVal[] = []
+  for (const bv of boundVars) {
+    // eslint-disable-next-line no-await-in-loop
+    vals.push(await bv[1].eval(ark))
+  }
+  for (let i = 0; i < lets.length; i += 1) {
+    lets[i].set(vals[i])
+  }
+  return lets.length
+}
 export class ArkLet extends ArkExp {
   constructor(public boundVars: [string, ArkExp][], public body: ArkExp) {
     super()
   }
 
   async eval(ark: ArkState): Promise<ArkVal> {
-    const lets = makeLocals(this.boundVars.map((bv) => bv[0]), [])
-    ark.push(lets)
-    const vals = []
-    for (const bv of this.boundVars) {
-      // eslint-disable-next-line no-await-in-loop
-      vals.push(await bv[1].eval(ark))
-    }
-    for (let i = 0; i < lets.length; i += 1) {
-      lets[i].set(vals[i])
-    }
+    const nLets = await pushLets(ark, this.boundVars)
     let res: ArkVal
     try {
       res = await this.body.eval(ark)
     } catch (e) {
       if (e instanceof ArkNonLocalReturn) {
-        ark.pop(lets.length)
+        ark.pop(nLets)
       }
       throw e
     }
-    ark.pop(lets.length)
+    ark.pop(nLets)
     return res
   }
 }

@@ -11,8 +11,8 @@ import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
 
 import programVersion from '../version.js'
 import {
-  debug, ArkState, ArkNull, ArkList,
-  ArkLet, ArkVal, ArkValRef, ArkString, globals, ArkExp,
+  debug, ArkState, ArkExp, ArkNull, ArkList,
+  ArkLet, ArkVal, ArkString, globals, pushLets,
 } from '../ark/interpreter.js'
 import {Environment, compile as arkCompile} from '../ark/compiler.js'
 import {fromJs, toJs} from '../ark/ffi.js'
@@ -189,13 +189,9 @@ async function repl(args: Args): Promise<ArkVal> {
     try {
       const compiled = compile(args, line, env)
       // Handle new let bindings
-      // FIXME: Use same code as in ArkLet.eval.
       if (compiled instanceof ArkLet) {
         env = env.push(compiled.boundVars.map((bv) => bv[0]))
-        for (const bv of compiled.boundVars) {
-          // eslint-disable-next-line no-await-in-loop
-          ark.push([new ArkValRef(await bv[1].eval(ark))])
-        }
+        await pushLets(ark, compiled.boundVars)
       }
       val = await runWithTraceback(ark, compiled)
       debug(toJs(val))
