@@ -1,6 +1,6 @@
 /* eslint-disable no-useless-concat */
 // Ursa tests using example source files.
-// © Reuben Thomas 2023
+// © Reuben Thomas 2023-2024
 // Released under the GPL version 3, or (at your option) any later version.
 
 import {ursaTest, ursaDirTest} from '../testutil.js'
@@ -89,7 +89,7 @@ Error: Line 6, col 13:
                   ^~~~~
   7 |     if l == null { return tot }
 
-Attempt to read property of non-object
+Invalid property 'get'
 
 Traceback (most recent call last)
   line 12
@@ -100,7 +100,7 @@ Error: Line 6, col 17:
                       ^~~~~
   7 |         if l == null {
 
-Attempt to read property of non-object
+Invalid property 'get'
 
 Traceback (most recent call last)
   line 14
@@ -113,10 +113,7 @@ Error: Line 3, col 1:
       ^~~~~~~~~~~~
   4 | ` + `
 
-Assignment to different type
-
-Traceback (most recent call last)
-`)
+Assignment to different type`)
 
 // Rosetta code examples
 ursaTest('Accumulator factory', 'rosettacode/Accumulator factory', [], '8.3')

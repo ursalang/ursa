@@ -1,6 +1,6 @@
 /* eslint-disable no-useless-concat */
 // Ursa tests of basics using inline source snippets.
-// © Reuben Thomas 2023
+// © Reuben Thomas 2023-2024
 // Released under the GPL version 3, or (at your option) any later version.
 
 import test from 'ava'
@@ -12,8 +12,9 @@ import {
   ArkState,
 } from '../ark/interpreter.js'
 import {toJs} from '../ark/ffi.js'
-
-import {compile, UrsaCompilerError} from './compiler.js'
+import {
+  compile, runWithTraceback, UrsaCompilerError, UrsaRuntimeError,
+} from './compiler.js'
 
 import {testUrsaGroup as testGroup} from '../testutil.js'
 
@@ -52,7 +53,7 @@ testGroup('Sequences', [
 ])
 
 test('Assignment', async (t) => {
-  const error1 = t.throws(() => new ArkState().run(compile('4 := 5')), {instanceOf: UrsaCompilerError})
+  const error1 = t.throws(() => compile('4 := 5'), {instanceOf: UrsaCompilerError})
   assert(error1 !== undefined)
   t.is(error1.message, `\
 Line 1, col 1:
@@ -60,7 +61,7 @@ Line 1, col 1:
       ^
 
 Bad lvalue`)
-  const error2 = t.throws(() => new ArkState().run(compile('range(1) := 5')), {instanceOf: UrsaCompilerError})
+  const error2 = t.throws(() => compile('range(1) := 5'), {instanceOf: UrsaCompilerError})
   assert(error2 !== undefined)
   t.is(error2.message, `\
 Line 1, col 1:
@@ -81,7 +82,7 @@ testGroup('Conditionals', [
 ])
 
 test('loop and break', async (t) => {
-  const error = t.throws(() => new ArkState().run(compile('break')), {instanceOf: UrsaCompilerError})
+  const error = t.throws(() => compile('break'), {instanceOf: UrsaCompilerError})
   assert(error !== undefined)
   t.is(error.message, `\
 Line 1, col 1:
@@ -93,7 +94,7 @@ break used outside a loop`)
 })
 
 test('return', async (t) => {
-  const error = await t.throwsAsync(async () => new ArkState().run(compile('return')), {instanceOf: UrsaCompilerError})
+  const error = t.throws(() => compile('return'), {instanceOf: UrsaCompilerError})
   assert(error !== undefined)
   t.is(error.message, `\
 Line 1, col 1:
@@ -125,8 +126,21 @@ testGroup('Objects', [
   ['Object {;}', {}],
   ['ABC {a = 1; b = 2; c=3}', {a: 1, b: 2, c: 3}],
   ['let o = ABC {a = 1; b = 2}; o.b := 3; o', {a: 1, b: 3}],
-  ['let o = ABC {a = 1; b = 2}; o.b := 3; o.c := "abc"; o', {a: 1, b: 3, c: 'abc'}],
 ])
+
+test('Object assign invalid property', async (t) => {
+  const error = await t.throwsAsync(async () => runWithTraceback(
+    new ArkState(),
+    compile('let o = ABC {a = 1; b = 2}; o.c := "abc"'),
+  ), {instanceOf: UrsaRuntimeError})
+  assert(error !== undefined)
+  t.is(error.message, `\
+Line 1, col 29:
+> 1 | let o = ABC {a = 1; b = 2}; o.c := "abc"
+                                  ^~~
+
+Invalid property 'c'`)
+})
 
 testGroup('Maps', [
   ['{}', new Map<unknown, unknown>()],

@@ -59,7 +59,7 @@ class UrsaError extends Error {
 
 export class UrsaCompilerError extends UrsaError {}
 
-class UrsaRuntimeError extends UrsaError {
+export class UrsaRuntimeError extends UrsaError {
   constructor(public ark: ArkState, source: Interval, message: string) {
     super(source, message)
     const trace = []
@@ -84,10 +84,12 @@ class UrsaRuntimeError extends UrsaError {
         trace.push('(uninstrumented stack frame)')
       }
     }
-    this.message += `
+    if (trace.length > 0) {
+      this.message += `
 
 Traceback (most recent call last)
 ${trace.map((s) => `  ${s}`).join('\n')}`
+    }
   }
 }
 

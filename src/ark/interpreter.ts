@@ -127,10 +127,8 @@ export class ArkLiteral extends ArkExp {
   }
 }
 
-// FIXME: Need to differentiate "indexable" (List, string) from "has
-// properties" (List, Object).
 abstract class ArkAbstractObjectBase extends ArkVal {
-  abstract get(prop: string): ArkVal | undefined
+  abstract get(prop: string): ArkVal
 
   abstract set(prop: string, val: ArkVal): ArkVal
 }
@@ -140,8 +138,8 @@ export class ArkObjectBase extends ArkAbstractObjectBase {
     super()
   }
 
-  get(prop: string): ArkVal | undefined {
-    return this.properties.get(prop)
+  get(prop: string) {
+    return this.properties.get(prop) ?? ArkUndefined
   }
 
   set(prop: string, val: ArkVal) {
@@ -295,7 +293,7 @@ export class NativeFn extends ArkCallable {
   }
 
   async call(ark: ArkState): Promise<ArkVal> {
-    const args = ark.frame.locals.map((ref) => ref.get())
+    const args = ark.frame.locals.map((ref) => ref.get(ark))
     return Promise.resolve(this.body(...args))
   }
 }
@@ -306,7 +304,7 @@ export class NativeAsyncFn extends ArkCallable {
   }
 
   async call(ark: ArkState): Promise<ArkVal> {
-    const args = ark.frame.locals.map((ref) => ref.get())
+    const args = ark.frame.locals.map((ref) => ref.get(ark))
     return this.body(...args)
   }
 }
@@ -374,9 +372,9 @@ export class ArkCall extends ArkExp {
 }
 
 export abstract class ArkRef extends Ark {
-  abstract get(): ArkVal
+  abstract get(ark: ArkState): ArkVal
 
-  abstract set(val: ArkVal): ArkVal
+  abstract set(ark: ArkState, val: ArkVal): ArkVal
 }
 
 export class ArkValRef extends ArkRef {
@@ -384,11 +382,11 @@ export class ArkValRef extends ArkRef {
     super()
   }
 
-  get(): ArkVal {
+  get(_ark: ArkState): ArkVal {
     return this.val
   }
 
-  set(val: ArkVal): ArkVal {
+  set(_ark: ArkState, val: ArkVal): ArkVal {
     this.val = val
     return val
   }
@@ -396,11 +394,7 @@ export class ArkValRef extends ArkRef {
 
 export abstract class ArkLexp extends ArkExp {
   async eval(ark: ArkState): Promise<ArkVal> {
-    const val = (await this.evalRef(ark)).get()
-    if (val === ArkUndefined) {
-      throw new ArkRuntimeError(ark, `Uninitialized symbol ${this.debug.name}`, this)
-    }
-    return val
+    return (await this.evalRef(ark)).get(ark)
   }
 
   abstract evalRef(ark: ArkState): Promise<ArkRef>
@@ -434,13 +428,13 @@ export class ArkSet extends ArkExp {
   async eval(ark: ArkState): Promise<ArkVal> {
     const ref = await this.lexp.evalRef(ark)
     const res = await this.exp.eval(ark)
-    const oldVal = ref.get()
+    const oldVal = ref.get(ark)
     if (oldVal !== ArkUndefined
       && oldVal.constructor !== ArkNullVal
       && res.constructor !== oldVal.constructor) {
       throw new ArkRuntimeError(ark, 'Assignment to different type', this)
     }
-    ref.set(res)
+    ref.set(ark, res)
     return res
   }
 }
@@ -467,8 +461,8 @@ export class NativeObject extends ArkAbstractObjectBase {
     super()
   }
 
-  get(prop: string): ArkVal | undefined {
-    return fromJs((this.obj as {[key: string]: unknown})[prop], this.obj)
+  get(prop: string): ArkVal {
+    return fromJs((this.obj as {[key: string]: unknown})[prop], this.obj) ?? ArkUndefined
   }
 
   set(prop: string, val: ArkVal) {
@@ -484,11 +478,12 @@ export class ArkProperty extends ArkLexp {
 
   async evalRef(ark: ArkState): Promise<ArkRef> {
     const obj = await this.obj.eval(ark)
-    // FIXME: This is ad-hoc. See ArkAbstractObjectBase.
-    if (!(obj instanceof ArkAbstractObjectBase) || obj instanceof ArkNullVal) {
+    if (!(obj instanceof ArkAbstractObjectBase)) {
       throw new ArkRuntimeError(ark, 'Attempt to read property of non-object', this)
     }
-    return new ArkPropertyRef(obj, this.prop)
+    const ref = new ArkPropertyRef(obj, this.prop)
+    ref.debug.sourceLoc = this.debug.sourceLoc
+    return ref
   }
 }
 
@@ -497,11 +492,15 @@ export class ArkPropertyRef extends ArkRef {
     super()
   }
 
-  get() {
-    return this.obj.get(this.prop) ?? ArkNull()
+  get(ark: ArkState) {
+    const val = this.obj.get(this.prop)
+    if (val === ArkUndefined) {
+      throw new ArkRuntimeError(ark, `Invalid property '${this.prop}'`, this)
+    }
+    return val
   }
 
-  set(val: ArkVal) {
+  set(_ark: ArkState, val: ArkVal) {
     this.obj.set(this.prop, val)
     return val
   }
@@ -630,7 +629,7 @@ export async function pushLets(ark: ArkState, boundVars: [string, ArkExp][]) {
     vals.push(await bv[1].eval(ark))
   }
   for (let i = 0; i < lets.length; i += 1) {
-    lets[i].set(vals[i])
+    lets[i].set(ark, vals[i])
   }
   return lets.length
 }
