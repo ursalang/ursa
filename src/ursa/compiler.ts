@@ -18,7 +18,7 @@ import {
   ArkSequence, ArkIf, ArkLoop, ArkAnd, ArkOr,
   ArkObjectLiteral, ArkListLiteral, ArkMapLiteral,
   ArkCall, ArkLet, ArkFn, ArkProperty, ArkSet, ArkReturn,
-  ArkBreak, ArkContinue, ArkNullVal,
+  ArkBreak, ArkContinue,
 } from '../ark/interpreter.js'
 import {
   ArkCompilerError, symRef, Frame, Environment, checkParamList,
@@ -33,6 +33,7 @@ type ParserOperations = {
   toType(a: ParserArgs): void
   toMethod(a: ParserArgs): string[]
   toParam(a: ParserArgs): string
+  toLet(a: ParserArgs): LetBinding
   boundVars: string[]
 }
 
@@ -112,6 +113,12 @@ class Arguments extends AST {
   }
 }
 
+class LetBinding extends AST {
+  constructor(public boundVars: [string, ArkExp][]) {
+    super()
+  }
+}
+
 function maybeVal(a: ParserArgs, exp: ParserIterationNode): ArkExp {
   return exp.children.length > 0
     ? exp.children[0].toExp(a)
@@ -173,28 +180,54 @@ semantics.addOperation<string>('toParam(a)', {
   },
 })
 
+semantics.addOperation<LetBinding>('toLet(a)', {
+  Lets(lets) {
+    const letIds: string[] = []
+    for (const l of (lets.asIteration().children)) {
+      const ident = l.children[1].children[0].sourceString
+      if (letIds.includes(ident)) {
+        throw new UrsaCompilerError(this.source, `Duplicate identifier in let: ${ident}`)
+      }
+      letIds.push(ident)
+    }
+    const innerEnv = this.args.a.env.push(letIds)
+    const parsedLets = []
+    for (const l of lets.asIteration().children) {
+      const definition = l.children[1].toDefinition({...this.args.a, env: innerEnv})
+      parsedLets.push(definition)
+    }
+    return new LetBinding(parsedLets.map((def) => [def.ident.sourceString, def.val]))
+  },
+
+  Use(_use, pathList) {
+    const path = pathList.asIteration().children
+    const ident = path[path.length - 1]
+    // For path x.y.z, compile `let z = x.use("y", "z")`
+    const innerEnv = this.args.a.env.push([ident.sourceString])
+    const libValue = path[0].toExp({...this.args.a, env: innerEnv})
+    const useProperty = addLoc(new ArkProperty(libValue, 'use'), this)
+    const useCallArgs = path.slice(1).map((id) => new ArkLiteral(ArkString(id.sourceString)))
+    const useCall = addLoc(new ArkCall(useProperty, useCallArgs), this)
+    return new LetBinding([[ident.sourceString, useCall]])
+  },
+})
+
 function makeSequence(a: ParserArgs, seq: ParserNode, exps: ParserNode[]): ArkExp {
   const res = []
   for (const [i, exp] of exps.entries()) {
-    const compiledExp = exp.toExp(a)
-    if (compiledExp instanceof ArkLet) {
-      const innerEnv = a.env.push(compiledExp.boundVars.map((bv) => bv[0]))
-      let letBody = compiledExp.body
+    if (exp.children[0].ctorName === 'Lets' || exp.children[0].ctorName === 'Use') {
+      const compiledLet = exp.toLet(a)
+      const innerEnv = a.env.push(compiledLet.boundVars.map((bv) => bv[0]))
+      let letBody: ArkExp
       if (i < exps.length - 1) {
-        const seqBody = []
-        // FIXME: add an AST class for compiling Lets, rather than producing
-        // an ArkLet and then having to take it apart like this.
-        if (!(compiledExp.body instanceof ArkLiteral
-          && compiledExp.body.val instanceof ArkNullVal)) {
-          seqBody.push(compiledExp.body)
-        }
-        seqBody.push(makeSequence({...a, env: innerEnv}, seq, exps.slice(i + 1)))
-        letBody = seqBody.length === 1 ? seqBody[0] : new ArkSequence(seqBody)
+        letBody = makeSequence({...a, env: innerEnv}, seq, exps.slice(i + 1))
+      } else {
+        letBody = new ArkLiteral(ArkNull())
       }
-      res.push(new ArkLet(compiledExp.boundVars, letBody))
+      res.push(addLoc(new ArkLet(compiledLet.boundVars, letBody), exp))
       break
     } else {
-      res.push(compiledExp)
+      res.push(exp.toExp(a))
     }
   }
   if (res.length === 1) {
@@ -473,43 +506,6 @@ semantics.addOperation<ArkExp>('toExp(a)', {
       throw new UrsaCompilerError(_return.source, 'return used outside a function')
     }
     return addLoc(new ArkReturn(maybeVal(this.args.a, exp)), this)
-  },
-
-  Lets(lets) {
-    const letIds: string[] = []
-    for (const l of (lets.asIteration().children)) {
-      const ident = l.children[1].children[0].sourceString
-      if (letIds.includes(ident)) {
-        throw new UrsaCompilerError(this.source, `Duplicate identifier in let: ${ident}`)
-      }
-      letIds.push(ident)
-    }
-    const innerEnv = this.args.a.env.push(letIds)
-    const parsedLets = []
-    for (const l of lets.asIteration().children) {
-      const definition = l.children[1].toDefinition({...this.args.a, env: innerEnv})
-      parsedLets.push(definition)
-    }
-    return addLoc(
-      new ArkLet(
-        parsedLets.map((def) => [def.ident.sourceString, def.val]),
-        new ArkLiteral(ArkNull()),
-      ),
-      this,
-    )
-  },
-
-  Use(_use, pathList) {
-    const path = pathList.asIteration().children
-    const ident = path[path.length - 1]
-    // For path x.y.z, compile `let z = x.use("y", "z")`
-    const innerEnv = this.args.a.env.push([ident.sourceString])
-    const libValue = path[0].toExp({...this.args.a, env: innerEnv})
-    const useProperty = addLoc(new ArkProperty(libValue, 'use'), this)
-    const useCallArgs = path.slice(1).map((id) => new ArkLiteral(ArkString(id.sourceString)))
-    const useCall = addLoc(new ArkCall(useProperty, useCallArgs), this)
-    const compiledUse = new ArkLet([[ident.sourceString, useCall]], new ArkLiteral(ArkNull()))
-    return addLoc(compiledUse, this)
   },
 
   Block(_open, seq, _close) {
