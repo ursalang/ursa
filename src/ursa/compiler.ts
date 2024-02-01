@@ -242,10 +242,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     return addLoc(makeProperty(this.args.a, exp, property), this)
   },
   PostfixExp_call(exp, args) {
-    return addLoc(
-      new ArkCall(exp.toExp(this.args.a), args.toArguments(this.args.a).args),
-      this,
-    )
+    return addLoc(new ArkCall(exp.toExp(this.args.a), args.toArguments(this.args.a).args), this)
   },
 
   Ifs(ifs, _else, elseBlock) {
@@ -253,17 +250,12 @@ semantics.addOperation<ArkExp>('toExp(a)', {
       (x) => addLoc(x.toExp(this.args.a), x) as ArkIf,
     )
     if (elseBlock.children.length > 0) {
-      compiledIfs.push(
-        elseBlock.children[0].toExp(this.args.a) as ArkIf,
-      )
+      compiledIfs.push(elseBlock.children[0].toExp(this.args.a) as ArkIf)
     }
     return makeIfChain(compiledIfs)
   },
   If(_if, cond, thenBlock) {
-    return addLoc(
-      new ArkIf(cond.toExp(this.args.a), thenBlock.toExp(this.args.a)),
-      this,
-    )
+    return addLoc(new ArkIf(cond.toExp(this.args.a), thenBlock.toExp(this.args.a)), this)
   },
 
   Fn(type, body) {
