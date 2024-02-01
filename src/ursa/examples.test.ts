@@ -86,7 +86,7 @@ e`, `\
 Error: Line 6, col 13:
   5 |     let l = it()
 > 6 |     let k = l.get(0) and let v = l.get(1)
-                  ^
+                  ^~~~~
   7 |     if l == null { return tot }
 
 Attempt to read property of non-object
@@ -97,7 +97,7 @@ Traceback (most recent call last)
 Error: Line 6, col 17:
   5 |         let l = it()
 > 6 |         let k = l.get(0) and let v = l.get(1)
-                      ^
+                      ^~~~~
   7 |         if l == null {
 
 Attempt to read property of non-object

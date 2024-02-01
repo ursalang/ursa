@@ -228,6 +228,7 @@ async function runCode(source: string, args: Args) {
   let result: ArkVal | undefined
   if (source !== undefined) {
     if (args.target === 'ark') {
+      // FIXME: Don't call runWithTraceback when --syntax=json
       result = await runWithTraceback(ark, compile(args, source))
     } else {
       // eslint-disable-next-line no-eval

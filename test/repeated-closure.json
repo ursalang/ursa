@@ -7,10 +7,10 @@
           "fn",
           [ "x" ],
           [
-            "set", "tot", [ "+", [ "get", "tot" ], [ "get", "x" ] ]
+            "set", "tot", [ "+", "tot", "x" ]
           ]
         ]
       ] ],
-    [ "list", [ [ "get", "accum" ], 1 ], [ [ "get", "accum" ], 1 ] ]
+    [ "list", [ "accum", 1 ], [ "accum", 1 ] ]
   ]
 ]

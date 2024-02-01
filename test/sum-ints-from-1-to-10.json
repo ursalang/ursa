@@ -5,13 +5,13 @@
     "loop",
     [
       "seq",
-      [ "set", "i", [ "+", [ "get", "i" ], 1 ] ],
+      [ "set", "i", [ "+", "i", 1 ] ],
       [
         "set",
         "total",
-        [ "+", [ "get", "total" ], [ "get", "i" ] ]
+        [ "+", "total", "i" ]
       ],
-      [ "if", [ "=", [ "get", "i" ], 10 ], [ "break", [ "get", "total" ] ] ]
+      [ "if", [ "=", "i", 10 ], [ "break", "total" ] ]
     ]
   ]
 ]

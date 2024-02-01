@@ -12,19 +12,19 @@
               "seq",
               [
                 "if",
-                [ "=", [ "get", "i" ], [ [ "get", [ "prop", "len", [ "get", "l" ] ] ] ] ],
-                [ "return", [ "get", "l" ] ]
+                [ "=", "i", [ [ "prop", "len", "l" ] ] ],
+                [ "return", "l" ]
               ],
               [
-                [ "get", [ "prop", "set", [ "get", "l" ] ] ],
-                [ "get", "i" ],
-                [ "*", [ [ "get", [ "prop", "get", [ "get", "l" ] ] ], [ "get", "i" ] ], 2 ]
+                [ "prop", "set", "l" ],
+                "i",
+                [ "*", [ [ "prop", "get", "l" ], "i" ], 2 ]
               ],
-              [ "set", "i", [ "+", [ "get", "i" ], 1 ] ]
+              [ "set", "i", [ "+", "i", 1 ] ]
             ]
           ]
         ]
       ]
     ] ],
-  [ [ "get", "double" ], [ "list", 1, 2, 3 ] ]
+  [ "double", [ "list", 1, 2, 3 ] ]
 ]

@@ -22,8 +22,8 @@ testGroup('Concrete values', [
 testGroup('Intrinsics', [
   ['["+",3,4]', 7],
   ['["*",["+",3,4],5]', 35],
-  ['["get","pi"]', Math.PI],
-  ['["seq",["get","pi"],["+",3,5]]', 8],
+  ['"pi"', Math.PI],
+  ['["seq","pi",["+",3,5]]', 8],
   ['["=",["+",3,4],7]', true],
   ['["not",2]', false],
   ['["~",2]', -3],
@@ -59,7 +59,7 @@ testGroup('loop and break', [
 ])
 
 testGroup('let', [
-  ['["let",[["a", 3]],["get","a"]]', 3],
+  ['["let",[["a", 3]],"a"]', 3],
 ])
 
 testGroup('Objects', [
@@ -68,9 +68,9 @@ testGroup('Objects', [
 
 testGroup('Lists', [
   ['["list",1,2,3]', [1, 2, 3]],
-  ['[["get",["prop","len",["list",1,2,3]]]]', 3],
-  ['[["get",["prop","get",["list",4,5,6]]],1]', 5],
-  ['[["get",["prop","set",["list",4,5,6]]],1,2]', [4, 2, 6]],
+  ['[["prop","len",["list",1,2,3]]]', 3],
+  ['[["prop","get",["list",4,5,6]],1]', 5],
+  ['[["prop","set",["list",4,5,6]],1,2]', [4, 2, 6]],
 ])
 
 testGroup('Maps', [

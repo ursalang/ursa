@@ -8,10 +8,10 @@ import preludeJson from './prelude.json' assert {type: 'json'}
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  ArkState, ArkExp, intrinsics, globals,
+  ArkState, ArkExp, ArkLexp, intrinsics, globals,
   ArkIf, ArkAnd, ArkOr, ArkSequence, ArkLoop, ArkBreak, ArkContinue,
   ArkNull, ArkBoolean, ArkNumber, ArkString,
-  ArkGet, ArkSet, ArkLocalRef, ArkCaptureRef,
+  ArkSet, ArkLocal, ArkCapture,
   ArkListLiteral, ArkObjectLiteral, ArkMapLiteral,
   ArkFn, ArkReturn, ArkProperty, ArkLet, ArkCall, ArkLiteral, ArkObject,
 } from './interpreter.js'
@@ -90,30 +90,25 @@ function listToVals(env: Environment, l: unknown[]): ArkExp[] {
   return l.map((elem) => doCompile(env, elem))
 }
 
-export function symRef(env: Environment, name: string): ArkExp {
-  // Check whether the symbol is an intrinsic.
-  const val = intrinsics.get(name)
-  if (val !== undefined) {
-    return new ArkLiteral(val)
-  }
-  let ref
+export function symRef(env: Environment, name: string): ArkLexp {
+  let lexp
   // Check whether the symbol is a local.
   const j = env.top().locals.lastIndexOf(name)
   if (j !== -1) {
-    ref = new ArkLocalRef(j)
+    lexp = new ArkLocal(j)
   } else {
     // Otherwise, check if it's a capture.
     // Check whether we already have this capture.
     const k = env.top().captures.lastIndexOf(name)
     if (k !== -1) {
-      ref = new ArkCaptureRef(k)
+      lexp = new ArkCapture(k)
     } else {
       // If not, see if it's on the stack to be captured.
       for (let i = 0; i < env.stack.length; i += 1) {
         const j = env.stack[i].locals.lastIndexOf(name)
         if (j !== -1) {
           const k = env.top().captures.length
-          ref = new ArkCaptureRef(k)
+          lexp = new ArkCapture(k)
           env.top().captures.push(name)
           break
         }
@@ -121,15 +116,16 @@ export function symRef(env: Environment, name: string): ArkExp {
     }
   }
   // Finally, see if it's a global, and if not, error.
-  if (ref === undefined) {
+  if (lexp === undefined) {
     if (env.externalSyms.get(name) === undefined) {
       throw new ArkCompilerError(`Undefined symbol ${name}`)
     }
-    return new ArkProperty(new ArkLiteral(env.externalSyms), name)
+    lexp = new ArkProperty(new ArkLiteral(env.externalSyms), name)
   }
-  ref.debug.name = name
-  ref.debug.env = JSON.stringify(env)
-  return new ArkLiteral(ref)
+  // TODO: set debug in ArkLexp.constructor()
+  lexp.debug.name = name
+  lexp.debug.env = JSON.stringify(env)
+  return lexp
 }
 
 function doCompile(env: Environment, value: unknown): ArkExp {
@@ -143,6 +139,11 @@ function doCompile(env: Environment, value: unknown): ArkExp {
     return new ArkLiteral(ArkNumber(value))
   }
   if (typeof value === 'string') {
+    // Check whether the symbol is an intrinsic.
+    const val = intrinsics.get(value)
+    if (val !== undefined) {
+      return new ArkLiteral(val)
+    }
     return symRef(env, value)
   }
   if (value instanceof Array) {
@@ -177,18 +178,14 @@ function doCompile(env: Environment, value: unknown): ArkExp {
           const compiled = doCompile(env, value[2])
           return new ArkProperty(compiled, value[1])
         }
-        case 'get': {
-          if (value.length !== 2) {
-            throw new ArkCompilerError("Invalid 'get'")
-          }
-          const compiled = doCompile(env, value[1])
-          return new ArkGet(compiled)
-        }
         case 'set': {
           if (value.length !== 3) {
             throw new ArkCompilerError("Invalid 'set'")
           }
           const compiledRef = doCompile(env, value[1])
+          if (!(compiledRef instanceof ArkLexp)) {
+            throw new ArkCompilerError('Invalid lvalue')
+          }
           const compiledVal = doCompile(env, value[2])
           return new ArkSet(compiledRef, compiledVal)
         }

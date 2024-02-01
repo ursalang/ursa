@@ -12,10 +12,11 @@ import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
   ArkState, intrinsics, ArkRuntimeError,
-  ArkVal, ArkExp, ArkLiteral, ArkNull, ArkBoolean, ArkNumber, ArkString,
+  ArkVal, ArkExp, ArkLexp, ArkLiteral,
+  ArkNull, ArkBoolean, ArkNumber, ArkString,
   ArkSequence, ArkIf, ArkLoop, ArkAnd, ArkOr,
   ArkObjectLiteral, ArkListLiteral, ArkMapLiteral,
-  ArkCall, ArkLet, ArkFn, ArkProperty, ArkGet, ArkSet, ArkReturn,
+  ArkCall, ArkLet, ArkFn, ArkProperty, ArkSet, ArkReturn,
   ArkBreak, ArkContinue, ArkNullVal,
 } from '../ark/interpreter.js'
 import {
@@ -24,7 +25,7 @@ import {
 
 type ParserOperations = {
   toExp(a: ParserArgs): ArkExp
-  toLval(a: ParserArgs): ArkExp
+  toLval(a: ParserArgs): ArkLexp
   toDefinition(a: ParserArgs): Definition
   toKeyValue(a: ParserArgs): KeyValue
   toArguments(a: ParserArgs): Arguments
@@ -62,20 +63,21 @@ class UrsaRuntimeError extends UrsaError {
     const trace = []
     // Exclude top level stack frame from trace-back.
     for (let state: ArkState = ark; state.outerState !== undefined; state = state.outerState) {
-      const callInfo = state.frame.debug.source
-      let fnName
+      const callerInfo = state.outerState.frame.debug.source
+      let fnLocation
       if (state.outerState.outerState !== undefined) {
-        const fnNameInfo = state.outerState.frame.debug.name
-        if (fnNameInfo !== undefined) {
-          fnName = fnNameInfo.debug.name
+        let fnName = '(anonymous function)'
+        if (callerInfo !== undefined && callerInfo.fn.debug.name) {
+          fnName = callerInfo.fn.debug.name
         }
-        fnName = `in ${fnName}`
+        fnLocation = `in ${fnName}`
       } else {
-        fnName = 'at top level'
+        fnLocation = 'at top level'
       }
+      const callInfo = state.frame.debug.source
       if (callInfo !== undefined) {
         const line = (callInfo.debug.sourceLoc as Interval).getLineAndColumn()
-        trace.push(`line ${line.lineNum}\n    ${line.line}, ${fnName}`)
+        trace.push(`line ${line.lineNum}\n    ${line.line}, ${fnLocation}`)
       } else {
         trace.push('(uninstrumented stack frame)')
       }
@@ -115,7 +117,7 @@ function maybeVal(a: ParserArgs, exp: ParserIterationNode): ArkExp {
     : new ArkLiteral(ArkNull())
 }
 
-function addLoc(val: ArkExp, node: ParserNode) {
+function addLoc<T extends ArkExp>(val: T, node: ParserNode): T {
   val.debug.sourceLoc = node.source
   return val
 }
@@ -237,7 +239,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
   },
 
   PostfixExp_property(exp, _dot, property) {
-    return addLoc(new ArkGet(makeProperty(this.args.a, exp, property)), this)
+    return addLoc(makeProperty(this.args.a, exp, property), this)
   },
   PostfixExp_call(exp, args) {
     return addLoc(
@@ -289,10 +291,10 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     const compiledForVar = symRef(loopEnv, forVar)
     const compiledForBody = body.toExp({...this.args.a, env: loopEnv, inLoop: true})
     const loopBody = new ArkLet(
-      [[forVar, new ArkCall(new ArkGet(symRef(loopEnv, '_for')), [])]],
+      [[forVar, new ArkCall(symRef(loopEnv, '_for'), [])]],
       new ArkSequence([
         new ArkIf(
-          new ArkCall(new ArkLiteral(intrinsics.get('=')), [new ArkGet(compiledForVar), new ArkLiteral(ArkNull())]),
+          new ArkCall(new ArkLiteral(intrinsics.get('=')), [compiledForVar, new ArkLiteral(ArkNull())]),
           new ArkBreak(),
         ),
         compiledForBody,
@@ -508,7 +510,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     // For path x.y.z, compile `let z = x.use("y", "z")`
     const innerEnv = this.args.a.env.push([ident.sourceString])
     const libValue = path[0].toExp({...this.args.a, env: innerEnv})
-    const useProperty = new ArkGet(addLoc(new ArkProperty(libValue, 'use'), this))
+    const useProperty = addLoc(new ArkProperty(libValue, 'use'), this)
     const useCallArgs = path.slice(1).map((id) => new ArkLiteral(ArkString(id.sourceString)))
     const useCall = addLoc(new ArkCall(useProperty, useCallArgs), this)
     const compiledUse = new ArkLet([[ident.sourceString, useCall]], new ArkLiteral(ArkNull()))
@@ -520,7 +522,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
   },
 
   ident(ident) {
-    return addLoc(new ArkGet(symRef(this.args.a.env, ident.sourceString)), this)
+    return addLoc(symRef(this.args.a.env, ident.sourceString), this)
   },
 
   null(_null) {
@@ -587,7 +589,7 @@ function badLvalue(node: ParserNode): never {
 }
 
 // The node passed to toLval is always a PostfixExp or PrimaryExp.
-semantics.addOperation<ArkExp>('toLval(a)', {
+semantics.addOperation<ArkLexp>('toLval(a)', {
   _terminal() {
     badLvalue(this)
   },

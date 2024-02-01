@@ -43,7 +43,7 @@ class ArkFrame {
 class FrameDebugInfo {
   constructor(
     public name: ArkRef | undefined = undefined,
-    public source: Ark | undefined = undefined,
+    public source: ArkCall | undefined = undefined,
   ) {}
 }
 
@@ -295,7 +295,7 @@ export class NativeFn extends ArkCallable {
   }
 
   async call(ark: ArkState): Promise<ArkVal> {
-    const args = ark.frame.locals.map((ref) => ref.get(ark))
+    const args = ark.frame.locals.map((ref) => ref.get())
     return Promise.resolve(this.body(...args))
   }
 }
@@ -306,13 +306,13 @@ export class NativeAsyncFn extends ArkCallable {
   }
 
   async call(ark: ArkState): Promise<ArkVal> {
-    const args = ark.frame.locals.map((ref) => ref.get(ark))
+    const args = ark.frame.locals.map((ref) => ref.get())
     return this.body(...args)
   }
 }
 
 export class ArkFn extends ArkExp {
-  constructor(public params: string[], public capturedVars: ArkExp[], public body: ArkExp) {
+  constructor(public params: string[], public capturedVars: ArkLexp[], public body: ArkExp) {
     super()
   }
 
@@ -320,7 +320,7 @@ export class ArkFn extends ArkExp {
     const captures = []
     for (const exp of this.capturedVars) {
       // eslint-disable-next-line no-await-in-loop
-      captures.push((await exp.eval(ark) as ArkLocalRef).ref(ark))
+      captures.push(await exp.evalRef(ark))
     }
     return new ArkClosure(this.params, captures, this.body)
   }
@@ -355,8 +355,8 @@ export class ArkCall extends ArkExp {
   async eval(ark: ArkState): Promise<ArkVal> {
     const fn = this.fn
     let sym: ArkRef | undefined
-    if (fn instanceof ArkGet && fn.val instanceof ArkLiteral && fn.val.val instanceof ArkRef) {
-      sym = fn.val.val
+    if (fn instanceof ArkLocal || fn instanceof ArkCapture) {
+      sym = await fn.evalRef(ark)
     }
     const fnVal = await fn.eval(ark)
     if (!(fnVal instanceof ArkCallable)) {
@@ -373,10 +373,10 @@ export class ArkCall extends ArkExp {
   }
 }
 
-export abstract class ArkRef extends ArkVal {
-  abstract get(ark: ArkState): ArkVal
+export abstract class ArkRef extends Ark {
+  abstract get(): ArkVal
 
-  abstract set(ark: ArkState, val: ArkVal): ArkVal
+  abstract set(val: ArkVal): ArkVal
 }
 
 export class ArkValRef extends ArkRef {
@@ -384,84 +384,63 @@ export class ArkValRef extends ArkRef {
     super()
   }
 
-  get(_ark: ArkState): ArkVal {
+  get(): ArkVal {
     return this.val
   }
 
-  set(_ark: ArkState, val: ArkVal): ArkVal {
+  set(val: ArkVal): ArkVal {
     this.val = val
     return val
   }
 }
 
-export class ArkLocalRef extends ArkRef {
-  constructor(public index: number) {
-    super()
-  }
-
-  ref(ark: ArkState): ArkRef {
-    return ark.frame.locals[this.index]
-  }
-
-  get(ark: ArkState): ArkVal {
-    return ark.frame.locals[this.index].get(ark)
-  }
-
-  set(ark: ArkState, val: ArkVal) {
-    ark.frame.locals[this.index].set(ark, val)
-    return val
-  }
-}
-
-export class ArkCaptureRef extends ArkRef {
-  constructor(public index: number) {
-    super()
-  }
-
-  get(ark: ArkState): ArkVal {
-    return ark.frame.captures[this.index].get(ark)
-  }
-
-  set(ark: ArkState, val: ArkVal) {
-    const ref = ark.frame.captures[this.index]
-    ref.set(ark, val)
-    return val
-  }
-}
-
-export class ArkGet extends ArkExp {
-  constructor(public val: ArkExp) {
-    super()
-  }
-
+export abstract class ArkLexp extends ArkExp {
   async eval(ark: ArkState): Promise<ArkVal> {
-    const ref = await (this.val.eval(ark) as Promise<ArkRef>)
-    const val = ref.get(ark)
+    const val = (await this.evalRef(ark)).get()
     if (val === ArkUndefined) {
-      throw new ArkRuntimeError(ark, `Uninitialized symbol ${this.val.debug.name}`, this)
+      throw new ArkRuntimeError(ark, `Uninitialized symbol ${this.debug.name}`, this)
     }
     return val
+  }
+
+  abstract evalRef(ark: ArkState): Promise<ArkRef>
+}
+
+export class ArkLocal extends ArkLexp {
+  constructor(public index: number) {
+    super()
+  }
+
+  evalRef(ark: ArkState): Promise<ArkRef> {
+    return Promise.resolve(ark.frame.locals[this.index])
+  }
+}
+
+export class ArkCapture extends ArkLexp {
+  constructor(public index: number) {
+    super()
+  }
+
+  evalRef(ark: ArkState): Promise<ArkRef> {
+    return Promise.resolve(ark.frame.captures[this.index])
   }
 }
 
 export class ArkSet extends ArkExp {
-  constructor(public ref: ArkExp, public val: ArkExp) {
+  constructor(public lexp: ArkLexp, public exp: ArkExp) {
     super()
   }
 
   async eval(ark: ArkState): Promise<ArkVal> {
-    const ref = await this.ref.eval(ark)
-    const res = await this.val.eval(ark)
-    if (!(ref instanceof ArkRef)) {
-      throw new ArkRuntimeError(ark, 'Assignment to non-reference', this)
-    }
-    const oldVal = ref.get(ark)
+    const ref = await this.lexp.evalRef(ark)
+    const res = await this.exp.eval(ark)
+    const oldVal = ref.get()
     if (oldVal !== ArkUndefined
       && oldVal.constructor !== ArkNullVal
       && res.constructor !== oldVal.constructor) {
       throw new ArkRuntimeError(ark, 'Assignment to different type', this)
     }
-    ref.set(ark, res)
+    ref.set(res)
     return res
   }
 }
@@ -498,12 +477,12 @@ export class NativeObject extends ArkAbstractObjectBase {
   }
 }
 
-export class ArkProperty extends ArkExp {
+export class ArkProperty extends ArkLexp {
   constructor(public obj: ArkExp, public prop: string) {
     super()
   }
 
-  async eval(ark: ArkState): Promise<ArkVal> {
+  async evalRef(ark: ArkState): Promise<ArkRef> {
     const obj = await this.obj.eval(ark)
     // FIXME: This is ad-hoc. See ArkAbstractObjectBase.
     if (!(obj instanceof ArkAbstractObjectBase) || obj instanceof ArkNullVal) {
@@ -518,11 +497,11 @@ export class ArkPropertyRef extends ArkRef {
     super()
   }
 
-  get(_ark: ArkState) {
+  get() {
     return this.obj.get(this.prop) ?? ArkNull()
   }
 
-  set(_ark: ArkState, val: ArkVal) {
+  set(val: ArkVal) {
     this.obj.set(this.prop, val)
     return val
   }
@@ -656,7 +635,7 @@ export class ArkLet extends ArkExp {
       vals.push(await bv[1].eval(ark))
     }
     for (let i = 0; i < lets.length; i += 1) {
-      lets[i].set(ark, vals[i])
+      lets[i].set(vals[i])
     }
     let res: ArkVal
     try {

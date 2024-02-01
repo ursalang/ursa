@@ -5,7 +5,7 @@
 import {
   Ark, ArkConcreteVal, ArkUndefined, ArkNull, ArkSequence,
   ArkAnd, ArkOr, ArkIf, ArkLoop, ArkBreak, ArkContinue,
-  ArkGet, ArkSet, ArkLet, ArkCall, ArkFn, ArkReturn,
+  ArkSet, ArkLet, ArkCall, ArkFn, ArkReturn,
   NativeObject, ArkObject, ArkList, ArkMap, ArkProperty,
   ArkLiteral, ArkListLiteral, ArkMapLiteral, ArkObjectLiteral,
   globals,
@@ -29,8 +29,6 @@ export function valToJs(val: Ark): unknown {
     return val.val
   } else if (val instanceof ArkLiteral) {
     return valToJs(val.val)
-  } else if (val instanceof ArkGet) {
-    return ['get', valToJs(val.val)]
   } else if (val instanceof ArkFn) {
     return ['fn', [...val.params], valToJs(val.body)]
   } else if (val instanceof ArkObject || val instanceof ArkObjectLiteral) {
@@ -52,7 +50,7 @@ export function valToJs(val: Ark): unknown {
   } else if (val instanceof ArkCall) {
     return [valToJs(val.fn), ...val.args.map(valToJs)]
   } else if (val instanceof ArkSet) {
-    return ['set', valToJs(val.ref), valToJs(val.val)]
+    return ['set', valToJs(val.lexp), valToJs(val.exp)]
   } else if (val instanceof ArkProperty) {
     if (val.obj instanceof ArkLiteral && val.obj.val === globals) {
       // Serialize globals as simply their name.
