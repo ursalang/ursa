@@ -82,10 +82,10 @@ export class ArkRuntimeError extends Error {
 export class Ark {
   static nextId = 0
 
+  static debugEnumerable = process.env.DEBUG_ARK !== undefined
+
   constructor() {
-    // FIXME: Do this more efficiently?
-    // Object.defineProperty(this, 'debug', {enumerable: process.env.ARK_DEBUG !== undefined})
-    Object.defineProperty(this, 'debug', {enumerable: false})
+    Object.defineProperty(this, 'debug', {enumerable: Ark.debugEnumerable})
     this.debug.uid = Ark.nextId
     Ark.nextId += 1
   }
