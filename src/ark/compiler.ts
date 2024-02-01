@@ -296,9 +296,6 @@ export function compile(expr: unknown, env = new Environment()): ArkExp {
 }
 
 // Compile the prelude and add its values to the globals
-const ark = new ArkState()
 const prelude = compile(preludeJson)
-const preludeObj = await prelude.eval(ark) as ArkObject
-for (const [sym, val] of preludeObj.properties) {
-  globals.set(sym, val)
-}
+const preludeObj = await prelude.eval(new ArkState()) as ArkObject
+preludeObj.properties.forEach((val, sym) => globals.set(sym, val))
