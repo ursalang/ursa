@@ -4,13 +4,14 @@
 
 import {Interval} from 'ohm-js'
 
+import assert from 'assert'
 import grammar, {
   Node, NonterminalNode, IterationNode, ThisNode,
   // eslint-disable-next-line import/extensions
 } from '../grammar/ursa.ohm-bundle.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  debug,
+  debug, valToString,
   ArkState, intrinsics, ArkRuntimeError,
   ArkVal, ArkExp, ArkLexp, ArkLiteral,
   ArkNull, ArkBoolean, ArkNumber, ArkString,
@@ -118,12 +119,19 @@ function maybeVal(a: ParserArgs, exp: ParserIterationNode): ArkExp {
 }
 
 function addLoc<T extends ArkExp>(val: T, node: ParserNode): T {
+  // Ensure we don't overwrite more precise location info with less precise.
+  assert(val.debug.sourceLoc === undefined, valToString(node))
   val.debug.sourceLoc = node.source
   return val
 }
 
-function makeProperty(a: ParserArgs, object: ParserNonterminalNode, property: ParserNode) {
-  return addLoc(new ArkProperty(object.toExp(a), property.sourceString), object)
+function makeProperty(
+  a: ParserArgs,
+  exp: ParserNode,
+  object: ParserNonterminalNode,
+  property: ParserNode,
+) {
+  return addLoc(new ArkProperty(object.toExp(a), property.sourceString), exp)
 }
 
 function makeIfChain(ifs: ArkIf[]): ArkIf {
@@ -135,10 +143,7 @@ function makeIfChain(ifs: ArkIf[]): ArkIf {
 
 semantics.addOperation<Definition>('toDefinition(a)', {
   Definition(ident, initializer) {
-    return new Definition(
-      ident,
-      addLoc(initializer.children[1].toExp(this.args.a), initializer),
-    )
+    return new Definition(ident, initializer.children[1].toExp(this.args.a))
   },
 })
 
@@ -146,7 +151,7 @@ semantics.addOperation<KeyValue>('toKeyValue(a)', {
   KeyValue(key, _colon, value) {
     return new KeyValue(
       key.toExp(this.args.a),
-      addLoc(value.toExp(this.args.a), value),
+      value.toExp(this.args.a),
     )
   },
 })
@@ -154,9 +159,7 @@ semantics.addOperation<KeyValue>('toKeyValue(a)', {
 semantics.addOperation<Arguments>('toArguments(a)', {
   Arguments(_open, args, _maybeComma, _close) {
     return new Arguments(
-      args.asIteration().children.map(
-        (x) => addLoc(x.toExp(this.args.a), x),
-      ),
+      args.asIteration().children.map((x) => x.toExp(this.args.a)),
     )
   },
 })
@@ -170,7 +173,7 @@ semantics.addOperation<string>('toParam(a)', {
   },
 })
 
-function makeSequence(a: ParserArgs, exps: ParserNode[]): ArkExp {
+function makeSequence(a: ParserArgs, seq: ParserNode, exps: ParserNode[]): ArkExp {
   const res = []
   for (const [i, exp] of exps.entries()) {
     const compiledExp = exp.toExp(a)
@@ -185,7 +188,7 @@ function makeSequence(a: ParserArgs, exps: ParserNode[]): ArkExp {
           && compiledExp.body.val instanceof ArkNullVal)) {
           seqBody.push(compiledExp.body)
         }
-        seqBody.push(makeSequence({...a, env: innerEnv}, exps.slice(i + 1)))
+        seqBody.push(makeSequence({...a, env: innerEnv}, seq, exps.slice(i + 1)))
         letBody = seqBody.length === 1 ? seqBody[0] : new ArkSequence(seqBody)
       }
       res.push(new ArkLet(compiledExp.boundVars, letBody))
@@ -197,16 +200,16 @@ function makeSequence(a: ParserArgs, exps: ParserNode[]): ArkExp {
   if (res.length === 1) {
     return res[0]
   }
-  return new ArkSequence(res)
+  return addLoc(new ArkSequence(res), seq)
 }
 
 semantics.addOperation<ArkExp>('toExp(a)', {
   Sequence(exps, _sc) {
-    return addLoc(makeSequence(this.args.a, exps.asIteration().children), this)
+    return makeSequence(this.args.a, this, exps.asIteration().children)
   },
 
   PrimaryExp_paren(_open, exp, _close) {
-    return addLoc(exp.toExp(this.args.a), this)
+    return exp.toExp(this.args.a)
   },
 
   List(_open, elems, _maybeComma, _close) {
@@ -239,7 +242,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
   },
 
   PostfixExp_property(exp, _dot, property) {
-    return addLoc(makeProperty(this.args.a, exp, property), this)
+    return makeProperty(this.args.a, this, exp, property)
   },
   PostfixExp_call(exp, args) {
     return addLoc(new ArkCall(exp.toExp(this.args.a), args.toArguments(this.args.a).args), this)
@@ -247,7 +250,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
 
   Ifs(ifs, _else, elseBlock) {
     const compiledIfs: ArkIf[] = (ifs.asIteration().children).map(
-      (x) => addLoc(x.toExp(this.args.a), x) as ArkIf,
+      (x) => x.toExp(this.args.a) as ArkIf,
     )
     if (elseBlock.children.length > 0) {
       compiledIfs.push(elseBlock.children[0].toExp(this.args.a) as ArkIf)
@@ -510,7 +513,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
   },
 
   Block(_open, seq, _close) {
-    return addLoc(seq.toExp(this.args.a), this)
+    return seq.toExp(this.args.a)
   },
 
   ident(ident) {
@@ -600,7 +603,7 @@ semantics.addOperation<ArkLexp>('toLval(a)', {
     return exp.toLval(this.args.a)
   },
   PostfixExp_property(exp, _dot, property) {
-    return makeProperty(this.args.a, exp, property)
+    return makeProperty(this.args.a, this, exp, property)
   },
   PostfixExp_primary(exp) {
     return exp.toLval(this.args.a)

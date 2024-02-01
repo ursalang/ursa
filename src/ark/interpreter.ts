@@ -795,13 +795,17 @@ export const globals = new ArkObject(new Map<string, ArkVal>([
   ]]))],
 ]))
 
-export function debug(x: unknown, depth: number | null = 1) {
-  console.log(util.inspect(
+export function valToString(x: unknown, depth: number | null = 1) {
+  return util.inspect(
     x,
     {
       depth,
       colors: process.stdout && process.stdout.isTTY,
       sorted: true,
     },
-  ))
+  )
+}
+
+export function debug(x: unknown, depth?: number | null) {
+  console.log(valToString(x, depth))
 }
