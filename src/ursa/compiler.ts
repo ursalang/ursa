@@ -507,10 +507,11 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     const ident = path[path.length - 1]
     // For path x.y.z, compile `let z = x.use("y", "z")`
     const innerEnv = this.args.a.env.push([ident.sourceString])
-    const compiledUse = new ArkLet([[ident.sourceString, new ArkCall(
-      new ArkGet(addLoc(new ArkProperty(path[0].toExp({...this.args.a, env: innerEnv}), 'use'), this)),
-      path.slice(1).map((id) => new ArkLiteral(ArkString(id.sourceString))),
-    )]], new ArkLiteral(ArkNull()))
+    const libValue = path[0].toExp({...this.args.a, env: innerEnv})
+    const useProperty = new ArkGet(addLoc(new ArkProperty(libValue, 'use'), this))
+    const useCallArgs = path.slice(1).map((id) => new ArkLiteral(ArkString(id.sourceString)))
+    const useCall = addLoc(new ArkCall(useProperty, useCallArgs), this)
+    const compiledUse = new ArkLet([[ident.sourceString, useCall]], new ArkLiteral(ArkNull()))
     return addLoc(compiledUse, this)
   },
 
