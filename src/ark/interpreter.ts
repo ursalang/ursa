@@ -90,7 +90,7 @@ export class Ark {
     Ark.nextId += 1
   }
 
-  debug: ArkDebugInfo = new ArkDebugInfo()
+  debug = new ArkDebugInfo()
 }
 
 class ArkDebugInfo {

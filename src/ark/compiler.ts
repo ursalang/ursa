@@ -122,7 +122,6 @@ export function symRef(env: Environment, name: string): ArkLexp {
     }
     lexp = new ArkProperty(new ArkLiteral(env.externalSyms), name)
   }
-  // TODO: set debug in ArkLexp.constructor()
   lexp.debug.name = name
   lexp.debug.env = JSON.stringify(env)
   return lexp
