@@ -8,15 +8,12 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "composite": true,
-    "declaration": true,
     "importHelpers": true,
     "lib": [ "DOM", "es2023" ],
     "noImplicitAny": true,
     "outDir": "lib",
     "rootDir": "./src",
     "sourceMap": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true
   }
 }
