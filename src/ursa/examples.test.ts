@@ -3,7 +3,11 @@
 // © Reuben Thomas 2023-2024
 // Released under the GPL version 3, or (at your option) any later version.
 
-import {ursaTest, ursaDirTest} from '../testutil.js'
+import assert from 'assert'
+import test from 'ava'
+import kill from 'tree-kill'
+
+import {ursaTest, ursaDirTest, run} from '../testutil.js'
 
 [
   ['Increment a variable in a loop', 'test/increment-variable-in-loop'],
@@ -49,6 +53,7 @@ many
 many`)
 ursaDirTest('fs', 'test/fs', 'test/fs.result')
 
+// Compiler error tests
 ursaTest('Test error on bad function call', 'test/bad-call', [], undefined, `\
 Error: Line 2, col 21:
   1 | let h = 3
@@ -123,3 +128,19 @@ ursaTest('Ackermann function', 'rosettacode/Ackermann function', [], '1\n125\n13
 ursaTest('Hello world-Text', 'rosettacode/Hello world-Text', [], 'hello woods!')
 // Not run, as this program does not terminate
 // test('Integer sequence', 'rosettacode/Integer sequence')
+
+// Complex tests
+test('Web server', async (t) => {
+  const proc = run(['./test/web-server.ursa'], {buffer: false, stdout: 'pipe', detached: true})
+  const response = await new Promise((resolve, _reject) => {
+    proc.stdout!.on('data', (data: Buffer) => {
+      const matches = data.toString().match(/http:\/\/localhost: ([0-9]+)/)
+      assert(matches)
+      const port = Number(matches[1])
+      void fetch(`http://localhost:${port}`).then(async (response) => resolve(await response.text()))
+    })
+  })
+  t.is(response, 'My first server!')
+  // Kill process group
+  kill(proc.pid!)
+})

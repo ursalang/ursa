@@ -7,7 +7,7 @@ import fs from 'fs'
 import path from 'path'
 import tmp from 'tmp'
 import test, {ExecutionContext, Macro} from 'ava'
-import {ExecaReturnValue, execa} from 'execa'
+import {ExecaReturnValue, Options as ExecaOptions, execa} from 'execa'
 import {compareSync, Difference} from 'dir-compare'
 
 import {ArkExp, ArkState, debug} from './ark/interpreter.js'
@@ -19,11 +19,11 @@ import {format} from './ursa/fmt.js'
 
 const command = process.env.NODE_ENV === 'coverage' ? './bin/test-run.sh' : './bin/run.js'
 
-async function run(args: string[], inputFile?: string) {
+export function run(args: string[], options: ExecaOptions) {
   if (process.env.DEBUG) {
-    console.log(`run ${command} ${args} ${inputFile}`)
+    console.log(`run ${command} ${args} ${options.inputFile}`)
   }
-  return execa(command, args, {inputFile})
+  return execa(command, args, options)
 }
 
 function arkCompile(source: string) {
@@ -76,7 +76,7 @@ async function doCliTest(
   try {
     const {stdout, stderr} = await run(
       [...args, ...extraArgs ?? []],
-      useRepl ? inputFile : undefined,
+      {inputFile: useRepl ? inputFile : undefined},
     )
     if (!useRepl) {
       const result: unknown = JSON.parse(fs.readFileSync(tempFile!.name, {encoding: 'utf-8'}))
