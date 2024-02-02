@@ -3,8 +3,11 @@
 // Released under the MIT license.
 
 import {
-  ArkVal, ArkNull, ArkBoolean, ArkNumber, ArkObject, ArkString,
-  ArkConcreteVal, ArkMap, ArkList, NativeFn, NativeObject,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  debug,
+  ArkState, ArkFrame, ArkValRef, ArkVal, ArkConcreteVal,
+  ArkNull, ArkBoolean, ArkNumber, ArkObject, ArkString, ArkClosure,
+  ArkMap, ArkList, NativeAsyncFn, NativeObject,
 } from './interpreter.js'
 
 export class ArkFromJsError extends Error {}
@@ -26,10 +29,10 @@ export function fromJs(x: unknown, thisObj?: object): ArkVal {
     // eslint-disable-next-line max-len
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/ban-types
     const fn: Function = thisObj ? x.bind(thisObj) : x
-    const nativeFn = new NativeFn(
+    const nativeFn = new NativeAsyncFn(
       [],
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      (...args: ArkVal[]) => fromJs(fn(...args.map(toJs))),
+      async (...args: ArkVal[]) => fromJs(await fn(...args.map(toJs))),
     )
     nativeFn.debug.name = x.name
     return nativeFn
@@ -68,6 +71,11 @@ export function toJs(val: ArkVal): unknown {
     return jsMap
   } else if (val instanceof ArkList) {
     return val.list.map(toJs)
+  } else if (val instanceof ArkClosure) {
+    return async (...args: unknown[]) => {
+      const locals = args.map((arg) => new ArkValRef(fromJs(arg)))
+      return val.call(new ArkState(new ArkFrame(locals, val.captures)))
+    }
   }
   return val
 }

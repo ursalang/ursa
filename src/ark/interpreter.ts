@@ -32,15 +32,15 @@ class Namespace<T extends ArkVal> extends Map<string, T> {
 
 // Each stack frame consists of a tuple of local vars, captures, and
 // debug info.
-class ArkFrame {
+export class ArkFrame {
   constructor(
     public locals: ArkRef[] = [],
     public captures: ArkRef[] = [],
-    public debug: FrameDebugInfo = new FrameDebugInfo(),
+    public debug = new ArkFrameDebugInfo(),
   ) {}
 }
 
-class FrameDebugInfo {
+export class ArkFrameDebugInfo {
   constructor(
     public name: ArkRef | undefined = undefined,
     public source: ArkCall | undefined = undefined,
@@ -270,7 +270,7 @@ abstract class ArkCallable extends ArkVal {
   abstract call(ark: ArkState): Promise<ArkVal>
 }
 
-class ArkClosure extends ArkCallable {
+export class ArkClosure extends ArkCallable {
   constructor(params: string[], captures: ArkRef[], public body: ArkExp) {
     super(params, captures)
   }
@@ -305,7 +305,8 @@ export class NativeAsyncFn extends ArkCallable {
 
   async call(ark: ArkState): Promise<ArkVal> {
     const args = ark.frame.locals.map((ref) => ref.get(ark))
-    return this.body(...args)
+    // eslint-disable-next-line @typescript-eslint/return-await
+    return await this.body(...args)
   }
 }
 
@@ -365,9 +366,9 @@ export class ArkCall extends ArkExp {
       // eslint-disable-next-line no-await-in-loop
       evaluatedArgs.push(await arg.eval(ark))
     }
-    const frame = makeLocals(fnVal.params, evaluatedArgs)
-    const debugInfo = new FrameDebugInfo(sym, this)
-    return fnVal.call(new ArkState(new ArkFrame(frame, fnVal.captures, debugInfo), ark))
+    const locals = makeLocals(fnVal.params, evaluatedArgs)
+    const debugInfo = new ArkFrameDebugInfo(sym, this)
+    return fnVal.call(new ArkState(new ArkFrame(locals, fnVal.captures, debugInfo), ark))
   }
 }
 
