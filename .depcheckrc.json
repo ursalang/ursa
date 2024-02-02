@@ -6,6 +6,7 @@
     "eslint-config-airbnb-typescript",
     "eslint-plugin-import",
     "pre-push",
+    "ts-node",
     "tslib",
     "tsx"
   ]
