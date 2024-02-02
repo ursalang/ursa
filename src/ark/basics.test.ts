@@ -49,9 +49,8 @@ testGroup('Conditionals', [
 
 test('Bare break', async (t) => {
   const error = await t.throwsAsync(() => new ArkState().run(compile(['break'])), {instanceOf: ArkBreakException})
-  if (error !== undefined) {
-    t.is(toJs(error.val), null)
-  }
+  t.not(error, undefined)
+  t.is(toJs(error.val), null)
 })
 
 testGroup('loop and break', [

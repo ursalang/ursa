@@ -4,7 +4,6 @@
 // Released under the GPL version 3, or (at your option) any later version.
 
 import test from 'ava'
-import assert from 'assert'
 
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -54,7 +53,7 @@ testGroup('Sequences', [
 
 test('Assignment', async (t) => {
   const error1 = t.throws(() => compile('4 := 5'), {instanceOf: UrsaCompilerError})
-  assert(error1 !== undefined)
+  t.not(error1, undefined)
   t.is(error1.message, `\
 Line 1, col 1:
 > 1 | 4 := 5
@@ -62,7 +61,7 @@ Line 1, col 1:
 
 Bad lvalue`)
   const error2 = t.throws(() => compile('range(1) := 5'), {instanceOf: UrsaCompilerError})
-  assert(error2 !== undefined)
+  t.not(error2, undefined)
   t.is(error2.message, `\
 Line 1, col 1:
 > 1 | range(1) := 5
@@ -83,7 +82,7 @@ testGroup('Conditionals', [
 
 test('loop and break', async (t) => {
   const error = t.throws(() => compile('break'), {instanceOf: UrsaCompilerError})
-  assert(error !== undefined)
+  t.not(error, undefined)
   t.is(error.message, `\
 Line 1, col 1:
 > 1 | break
@@ -95,7 +94,7 @@ break used outside a loop`)
 
 test('return', async (t) => {
   const error = t.throws(() => compile('return'), {instanceOf: UrsaCompilerError})
-  assert(error !== undefined)
+  t.not(error, undefined)
   t.is(error.message, `\
 Line 1, col 1:
 > 1 | return
@@ -133,7 +132,7 @@ test('Object assign invalid property', async (t) => {
     new ArkState(),
     compile('let o = ABC {a = 1; b = 2}; o.c := "abc"'),
   ), {instanceOf: UrsaRuntimeError})
-  assert(error !== undefined)
+  t.not(error, undefined)
   t.is(error.message, `\
 Line 1, col 29:
 > 1 | let o = ABC {a = 1; b = 2}; o.c := "abc"
