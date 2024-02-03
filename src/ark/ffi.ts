@@ -76,6 +76,8 @@ export function toJs(val: ArkVal): unknown {
       const locals = args.map((arg) => new ArkValRef(fromJs(arg)))
       return val.call(new ArkState(new ArkFrame(locals, val.captures)))
     }
+  } else if (val instanceof NativeAsyncFn) {
+    return val.body
   }
   return val
 }

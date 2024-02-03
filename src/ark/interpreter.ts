@@ -305,8 +305,7 @@ export class NativeAsyncFn extends ArkCallable {
 
   async call(ark: ArkState): Promise<ArkVal> {
     const args = ark.frame.locals.map((ref) => ref.get(ark))
-    // eslint-disable-next-line @typescript-eslint/return-await
-    return await this.body(...args)
+    return this.body(...args)
   }
 }
 
