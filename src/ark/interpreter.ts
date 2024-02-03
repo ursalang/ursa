@@ -224,16 +224,16 @@ export class ArkNonLocalReturn extends Error {
 }
 
 export class ArkBreakException extends ArkNonLocalReturn {}
-export class ArkReturnException extends ArkNonLocalReturn {}
 export class ArkContinueException extends ArkNonLocalReturn {}
+export class ArkReturnException extends ArkNonLocalReturn {}
 
 export class ArkBreak extends ArkExp {
-  constructor(public val: ArkExp = new ArkLiteral(ArkNull())) {
+  constructor(public exp: ArkExp = new ArkLiteral(ArkNull())) {
     super()
   }
 
   async eval(ark: ArkState): Promise<never> {
-    throw new ArkBreakException(await this.val.eval(ark))
+    throw new ArkBreakException(await this.exp.eval(ark))
   }
 }
 
@@ -245,12 +245,12 @@ export class ArkContinue extends ArkExp {
 }
 
 export class ArkReturn extends ArkExp {
-  constructor(public val: ArkExp = new ArkLiteral(ArkNull())) {
+  constructor(public exp: ArkExp = new ArkLiteral(ArkNull())) {
     super()
   }
 
   async eval(ark: ArkState): Promise<never> {
-    throw new ArkReturnException(await this.val.eval(ark))
+    throw new ArkReturnException(await this.exp.eval(ark))
   }
 }
 

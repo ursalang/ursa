@@ -77,11 +77,11 @@ export function valToJs(val: Ark, externalSyms = globals) {
     } else if (val instanceof ArkLoop) {
       return ['loop', doValToJs(val.body)]
     } else if (val instanceof ArkBreak) {
-      return ['break', doValToJs(val.val)]
+      return ['break', doValToJs(val.exp)]
     } else if (val instanceof ArkContinue) {
       return ['continue']
     } else if (val instanceof ArkReturn) {
-      return ['return', doValToJs(val.val)]
+      return ['return', doValToJs(val.exp)]
     } else if (val === ArkNull()) {
       return null
     } else if (val === ArkUndefined) {

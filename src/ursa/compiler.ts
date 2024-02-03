@@ -98,13 +98,13 @@ ${trace.map((s) => `  ${s}`).join('\n')}`
 export class AST {}
 
 class Definition extends AST {
-  constructor(public ident: ParserNode, public val: ArkExp) {
+  constructor(public ident: ParserNode, public exp: ArkExp) {
     super()
   }
 }
 
 class KeyValue extends AST {
-  constructor(public key: ArkExp, public val: ArkExp) {
+  constructor(public key: ArkExp, public exp: ArkExp) {
     super()
   }
 }
@@ -198,7 +198,7 @@ semantics.addOperation<LetBinding>('toLet(a)', {
       const definition = l.children[1].toDefinition({...this.args.a, env: innerEnv})
       parsedLets.push(definition)
     }
-    return new LetBinding(parsedLets.map((def) => [def.ident.sourceString, def.val]))
+    return new LetBinding(parsedLets.map((def) => [def.ident.sourceString, def.exp]))
   },
 
   Use(_use, pathList) {
@@ -260,7 +260,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     const inits = new Map<ArkExp, ArkExp>()
     elems.asIteration().children.forEach((value) => {
       const elem = value.toKeyValue(this.args.a)
-      inits.set(elem.key, elem.val)
+      inits.set(elem.key, elem.exp)
     })
     return addLoc(new ArkMapLiteral(inits), this)
   },
@@ -271,7 +271,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     const inits = new Map<string, ArkExp>()
     elems.asIteration().children.forEach((value) => {
       const elem = value.toDefinition(this.args.a)
-      inits.set(elem.ident.sourceString, elem.val)
+      inits.set(elem.ident.sourceString, elem.exp)
     })
     return addLoc(new ArkObjectLiteral(inits), this)
   },
