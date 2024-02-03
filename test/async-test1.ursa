@@ -1,0 +1,7 @@
+for i of range(5) {
+  setTimeout(fn () { print(i) }, i * 1000)
+}
+
+for i of range(10) {
+  setTimeout(fn () { print(i) }, i * 500)
+}

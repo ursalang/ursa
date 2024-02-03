@@ -8,6 +8,7 @@ use js.process
 use js.RegExp
 use js.document
 use js.console
+use js.setTimeout
 
 Object {
   // Basic facilities
@@ -18,6 +19,7 @@ Object {
   RegExp = RegExp
   process = process
   document = document
+  setTimeout = setTimeout
 
   // Maths
   pi = Math.PI

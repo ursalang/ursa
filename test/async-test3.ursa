@@ -1,0 +1,7 @@
+let delay = fn(time) {
+  return Promise(fn(resolve) { setTimeout(resolve, time) })
+}
+
+print("This statement will be displayed immediately.")
+await delay(1000)
+print("This statement will be displayed after a 1-second delay.")

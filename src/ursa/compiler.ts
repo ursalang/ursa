@@ -18,7 +18,7 @@ import {
   ArkSequence, ArkIf, ArkLoop, ArkAnd, ArkOr,
   ArkObjectLiteral, ArkListLiteral, ArkMapLiteral,
   ArkCall, ArkLet, ArkFn, ArkProperty, ArkSet, ArkReturn,
-  ArkBreak, ArkContinue,
+  ArkBreak, ArkContinue, ArkAwait, ArkLaunch,
 } from '../ark/interpreter.js'
 import {
   ArkCompilerError, symRef, Frame, Environment, checkParamList,
@@ -491,6 +491,9 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     return addLoc(new ArkSet(compiledLvalue, compiledValue), this)
   },
 
+  Exp_await(_await, exp) {
+    return addLoc(new ArkAwait(exp.toExp(this.args.a)), this)
+  },
   Exp_break(_break, exp) {
     if (!this.args.a.inLoop) {
       throw new UrsaCompilerError(_break.source, 'break used outside a loop')
@@ -502,6 +505,9 @@ semantics.addOperation<ArkExp>('toExp(a)', {
       throw new UrsaCompilerError(_continue.source, 'continue used outside a loop')
     }
     return addLoc(new ArkContinue(), this)
+  },
+  Exp_launch(_await, exp) {
+    return addLoc(new ArkLaunch(exp.toExp(this.args.a)), this)
   },
   Exp_return(_return, exp) {
     if (!this.args.a.inFn) {

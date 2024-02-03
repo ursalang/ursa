@@ -217,6 +217,37 @@ export function ArkString(s: string) {
   return ConcreteInterned.value<ArkStringVal, string>(ArkStringVal, s)
 }
 
+export class ArkPromise extends ArkVal {
+  constructor(public promise: Promise<ArkVal>) {
+    super()
+  }
+}
+
+export class ArkLaunch extends ArkExp {
+  constructor(public exp: ArkExp) {
+    super()
+  }
+
+  eval(ark: ArkState) {
+    return Promise.resolve(new ArkPromise(this.exp.eval(ark)))
+  }
+}
+
+export class ArkAwait extends ArkExp {
+  constructor(public exp: ArkExp) {
+    super()
+  }
+
+  async eval(ark: ArkState) {
+    const promise = await this.exp.eval(ark)
+    if (!(promise instanceof ArkPromise)) {
+      throw new ArkRuntimeError(ark, "Attempt to 'await' non-Promise", this)
+    }
+    const res = await promise.promise
+    return res
+  }
+}
+
 export class ArkNonLocalReturn extends Error {
   constructor(public readonly val: ArkVal = ArkNull()) {
     super()
@@ -772,7 +803,17 @@ export const globals = new ArkObject(new Map<string, ArkVal>([
   })],
   ['fs', new NativeFn(['path'], (path: ArkVal) => new NativeObject(new FsMap(toJs(path) as string)))],
 
-  // JavaScript bindings—imported libraries (with "use").
+  ['Promise', new NativeAsyncFn(
+    ['resolve', 'reject'],
+    (fn: ArkVal) => Promise.resolve(new ArkPromise(
+      new Promise(
+        toJs(fn) as
+        (resolve: (value: unknown) => void, reject: (reason?: unknown) => void) => void,
+      ).then((x) => fromJs(x)),
+    )),
+  )],
+
+  // JavaScript bindings—globals (with "use").
   ['js', new ArkObject(new Map([[
     'use', new NativeFn([], (arg: ArkVal) => {
       const name = toJs(arg)

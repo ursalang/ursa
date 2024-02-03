@@ -113,8 +113,10 @@ Ursa {
     | AssignmentExp
     | Lets
     | Use
+    | await Exp       -- await
     | break Exp?      -- break
     | continue        -- continue
+    | launch Exp      -- launch
     | return Exp?     -- return
 
   Lets = NonemptyListOf<Let, and>
@@ -151,6 +153,7 @@ Ursa {
 
   // Convenience rules for parsing keyword tokens.
   and = "and" ~identifierPart
+  await = "await" ~identifierPart
   break = "break" ~identifierPart
   class = "class" ~identifierPart
   continue = "continue" ~identifierPart
@@ -158,6 +161,7 @@ Ursa {
   fn = "fn" ~identifierPart
   for = "for" ~identifierPart
   if = "if" ~identifierPart
+  launch = "launch" ~identifierPart
   let = "let" ~identifierPart
   loop = "loop" ~identifierPart
   not = "not" ~identifierPart
@@ -170,8 +174,9 @@ Ursa {
   use = "use" ~identifierPart
   var = "var" ~identifierPart
 
-  keyword = and | break | class | continue | else | fn | for | if | let | loop
-    | not | of | or | pub | return | static | trait | use | var
+  keyword = and | await | break | class | continue | else | fn | for | if
+    | launch | let | loop | not | of | or | pub | return | static | trait
+    | use | var
 
   reservedWord = bool | null | keyword
 

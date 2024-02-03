@@ -1,0 +1,8 @@
+let f = fn(n) {
+  for i of range(n) {
+    print(n, i)
+  }
+}
+
+launch f(10)
+launch f(5)
