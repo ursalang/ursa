@@ -238,8 +238,8 @@ async function runCode(source: string, args: Args) {
   if (source === undefined || args.interactive) {
     result = await repl(args)
   }
-  const output = serializeVal(result ?? ArkNull()) ?? 'null'
   if (outputFile !== undefined) {
+    const output = serializeVal(result ?? ArkNull()) ?? 'null'
     fs.writeFileSync(outputFile, output)
   }
 }
