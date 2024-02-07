@@ -178,7 +178,7 @@ export class ArkStringVal extends ArkConcreteVal<string> {
 
 class ConcreteInterned {
   constructor() {
-    throw new Error('use ConcreteInterned.create, not constructor')
+    throw new Error('use ConcreteInterned.value, not constructor')
   }
 
   private static intern: Map<unknown, WeakRef<ArkConcreteVal<unknown>>> = new Map()
@@ -310,10 +310,10 @@ export class ArkClosure extends ArkCallable {
     try {
       return await this.body.eval(ark)
     } catch (e) {
-      if (!(e instanceof ArkReturnException)) {
-        throw e
+      if (e instanceof ArkReturnException) {
+        return e.val
       }
-      return e.val
+      throw e
     }
   }
 }
