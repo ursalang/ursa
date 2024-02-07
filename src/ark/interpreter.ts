@@ -9,27 +9,6 @@ import programVersion from '../version.js'
 import {fromJs, toJs} from './ffi.js'
 import {FsMap} from './fsmap.js'
 
-class Namespace<T extends ArkVal> extends Map<string, T> {
-  constructor(inits: [string, T][]) {
-    super(inits)
-    for (const [name, val] of inits) {
-      Namespace.setName(name, val)
-    }
-  }
-
-  private static setName(name: string, val: ArkVal) {
-    if (!(val instanceof ArkConcreteVal)) {
-      val.debug.name = name
-    }
-  }
-
-  set(name: string, val: T) {
-    Namespace.setName(name, val)
-    super.set(name, val)
-    return this
-  }
-}
-
 // Each stack frame consists of a tuple of local vars, captures, and
 // debug info.
 export class ArkFrame {
@@ -136,6 +115,10 @@ abstract class ArkAbstractObjectBase extends ArkVal {
 export class ArkObjectBase extends ArkAbstractObjectBase {
   constructor(public properties: Map<string, ArkVal> = new Map()) {
     super()
+    this.addDefaults([
+      ['=', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this === right))],
+      ['!=', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this !== right))],
+    ])
   }
 
   get(prop: string) {
@@ -146,21 +129,65 @@ export class ArkObjectBase extends ArkAbstractObjectBase {
     this.properties.set(prop, val)
     return val
   }
+
+  addDefaults(defaults: [string, ArkVal][]) {
+    defaults.forEach(([name, val]) => {
+      if (this.get(name) === ArkUndefined) {
+        this.set(name, val)
+      }
+    })
+  }
 }
 
 export abstract class ArkConcreteVal<T> extends ArkObjectBase {
   constructor(public val: T) {
     super()
+    this.addDefaults([
+      ['=', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val === toJs(right)))],
+      ['!=', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val !== toJs(right)))],
+    ])
   }
 }
 
 export class ArkNullVal extends ArkConcreteVal<null> {}
-export class ArkBooleanVal extends ArkConcreteVal<boolean> {}
-export class ArkNumberVal extends ArkConcreteVal<number> {}
+export class ArkBooleanVal extends ArkConcreteVal<boolean> {
+  constructor(val: boolean) {
+    super(val)
+    this.addDefaults([['not', new NativeFn([], () => ArkBoolean(!this.val))]])
+  }
+}
+export class ArkNumberVal extends ArkConcreteVal<number> {
+  constructor(val: number) {
+    super(val)
+    this.addDefaults([
+      ['pos', new NativeFn([], () => ArkNumber(+this.val))],
+      ['neg', new NativeFn([], () => ArkNumber(-this.val))],
+      ['~', new NativeFn([], () => ArkNumber(~this.val))],
+      ['=', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val === toJs(right)))],
+      ['!=', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val !== toJs(right)))],
+      ['<', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val < (right as ArkNumberVal).val))],
+      ['<=', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val <= (right as ArkNumberVal).val))],
+      ['>', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val > (right as ArkNumberVal).val))],
+      ['>=', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val >= (right as ArkNumberVal).val))],
+      ['+', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val + (right as ArkNumberVal).val))],
+      ['-', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val - (right as ArkNumberVal).val))],
+      ['*', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val * (right as ArkNumberVal).val))],
+      ['/', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val / (right as ArkNumberVal).val))],
+      ['%', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val % (right as ArkNumberVal).val))],
+      ['**', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val ** (right as ArkNumberVal).val))],
+      ['&', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val & (right as ArkNumberVal).val))],
+      ['|', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val | (right as ArkNumberVal).val))],
+      ['^', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val ^ (right as ArkNumberVal).val))],
+      ['<<', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val << (right as ArkNumberVal).val))],
+      ['>>', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val >> (right as ArkNumberVal).val))],
+      ['>>>', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val >>> (right as ArkNumberVal).val))],
+    ])
+  }
+}
 export class ArkStringVal extends ArkConcreteVal<string> {
   constructor(val: string) {
     super(val)
-    this.properties = new Map([
+    this.addDefaults([
       ['get', new NativeFn(['index'], (index: ArkVal) => ArkString(this.val[toJs(index) as number]))],
       ['iter', new NativeFn([], () => {
         const str = this.val
@@ -768,31 +795,6 @@ export class ArkLoop extends ArkExp {
     }
   }
 }
-
-export const intrinsics = new Namespace([
-  ['pos', new NativeFn(['val'], (val: ArkVal) => ArkNumber(+(toJs(val) as number)))],
-  ['neg', new NativeFn(['val'], (val: ArkVal) => ArkNumber(-(toJs(val) as number)))],
-  ['not', new NativeFn(['val'], (val: ArkVal) => ArkBoolean(!(toJs(val) as boolean)))],
-  ['~', new NativeFn(['val'], (val: ArkVal) => ArkNumber(~(toJs(val) as number)))],
-  ['=', new NativeFn(['left', 'right'], (left: ArkVal, right: ArkVal) => ArkBoolean(toJs(left) === toJs(right)))],
-  ['!=', new NativeFn(['left', 'right'], (left: ArkVal, right: ArkVal) => ArkBoolean(toJs(left) !== toJs(right)))],
-  ['<', new NativeFn(['left', 'right'], (left: ArkVal, right: ArkVal) => ArkBoolean((toJs(left) as number) < (toJs(right) as number)))],
-  ['<=', new NativeFn(['left', 'right'], (left: ArkVal, right: ArkVal) => ArkBoolean((toJs(left) as number) <= (toJs(right) as number)))],
-  ['>', new NativeFn(['left', 'right'], (left: ArkVal, right: ArkVal) => ArkBoolean((toJs(left) as number) > (toJs(right) as number)))],
-  ['>=', new NativeFn(['left', 'right'], (left: ArkVal, right: ArkVal) => ArkBoolean((toJs(left) as number) >= (toJs(right) as number)))],
-  ['+', new NativeFn(['left', 'right'], (left: ArkVal, right: ArkVal) => ArkNumber((toJs(left) as number) + (toJs(right) as number)))],
-  ['-', new NativeFn(['left', 'right'], (left: ArkVal, right: ArkVal) => ArkNumber((toJs(left) as number) - (toJs(right) as number)))],
-  ['*', new NativeFn(['left', 'right'], (left: ArkVal, right: ArkVal) => ArkNumber((toJs(left) as number) * (toJs(right) as number)))],
-  ['/', new NativeFn(['left', 'right'], (left: ArkVal, right: ArkVal) => ArkNumber((toJs(left) as number) / (toJs(right) as number)))],
-  ['%', new NativeFn(['left', 'right'], (left: ArkVal, right: ArkVal) => ArkNumber((toJs(left) as number) % (toJs(right) as number)))],
-  ['**', new NativeFn(['left', 'right'], (left: ArkVal, right: ArkVal) => ArkNumber((toJs(left) as number) ** (toJs(right) as number)))],
-  ['&', new NativeFn(['left', 'right'], (left: ArkVal, right: ArkVal) => ArkNumber((toJs(left) as number) & (toJs(right) as number)))],
-  ['|', new NativeFn(['left', 'right'], (left: ArkVal, right: ArkVal) => ArkNumber((toJs(left) as number) | (toJs(right) as number)))],
-  ['^', new NativeFn(['left', 'right'], (left: ArkVal, right: ArkVal) => ArkNumber((toJs(left) as number) ^ (toJs(right) as number)))],
-  ['<<', new NativeFn(['left', 'right'], (left: ArkVal, right: ArkVal) => ArkNumber((toJs(left) as number) << (toJs(right) as number)))],
-  ['>>', new NativeFn(['left', 'right'], (left: ArkVal, right: ArkVal) => ArkNumber((toJs(left) as number) >> (toJs(right) as number)))],
-  ['>>>', new NativeFn(['left', 'right'], (left: ArkVal, right: ArkVal) => ArkNumber((toJs(left) as number) >>> (toJs(right) as number)))],
-])
 
 export const globals = new ArkObject(new Map<string, ArkVal>([
   // Ursa's prelude (see also prelude.ursa).

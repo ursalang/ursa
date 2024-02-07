@@ -8,7 +8,7 @@ import preludeJson from './prelude.json' assert {type: 'json'}
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  ArkState, ArkExp, ArkLexp, intrinsics, globals,
+  ArkState, ArkExp, ArkLexp, globals,
   ArkIf, ArkAnd, ArkOr, ArkSequence, ArkLoop, ArkBreak, ArkContinue,
   ArkNull, ArkBoolean, ArkNumber, ArkString,
   ArkSet, ArkLocal, ArkCapture,
@@ -137,11 +137,6 @@ function doCompile(env: Environment, value: unknown): ArkExp {
     return new ArkLiteral(ArkNumber(value))
   }
   if (typeof value === 'string') {
-    // Check whether the symbol is an intrinsic.
-    const val = intrinsics.get(value)
-    if (val !== undefined) {
-      return new ArkLiteral(val)
-    }
     return symRef(env, value)
   }
   if (value instanceof Array) {

@@ -2,6 +2,7 @@
 // © Reuben Thomas 2023
 // Released under the GPL version 3, or (at your option) any later version.
 
+import assert from 'assert'
 import util from 'util'
 import fs from 'fs'
 import path from 'path'
@@ -10,7 +11,9 @@ import test, {ExecutionContext, Macro} from 'ava'
 import {ExecaReturnValue, Options as ExecaOptions, execa} from 'execa'
 import {compareSync, Difference} from 'dir-compare'
 
-import {ArkExp, ArkState, debug} from './ark/interpreter.js'
+import {
+  debug, ArkState, ArkExp, ArkObject,
+} from './ark/interpreter.js'
 import {compile as doArkCompile} from './ark/compiler.js'
 import {toJs} from './ark/ffi.js'
 import {valToJs} from './ark/serialize.js'
@@ -42,7 +45,19 @@ function doTestGroup(
         debug(compiled, null)
       }
       // eslint-disable-next-line no-await-in-loop
-      t.deepEqual(toJs(await new ArkState().run(compiled)), expected)
+      const res = await new ArkState().run(compiled)
+      if (res instanceof ArkObject) {
+        assert(typeof expected === 'object')
+        // Remove methods of ArkObject
+        // FIXME: remove this once we have separated methods from properties.
+        if (Object.keys(expected as object).length === 0) {
+          t.deepEqual({}, expected)
+        } else {
+          t.like(toJs(res), expected as object)
+        }
+      } else {
+        t.deepEqual(toJs(res), expected)
+      }
     }
   })
 }

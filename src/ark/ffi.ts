@@ -38,7 +38,7 @@ export function fromJs(x: unknown, thisObj?: object): ArkVal {
     return nativeFn
   }
   if (x instanceof Array) {
-    return new ArkList(x as [])
+    return new ArkList(x.map((e) => fromJs(e)))
   }
   if (x instanceof Map) {
     const map = new Map<ArkVal, ArkVal>()
