@@ -52,16 +52,16 @@ type ParserThisNode = ThisNode<{a: ParserArgs}, ParserOperations>
 const semantics = grammar.createSemantics<ParserNode, ParserNonterminalNode, ParserIterationNode, ParserThisNode, ParserOperations>()
 
 class UrsaError extends Error {
-  constructor(source: Interval, message: string) {
-    super(`${source ? source.getLineAndColumnMessage() : 'unknown location'}\n${message}`)
+  constructor(source: Interval, message: string, options: ErrorOptions = {}) {
+    super(`${source ? source.getLineAndColumnMessage() : 'unknown location'}\n${message}`, options)
   }
 }
 
 export class UrsaCompilerError extends UrsaError {}
 
 export class UrsaRuntimeError extends UrsaError {
-  constructor(public ark: ArkState, source: Interval, message: string) {
-    super(source, message)
+  constructor(public ark: ArkState, source: Interval, message: string, options: ErrorOptions = {}) {
+    super(source, message, options)
     const trace = []
     // Exclude top level stack frame from trace-back.
     for (let state: ArkState = ark; state.outerState !== undefined; state = state.outerState) {
@@ -665,7 +665,7 @@ export async function runWithTraceback(ark: ArkState, compiledExp: ArkExp): Prom
     return await ark.run(compiledExp)
   } catch (e) {
     if (e instanceof ArkRuntimeError) {
-      throw new UrsaRuntimeError(e.ark, e.sourceLoc as Interval, e.message)
+      throw new UrsaRuntimeError(e.ark, e.sourceLoc as Interval, e.message, {cause: e})
     }
     throw e
   }
