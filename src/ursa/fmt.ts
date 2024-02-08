@@ -487,6 +487,13 @@ semantics.addOperation<Span>('fmt(a)', {
       [(a) => hSpan(['return', ...fmtOptional(a, exp)])],
     )
   },
+  Exp_yield(_yield, exp) {
+    return tryFormats(
+      this.args.a,
+      (a) => hSpan(['yield', ...fmtOptional(a, exp)]),
+      [(a) => hSpan(['yield', ...fmtOptional(a, exp)])],
+    )
+  },
 
   Lets(lets) {
     return tryFormats(

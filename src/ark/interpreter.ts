@@ -284,6 +284,11 @@ export class ArkNonLocalReturn extends Error {
 export class ArkBreakException extends ArkNonLocalReturn {}
 export class ArkContinueException extends ArkNonLocalReturn {}
 export class ArkReturnException extends ArkNonLocalReturn {}
+export class ArkYieldException extends ArkNonLocalReturn {
+  constructor(val: ArkVal, public cnt: () => ArkVal) {
+    super(val)
+  }
+}
 
 export class ArkBreak extends ArkExp {
   constructor(public exp: ArkExp = new ArkLiteral(ArkNull())) {
@@ -312,6 +317,23 @@ export class ArkReturn extends ArkExp {
   }
 }
 
+export class ArkYield extends ArkExp {
+  constructor(public exp: ArkExp = new ArkLiteral(ArkNull())) {
+    super()
+  }
+
+  async eval(ark: ArkState): Promise<ArkVal> {
+    function* yielder(arg: ArkVal | undefined) {
+      const res = await this.exp.eval(ark)
+      if (arg === undefined) {
+        throw new ArkReturnException(res)
+      }
+      return arg
+    }
+    throw new ArkYieldException(await this.exp.eval(ark), resume)
+  }
+}
+
 function makeLocals(names: string[], vals: ArkVal[]): ArkRef[] {
   const locals: ArkValRef[] = names.map((_val, index) => new ArkValRef(vals[index] ?? ArkUndefined))
   if (vals.length > names.length) {
@@ -329,12 +351,17 @@ abstract class ArkCallable extends ArkVal {
 }
 
 export class ArkClosure extends ArkCallable {
+  private continuation: (() => Promise<ArkVal>) | undefined
+
   constructor(params: string[], captures: ArkRef[], public body: ArkExp) {
     super(params, captures)
   }
 
   async call(ark: ArkState): Promise<ArkVal> {
     try {
+      if (this.continuation !== undefined) {
+        return await this.continuation()
+      }
       return await this.body.eval(ark)
     } catch (e) {
       if (e instanceof ArkReturnException) {

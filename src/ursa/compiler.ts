@@ -17,8 +17,8 @@ import {
   ArkNull, ArkBoolean, ArkNumber, ArkString,
   ArkSequence, ArkIf, ArkLoop, ArkAnd, ArkOr,
   ArkObjectLiteral, ArkListLiteral, ArkMapLiteral,
-  ArkCall, ArkLet, ArkFn, ArkProperty, ArkSet, ArkReturn,
-  ArkBreak, ArkContinue, ArkAwait, ArkLaunch,
+  ArkCall, ArkLet, ArkFn, ArkProperty, ArkSet,
+  ArkReturn, ArkYield, ArkBreak, ArkContinue, ArkAwait, ArkLaunch,
 } from '../ark/interpreter.js'
 import {
   ArkCompilerError, symRef, Frame, Environment, checkParamList,
@@ -515,6 +515,13 @@ semantics.addOperation<ArkExp>('toExp(a)', {
       throw new UrsaCompilerError(_return.source, 'return used outside a function')
     }
     return addLoc(new ArkReturn(maybeVal(this.args.a, exp)), this)
+  },
+  Exp_yield(_yield, exp) {
+    if (!this.args.a.inFn) {
+      // FIXME: check function has arity less than 2
+      throw new UrsaCompilerError(_yield.source, 'yield used outside a function')
+    }
+    return addLoc(new ArkYield(maybeVal(this.args.a, exp)), this)
   },
 
   Block(_open, seq, _close) {
