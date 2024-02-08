@@ -92,8 +92,12 @@ export class ArkVal extends Ark {
   _arkval: undefined
 }
 
+// Making eval() use generators.
+
+// We want all eval() methods to be generators, and to have the option of
+// yielding or returning.
 export abstract class ArkExp extends Ark {
-  abstract eval(ark: ArkState): Promise<ArkVal>
+  abstract eval(ark: ArkState): AsyncGenerator<ArkVal, ArkVal>
 }
 
 export class ArkLiteral extends ArkExp {
@@ -101,8 +105,8 @@ export class ArkLiteral extends ArkExp {
     super()
   }
 
-  eval(_ark: ArkState): Promise<ArkVal> {
-    return Promise.resolve(this.val)
+  eval(_ark: ArkState) {
+    return this.val
   }
 }
 
@@ -284,11 +288,6 @@ export class ArkNonLocalReturn extends Error {
 export class ArkBreakException extends ArkNonLocalReturn {}
 export class ArkContinueException extends ArkNonLocalReturn {}
 export class ArkReturnException extends ArkNonLocalReturn {}
-export class ArkYieldException extends ArkNonLocalReturn {
-  constructor(val: ArkVal, public cnt: () => ArkVal) {
-    super(val)
-  }
-}
 
 export class ArkBreak extends ArkExp {
   constructor(public exp: ArkExp = new ArkLiteral(ArkNull())) {
@@ -323,15 +322,11 @@ export class ArkYield extends ArkExp {
   }
 
   async eval(ark: ArkState): Promise<ArkVal> {
-    function* yielder(arg: ArkVal | undefined) {
-      const res = await this.exp.eval(ark)
-      if (arg === undefined) {
-        throw new ArkReturnException(res)
-      }
-      return arg
-    }
-    throw new ArkYieldException(await this.exp.eval(ark), resume)
+    return this.exp.eval(ark)
   }
+  // async* eval(ark: ArkState): AsyncGenerator<ArkVal> {
+  //   yield this.exp.eval(ark)
+  // }
 }
 
 function makeLocals(names: string[], vals: ArkVal[]): ArkRef[] {
@@ -351,7 +346,7 @@ abstract class ArkCallable extends ArkVal {
 }
 
 export class ArkClosure extends ArkCallable {
-  private continuation: (() => Promise<ArkVal>) | undefined
+  private generator: (() => AsyncGenerator<ArkVal>) | undefined
 
   constructor(params: string[], captures: ArkRef[], public body: ArkExp) {
     super(params, captures)
@@ -359,10 +354,10 @@ export class ArkClosure extends ArkCallable {
 
   async call(ark: ArkState): Promise<ArkVal> {
     try {
-      if (this.continuation !== undefined) {
-        return await this.continuation()
+      if (this.generator === undefined) {
+        this.generator = this.body.eval(ark)
       }
-      return await this.body.eval(ark)
+
     } catch (e) {
       if (e instanceof ArkReturnException) {
         return e.val
