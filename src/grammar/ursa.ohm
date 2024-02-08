@@ -3,7 +3,7 @@
 // Released under the MIT license.
 
 Ursa {
-  Sequence = ListOf<Exp, #sc> #sc
+  Sequence = ListOf<Statement, #sc> #sc
 
   // A semicolon is "automatically inserted" if a newline or the end of the input stream is
   // reached, or the next token is "}".
@@ -29,7 +29,7 @@ Ursa {
   Definition = ident Initializer
   Initializer = "=" Exp
 
-  List = "[" ListOf<AssignmentExp, ","> ","? "]"
+  List = "[" ListOf<Exp, ","> ","? "]"
 
   Object = NamedType "{" ListOf<Definition, #sc> #sc "}"
 
@@ -102,22 +102,25 @@ Ursa {
     | LogicExp or LogicNotExp  -- or
     | LogicNotExp
 
-  AssignmentExp
-    = PostfixExp ":=" AssignmentExp -- ass
-    | LogicExp
-
   Exp
     = Ifs
     | Loop
     | For
-    | AssignmentExp
+    | await Exp       -- await
+    | LogicExp
+
+  Assignment
+    = PostfixExp ":=" Exp -- ass
+
+  Statement
+    = Assignment
     | Lets
     | Use
-    | await Exp       -- await
     | break Exp?      -- break
     | continue        -- continue
     | launch Exp      -- launch
     | return Exp?     -- return
+    | Exp
 
   Lets = NonemptyListOf<Let, and>
   Let = let Definition

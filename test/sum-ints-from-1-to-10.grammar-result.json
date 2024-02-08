@@ -28,7 +28,7 @@
           "2": "1",
           "type": "SumExp_plus"
         },
-        "type": "AssignmentExp_ass"
+        "type": "Assignment_ass"
       },
       {
         "0": "total",
@@ -37,7 +37,7 @@
           "2": "i",
           "type": "SumExp_plus"
         },
-        "type": "AssignmentExp_ass"
+        "type": "Assignment_ass"
       },
       {
         "0": [
@@ -50,7 +50,7 @@
             "2": [
               {
                 "1": "total",
-                "type": "Exp_break"
+                "type": "Statement_break"
               }
             ],
             "type": "If"

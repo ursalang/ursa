@@ -121,9 +121,9 @@ testGroup('Conditionals', [
 ])
 
 testGroup('loop and break', [
-  ['break', [{1: null, type: 'Exp_break'}]],
+  ['break', [{1: null, type: 'Statement_break'}]],
   ['loop { break 3 }', [
-    {1: [{1: '3', type: 'Exp_break'}], type: 'Loop'},
+    {1: [{1: '3', type: 'Statement_break'}], type: 'Loop'},
   ]],
 ])
 
@@ -131,7 +131,7 @@ testGroup('let', [
   ['let a = 3; a', [[{1: {0: 'a', 1: '3', type: 'Definition'}, type: 'Let'}], 'a']],
   ['let b = 5; b := 7; b', [
     [{1: {0: 'b', 1: '5', type: 'Definition'}, type: 'Let'}],
-    {0: 'b', 2: '7', type: 'AssignmentExp_ass'},
+    {0: 'b', 2: '7', type: 'Assignment_ass'},
     'b',
   ]],
 ])

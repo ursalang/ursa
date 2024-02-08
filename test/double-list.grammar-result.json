@@ -94,7 +94,7 @@
                       "2": [
                         {
                           "1": "l",
-                          "type": "Exp_return"
+                          "type": "Statement_return"
                         }
                       ],
                       "type": "If"
@@ -143,7 +143,7 @@
                     "2": "1",
                     "type": "SumExp_plus"
                   },
-                  "type": "AssignmentExp_ass"
+                  "type": "Assignment_ass"
                 }
               ],
               "type": "Loop"

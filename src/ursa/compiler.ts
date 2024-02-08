@@ -485,31 +485,32 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     )
   },
 
-  AssignmentExp_ass(lvalue, _ass, value) {
+  Assignment_ass(lvalue, _ass, exp) {
     const compiledLvalue = lvalue.toLval(this.args.a)
-    const compiledValue = value.toExp(this.args.a)
+    const compiledValue = exp.toExp(this.args.a)
     return addLoc(new ArkSet(compiledLvalue, compiledValue), this)
   },
 
   Exp_await(_await, exp) {
     return addLoc(new ArkAwait(exp.toExp(this.args.a)), this)
   },
-  Exp_break(_break, exp) {
+
+  Statement_break(_break, exp) {
     if (!this.args.a.inLoop) {
       throw new UrsaCompilerError(_break.source, 'break used outside a loop')
     }
     return addLoc(new ArkBreak(maybeVal(this.args.a, exp)), this)
   },
-  Exp_continue(_continue) {
+  Statement_continue(_continue) {
     if (!this.args.a.inLoop) {
       throw new UrsaCompilerError(_continue.source, 'continue used outside a loop')
     }
     return addLoc(new ArkContinue(), this)
   },
-  Exp_launch(_await, exp) {
+  Statement_launch(_await, exp) {
     return addLoc(new ArkLaunch(exp.toExp(this.args.a)), this)
   },
-  Exp_return(_return, exp) {
+  Statement_return(_return, exp) {
     if (!this.args.a.inFn) {
       throw new UrsaCompilerError(_return.source, 'return used outside a function')
     }

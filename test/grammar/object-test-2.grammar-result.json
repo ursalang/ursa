@@ -37,7 +37,7 @@
       "type": "PostfixExp_property"
     },
     "2": "\"abc\"",
-    "type": "AssignmentExp_ass"
+    "type": "Assignment_ass"
   },
   "o"
 ]

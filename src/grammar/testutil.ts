@@ -32,8 +32,8 @@ export function parse(
     If: {1: 1, 2: 2},
     FnType: {2: 2, 5: 5},
     Loop: {1: 1},
-    Exp_break: {1: 1},
-    Exp_return: {1: 1},
+    Statement_break: {1: 1},
+    Statement_return: {1: 1},
     Let: {1: 1},
     // The following are to work around https://github.com/ohmjs/ohm/issues/463
     LogicNotExp_not: {1: 1},

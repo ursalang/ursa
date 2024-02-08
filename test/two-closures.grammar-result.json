@@ -86,7 +86,7 @@
                           "2": "x",
                           "type": "SumExp_plus"
                         },
-                        "type": "AssignmentExp_ass"
+                        "type": "Assignment_ass"
                       }
                     ],
                     "type": "Fn"
@@ -99,7 +99,7 @@
             {
               "0": "tot",
               "2": "2",
-              "type": "AssignmentExp_ass"
+              "type": "Assignment_ass"
             },
             "f"
           ],

@@ -451,8 +451,8 @@ semantics.addOperation<Span>('fmt(a)', {
     return fmtBinary(this.args.a, 'or', left, right)
   },
 
-  AssignmentExp_ass(lvalue, _ass, value) {
-    return fmtBinary(this.args.a, ':=', lvalue, value)
+  Assignment_ass(lvalue, _ass, exp) {
+    return fmtBinary(this.args.a, ':=', lvalue, exp)
   },
 
   Exp_await(_await, exp) {
@@ -462,24 +462,25 @@ semantics.addOperation<Span>('fmt(a)', {
       [(a) => hSpan(['await', exp.fmt(a)])],
     )
   },
-  Exp_break(_break, exp) {
+
+  Statement_break(_break, exp) {
     return tryFormats(
       this.args.a,
       (a) => hSpan(['break', ...fmtOptional(a, exp)]),
       [(a) => hSpan(['break', ...fmtOptional(a, exp)])],
     )
   },
-  Exp_continue(_continue) {
+  Statement_continue(_continue) {
     return hSpan(['continue'])
   },
-  Exp_launch(_await, exp) {
+  Statement_launch(_await, exp) {
     return tryFormats(
       this.args.a,
       (a) => hSpan(['launch', exp.fmt(a)]),
       [(a) => hSpan(['launch', exp.fmt(a)])],
     )
   },
-  Exp_return(_return, exp) {
+  Statement_return(_return, exp) {
     return tryFormats(
       this.args.a,
       (a) => hSpan(['return', ...fmtOptional(a, exp)]),

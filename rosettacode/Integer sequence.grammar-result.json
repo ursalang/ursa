@@ -28,7 +28,7 @@
           "2": "1",
           "type": "SumExp_plus"
         },
-        "type": "AssignmentExp_ass"
+        "type": "Assignment_ass"
       }
     ],
     "type": "Loop"

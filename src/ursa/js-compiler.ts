@@ -229,24 +229,24 @@ semantics.addOperation<string>('toExp(a)', {
     return `${left.toExp(this.args.a)} or ${right.toExp(this.args.a)}`
   },
 
-  AssignmentExp_ass(lvalue, _ass, value) {
-    return `${lvalue.toExp(this.args.a)} = ${value.toExp(this.args.a)}`
+  Assignment_ass(lvalue, _ass, exp) {
+    return `${lvalue.toExp(this.args.a)} = ${exp.toExp(this.args.a)}`
   },
 
-  Exp_break(_break, _exp) {
+  Statement_break(_break, _exp) {
     if (!this.args.a.inLoop) {
       throw new UrsaCompilerError(_break.source, 'break used outside a loop')
     }
     // FIXME: compile exp
     return 'break'
   },
-  Exp_continue(_continue) {
+  Statement_continue(_continue) {
     if (!this.args.a.inLoop) {
       throw new UrsaCompilerError(_continue.source, 'continue used outside a loop')
     }
     return 'continue'
   },
-  Exp_return(_return, exp) {
+  Statement_return(_return, exp) {
     if (!this.args.a.inFn) {
       throw new UrsaCompilerError(_return.source, 'return used outside a function')
     }

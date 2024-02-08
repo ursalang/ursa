@@ -90,7 +90,7 @@
                       "2": [
                         {
                           "1": "tot",
-                          "type": "Exp_return"
+                          "type": "Statement_return"
                         }
                       ],
                       "type": "If"
@@ -120,7 +120,7 @@
                     },
                     "type": "SumExp_plus"
                   },
-                  "type": "AssignmentExp_ass"
+                  "type": "Assignment_ass"
                 },
                 {
                   "0": "i",
@@ -129,7 +129,7 @@
                     "2": "1",
                     "type": "SumExp_plus"
                   },
-                  "type": "AssignmentExp_ass"
+                  "type": "Assignment_ass"
                 }
               ],
               "type": "Loop"
