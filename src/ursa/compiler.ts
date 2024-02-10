@@ -41,6 +41,7 @@ type ParserArgs = {
   env: Environment
   inLoop?: boolean
   inFn?: boolean
+  inExp?: boolean
 }
 
 type ParserNode = Node<ParserOperations>
@@ -300,7 +301,9 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     const paramStrings = type.toMethod(this.args.a)
     // TODO: Environment should contain typed params, not just strings
     const innerEnv = this.args.a.env.pushFrame(new Frame(paramStrings, []))
-    const compiledBody = body.toExp({env: innerEnv, inLoop: false, inFn: true})
+    const compiledBody = body.toExp({
+      env: innerEnv, inLoop: false, inFn: true, inExp: false,
+    })
     // TODO: ArkFn should be an ArkObject which contains one method.
     return addLoc(new ArkFn(
       paramStrings,
@@ -472,6 +475,9 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     )
   },
 
+  LogicExp(node) {
+    return node.toExp({...this.args.a, inExp: true})
+  },
   LogicExp_and(left, _and, right) {
     return addLoc(
       new ArkAnd(left.toExp(this.args.a), right.toExp(this.args.a)),
@@ -510,9 +516,11 @@ semantics.addOperation<ArkExp>('toExp(a)', {
   Statement_launch(_await, exp) {
     return addLoc(new ArkLaunch(exp.toExp(this.args.a)), this)
   },
-  Statement_return(_return, exp) {
+  Statement_return(return_, exp) {
     if (!this.args.a.inFn) {
-      throw new UrsaCompilerError(_return.source, 'return used outside a function')
+      throw new UrsaCompilerError(return_.source, 'return used outside a function')
+    } else if (this.args.a.inExp) {
+      throw new UrsaCompilerError(return_.source, 'return may not be used inside an expression')
     }
     return addLoc(new ArkReturn(maybeVal(this.args.a, exp)), this)
   },
@@ -657,7 +665,9 @@ export function compile(
     throw new Error(matchResult.message)
   }
   const ast = semantics(matchResult)
-  const args = {env, inLoop: false, inFn: false}
+  const args = {
+    env, inLoop: false, inFn: false, atSeqTop: true,
+  }
   return ast.toExp(args)
 }
 
