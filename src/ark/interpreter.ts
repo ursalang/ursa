@@ -8,6 +8,7 @@ import util from 'util'
 import programVersion from '../version.js'
 import {fromJs, toJs} from './ffi.js'
 import {FsMap} from './fsmap.js'
+import {evalArk} from './eval.js'
 
 // Each stack frame consists of a tuple of local vars, captures, and
 // debug info.
@@ -44,7 +45,7 @@ export class ArkState {
   }
 
   async run(compiledVal: ArkExp): Promise<ArkVal> {
-    return compiledVal.eval(this)
+    return evalArk(this, compiledVal)
   }
 }
 
@@ -92,17 +93,11 @@ export class ArkVal extends Ark {
   _arkval: undefined
 }
 
-export abstract class ArkExp extends Ark {
-  abstract eval(ark: ArkState): Promise<ArkVal>
-}
+export abstract class ArkExp extends Ark {}
 
 export class ArkLiteral extends ArkExp {
   constructor(public val: ArkVal = ArkNull()) {
     super()
-  }
-
-  eval(_ark: ArkState): Promise<ArkVal> {
-    return Promise.resolve(this.val)
   }
 }
 
@@ -254,24 +249,11 @@ export class ArkLaunch extends ArkExp {
   constructor(public exp: ArkExp) {
     super()
   }
-
-  eval(ark: ArkState) {
-    return Promise.resolve(new ArkPromise(this.exp.eval(ark)))
-  }
 }
 
 export class ArkAwait extends ArkExp {
   constructor(public exp: ArkExp) {
     super()
-  }
-
-  async eval(ark: ArkState) {
-    const promise = await this.exp.eval(ark)
-    if (!(promise instanceof ArkPromise)) {
-      throw new ArkRuntimeError(ark, "Attempt to 'await' non-Promise", this)
-    }
-    const res = await promise.promise
-    return res
   }
 }
 
@@ -289,10 +271,6 @@ export class ArkBreak extends ArkExp {
   constructor(public exp: ArkExp = new ArkLiteral(ArkNull())) {
     super()
   }
-
-  async eval(ark: ArkState): Promise<never> {
-    throw new ArkBreakException(await this.exp.eval(ark))
-  }
 }
 
 export class ArkContinue extends ArkExp {
@@ -306,13 +284,9 @@ export class ArkReturn extends ArkExp {
   constructor(public exp: ArkExp = new ArkLiteral(ArkNull())) {
     super()
   }
-
-  async eval(ark: ArkState): Promise<never> {
-    throw new ArkReturnException(await this.exp.eval(ark))
-  }
 }
 
-function makeLocals(names: string[], vals: ArkVal[]): ArkRef[] {
+export function makeLocals(names: string[], vals: ArkVal[]): ArkRef[] {
   const locals: ArkValRef[] = names.map((_val, index) => new ArkValRef(vals[index] ?? ArkUndefined))
   if (vals.length > names.length) {
     locals.push(...vals.slice(names.length).map((val) => new ArkValRef(val)))
@@ -320,7 +294,7 @@ function makeLocals(names: string[], vals: ArkVal[]): ArkRef[] {
   return locals
 }
 
-abstract class ArkCallable extends ArkVal {
+export abstract class ArkCallable extends ArkVal {
   constructor(public params: string[], public captures: ArkRef[]) {
     super()
   }
@@ -335,7 +309,7 @@ export class ArkClosure extends ArkCallable {
 
   async call(ark: ArkState): Promise<ArkVal> {
     try {
-      return await this.body.eval(ark)
+      return await evalArk(ark, this.body)
     } catch (e) {
       if (e instanceof ArkReturnException) {
         return e.val
@@ -371,15 +345,6 @@ export class ArkFn extends ArkExp {
   constructor(public params: string[], public capturedVars: ArkLexp[], public body: ArkExp) {
     super()
   }
-
-  async eval(ark: ArkState): Promise<ArkVal> {
-    const captures = []
-    for (const exp of this.capturedVars) {
-      // eslint-disable-next-line no-await-in-loop
-      captures.push(await exp.evalRef(ark))
-    }
-    return new ArkClosure(this.params, captures, this.body)
-  }
 }
 
 // export class ArkType extends Ark {
@@ -407,26 +372,6 @@ export class ArkCall extends ArkExp {
   constructor(public fn: ArkExp, public args: ArkExp[]) {
     super()
   }
-
-  async eval(ark: ArkState): Promise<ArkVal> {
-    const fn = this.fn
-    let sym: ArkRef | undefined
-    if (fn instanceof ArkLocal || fn instanceof ArkCapture) {
-      sym = await fn.evalRef(ark)
-    }
-    const fnVal = await fn.eval(ark)
-    if (!(fnVal instanceof ArkCallable)) {
-      throw new ArkRuntimeError(ark, 'Invalid call', this)
-    }
-    const evaluatedArgs = []
-    for (const arg of this.args) {
-      // eslint-disable-next-line no-await-in-loop
-      evaluatedArgs.push(await arg.eval(ark))
-    }
-    const locals = makeLocals(fnVal.params, evaluatedArgs)
-    const debugInfo = new ArkFrameDebugInfo(sym, this)
-    return fnVal.call(new ArkState(new ArkFrame(locals, fnVal.captures, debugInfo), ark))
-  }
 }
 
 export abstract class ArkRef extends Ark {
@@ -451,10 +396,6 @@ export class ArkValRef extends ArkRef {
 }
 
 export abstract class ArkLexp extends ArkExp {
-  async eval(ark: ArkState): Promise<ArkVal> {
-    return (await this.evalRef(ark)).get(ark)
-  }
-
   abstract evalRef(ark: ArkState): Promise<ArkRef>
 }
 
@@ -482,19 +423,6 @@ export class ArkSet extends ArkExp {
   constructor(public lexp: ArkLexp, public exp: ArkExp) {
     super()
   }
-
-  async eval(ark: ArkState): Promise<ArkVal> {
-    const ref = await this.lexp.evalRef(ark)
-    const res = await this.exp.eval(ark)
-    const oldVal = ref.get(ark)
-    if (oldVal !== ArkUndefined
-      && oldVal.constructor !== ArkNullVal
-      && res.constructor !== oldVal.constructor) {
-      throw new ArkRuntimeError(ark, 'Assignment to different type', this)
-    }
-    ref.set(ark, res)
-    return res
-  }
 }
 
 export class ArkObject extends ArkObjectBase {}
@@ -502,15 +430,6 @@ export class ArkObject extends ArkObjectBase {}
 export class ArkObjectLiteral extends ArkExp {
   constructor(public properties: Map<string, ArkExp>) {
     super()
-  }
-
-  async eval(ark: ArkState): Promise<ArkVal> {
-    const inits = new Map<string, ArkVal>()
-    for (const [k, v] of this.properties) {
-      // eslint-disable-next-line no-await-in-loop
-      inits.set(k, await v.eval(ark))
-    }
-    return new ArkObject(inits)
   }
 }
 
@@ -535,7 +454,7 @@ export class ArkProperty extends ArkLexp {
   }
 
   async evalRef(ark: ArkState): Promise<ArkRef> {
-    const obj = await this.obj.eval(ark)
+    const obj = await evalArk(ark, this.obj)
     if (!(obj instanceof ArkAbstractObjectBase)) {
       throw new ArkRuntimeError(ark, 'Attempt to read property of non-object', this)
     }
@@ -602,15 +521,6 @@ export class ArkListLiteral extends ArkExp {
   constructor(public list: ArkExp[]) {
     super()
   }
-
-  async eval(ark: ArkState): Promise<ArkVal> {
-    const evaluatedList = []
-    for (const e of this.list) {
-      // eslint-disable-next-line no-await-in-loop
-      evaluatedList.push(await e.eval(ark))
-    }
-    return new ArkList(evaluatedList)
-  }
 }
 
 export class ArkMap extends ArkObjectBase {
@@ -667,15 +577,6 @@ export class ArkMapLiteral extends ArkExp {
   constructor(public map: Map<ArkExp, ArkExp>) {
     super()
   }
-
-  async eval(ark: ArkState): Promise<ArkVal> {
-    const evaluatedMap = new Map<ArkVal, ArkVal>()
-    for (const [k, v] of this.map) {
-      // eslint-disable-next-line no-await-in-loop
-      evaluatedMap.set(await k.eval(ark), await v.eval(ark))
-    }
-    return new ArkMap(evaluatedMap)
-  }
 }
 
 export async function pushLets(ark: ArkState, boundVars: [string, ArkExp][]) {
@@ -684,31 +585,17 @@ export async function pushLets(ark: ArkState, boundVars: [string, ArkExp][]) {
   const vals: ArkVal[] = []
   for (const bv of boundVars) {
     // eslint-disable-next-line no-await-in-loop
-    vals.push(await bv[1].eval(ark))
+    vals.push(await evalArk(ark, bv[1]))
   }
   for (let i = 0; i < lets.length; i += 1) {
     lets[i].set(ark, vals[i])
   }
   return lets.length
 }
+
 export class ArkLet extends ArkExp {
   constructor(public boundVars: [string, ArkExp][], public body: ArkExp) {
     super()
-  }
-
-  async eval(ark: ArkState): Promise<ArkVal> {
-    const nLets = await pushLets(ark, this.boundVars)
-    let res: ArkVal
-    try {
-      res = await this.body.eval(ark)
-    } catch (e) {
-      if (e instanceof ArkNonLocalReturn) {
-        ark.pop(nLets)
-      }
-      throw e
-    }
-    ark.pop(nLets)
-    return res
   }
 }
 
@@ -716,31 +603,11 @@ export class ArkSequence extends ArkExp {
   constructor(public exps: ArkExp[]) {
     super()
   }
-
-  async eval(ark: ArkState): Promise<ArkVal> {
-    let res: ArkVal = ArkNull()
-    for (const exp of this.exps) {
-      // eslint-disable-next-line no-await-in-loop
-      res = await exp.eval(ark)
-    }
-    return res
-  }
 }
 
 export class ArkIf extends ArkExp {
   constructor(public cond: ArkExp, public thenExp: ArkExp, public elseExp?: ArkExp) {
     super()
-  }
-
-  async eval(ark: ArkState): Promise<ArkVal> {
-    const condVal = await this.cond.eval(ark)
-    let res: ArkVal
-    if (toJs(condVal)) {
-      res = await this.thenExp.eval(ark)
-    } else {
-      res = this.elseExp ? await this.elseExp.eval(ark) : ArkNull()
-    }
-    return res
   }
 }
 
@@ -748,51 +615,17 @@ export class ArkAnd extends ArkExp {
   constructor(public left: ArkExp, public right: ArkExp) {
     super()
   }
-
-  async eval(ark: ArkState): Promise<ArkVal> {
-    const leftVal = await this.left.eval(ark)
-    if (toJs(leftVal)) {
-      // eslint-disable-next-line @typescript-eslint/return-await
-      return await this.right.eval(ark)
-    }
-    return leftVal
-  }
 }
 
 export class ArkOr extends ArkExp {
   constructor(public left: ArkExp, public right: ArkExp) {
     super()
   }
-
-  async eval(ark: ArkState): Promise<ArkVal> {
-    const leftVal = await this.left.eval(ark)
-    if (toJs(leftVal)) {
-      return leftVal
-    }
-    // eslint-disable-next-line @typescript-eslint/return-await
-    return await this.right.eval(ark)
-  }
 }
 
 export class ArkLoop extends ArkExp {
   constructor(public body: ArkExp) {
     super()
-  }
-
-  async eval(ark: ArkState): Promise<ArkVal> {
-    for (; ;) {
-      try {
-        // eslint-disable-next-line no-await-in-loop
-        await this.body.eval(ark)
-      } catch (e) {
-        if (e instanceof ArkBreakException) {
-          return e.val
-        }
-        if (!(e instanceof ArkContinueException)) {
-          throw e
-        }
-      }
-    }
   }
 }
 

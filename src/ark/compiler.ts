@@ -15,6 +15,7 @@ import {
   ArkListLiteral, ArkObjectLiteral, ArkMapLiteral,
   ArkFn, ArkReturn, ArkProperty, ArkLet, ArkCall, ArkLiteral, ArkObject,
 } from './interpreter.js'
+import {evalArk} from './eval.js'
 
 export class ArkCompilerError extends Error {}
 
@@ -291,5 +292,5 @@ export function compile(expr: unknown, env = new Environment()): ArkExp {
 
 // Compile the prelude and add its values to the globals
 const prelude = compile(preludeJson)
-const preludeObj = await prelude.eval(new ArkState()) as ArkObject
+const preludeObj = await evalArk(new ArkState(), prelude) as ArkObject
 preludeObj.properties.forEach((val, sym) => globals.set(sym, val))
