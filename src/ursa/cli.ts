@@ -3,11 +3,12 @@
 // Released under the GPL version 3, or (at your option) any later version.
 
 import path from 'path'
-import os from 'os'
-import fs, {PathOrFileDescriptor} from 'fs'
+import fs, {PathOrFileDescriptor} from 'fs-extra'
 import * as readline from 'node:readline'
 
 import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
+import envPaths from 'env-paths'
+import tildify from 'tildify'
 
 import programVersion from '../version.js'
 import {
@@ -25,16 +26,19 @@ if (process.env.DEBUG) {
   Error.stackTraceLimit = Infinity
 }
 
+const historyFile = process.env.URSA_HISTORY
+ ?? path.join(envPaths('ursa', {suffix: ''}).config, 'history')
+
 // Read and process arguments
 const parser = new ArgumentParser({
   description: 'The Ursa language.',
   formatter_class: RawDescriptionHelpFormatter,
   epilog: `\`-' given as a file name means standard input or output.
 
-If just one non-option argument is given, Ursa treats it as
-a FILE to be \`run'.
+If just one non-option argument is given, Ursa treats it as a FILE to be \`run'.
 
-Command line history is read from and saved to ~/.ursarc`,
+Command line history is saved to the file given by the environment variable
+URSA_HISTORY (default: ${tildify(historyFile)})`,
 })
 parser.add_argument('--version', {
   action: 'version',
@@ -164,7 +168,6 @@ function compile(
 
 async function repl(args: Args): Promise<ArkVal> {
   console.log(`Welcome to Ursa ${programVersion}.`)
-  const historyFile = path.join(os.homedir(), '.ursarc')
   let history: string[] = []
   if (fs.existsSync(historyFile)) {
     history = fs.readFileSync(historyFile, {encoding: 'utf-8'}).split('\n').reverse()
@@ -179,6 +182,7 @@ async function repl(args: Args): Promise<ArkVal> {
   })
   rl.on('history', (history: string[]) => {
     const reversedHistory: string[] = history.toReversed()
+    fs.ensureDirSync(path.dirname(historyFile))
     fs.writeFileSync(historyFile, `${reversedHistory.join('\n')}\n`)
   })
   rl.prompt()
