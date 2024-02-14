@@ -101,7 +101,7 @@ export class ArkLiteral extends ArkExp {
   }
 }
 
-abstract class ArkAbstractObjectBase extends ArkVal {
+export abstract class ArkAbstractObjectBase extends ArkVal {
   abstract get(prop: string): ArkVal
 
   abstract set(prop: string, val: ArkVal): ArkVal
@@ -395,27 +395,17 @@ export class ArkValRef extends ArkRef {
   }
 }
 
-export abstract class ArkLexp extends ArkExp {
-  abstract evalRef(ark: ArkState): Promise<ArkRef>
-}
+export abstract class ArkLexp extends ArkExp {}
 
 export class ArkLocal extends ArkLexp {
   constructor(public index: number) {
     super()
-  }
-
-  evalRef(ark: ArkState): Promise<ArkRef> {
-    return Promise.resolve(ark.frame.locals[this.index])
   }
 }
 
 export class ArkCapture extends ArkLexp {
   constructor(public index: number) {
     super()
-  }
-
-  evalRef(ark: ArkState): Promise<ArkRef> {
-    return Promise.resolve(ark.frame.captures[this.index])
   }
 }
 
@@ -451,16 +441,6 @@ export class NativeObject extends ArkAbstractObjectBase {
 export class ArkProperty extends ArkLexp {
   constructor(public obj: ArkExp, public prop: string) {
     super()
-  }
-
-  async evalRef(ark: ArkState): Promise<ArkRef> {
-    const obj = await evalArk(ark, this.obj)
-    if (!(obj instanceof ArkAbstractObjectBase)) {
-      throw new ArkRuntimeError(ark, 'Attempt to read property of non-object', this)
-    }
-    const ref = new ArkPropertyRef(obj, this.prop)
-    ref.debug.sourceLoc = this.debug.sourceLoc
-    return ref
   }
 }
 

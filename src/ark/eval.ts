@@ -2,14 +2,16 @@ import {toJs} from './ffi.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  ArkState, ArkFrameDebugInfo, ArkFrame, ArkExp, ArkLaunch, ArkLiteral, ArkPromise, ArkAwait,
-  ArkRuntimeError, ArkBreak, ArkBreakException,
+  ArkState, ArkFrameDebugInfo, ArkFrame,
+  ArkVal, ArkUndefined, ArkNullVal, ArkNull,
+  ArkExp, ArkLexp, pushLets, ArkLet,
+  ArkRuntimeError, ArkNonLocalReturn, ArkBreak, ArkBreakException,
+  ArkLaunch, ArkLiteral, ArkPromise, ArkAwait,
   ArkContinue, ArkContinueException, ArkReturn, ArkReturnException,
   ArkFn, ArkClosure, ArkCall, ArkRef, ArkLocal, ArkCapture,
   ArkCallable, makeLocals, ArkSet, ArkSequence, ArkIf, ArkAnd, ArkOr, ArkLoop,
-  ArkVal, ArkUndefined, ArkNullVal, ArkNull,
-  ArkObjectLiteral, ArkObject, ArkListLiteral, ArkList, ArkMapLiteral,
-  ArkMap, pushLets, ArkLet, ArkNonLocalReturn, ArkLexp,
+  ArkObjectLiteral, ArkObject, ArkListLiteral, ArkList, ArkMapLiteral, ArkMap,
+  ArkProperty, ArkAbstractObjectBase, ArkPropertyRef,
 } from './interpreter.js'
 
 export async function evalArk(ark: ArkState, exp: ArkExp): Promise<ArkVal> {
@@ -34,14 +36,14 @@ export async function evalArk(ark: ArkState, exp: ArkExp): Promise<ArkVal> {
     const captures = []
     for (const v of exp.capturedVars) {
       // eslint-disable-next-line no-await-in-loop
-      captures.push(await v.evalRef(ark))
+      captures.push(await evalRef(ark, v))
     }
     return new ArkClosure(exp.params, captures, exp.body)
   } else if (exp instanceof ArkCall) {
     const fn = exp.fn
     let sym: ArkRef | undefined
     if (fn instanceof ArkLocal || fn instanceof ArkCapture) {
-      sym = await fn.evalRef(ark)
+      sym = await evalRef(ark, fn)
     }
     const fnVal = await evalArk(ark, fn)
     if (!(fnVal instanceof ArkCallable)) {
@@ -56,7 +58,7 @@ export async function evalArk(ark: ArkState, exp: ArkExp): Promise<ArkVal> {
     const debugInfo = new ArkFrameDebugInfo(sym, exp)
     return fnVal.call(new ArkState(new ArkFrame(locals, fnVal.captures, debugInfo), ark))
   } else if (exp instanceof ArkSet) {
-    const ref = await exp.lexp.evalRef(ark)
+    const ref = await evalRef(ark, exp.lexp)
     const res = await evalArk(ark, exp.exp)
     const oldVal = ref.get(ark)
     if (oldVal !== ArkUndefined
@@ -145,7 +147,24 @@ export async function evalArk(ark: ArkState, exp: ArkExp): Promise<ArkVal> {
       }
     }
   } else if (exp instanceof ArkLexp) {
-    return (await exp.evalRef(ark)).get(ark)
+    return (await evalRef(ark, exp)).get(ark)
   }
-  throw new Error('invalid Ark code')
+  throw new Error('invalid ArkExp')
+}
+
+async function evalRef(ark: ArkState, lexp: ArkLexp): Promise<ArkRef> {
+  if (lexp instanceof ArkLocal) {
+    return Promise.resolve(ark.frame.locals[lexp.index])
+  } else if (lexp instanceof ArkCapture) {
+    return Promise.resolve(ark.frame.captures[lexp.index])
+  } else if (lexp instanceof ArkProperty) {
+    const obj = await evalArk(ark, lexp.obj)
+    if (!(obj instanceof ArkAbstractObjectBase)) {
+      throw new ArkRuntimeError(ark, 'Attempt to read property of non-object', lexp)
+    }
+    const ref = new ArkPropertyRef(obj, lexp.prop)
+    ref.debug.sourceLoc = lexp.debug.sourceLoc
+    return ref
+  }
+  throw new Error('invalid ArkLexp')
 }
