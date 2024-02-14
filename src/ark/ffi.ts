@@ -2,6 +2,7 @@
 // © Reuben Thomas 2023
 // Released under the MIT license.
 
+import {call} from './eval.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
@@ -74,7 +75,7 @@ export function toJs(val: ArkVal): unknown {
   } else if (val instanceof ArkClosure) {
     return async (...args: unknown[]) => {
       const locals = args.map((arg) => new ArkValRef(fromJs(arg)))
-      return val.call(new ArkState(new ArkFrame(locals, val.captures)))
+      return call(new ArkState(new ArkFrame(locals, val.captures)), val)
     }
   } else if (val instanceof NativeAsyncFn) {
     return val.body

@@ -298,24 +298,11 @@ export abstract class ArkCallable extends ArkVal {
   constructor(public params: string[], public captures: ArkRef[]) {
     super()
   }
-
-  abstract call(ark: ArkState): Promise<ArkVal>
 }
 
 export class ArkClosure extends ArkCallable {
   constructor(params: string[], captures: ArkRef[], public body: ArkExp) {
     super(params, captures)
-  }
-
-  async call(ark: ArkState): Promise<ArkVal> {
-    try {
-      return await evalArk(ark, this.body)
-    } catch (e) {
-      if (e instanceof ArkReturnException) {
-        return e.val
-      }
-      throw e
-    }
   }
 }
 
@@ -323,21 +310,11 @@ export class NativeFn extends ArkCallable {
   constructor(params: string[], public body: (...args: ArkVal[]) => ArkVal) {
     super(params, [])
   }
-
-  async call(ark: ArkState): Promise<ArkVal> {
-    const args = ark.frame.locals.map((ref) => ref.get(ark))
-    return Promise.resolve(this.body(...args))
-  }
 }
 
 export class NativeAsyncFn extends ArkCallable {
   constructor(params: string[], public body: (...args: ArkVal[]) => Promise<ArkVal>) {
     super(params, [])
-  }
-
-  async call(ark: ArkState): Promise<ArkVal> {
-    const args = ark.frame.locals.map((ref) => ref.get(ark))
-    return this.body(...args)
   }
 }
 

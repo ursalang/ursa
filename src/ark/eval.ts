@@ -8,10 +8,12 @@ import {
   ArkRuntimeError, ArkNonLocalReturn, ArkBreak, ArkBreakException,
   ArkLaunch, ArkLiteral, ArkPromise, ArkAwait,
   ArkContinue, ArkContinueException, ArkReturn, ArkReturnException,
-  ArkFn, ArkClosure, ArkCall, ArkRef, ArkLocal, ArkCapture,
-  ArkCallable, makeLocals, ArkSet, ArkSequence, ArkIf, ArkAnd, ArkOr, ArkLoop,
-  ArkObjectLiteral, ArkObject, ArkListLiteral, ArkList, ArkMapLiteral, ArkMap,
-  ArkProperty, ArkAbstractObjectBase, ArkPropertyRef,
+  ArkFn, ArkCallable, ArkClosure, ArkCall, NativeFn, NativeAsyncFn,
+  ArkRef, ArkLocal, ArkCapture,
+  makeLocals, ArkSet, ArkSequence, ArkIf, ArkAnd, ArkOr, ArkLoop,
+  ArkAbstractObjectBase, ArkObjectLiteral, ArkObject,
+  ArkListLiteral, ArkList, ArkMapLiteral, ArkMap,
+  ArkProperty, ArkPropertyRef,
 } from './interpreter.js'
 
 export async function evalArk(ark: ArkState, exp: ArkExp): Promise<ArkVal> {
@@ -56,7 +58,7 @@ export async function evalArk(ark: ArkState, exp: ArkExp): Promise<ArkVal> {
     }
     const locals = makeLocals(fnVal.params, evaluatedArgs)
     const debugInfo = new ArkFrameDebugInfo(sym, exp)
-    return fnVal.call(new ArkState(new ArkFrame(locals, fnVal.captures, debugInfo), ark))
+    return call(new ArkState(new ArkFrame(locals, fnVal.captures, debugInfo), ark), fnVal)
   } else if (exp instanceof ArkSet) {
     const ref = await evalRef(ark, exp.lexp)
     const res = await evalArk(ark, exp.exp)
@@ -167,4 +169,24 @@ async function evalRef(ark: ArkState, lexp: ArkLexp): Promise<ArkRef> {
     return ref
   }
   throw new Error('invalid ArkLexp')
+}
+
+export async function call(ark: ArkState, callable: ArkCallable): Promise<ArkVal> {
+  if (callable instanceof ArkClosure) {
+    try {
+      return await evalArk(ark, callable.body)
+    } catch (e) {
+      if (e instanceof ArkReturnException) {
+        return e.val
+      }
+      throw e
+    }
+  } else if (callable instanceof NativeFn) {
+    const args = ark.frame.locals.map((ref) => ref.get(ark))
+    return Promise.resolve(callable.body(...args))
+  } else if (callable instanceof NativeAsyncFn) {
+    const args = ark.frame.locals.map((ref) => ref.get(ark))
+    return callable.body(...args)
+  }
+  throw new Error('invalid ArkCallable')
 }
