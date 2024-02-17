@@ -16,10 +16,9 @@ import {
   ArkLet, ArkVal, ArkString, globals, pushLets,
 } from '../ark/interpreter.js'
 import {Environment, compile as arkCompile} from '../ark/compiler.js'
-import {fromJs, toJs} from '../ark/ffi.js'
+import {toJs} from '../ark/ffi.js'
 import {serializeVal} from '../ark/serialize.js'
 import {runWithTraceback, compile as ursaCompile} from './compiler.js'
-import {compile as jsCompile} from './js-compiler.js'
 import {format} from './fmt.js'
 
 if (process.env.DEBUG) {
@@ -236,7 +235,7 @@ async function runCode(source: string, args: Args) {
       }
     } else {
       // eslint-disable-next-line no-eval
-      result = fromJs(eval(jsCompile(source)))
+      throw new Error('JavaScript back-end unimplemented')
     }
   }
   if (source === undefined || args.interactive) {
@@ -268,7 +267,12 @@ function compileCommand(args: Args) {
   // Read input
   const inputFile = getInputFile(args)
   const source = readSourceFile(inputFile)
-  const output = args.target === 'ark' ? serializeVal(compile(args, source)) : jsCompile(source)
+  let output
+  if (args.target === 'ark') {
+    output = serializeVal(compile(args, source))
+  } else {
+    throw new Error('JavaScript back-end unimplemented')
+  }
   fs.writeFileSync(outputFile, output)
   return Promise.resolve()
 }
