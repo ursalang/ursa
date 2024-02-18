@@ -22,7 +22,7 @@ import {
 } from '../ark/interpreter.js'
 import {
   ArkCompilerError, symRef, Frame, Environment, checkParamList,
-} from '../ark/compiler.js'
+} from '../ark/reader.js'
 
 type ParserOperations = {
   toExp(a: ParserArgs): ArkExp
@@ -327,7 +327,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
       [[forVar, new ArkCall(symRef(loopEnv, '_for'), [])]],
       new ArkSequence([
         new ArkIf(
-          new ArkCall(new ArkProperty(compiledForVar, '='), [new ArkLiteral(ArkNull())]),
+          new ArkCall(new ArkProperty(compiledForVar, 'equals'), [new ArkLiteral(ArkNull())]),
           new ArkBreak(),
         ),
         compiledForBody,
@@ -338,7 +338,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
 
   UnaryExp_bitwise_not(_not, exp) {
     return addLoc(
-      new ArkCall(new ArkProperty(exp.toExp(this.args.a), '~'), []),
+      new ArkCall(new ArkProperty(exp.toExp(this.args.a), 'bitwiseNot'), []),
       this,
     )
   },
@@ -357,113 +357,113 @@ semantics.addOperation<ArkExp>('toExp(a)', {
 
   ExponentExp_power(left, _power, right) {
     return addLoc(
-      new ArkCall(new ArkProperty(left.toExp(this.args.a), '**'), [right.toExp(this.args.a)]),
+      new ArkCall(new ArkProperty(left.toExp(this.args.a), 'exp'), [right.toExp(this.args.a)]),
       this,
     )
   },
 
   ProductExp_times(left, _times, right) {
     return addLoc(
-      new ArkCall(new ArkProperty(left.toExp(this.args.a), '*'), [right.toExp(this.args.a)]),
+      new ArkCall(new ArkProperty(left.toExp(this.args.a), 'mul'), [right.toExp(this.args.a)]),
       this,
     )
   },
   ProductExp_divide(left, _divide, right) {
     return addLoc(
-      new ArkCall(new ArkProperty(left.toExp(this.args.a), '/'), [right.toExp(this.args.a)]),
+      new ArkCall(new ArkProperty(left.toExp(this.args.a), 'div'), [right.toExp(this.args.a)]),
       this,
     )
   },
   ProductExp_mod(left, _mod, right) {
     return addLoc(
-      new ArkCall(new ArkProperty(left.toExp(this.args.a), '%'), [right.toExp(this.args.a)]),
+      new ArkCall(new ArkProperty(left.toExp(this.args.a), 'mod'), [right.toExp(this.args.a)]),
       this,
     )
   },
 
   SumExp_plus(left, _plus, right) {
     return addLoc(
-      new ArkCall(new ArkProperty(left.toExp(this.args.a), '+'), [right.toExp(this.args.a)]),
+      new ArkCall(new ArkProperty(left.toExp(this.args.a), 'add'), [right.toExp(this.args.a)]),
       this,
     )
   },
   SumExp_minus(left, _minus, right) {
     return addLoc(
-      new ArkCall(new ArkProperty(left.toExp(this.args.a), '-'), [right.toExp(this.args.a)]),
+      new ArkCall(new ArkProperty(left.toExp(this.args.a), 'sub'), [right.toExp(this.args.a)]),
       this,
     )
   },
 
   CompareExp_eq(left, _eq, right) {
     return addLoc(
-      new ArkCall(new ArkProperty(left.toExp(this.args.a), '='), [right.toExp(this.args.a)]),
+      new ArkCall(new ArkProperty(left.toExp(this.args.a), 'equals'), [right.toExp(this.args.a)]),
       this,
     )
   },
   CompareExp_neq(left, _neq, right) {
     return addLoc(
-      new ArkCall(new ArkProperty(left.toExp(this.args.a), '!='), [right.toExp(this.args.a)]),
+      new ArkCall(new ArkProperty(left.toExp(this.args.a), 'notEquals'), [right.toExp(this.args.a)]),
       this,
     )
   },
   CompareExp_lt(left, _lt, right) {
     return addLoc(
-      new ArkCall(new ArkProperty(left.toExp(this.args.a), '<'), [right.toExp(this.args.a)]),
+      new ArkCall(new ArkProperty(left.toExp(this.args.a), 'lt'), [right.toExp(this.args.a)]),
       this,
     )
   },
   CompareExp_leq(left, _leq, right) {
     return addLoc(
-      new ArkCall(new ArkProperty(left.toExp(this.args.a), '<='), [right.toExp(this.args.a)]),
+      new ArkCall(new ArkProperty(left.toExp(this.args.a), 'leq'), [right.toExp(this.args.a)]),
       this,
     )
   },
   CompareExp_gt(left, _gt, right) {
     return addLoc(
-      new ArkCall(new ArkProperty(left.toExp(this.args.a), '>'), [right.toExp(this.args.a)]),
+      new ArkCall(new ArkProperty(left.toExp(this.args.a), 'gt'), [right.toExp(this.args.a)]),
       this,
     )
   },
   CompareExp_geq(left, _geq, right) {
     return addLoc(
-      new ArkCall(new ArkProperty(left.toExp(this.args.a), '>='), [right.toExp(this.args.a)]),
+      new ArkCall(new ArkProperty(left.toExp(this.args.a), 'geq'), [right.toExp(this.args.a)]),
       this,
     )
   },
 
   BitwiseExp_and(left, _and, right) {
     return addLoc(
-      new ArkCall(new ArkProperty(left.toExp(this.args.a), '&'), [right.toExp(this.args.a)]),
+      new ArkCall(new ArkProperty(left.toExp(this.args.a), 'bitwiseAnd'), [right.toExp(this.args.a)]),
       this,
     )
   },
   BitwiseExp_or(left, _or, right) {
     return addLoc(
-      new ArkCall(new ArkProperty(left.toExp(this.args.a), '|'), [right.toExp(this.args.a)]),
+      new ArkCall(new ArkProperty(left.toExp(this.args.a), 'bitwiseOr'), [right.toExp(this.args.a)]),
       this,
     )
   },
   BitwiseExp_xor(left, _xor, right) {
     return addLoc(
-      new ArkCall(new ArkProperty(left.toExp(this.args.a), '^'), [right.toExp(this.args.a)]),
+      new ArkCall(new ArkProperty(left.toExp(this.args.a), 'bitwiseXor'), [right.toExp(this.args.a)]),
       this,
     )
   },
   BitwiseExp_lshift(left, _lshift, right) {
     return addLoc(
-      new ArkCall(new ArkProperty(left.toExp(this.args.a), '<<'), [right.toExp(this.args.a)]),
+      new ArkCall(new ArkProperty(left.toExp(this.args.a), 'shiftLeft'), [right.toExp(this.args.a)]),
       this,
     )
   },
   BitwiseExp_arshift(left, _arshift, right) {
     return addLoc(
-      new ArkCall(new ArkProperty(left.toExp(this.args.a), '>>'), [right.toExp(this.args.a)]),
+      new ArkCall(new ArkProperty(left.toExp(this.args.a), 'shiftRight'), [right.toExp(this.args.a)]),
       this,
     )
   },
   BitwiseExp_lrshift(left, _lrshift, right) {
     return addLoc(
-      new ArkCall(new ArkProperty(left.toExp(this.args.a), '>>>'), [right.toExp(this.args.a)]),
+      new ArkCall(new ArkProperty(left.toExp(this.args.a), 'shiftRightArith'), [right.toExp(this.args.a)]),
       this,
     )
   },

@@ -94,7 +94,7 @@ Error: Line 6, col 13:
                   ^~~~~
   7 |     if l == null { return tot }
 
-Invalid property 'get'
+Invalid property
 
 Traceback (most recent call last)
   line 12
@@ -105,7 +105,7 @@ Error: Line 6, col 17:
                       ^~~~~
   7 |         if l == null {
 
-Invalid property 'get'
+Invalid property
 
 Traceback (most recent call last)
   line 14

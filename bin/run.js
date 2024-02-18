@@ -1,4 +1,4 @@
-#!/usr/bin/env -S node --no-warnings
+#!/usr/bin/env -S node --enable-source-maps --no-warnings
 import path from 'path'
 import { fileURLToPath } from 'url'
 

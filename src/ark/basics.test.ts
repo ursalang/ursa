@@ -10,7 +10,7 @@ import {
   ArkBreakException, ArkState,
 } from './interpreter.js'
 import {toJs} from './ffi.js'
-import {compile} from './compiler.js'
+import {compile} from './reader.js'
 
 import {testArkGroup as testGroup} from '../testutil.js'
 
@@ -20,29 +20,29 @@ testGroup('Concrete values', [
 ])
 
 testGroup('Intrinsics', [
-  ['[["prop","+",3],4]', 7],
-  ['[["prop","*",[["prop","+",3],4]],5]', 35],
+  ['[["prop","add",3],4]', 7],
+  ['[["prop","mul",[["prop","add",3],4]],5]', 35],
   ['"pi"', Math.PI],
-  ['["seq","pi",[["prop","+",3],5]]', 8],
-  ['[["prop","=",[["prop","+",3],4]],7]', true],
+  ['["seq","pi",[["prop","add",3],5]]', 8],
+  ['[["prop","equals",[["prop","add",3],4]],7]', true],
   ['[["prop","not",true]]', false],
-  ['[["prop","~",2]]', -3],
-  ['[["prop","&",34],48]', 32],
-  ['[["prop","|",34],48]', 50],
-  ['[["prop","^",34],48]', 18],
-  ['[["prop","<<",34],4]', 544],
-  ['[["prop",">>",-34],4]', -3],
-  ['[["prop",">>>",34],4]', 2],
+  ['[["prop","bitwiseNot",2]]', -3],
+  ['[["prop","bitwiseAnd",34],48]', 32],
+  ['[["prop","bitwiseOr",34],48]', 50],
+  ['[["prop","bitwiseXor",34],48]', 18],
+  ['[["prop","shiftLeft",34],4]', 544],
+  ['[["prop","shiftRight",-34],4]', -3],
+  ['[["prop","shiftRightArith",34],4]', 2],
 ])
 
 testGroup('Sequences', [
-  ['["seq","pi",[["prop","+",3],4]]', 7],
+  ['["seq","pi",[["prop","add",3],4]]', 7],
 ])
 
 testGroup('Conditionals', [
   ['["if",false,3,4]', 4],
   ['["if",true,3,4]', 3],
-  ['["if",[["prop","=",[["prop","+",3],4]],7],1,0]', 1],
+  ['["if",[["prop","equals",[["prop","add",3],4]],7],1,0]', 1],
   ['["or",1,2]', 1],
   ['["and",1,2]', 2],
 ])
@@ -73,5 +73,5 @@ testGroup('Lists', [
 ])
 
 testGroup('Maps', [
-  ['["seq",["map",[["str","a"],1],[["str","b"],[["prop","+",2],0]],[3,4]]]', new Map<unknown, unknown>([['a', 1], ['b', 2], [3, 4]])],
+  ['["seq",["map",[["str","a"],1],[["str","b"],[["prop","add",2],0]],[3,4]]]', new Map<unknown, unknown>([['a', 1], ['b', 2], [3, 4]])],
 ])

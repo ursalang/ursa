@@ -2,8 +2,8 @@
 // © Reuben Thomas 2023-2024
 // Released under the MIT license.
 
-import assert from 'assert'
-import util from 'util'
+import assert from 'node:assert'
+import util from 'node:util'
 import {Interval} from 'ohm-js'
 
 import programVersion from '../version.js'
@@ -106,8 +106,8 @@ export class ArkObjectBase extends ArkAbstractObjectBase {
   constructor(public properties: Map<string, ArkVal> = new Map()) {
     super()
     this.addDefaults([
-      ['=', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this === right))],
-      ['!=', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this !== right))],
+      ['equals', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this === right))],
+      ['notEquals', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this !== right))],
     ])
   }
 
@@ -133,8 +133,8 @@ export abstract class ArkConcreteVal<T> extends ArkObjectBase {
   constructor(public val: T) {
     super()
     this.addDefaults([
-      ['=', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val === toJs(right)))],
-      ['!=', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val !== toJs(right)))],
+      ['equals', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val === toJs(right)))],
+      ['notEquals', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val !== toJs(right)))],
     ])
   }
 }
@@ -152,25 +152,25 @@ export class ArkNumberVal extends ArkConcreteVal<number> {
     this.addDefaults([
       ['pos', new NativeFn([], () => ArkNumber(+this.val))],
       ['neg', new NativeFn([], () => ArkNumber(-this.val))],
-      ['~', new NativeFn([], () => ArkNumber(~this.val))],
-      ['=', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val === toJs(right)))],
-      ['!=', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val !== toJs(right)))],
-      ['<', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val < (right as ArkNumberVal).val))],
-      ['<=', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val <= (right as ArkNumberVal).val))],
-      ['>', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val > (right as ArkNumberVal).val))],
-      ['>=', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val >= (right as ArkNumberVal).val))],
-      ['+', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val + (right as ArkNumberVal).val))],
-      ['-', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val - (right as ArkNumberVal).val))],
-      ['*', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val * (right as ArkNumberVal).val))],
-      ['/', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val / (right as ArkNumberVal).val))],
-      ['%', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val % (right as ArkNumberVal).val))],
-      ['**', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val ** (right as ArkNumberVal).val))],
-      ['&', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val & (right as ArkNumberVal).val))],
-      ['|', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val | (right as ArkNumberVal).val))],
-      ['^', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val ^ (right as ArkNumberVal).val))],
-      ['<<', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val << (right as ArkNumberVal).val))],
-      ['>>', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val >> (right as ArkNumberVal).val))],
-      ['>>>', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val >>> (right as ArkNumberVal).val))],
+      ['bitwiseNot', new NativeFn([], () => ArkNumber(~this.val))],
+      ['equals', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val === toJs(right)))],
+      ['notEquals', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val !== toJs(right)))],
+      ['lt', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val < (right as ArkNumberVal).val))],
+      ['leq', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val <= (right as ArkNumberVal).val))],
+      ['gt', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val > (right as ArkNumberVal).val))],
+      ['geq', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val >= (right as ArkNumberVal).val))],
+      ['add', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val + (right as ArkNumberVal).val))],
+      ['sub', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val - (right as ArkNumberVal).val))],
+      ['mul', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val * (right as ArkNumberVal).val))],
+      ['div', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val / (right as ArkNumberVal).val))],
+      ['mod', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val % (right as ArkNumberVal).val))],
+      ['exp', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val ** (right as ArkNumberVal).val))],
+      ['bitwiseAnd', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val & (right as ArkNumberVal).val))],
+      ['bitwiseOr', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val | (right as ArkNumberVal).val))],
+      ['bitwiseXor', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val ^ (right as ArkNumberVal).val))],
+      ['shiftLeft', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val << (right as ArkNumberVal).val))],
+      ['shiftRight', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val >> (right as ArkNumberVal).val))],
+      ['shiftRightArith', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val >>> (right as ArkNumberVal).val))],
     ])
   }
 }
@@ -421,7 +421,7 @@ export class ArkPropertyRef extends ArkRef {
   constructor(public obj: ArkAbstractObjectBase, public prop: string) {
     super()
     if (obj.get(prop) === ArkUndefined) {
-      throw new ArkPropertyRefError(`Invalid property '${this.prop}'`)
+      throw new ArkPropertyRefError('Invalid property')
     }
   }
 

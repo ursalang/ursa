@@ -137,7 +137,7 @@ Line 1, col 29:
 > 1 | let o = ABC {a = 1; b = 2}; o.c := "abc"
                                   ^~~
 
-Invalid property 'c'`)
+Invalid property`)
 })
 
 testGroup('Maps', [

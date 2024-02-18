@@ -8,7 +8,7 @@ import {
   debug,
   ArkState, ArkFrame, ArkValRef, ArkVal, ArkConcreteVal,
   ArkNull, ArkBoolean, ArkNumber, ArkObject, ArkString, ArkClosure,
-  ArkMap, ArkList, NativeAsyncFn, NativeObject,
+  ArkMap, ArkList, NativeFn, NativeAsyncFn, NativeObject,
 } from './interpreter.js'
 
 export class ArkFromJsError extends Error {}
@@ -75,7 +75,7 @@ export function toJs(val: ArkVal): unknown {
       const locals = args.map((arg) => new ArkValRef(fromJs(arg)))
       return call(new ArkState(new ArkFrame(locals, val.captures)), val)
     }
-  } else if (val instanceof NativeAsyncFn) {
+  } else if (val instanceof NativeFn || val instanceof NativeAsyncFn) {
     return (...args: unknown[]) => toJs(val.body(...args.map((arg) => fromJs(arg))))
   }
   return val

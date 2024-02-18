@@ -1,5 +1,5 @@
 // Ursa test utilities.
-// © Reuben Thomas 2023
+// © Reuben Thomas 2023-2024
 // Released under the GPL version 3, or (at your option) any later version.
 
 import assert from 'assert'
@@ -14,13 +14,16 @@ import {compareSync, Difference} from 'dir-compare'
 import {
   debug, ArkState, ArkExp, ArkObject,
 } from './ark/interpreter.js'
-import {compile as doArkCompile} from './ark/compiler.js'
+import {compile as doArkCompile} from './ark/reader.js'
 import {toJs} from './ark/ffi.js'
 import {valToJs} from './ark/serialize.js'
 import {compile as ursaCompile} from './ursa/compiler.js'
 import {format} from './ursa/fmt.js'
+import {arkToJs, evalArkJs} from './ark/compiler/index.js'
 
 const command = process.env.NODE_ENV === 'coverage' ? './bin/test-run.sh' : './bin/run.js'
+
+const arkTargets = new Set(['ark', 'js'])
 
 export function run(args: string[], options: ExecaOptions) {
   if (process.env.DEBUG) {
@@ -44,19 +47,24 @@ function doTestGroup(
       if (process.env.DEBUG) {
         debug(compiled, null)
       }
+      const jsSource = arkToJs(compiled)
       // eslint-disable-next-line no-await-in-loop
-      const res = await new ArkState().run(compiled)
-      if (res instanceof ArkObject) {
+      const resArk = await new ArkState().run(compiled)
+      // eslint-disable-next-line no-await-in-loop
+      const resJs = await evalArkJs(jsSource, title)
+      if (resArk instanceof ArkObject) {
         assert(typeof expected === 'object')
         // Remove methods of ArkObject
         // FIXME: remove this once we have separated methods from properties.
         if (Object.keys(expected as object).length === 0) {
           t.deepEqual({}, expected)
         } else {
-          t.like(toJs(res), expected as object)
+          t.like(toJs(resArk), expected as object)
+          t.like(toJs(resJs), expected as object)
         }
       } else {
-        t.deepEqual(toJs(res), expected)
+        t.deepEqual(toJs(resArk), expected)
+        t.deepEqual(toJs(resJs), expected)
       }
     }
   })
@@ -70,6 +78,14 @@ export function testUrsaGroup(title: string, tests: [string, unknown][]) {
   return doTestGroup(title, ursaCompile, tests)
 }
 
+// The interpreter is able to underline the extent of an error location,
+// whereas JavaScript source maps, used by the JavaScript compiler, lack
+// extent; so, remove the underlines from expected and actual output, and
+// assume that they came at the end of a line.
+function deleteErrorExtent(msg: string) {
+  return msg.replaceAll(/~+$/gm, '')
+}
+
 async function doCliTest(
   t: ExecutionContext,
   syntax: string,
@@ -79,9 +95,10 @@ async function doCliTest(
   expectedStdout?: string,
   expectedStderr?: string,
   useRepl?: boolean,
+  target: string = 'ark',
 ) {
   const inputFile = `${inputBasename}.${syntax}`
-  const args = [`--syntax=${syntax}`]
+  const args = [`--syntax=${syntax}`, `--target=${target}`]
   let tempFile: tmp.FileResult
   if (!useRepl) {
     tempFile = tmp.fileSync()
@@ -107,11 +124,14 @@ async function doCliTest(
       t.is(stdout, expectedStdout)
     }
     if (expectedStderr !== undefined) {
-      t.is(stderr, expectedStderr)
+      t.is(deleteErrorExtent(stderr), deleteErrorExtent(expectedStderr))
     }
   } catch (error) {
     if (expectedStderr !== undefined) {
-      t.is((error as ExecaReturnValue).stderr.slice('run.js: '.length), expectedStderr)
+      t.is(
+        deleteErrorExtent((error as ExecaReturnValue).stderr.slice('run.js: '.length)),
+        deleteErrorExtent(expectedStderr),
+      )
       if (expectedStdout !== undefined) {
         t.is((error as ExecaReturnValue).stdout, expectedStdout)
       }
@@ -120,26 +140,6 @@ async function doCliTest(
     }
   }
 }
-
-const arkCliTest = test.macro(async (
-  t: ExecutionContext,
-  file: string,
-  args?: string[],
-  expectedStdout?: string,
-  expectedStderr?: string,
-  useRepl?: boolean,
-) => {
-  await doCliTest(
-    t,
-    'json',
-    file,
-    `${file}.result.json`,
-    args,
-    expectedStdout,
-    expectedStderr,
-    useRepl,
-  )
-})
 
 function diffsetDiffsOnly(diffSet: Difference[]): Difference[] {
   return diffSet.filter((diff) => diff.state !== 'equal')
@@ -196,16 +196,20 @@ const reformattingCliTest = test.macro(async (
   syntaxErrorExpected?: boolean,
 ) => {
   const resultFile = `${inputBasename}.result.json`
-  await doCliTest(
-    t,
-    'ursa',
-    inputBasename,
-    resultFile,
-    extraArgs,
-    expectedStdout,
-    expectedStderr,
-    useRepl,
-  )
+  for (const target of arkTargets) {
+    // eslint-disable-next-line no-await-in-loop
+    await doCliTest(
+      t,
+      'ursa',
+      inputBasename,
+      resultFile,
+      extraArgs,
+      expectedStdout,
+      expectedStderr,
+      useRepl,
+      target,
+    )
+  }
   if (!syntaxErrorExpected && !useRepl) {
     await doCliTest(
       t,
@@ -232,22 +236,26 @@ const reformattingCliDirTest = test.macro(async (
   syntaxErrorExpected?: boolean,
 ) => {
   const resultFile = `${inputBasename}.result.json`
-  await doDirTest(
-    t,
-    expectedDirPath,
-    async (t, tmpDirPath) => (
-      doCliTest(
-        t,
-        'ursa',
-        inputBasename,
-        resultFile,
-        [tmpDirPath, ...extraArgs ?? []],
-        expectedStdout,
-        expectedStderr,
-        useRepl,
-      )
-    ),
-  )
+  for (const target of arkTargets) {
+    // eslint-disable-next-line no-await-in-loop
+    await doDirTest(
+      t,
+      expectedDirPath,
+      async (t, tmpDirPath) => (
+        doCliTest(
+          t,
+          'ursa',
+          inputBasename,
+          resultFile,
+          [tmpDirPath, ...extraArgs ?? []],
+          expectedStdout,
+          expectedStderr,
+          useRepl,
+          target,
+        )
+      ),
+    )
+  }
   if (!syntaxErrorExpected && !useRepl) {
     await doDirTest(
       t,
@@ -274,6 +282,5 @@ function mkTester<Args extends unknown[]>(macro: Macro<Args, unknown>) {
   }
 }
 
-export const arkTest = mkTester(arkCliTest)
 export const ursaTest = mkTester(reformattingCliTest)
 export const ursaDirTest = mkTester(reformattingCliDirTest)

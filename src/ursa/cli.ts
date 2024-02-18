@@ -15,11 +15,12 @@ import {
   debug, ArkState, ArkExp, ArkNull, ArkList,
   ArkLet, ArkVal, ArkString, globals, pushLets,
 } from '../ark/interpreter.js'
-import {Environment, compile as arkCompile} from '../ark/compiler.js'
+import {Environment, compile as arkCompile} from '../ark/reader.js'
 import {toJs} from '../ark/ffi.js'
 import {serializeVal} from '../ark/serialize.js'
 import {runWithTraceback, compile as ursaCompile} from './compiler.js'
 import {format} from './fmt.js'
+import {arkToJs, evalArkJs, jsGlobals} from '../ark/compiler/index.js'
 
 if (process.env.DEBUG) {
   Error.stackTraceLimit = Infinity
@@ -220,21 +221,23 @@ async function runCode(source: string, args: Args) {
   // Any otherwise uncaught exception is reported as an error.
   const ark = new ArkState()
   // Add command-line arguments.
-  globals.set('argv', new ArkList(
+  const ursaArgv = new ArkList(
     [ArkString(prog ?? process.argv[1]), ...args.argument.map((s) => ArkString(s))],
-  ))
+  )
+  globals.set('argv', ursaArgv)
+  jsGlobals.set('argv', ursaArgv)
   // Run the program
   let result: ArkVal | undefined
   if (source !== undefined) {
+    const exp = compile(args, source)
     if (args.target === 'ark') {
-      const exp = compile(args, source)
       if (args.syntax === 'ursa') {
         result = await runWithTraceback(ark, exp)
       } else {
         result = await ark.run(exp)
       }
     } else {
-      throw new Error('JavaScript back-end unimplemented')
+      result = await evalArkJs(arkToJs(exp, prog), prog)
     }
   }
   if (source === undefined || args.interactive) {
@@ -266,11 +269,12 @@ function compileCommand(args: Args) {
   // Read input
   const inputFile = getInputFile(args)
   const source = readSourceFile(inputFile)
+  const exp = compile(args, source)
   let output
   if (args.target === 'ark') {
-    output = serializeVal(compile(args, source))
+    output = serializeVal(exp)
   } else {
-    throw new Error('JavaScript back-end unimplemented')
+    output = arkToJs(exp, prog).code
   }
   fs.writeFileSync(outputFile, output)
   return Promise.resolve()
