@@ -62,13 +62,13 @@ export async function evalArk(ark: ArkState, exp: ArkExp): Promise<ArkVal> {
   } else if (exp instanceof ArkSet) {
     const ref = await evalRef(ark, exp.lexp)
     const res = await evalArk(ark, exp.exp)
-    const oldVal = ref.get(ark)
+    const oldVal = ref.get()
     if (oldVal !== ArkUndefined
       && oldVal.constructor !== ArkNullVal
       && res.constructor !== oldVal.constructor) {
       throw new ArkRuntimeError(ark, 'Assignment to different type', exp)
     }
-    ref.set(ark, res)
+    ref.set(res)
     return res
   } else if (exp instanceof ArkObjectLiteral) {
     const inits = new Map<string, ArkVal>()
@@ -149,7 +149,7 @@ export async function evalArk(ark: ArkState, exp: ArkExp): Promise<ArkVal> {
       }
     }
   } else if (exp instanceof ArkLexp) {
-    return (await evalRef(ark, exp)).get(ark)
+    return (await evalRef(ark, exp)).get()
   }
   throw new Error('invalid ArkExp')
 }
@@ -186,10 +186,10 @@ export async function call(ark: ArkState, callable: ArkCallable): Promise<ArkVal
       throw e
     }
   } else if (callable instanceof NativeFn) {
-    const args = ark.frame.locals.map((ref) => ref.get(ark))
+    const args = ark.frame.locals.map((ref) => ref.get())
     return Promise.resolve(callable.body(...args))
   } else if (callable instanceof NativeAsyncFn) {
-    const args = ark.frame.locals.map((ref) => ref.get(ark))
+    const args = ark.frame.locals.map((ref) => ref.get())
     return callable.body(...args)
   }
   throw new Error('invalid ArkCallable')

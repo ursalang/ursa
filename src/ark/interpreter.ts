@@ -344,9 +344,9 @@ export class ArkCall extends ArkExp {
 }
 
 export abstract class ArkRef extends Ark {
-  abstract get(ark: ArkState): ArkVal
+  abstract get(): ArkVal
 
-  abstract set(ark: ArkState, val: ArkVal): ArkVal
+  abstract set(val: ArkVal): ArkVal
 }
 
 export class ArkValRef extends ArkRef {
@@ -354,11 +354,11 @@ export class ArkValRef extends ArkRef {
     super()
   }
 
-  get(_ark: ArkState): ArkVal {
+  get(): ArkVal {
     return this.val
   }
 
-  set(_ark: ArkState, val: ArkVal): ArkVal {
+  set(val: ArkVal): ArkVal {
     this.val = val
     return val
   }
@@ -423,12 +423,12 @@ export class ArkPropertyRef extends ArkRef {
     }
   }
 
-  get(_ark: ArkState) {
+  get() {
     const val = this.obj.get(this.prop)
     return val
   }
 
-  set(_ark: ArkState, val: ArkVal) {
+  set(val: ArkVal) {
     this.obj.set(this.prop, val)
     return val
   }
@@ -539,7 +539,7 @@ export async function pushLets(ark: ArkState, boundVars: [string, ArkExp][]) {
     vals.push(await evalArk(ark, bv[1]))
   }
   for (let i = 0; i < lets.length; i += 1) {
-    lets[i].set(ark, vals[i])
+    lets[i].set(vals[i])
   }
   return lets.length
 }
