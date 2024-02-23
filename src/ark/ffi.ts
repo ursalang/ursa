@@ -35,7 +35,6 @@ export function fromJs(x: unknown, thisObj?: object): ArkVal {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       async (...args: ArkVal[]) => fromJs(await fn(...args.map(toJs))),
     )
-    nativeFn.debug.name = x.name
     return nativeFn
   }
   if (x instanceof Array) {

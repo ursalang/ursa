@@ -13,7 +13,7 @@ import {
   makeLocals, ArkSet, ArkSequence, ArkIf, ArkAnd, ArkOr, ArkLoop,
   ArkAbstractObjectBase, ArkObjectLiteral, ArkObject,
   ArkListLiteral, ArkList, ArkMapLiteral, ArkMap,
-  ArkProperty, ArkPropertyRef,
+  ArkProperty, ArkPropertyRef, ArkPropertyRefError,
 } from './interpreter.js'
 
 export async function evalArk(ark: ArkState, exp: ArkExp): Promise<ArkVal> {
@@ -164,9 +164,13 @@ async function evalRef(ark: ArkState, lexp: ArkLexp): Promise<ArkRef> {
     if (!(obj instanceof ArkAbstractObjectBase)) {
       throw new ArkRuntimeError(ark, 'Attempt to read property of non-object', lexp)
     }
-    const ref = new ArkPropertyRef(obj, lexp.prop)
-    ref.debug.sourceLoc = lexp.debug.sourceLoc
-    return ref
+    try {
+      return new ArkPropertyRef(obj, lexp.prop)
+    } catch (e) {
+      if (e instanceof ArkPropertyRefError) {
+        throw new ArkRuntimeError(ark, e.message, lexp)
+      }
+    }
   }
   throw new Error('invalid ArkLexp')
 }

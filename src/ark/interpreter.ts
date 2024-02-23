@@ -52,26 +52,14 @@ export class ArkState {
 export class ArkRuntimeError extends Error {
   sourceLoc: unknown
 
-  constructor(public ark: ArkState, public message: string, public val: Ark) {
+  constructor(public ark: ArkState, public message: string, public val: ArkExp) {
     super()
     this.sourceLoc = val.debug.sourceLoc
   }
 }
 
 // Base class for compiled code.
-export class Ark {
-  static nextId = 0
-
-  static debugEnumerable = process.env.DEBUG_ARK !== undefined
-
-  constructor() {
-    Object.defineProperty(this, 'debug', {enumerable: Ark.debugEnumerable})
-    this.debug.uid = Ark.nextId
-    Ark.nextId += 1
-  }
-
-  debug = new ArkDebugInfo()
-}
+export class Ark {}
 
 class ArkDebugInfo {
   uid: number | undefined
@@ -83,17 +71,22 @@ class ArkDebugInfo {
   env: string | undefined
 }
 
-export class ArkVal extends Ark {
+export class ArkVal extends Ark {}
+
+export abstract class ArkExp extends Ark {
+  static nextId = 0
+
+  static debugEnumerable = process.env.DEBUG_ARK !== undefined
+
   constructor() {
     super()
-    // Make this class incompatible with ArkExp.
-    Object.defineProperty(this, '_arkval', {enumerable: false})
+    Object.defineProperty(this, 'debug', {enumerable: ArkExp.debugEnumerable})
+    this.debug.uid = ArkExp.nextId
+    ArkExp.nextId += 1
   }
 
-  _arkval: undefined
+  debug = new ArkDebugInfo()
 }
-
-export abstract class ArkExp extends Ark {}
 
 export class ArkLiteral extends ArkExp {
   constructor(public val: ArkVal = ArkNull()) {
@@ -225,7 +218,6 @@ class ConcreteInterned {
 }
 
 export const ArkUndefined = new ArkVal()
-ArkUndefined.debug.name = 'Undefined'
 export function ArkNull() {
   return ConcreteInterned.value<ArkNullVal, null>(ArkNullVal, null)
 }
@@ -421,16 +413,18 @@ export class ArkProperty extends ArkLexp {
   }
 }
 
+export class ArkPropertyRefError extends Error {}
+
 export class ArkPropertyRef extends ArkRef {
   constructor(public obj: ArkAbstractObjectBase, public prop: string) {
     super()
+    if (obj.get(prop) === ArkUndefined) {
+      throw new ArkPropertyRefError(`Invalid property '${this.prop}'`)
+    }
   }
 
-  get(ark: ArkState) {
+  get(_ark: ArkState) {
     const val = this.obj.get(this.prop)
-    if (val === ArkUndefined) {
-      throw new ArkRuntimeError(ark, `Invalid property '${this.prop}'`, this)
-    }
     return val
   }
 

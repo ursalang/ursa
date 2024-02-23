@@ -3,7 +3,7 @@
 // Released under the MIT license.
 
 import {
-  Ark, ArkConcreteVal, ArkUndefined, ArkNull, ArkSequence,
+  Ark, ArkExp, ArkConcreteVal, ArkUndefined, ArkNull, ArkSequence,
   ArkAnd, ArkOr, ArkIf, ArkLoop, ArkBreak, ArkContinue,
   ArkSet, ArkLet, ArkCall, ArkFn, ArkReturn,
   NativeObject, ArkObject, ArkList, ArkMap, ArkProperty,
@@ -16,7 +16,7 @@ export function valToJs(val: Ark, externalSyms = globals) {
     if (val instanceof NativeObject) {
       return val.obj
     }
-    if (val.debug !== undefined) {
+    if (val instanceof ArkExp && val.debug !== undefined) {
       const name = val.debug.name
       if (name !== undefined) {
         return name
