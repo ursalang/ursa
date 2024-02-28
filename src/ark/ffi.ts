@@ -32,7 +32,6 @@ export function fromJs(x: unknown, thisObj?: object): ArkVal {
     const fn: Function = thisObj ? x.bind(thisObj) : x
     const nativeFn = new NativeAsyncFn(
       [],
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       async (...args: ArkVal[]) => fromJs(await fn(...args.map(toJs))),
     )
     return nativeFn

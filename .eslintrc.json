@@ -15,6 +15,7 @@
     "plugin:@typescript-eslint/recommended-type-checked"
   ],
   "ignorePatterns": [ "*.ohm-bundle.d.ts", "*.ohm-bundle.d.part-patched.ts" ],
+  "reportUnusedDisableDirectives": true,
   "rules": {
     "max-classes-per-file": "off",
     "no-cond-assign": [

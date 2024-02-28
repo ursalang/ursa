@@ -234,7 +234,6 @@ async function runCode(source: string, args: Args) {
         result = await ark.run(exp)
       }
     } else {
-      // eslint-disable-next-line no-eval
       throw new Error('JavaScript back-end unimplemented')
     }
   }
@@ -292,7 +291,7 @@ if (process.argv.length === 3) {
   const filename = process.argv[2]
   // The next line accesses a private field of subparsers to get the command names.
   // eslint-disable-next-line max-len
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
   if (!filename.startsWith('-') && !new Set(Object.keys((subparsers as any).choices)).has(filename)) {
     process.argv.splice(2, 0, 'run')
   }
