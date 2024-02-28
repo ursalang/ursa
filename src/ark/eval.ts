@@ -123,8 +123,7 @@ export async function evalArk(ark: ArkState, exp: ArkExp): Promise<ArkVal> {
   } else if (exp instanceof ArkAnd) {
     const leftVal = await evalArk(ark, exp.left)
     if (toJs(leftVal)) {
-      // eslint-disable-next-line @typescript-eslint/return-await
-      return await evalArk(ark, exp.right)
+      return evalArk(ark, exp.right)
     }
     return leftVal
   } else if (exp instanceof ArkOr) {
@@ -132,8 +131,7 @@ export async function evalArk(ark: ArkState, exp: ArkExp): Promise<ArkVal> {
     if (toJs(leftVal)) {
       return leftVal
     }
-    // eslint-disable-next-line @typescript-eslint/return-await
-    return await evalArk(ark, exp.right)
+    return evalArk(ark, exp.right)
   } else if (exp instanceof ArkLoop) {
     for (; ;) {
       try {
