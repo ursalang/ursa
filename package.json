@@ -69,7 +69,7 @@
     "diff-check": "git diff --exit-code",
     "prepublishOnly": "npm run diff-check && git push --all",
     "postpublish": "git push --tags --no-verify && gh release create $(git describe) -t \"Release $(git describe)\"",
-    "no-diff-or-untracked": "git diff --exit-code && git ls-files --other --directory --exclude-standard | sed q1"
+    "no-diff-or-untracked": "git diff --exit-code package.json src/ test/ || ( git ls-files --other --directory --exclude-standard | sed q1; exit 1 )"
   },
   "ava": {
     "nodeArguments": [
