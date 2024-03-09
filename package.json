@@ -62,8 +62,6 @@
     "update-ohm-patch": "npm run generate-only && npm run patch-diff-ohm && diff -u src/grammar/ursa.ohm-bundle.d.ts src/grammar/ursa.ohm-bundle.d.part-patched.ts > src/grammar/ursa.ohm-bundle.d.ts.diff; npm run patch-ohm",
     "compile-prelude": "npm run pre-compile-prelude && ./bin/test-run.sh compile --output=src/ark/prelude.json src/ursa/prelude.ursa",
     "test": "npm run generate && npm run build && ava",
-    "test-ursa": "ava src/ursa/ursa.test.ts",
-    "test-ark": "ava src/ark/ark.test.ts",
     "coverage": "NODE_ENV=coverage c8 --extension .ts npm test",
     "loc": "cloc --exclude-ext=js --force-lang='JavaScript,ohm' --not-match-f='\\.test\\.ts|\\.ohm-bundle\\.d\\.ts|prelude.json' src",
     "diff-check": "git diff --exit-code",
