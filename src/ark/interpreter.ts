@@ -4,6 +4,7 @@
 
 import assert from 'assert'
 import util from 'util'
+import {Interval} from 'ohm-js'
 
 import programVersion from '../version.js'
 import {fromJs, toJs} from './ffi.js'
@@ -54,7 +55,7 @@ export class ArkRuntimeError extends Error {
 
   constructor(public ark: ArkState, public message: string, public val: ArkExp) {
     super()
-    this.sourceLoc = val.debug.sourceLoc
+    this.sourceLoc = val.sourceLoc
   }
 }
 
@@ -65,8 +66,6 @@ class ArkDebugInfo {
   uid: number | undefined
 
   name: string | undefined
-
-  sourceLoc: unknown
 
   env: string | undefined
 }
@@ -81,11 +80,14 @@ export abstract class ArkExp extends Ark {
   constructor() {
     super()
     Object.defineProperty(this, 'debug', {enumerable: ArkExp.debugEnumerable})
+    Object.defineProperty(this, 'sourceLoc', {enumerable: ArkExp.debugEnumerable})
     this.debug.uid = ArkExp.nextId
     ArkExp.nextId += 1
   }
 
   debug = new ArkDebugInfo()
+
+  sourceLoc?: Interval
 }
 
 export class ArkLiteral extends ArkExp {

@@ -79,7 +79,7 @@ export class UrsaRuntimeError extends UrsaError {
       }
       const callInfo = state.frame.debug.source
       if (callInfo !== undefined) {
-        const line = (callInfo.debug.sourceLoc as Interval).getLineAndColumn()
+        const line = callInfo.sourceLoc!.getLineAndColumn()
         trace.push(`line ${line.lineNum}\n    ${line.line}, ${fnLocation}`)
       } else {
         trace.push('(uninstrumented stack frame)')
@@ -130,8 +130,8 @@ function maybeVal(a: ParserArgs, exp: ParserIterationNode): ArkExp {
 
 function addLoc<T extends ArkExp>(val: T, node: ParserNode): T {
   // Ensure we don't overwrite more precise location info with less precise.
-  assert(val.debug.sourceLoc === undefined, valToString(node))
-  val.debug.sourceLoc = node.source
+  assert(val.sourceLoc === undefined, valToString(node))
+  val.sourceLoc = node.source
   return val
 }
 
