@@ -37,7 +37,6 @@ export async function evalArk(ark: ArkState, exp: ArkExp): Promise<ArkVal> {
   } else if (exp instanceof ArkFn) {
     const captures = []
     for (const v of exp.capturedVars) {
-      // eslint-disable-next-line no-await-in-loop
       captures.push(await evalRef(ark, v))
     }
     return new ArkClosure(exp.params, captures, exp.body)
@@ -53,7 +52,6 @@ export async function evalArk(ark: ArkState, exp: ArkExp): Promise<ArkVal> {
     }
     const evaluatedArgs = []
     for (const arg of exp.args) {
-      // eslint-disable-next-line no-await-in-loop
       evaluatedArgs.push(await evalArk(ark, arg))
     }
     const locals = makeLocals(fnVal.params, evaluatedArgs)
@@ -73,21 +71,18 @@ export async function evalArk(ark: ArkState, exp: ArkExp): Promise<ArkVal> {
   } else if (exp instanceof ArkObjectLiteral) {
     const inits = new Map<string, ArkVal>()
     for (const [k, v] of exp.properties) {
-      // eslint-disable-next-line no-await-in-loop
       inits.set(k, await evalArk(ark, v))
     }
     return new ArkObject(inits)
   } else if (exp instanceof ArkListLiteral) {
     const evaluatedList = []
     for (const e of exp.list) {
-      // eslint-disable-next-line no-await-in-loop
       evaluatedList.push(await evalArk(ark, e))
     }
     return new ArkList(evaluatedList)
   } else if (exp instanceof ArkMapLiteral) {
     const evaluatedMap = new Map<ArkVal, ArkVal>()
     for (const [k, v] of exp.map) {
-      // eslint-disable-next-line no-await-in-loop
       evaluatedMap.set(await evalArk(ark, k), await evalArk(ark, v))
     }
     return new ArkMap(evaluatedMap)
@@ -107,7 +102,6 @@ export async function evalArk(ark: ArkState, exp: ArkExp): Promise<ArkVal> {
   } else if (exp instanceof ArkSequence) {
     let res: ArkVal = ArkNull()
     for (const e of exp.exps) {
-      // eslint-disable-next-line no-await-in-loop
       res = await evalArk(ark, e)
     }
     return res
@@ -135,7 +129,6 @@ export async function evalArk(ark: ArkState, exp: ArkExp): Promise<ArkVal> {
   } else if (exp instanceof ArkLoop) {
     for (; ;) {
       try {
-        // eslint-disable-next-line no-await-in-loop
         await evalArk(ark, exp.body)
       } catch (e) {
         if (e instanceof ArkBreakException) {

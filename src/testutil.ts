@@ -48,9 +48,7 @@ function doTestGroup(
         debug(compiled, null)
       }
       const jsSource = arkToJs(compiled)
-      // eslint-disable-next-line no-await-in-loop
       const resArk = await new ArkState().run(compiled)
-      // eslint-disable-next-line no-await-in-loop
       const resJs = await evalArkJs(jsSource, title)
       if (resArk instanceof ArkObject) {
         assert(typeof expected === 'object')
@@ -197,7 +195,6 @@ const reformattingCliTest = test.macro(async (
 ) => {
   const resultFile = `${inputBasename}.result.json`
   for (const target of arkTargets) {
-    // eslint-disable-next-line no-await-in-loop
     await doCliTest(
       t,
       'ursa',
@@ -237,7 +234,6 @@ const reformattingCliDirTest = test.macro(async (
 ) => {
   const resultFile = `${inputBasename}.result.json`
   for (const target of arkTargets) {
-    // eslint-disable-next-line no-await-in-loop
     await doDirTest(
       t,
       expectedDirPath,

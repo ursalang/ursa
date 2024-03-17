@@ -537,7 +537,6 @@ export async function pushLets(ark: ArkState, boundVars: [string, ArkExp][]) {
   ark.push(lets)
   const vals: ArkVal[] = []
   for (const bv of boundVars) {
-    // eslint-disable-next-line no-await-in-loop
     vals.push(await evalArk(ark, bv[1]))
   }
   for (let i = 0; i < lets.length; i += 1) {
