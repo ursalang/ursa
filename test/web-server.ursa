@@ -1,4 +1,3 @@
-// FIXME: Use this as a test
 use jslib.http
 
 let requestListener = fn (req, res) {
