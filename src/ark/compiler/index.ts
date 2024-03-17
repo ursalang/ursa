@@ -72,9 +72,8 @@ function valToJs(val: ArkVal): string {
     return `ArkNumber(${val.val})`
   } else if (val instanceof ArkStringVal) {
     return `ArkString(${util.inspect(val.val)})`
-  } else if (val instanceof ArkObject) {
-    // FIXME: this is the only ArkObject we expect, but it should be
-    // 'externalSyms', not 'jsGlobals', and detected in a principled way.
+  } else if (val === arkGlobals) {
+    // FIXME: We should detect 'externalSyms', not 'jsGlobals'.
     return 'jsGlobals'
   } else {
     debug(val)
