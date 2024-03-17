@@ -4,7 +4,7 @@
 
 import path from 'path'
 import fs, {PathOrFileDescriptor} from 'fs-extra'
-import * as readline from 'node:readline'
+import * as readline from 'readline'
 
 import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
 import envPaths from 'env-paths'

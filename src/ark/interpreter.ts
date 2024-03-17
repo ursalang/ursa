@@ -2,8 +2,8 @@
 // © Reuben Thomas 2023-2024
 // Released under the MIT license.
 
-import assert from 'node:assert'
-import util from 'node:util'
+import assert from 'assert'
+import util from 'util'
 import {Interval} from 'ohm-js'
 
 import programVersion from '../version.js'

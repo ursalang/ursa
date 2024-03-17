@@ -2,7 +2,7 @@
 // © Reuben Thomas 2024
 // Released under the GPL version 3, or (at your option) any later version.
 
-import assert from 'node:assert'
+import assert from 'assert'
 import {Interval} from 'ohm-js'
 
 import {

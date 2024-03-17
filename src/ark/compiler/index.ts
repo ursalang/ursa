@@ -2,11 +2,11 @@
 // © Reuben Thomas 2024
 // Released under the GPL version 3, or (at your option) any later version.
 
-import assert from 'node:assert'
-import fs from 'node:fs'
-import path from 'node:path'
-import {fileURLToPath} from 'node:url'
-import util from 'node:util'
+import assert from 'assert'
+import fs from 'fs'
+import path from 'path'
+import {fileURLToPath} from 'url'
+import util from 'util'
 import getSource from 'get-source'
 import {
   CodeWithSourceMap, Position, SourceMapConsumer,

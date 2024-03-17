@@ -2,7 +2,7 @@
 // © Reuben Thomas 2023-2024
 // Released under the MIT license.
 
-import assert from 'node:assert'
+import assert from 'assert'
 
 import preludeJson from './prelude.json' assert {type: 'json'}
 import {
