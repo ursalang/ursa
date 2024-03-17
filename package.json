@@ -9,6 +9,7 @@
     "ursa": "./bin/run.js"
   },
   "dependencies": {
+    "@prettier/sync": "^0.5.1",
     "@sc3d/stacktracey": "^2.1.9",
     "argparse": "^2.0.1",
     "env-paths": "^3.0.0",

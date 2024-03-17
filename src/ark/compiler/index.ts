@@ -14,6 +14,7 @@ import {
 } from 'source-map'
 import StackTracey, {Entry} from '@sc3d/stacktracey'
 import {Interval} from 'ohm-js'
+import prettier from '@prettier/sync'
 
 import {
   flattenExp,
@@ -217,7 +218,7 @@ export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSource
   ])
   const jsCode = sourceNode.toStringWithSourceMap({file: file ?? undefined})
   if (process.env.DEBUG) {
-    console.log(jsCode.code) // FIXME: format with prettier
+    console.log(prettier.format(jsCode.code, {parser: 'babel'}))
   }
   return jsCode
 }
