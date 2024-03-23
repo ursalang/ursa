@@ -18,12 +18,12 @@ import prettier from '@prettier/sync'
 
 import {
   flattenExp,
-  ArkInst, ArkAndInst, ArkAwaitInst,
-  ArkBlockCloseInst, ArkBlockOpenInst, ArkThenBlockOpenInst, ArkLoopBlockOpenInst,
+  ArkInst, ArkAwaitInst,
+  ArkBlockCloseInst, ArkBlockOpenInst, ArkIfBlockOpenInst, ArkLoopBlockOpenInst,
   ArkBreakInst, ArkCallInst, ArkContinueInst, ArkCopyInst, ArkFnInst, ArkElseBlockOpenInst,
   ArkInsts, ArkLaunchInst, ArkLetInst, ArkLetCopyInst,
   ArkLexpInst, ArkListLiteralInst, ArkLiteralInst, ArkMapLiteralInst,
-  ArkObjectLiteralInst, ArkOrInst, ArkPropertyInst, ArkReturnInst,
+  ArkObjectLiteralInst, ArkPropertyInst, ArkReturnInst,
   ArkSetInst, ArkSetPropertyInst,
 } from './flatten.js'
 import {
@@ -110,7 +110,7 @@ export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSource
         return sourceNode(`${assign(inst.src.description!, inst.dest)}\n`)
       } else if (inst instanceof ArkBlockCloseInst) {
         return sourceNode([`${assign(inst.blockId.description!, inst.id.description!)}\n`, '}\n'])
-      } else if (inst instanceof ArkThenBlockOpenInst) {
+      } else if (inst instanceof ArkIfBlockOpenInst) {
         return sourceNode([letAssign(inst.id, 'ArkNull()'), `if (${inst.condId.description} !== ArkBoolean(false)) {\n`])
       } else if (inst instanceof ArkElseBlockOpenInst) {
         return sourceNode('else {\n')
@@ -169,28 +169,6 @@ export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSource
           mapInits.push(`[${k.description}, ${v.description}]`)
         }
         return sourceNode(letAssign(inst.id, `new ArkMap(new Map([${mapInits.join(', ')}]))`))
-      } else if (inst instanceof ArkAndInst) {
-        return sourceNode([
-          letAssign(inst.id, 'undefined'),
-          instsToJs(inst.leftInsts),
-          `if (${inst.leftInsts.id.description} === ArkBoolean(false)) {\n`,
-          `${inst.id.description} = ${inst.leftInsts.id.description}\n`,
-          '} else {\n',
-          instsToJs(inst.rightInsts),
-          `${inst.id.description} = ${inst.rightInsts.id.description}\n`,
-          '}\n',
-        ])
-      } else if (inst instanceof ArkOrInst) {
-        return sourceNode([
-          letAssign(inst.id, 'undefined'),
-          instsToJs(inst.leftInsts),
-          `if (${inst.leftInsts.id.description} !== ArkBoolean(false)) {\n`,
-          `${inst.id.description} = ${inst.leftInsts.id.description}\n`,
-          '} else {\n',
-          instsToJs(inst.rightInsts),
-          `${inst.id.description} = ${inst.rightInsts.id.description}\n`,
-          '}\n',
-        ])
       } else if (inst instanceof ArkPropertyInst) {
         return sourceNode(letAssign(inst.id, `${inst.objId.description}.get('${inst.prop}')`))
       } else if (inst instanceof ArkLexpInst) {

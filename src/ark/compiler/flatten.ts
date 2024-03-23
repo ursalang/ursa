@@ -6,7 +6,7 @@ import assert from 'assert'
 import {Interval} from 'ohm-js'
 
 import {
-  ArkAnd, ArkAwait, ArkBreak, ArkCall, ArkContinue, ArkExp, ArkFn,
+  ArkAnd, ArkAwait, ArkBoolean, ArkBreak, ArkCall, ArkContinue, ArkExp, ArkFn,
   ArkIf, ArkLaunch, ArkLet, ArkLexp, ArkListLiteral, ArkLiteral,
   ArkLoop, ArkMapLiteral, ArkNull,
   ArkObjectLiteral, ArkOr, ArkProperty, ArkReturn, ArkSequence, ArkSet, ArkVal,
@@ -71,7 +71,7 @@ export class ArkElseBlockOpenInst extends ArkBlockOpenInst {
   }
 }
 
-export class ArkThenBlockOpenInst extends ArkBlockOpenInst {
+export class ArkIfBlockOpenInst extends ArkBlockOpenInst {
   constructor(
     sourceLoc: Interval | undefined,
     public condId: symbol,
@@ -108,20 +108,22 @@ export function block(
 export function ifElseBlock(
   sourceLoc: Interval | undefined,
   cond: ArkExp,
-  thenExp: ArkExp,
+  thenExp?: ArkExp,
   elseExp?: ArkExp,
   innerLoop?: ArkLoopBlockOpenInst,
   innerFn?: ArkFnInst,
 ): ArkInsts {
   const condInsts = new ArkInsts(flattenExp(cond, innerLoop, innerFn).insts)
-  const thenInsts = flattenExp(thenExp, innerLoop, innerFn)
+  const thenInsts = thenExp
+    ? flattenExp(thenExp, innerLoop, innerFn)
+    : new ArkInsts([new ArkLetCopyInst(cond.sourceLoc, condInsts.id)])
   let elseBlockInsts
-  const thenOpenInst = new ArkThenBlockOpenInst(
-    thenExp.sourceLoc,
+  const ifOpenInst = new ArkIfBlockOpenInst(
+    thenExp ? thenExp.sourceLoc : cond.sourceLoc,
     condInsts.id,
     thenInsts.insts.length > 0 ? thenInsts.insts[thenInsts.insts.length - 1] : undefined,
   )
-  const blockInsts = block(sourceLoc, thenInsts, thenOpenInst)
+  const blockInsts = block(sourceLoc, thenInsts, ifOpenInst)
   if (elseExp !== undefined) {
     const elseInsts = flattenExp(elseExp, innerLoop, innerFn)
     elseBlockInsts = block(
@@ -131,7 +133,7 @@ export function ifElseBlock(
         elseExp.sourceLoc,
         elseInsts.insts.length > 0 ? elseInsts.insts[elseInsts.insts.length - 1] : undefined,
       ),
-      new ArkBlockCloseInst(elseExp.sourceLoc, thenOpenInst.id, elseInsts.id),
+      new ArkBlockCloseInst(elseExp.sourceLoc, ifOpenInst.id, elseInsts.id),
     )
   }
   const ifElseInsts = [...condInsts.insts, ...blockInsts.insts]
@@ -246,26 +248,6 @@ export class ArkMapLiteralInst extends ArkSymInst {
 
 export class ArkLetInst extends ArkSymInst {
   constructor(sourceLoc: Interval | undefined, public vars: string[]) {
-    super(sourceLoc)
-  }
-}
-
-export class ArkAndInst extends ArkSymInst {
-  constructor(
-    sourceLoc: Interval | undefined,
-    public leftInsts: ArkInsts,
-    public rightInsts: ArkInsts,
-  ) {
-    super(sourceLoc)
-  }
-}
-
-export class ArkOrInst extends ArkSymInst {
-  constructor(
-    sourceLoc: Interval | undefined,
-    public leftInsts: ArkInsts,
-    public rightInsts: ArkInsts,
-  ) {
     super(sourceLoc)
   }
 }
@@ -388,17 +370,23 @@ export function flattenExp(
   } else if (exp instanceof ArkIf) {
     return ifElseBlock(exp.sourceLoc, exp.cond, exp.thenExp, exp.elseExp, innerLoop, innerFn)
   } else if (exp instanceof ArkAnd) {
-    const leftInsts = flattenExp(exp.left, innerLoop, innerFn)
-    const rightInsts = flattenExp(exp.right, innerLoop, innerFn)
-    return new ArkInsts([
-      new ArkAndInst(exp.sourceLoc, leftInsts, rightInsts),
-    ])
+    return ifElseBlock(
+      exp.sourceLoc,
+      exp.left,
+      exp.right,
+      new ArkLiteral(ArkBoolean(false)),
+      innerLoop,
+      innerFn,
+    )
   } else if (exp instanceof ArkOr) {
-    const leftInsts = flattenExp(exp.left, innerLoop, innerFn)
-    const rightInsts = flattenExp(exp.right, innerLoop, innerFn)
-    return new ArkInsts([
-      new ArkOrInst(exp.sourceLoc, leftInsts, rightInsts),
-    ])
+    return ifElseBlock(
+      exp.sourceLoc,
+      exp.left,
+      undefined,
+      exp.right,
+      innerLoop,
+      innerFn,
+    )
   } else if (exp instanceof ArkLoop) {
     return loopBlock(exp.sourceLoc, exp.body, innerFn)
   } else if (exp instanceof ArkProperty) {
