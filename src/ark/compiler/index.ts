@@ -17,11 +17,11 @@ import {Interval} from 'ohm-js'
 import prettier from '@prettier/sync'
 
 import {
-  flattenExp,
+  flattenExp, ArkInsts,
   ArkInst, ArkAwaitInst,
   ArkBlockCloseInst, ArkBlockOpenInst, ArkIfBlockOpenInst, ArkLoopBlockOpenInst,
   ArkBreakInst, ArkCallInst, ArkContinueInst, ArkCopyInst, ArkFnInst, ArkElseBlockOpenInst,
-  ArkInsts, ArkLaunchInst, ArkLetInst, ArkLetCopyInst,
+  ArkLaunchBlockOpenInst, ArkLaunchBlockCloseInst, ArkLetInst, ArkLetCopyInst,
   ArkLexpInst, ArkListLiteralInst, ArkLiteralInst, ArkMapLiteralInst,
   ArkObjectLiteralInst, ArkPropertyInst, ArkReturnInst,
   ArkSetInst, ArkSetPropertyInst,
@@ -109,6 +109,11 @@ export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSource
         return sourceNode(letAssign(inst.id, valToJs(inst.val)))
       } else if (inst instanceof ArkCopyInst) {
         return sourceNode(`${assign(inst.src.description!, inst.dest)}\n`)
+      } else if (inst instanceof ArkLaunchBlockCloseInst) {
+        return sourceNode([
+          `return ${inst.id.description!}\n`,
+          '})())\n',
+        ])
       } else if (inst instanceof ArkBlockCloseInst) {
         return sourceNode([`${assign(inst.blockId.description!, inst.id.description!)}\n`, '}\n'])
       } else if (inst instanceof ArkIfBlockOpenInst) {
@@ -117,15 +122,10 @@ export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSource
         return sourceNode('else {\n')
       } else if (inst instanceof ArkLoopBlockOpenInst) {
         return sourceNode([letAssign(inst.id, 'ArkNull()'), 'for (;;) {\n'])
+      } else if (inst instanceof ArkLaunchBlockOpenInst) {
+        return sourceNode([letAssign(inst.id, 'new ArkPromise((async () => {')])
       } else if (inst instanceof ArkBlockOpenInst) {
         return sourceNode([`let ${inst.id.description!}\n`, '{\n'])
-      } else if (inst instanceof ArkLaunchInst) {
-        return sourceNode([
-          letAssign(inst.id, 'new ArkPromise((async () => {'),
-          instsToJs(inst.asyncInsts),
-          `return ${inst.asyncInsts.id.description}\n`,
-          '})())\n',
-        ])
       } else if (inst instanceof ArkAwaitInst) {
         return sourceNode(letAssign(inst.id, `await ${inst.argId.description}.promise`))
       } else if (inst instanceof ArkBreakInst) {
