@@ -30,7 +30,7 @@ import {
   debug, globals as arkGlobals,
   ArkBoolean, ArkBooleanVal, ArkExp, ArkList, ArkMap, ArkNull,
   ArkNumber, ArkNullVal, ArkNumberVal, ArkObject, ArkString,
-  ArkStringVal, ArkUndefined, ArkVal, NativeFn,
+  ArkStringVal, ArkUndefined, ArkVal, NativeFn, ArkPromise,
 } from '../interpreter.js'
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -60,6 +60,7 @@ const runtimeContext: Record<string, unknown> = {
   ArkObject,
   ArkList,
   ArkMap,
+  ArkPromise,
   NativeFn,
   jsGlobals,
 }
