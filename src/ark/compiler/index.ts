@@ -20,7 +20,8 @@ import {
   flattenExp, ArkInsts,
   ArkInst, ArkAwaitInst,
   ArkBlockCloseInst, ArkBlockOpenInst, ArkIfBlockOpenInst, ArkLoopBlockOpenInst,
-  ArkBreakInst, ArkCallInst, ArkContinueInst, ArkCopyInst, ArkFnInst, ArkElseBlockOpenInst,
+  ArkBreakInst, ArkCallInst, ArkContinueInst, ArkCopyInst,
+  ArkFnBlockOpenInst, ArkFnBlockCloseInst, ArkElseBlockOpenInst,
   ArkLaunchBlockOpenInst, ArkLaunchBlockCloseInst, ArkLetInst, ArkLetCopyInst,
   ArkLexpInst, ArkListLiteralInst, ArkLiteralInst, ArkMapLiteralInst,
   ArkObjectLiteralInst, ArkPropertyInst, ArkReturnInst,
@@ -99,11 +100,12 @@ function sourceLocToLineAndCol(sourceLoc?: Interval): [number | null, number | n
 }
 
 export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSourceMap {
-  function instsToJs(insts: ArkInsts, fnName?: string): SourceNode {
+  function instsToJs(insts: ArkInsts): SourceNode {
+    const fnName: (string | undefined)[] = []
     function instToJs(inst: ArkInst): SourceNode {
       const [line, col] = sourceLocToLineAndCol(inst.sourceLoc)
       function sourceNode(stmt: string | SourceNode | (string | SourceNode)[]) {
-        return new SourceNode(line, col, file, stmt, fnName)
+        return new SourceNode(line, col, file, stmt, fnName[0])
       }
       if (inst instanceof ArkLiteralInst) {
         return sourceNode(letAssign(inst.id, valToJs(inst.val)))
@@ -113,6 +115,12 @@ export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSource
         return sourceNode([
           `return ${inst.id.description!}\n`,
           '})())\n',
+        ])
+      } else if (inst instanceof ArkFnBlockCloseInst) {
+        fnName.shift()
+        return sourceNode([
+          `return ${inst.blockId.description}\n`,
+          '})\n',
         ])
       } else if (inst instanceof ArkBlockCloseInst) {
         return sourceNode([`${assign(inst.blockId.description!, inst.id.description!)}\n`, '}\n'])
@@ -124,6 +132,11 @@ export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSource
         return sourceNode([letAssign(inst.id, 'ArkNull()'), 'for (;;) {\n'])
       } else if (inst instanceof ArkLaunchBlockOpenInst) {
         return sourceNode([letAssign(inst.id, 'new ArkPromise((async () => {')])
+      } else if (inst instanceof ArkFnBlockOpenInst) {
+        fnName.unshift(inst.name)
+        return sourceNode([
+          letAssign(inst.id, `new NativeFn([${inst.params.map((p) => `'${p}'`).join(', ')}], async (${inst.params.join(', ')}) => {`),
+        ])
       } else if (inst instanceof ArkBlockOpenInst) {
         return sourceNode([`let ${inst.id.description!}\n`, '{\n'])
       } else if (inst instanceof ArkAwaitInst) {
@@ -136,13 +149,6 @@ export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSource
         return sourceNode(`return ${inst.argId.description}\n`)
       } else if (inst instanceof ArkLetCopyInst) {
         return sourceNode(letAssign(inst.id, `${inst.argId.description}`))
-      } else if (inst instanceof ArkFnInst) {
-        return sourceNode([
-          letAssign(inst.id, `new NativeFn([${inst.params.map((p) => `'${p}'`).join(', ')}], async (${inst.params.join(', ')}) => {`),
-          instsToJs(inst.body, inst.name),
-          `return ${inst.body.id.description}\n`,
-          '})\n',
-        ])
       } else if (inst instanceof ArkCallInst) {
         return sourceNode(letAssign(inst.id, `await ${inst.fnId.description}.body(${inst.argIds.map((id) => id.description).join(', ')})`))
       } else if (inst instanceof ArkSetInst) {

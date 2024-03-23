@@ -82,6 +82,17 @@ export class ArkIfBlockOpenInst extends ArkBlockOpenInst {
   }
 }
 
+export class ArkFnBlockOpenInst extends ArkBlockOpenInst {
+  constructor(
+    sourceLoc: Interval | undefined,
+    public params: string [],
+    public capturedVars: ArkLexp[],
+    public name?: string,
+  ) {
+    super(sourceLoc)
+  }
+}
+
 export class ArkBlockCloseInst extends ArkValInst {
   public matchingOpen?: ArkBlockOpenInst
 
@@ -91,6 +102,7 @@ export class ArkBlockCloseInst extends ArkValInst {
 }
 
 export class ArkLaunchBlockCloseInst extends ArkBlockCloseInst {}
+export class ArkFnBlockCloseInst extends ArkBlockCloseInst {}
 
 export function block(
   sourceLoc: Interval | undefined,
@@ -114,7 +126,7 @@ export function ifElseBlock(
   thenExp?: ArkExp,
   elseExp?: ArkExp,
   innerLoop?: ArkLoopBlockOpenInst,
-  innerFn?: ArkFnInst,
+  innerFn?: ArkFnBlockOpenInst,
 ): ArkInsts {
   const condInsts = new ArkInsts(flattenExp(cond, innerLoop, innerFn).insts)
   const thenInsts = thenExp
@@ -149,7 +161,7 @@ export function ifElseBlock(
 export function loopBlock(
   sourceLoc: Interval | undefined,
   bodyExp: ArkExp,
-  innerFn?: ArkFnInst,
+  innerFn?: ArkFnBlockOpenInst,
 ): ArkInsts {
   const loopInst = new ArkLoopBlockOpenInst(sourceLoc)
   return block(sourceLoc, flattenExp(bodyExp, loopInst, innerFn), loopInst)
@@ -182,22 +194,6 @@ export class ArkReturnInst extends ArkLetCopyInst {
 }
 
 export class ArkContinueInst extends ArkLiteralInst {}
-
-export class ArkFnInst extends ArkSymInst {
-  public body: ArkInsts
-
-  constructor(
-    sourceLoc: Interval | undefined,
-    bodyExp: ArkExp,
-    public params: string [],
-    public capturedVars: ArkLexp[],
-    public name?: string,
-    innerLoop?: ArkLoopBlockOpenInst,
-  ) {
-    super(sourceLoc)
-    this.body = flattenExp(bodyExp, innerLoop, this)
-  }
-}
 
 export class ArkCallInst extends ArkSymInst {
   constructor(sourceLoc: Interval | undefined, public fnId: symbol, public argIds: symbol[]) {
@@ -261,7 +257,7 @@ export class ArkPropertyInst extends ArkSymInst {
 export function flattenExp(
   exp: ArkExp,
   innerLoop?: ArkLoopBlockOpenInst,
-  innerFn?: ArkFnInst,
+  innerFn?: ArkFnBlockOpenInst,
   sym?: string,
 ): ArkInsts {
   if (exp instanceof ArkLiteral) {
@@ -293,9 +289,14 @@ export function flattenExp(
     const insts = flattenExp(exp.exp, innerLoop, innerFn)
     return new ArkInsts([...insts.insts, new ArkReturnInst(exp.sourceLoc, insts.id, innerFn)])
   } else if (exp instanceof ArkFn) {
-    return new ArkInsts([
-      new ArkFnInst(exp.sourceLoc, exp.body, exp.params, exp.capturedVars, sym, innerLoop),
-    ])
+    const fnInst = new ArkFnBlockOpenInst(exp.sourceLoc, exp.params, exp.capturedVars, sym)
+    const bodyInsts = flattenExp(exp.body, innerLoop, fnInst)
+    return block(
+      exp.sourceLoc,
+      bodyInsts,
+      fnInst,
+      new ArkFnBlockCloseInst(exp.sourceLoc, fnInst.id, bodyInsts.id),
+    )
   } else if (exp instanceof ArkCall) {
     const argInsts = exp.args.map((exp) => flattenExp(exp, innerLoop, innerFn))
     const argIds = argInsts.map((insts) => insts.id)
