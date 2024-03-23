@@ -5,7 +5,7 @@
 import {
   Ark, ArkExp, ArkConcreteVal, ArkUndefined, ArkNull, ArkSequence,
   ArkAnd, ArkOr, ArkIf, ArkLoop, ArkBreak, ArkContinue,
-  ArkSet, ArkLet, ArkCall, ArkFn, ArkReturn,
+  ArkSet, ArkLet, ArkCall, ArkFn, ArkReturn, ArkPromise,
   NativeObject, ArkObject, ArkList, ArkMap, ArkProperty,
   ArkLiteral, ArkListLiteral, ArkMapLiteral, ArkObjectLiteral,
   globals,
@@ -82,6 +82,9 @@ export function valToJs(val: Ark, externalSyms = globals) {
       return ['continue']
     } else if (val instanceof ArkReturn) {
       return ['return', doValToJs(val.exp)]
+    } else if (val instanceof ArkPromise) {
+      // FIXME: Can we properly serialize a promise?
+      return ['promise']
     } else if (val === ArkNull()) {
       return null
     } else if (val === ArkUndefined) {

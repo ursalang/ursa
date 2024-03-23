@@ -51,6 +51,22 @@ many
 many
 many
 many`)
+ursaTest('launch', 'test/launch', [], `\
+10 0
+5 0
+10 1
+5 1
+10 2
+5 2
+10 3
+5 3
+10 4
+5 4
+10 5
+10 6
+10 7
+10 8
+10 9`)
 ursaDirTest('fs', 'test/fs', 'test/fs.result')
 
 // Compiler error tests
