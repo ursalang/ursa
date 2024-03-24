@@ -22,7 +22,7 @@ import {
   ArkBlockCloseInst, ArkBlockOpenInst, ArkIfBlockOpenInst, ArkLoopBlockOpenInst,
   ArkBreakInst, ArkCallInst, ArkContinueInst, ArkCopyInst,
   ArkFnBlockOpenInst, ArkFnBlockCloseInst, ArkElseBlockOpenInst,
-  ArkLaunchBlockOpenInst, ArkLaunchBlockCloseInst, ArkLetInst, ArkLetCopyInst,
+  ArkLaunchBlockOpenInst, ArkLaunchBlockCloseInst, ArkLetBlockOpenInst, ArkLetCopyInst,
   ArkLexpInst, ArkListLiteralInst, ArkLiteralInst, ArkMapLiteralInst,
   ArkObjectLiteralInst, ArkPropertyInst, ArkReturnInst,
   ArkSetInst, ArkSetPropertyInst,
@@ -137,6 +137,8 @@ export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSource
         return sourceNode([
           letAssign(inst.id, `new NativeFn([${inst.params.map((p) => `'${p}'`).join(', ')}], async (${inst.params.join(', ')}) => {`),
         ])
+      } else if (inst instanceof ArkLetBlockOpenInst) {
+        return sourceNode([`let ${inst.id.description!}\n`, '{\n', `let ${inst.vars.join(', ')}\n`])
       } else if (inst instanceof ArkBlockOpenInst) {
         return sourceNode([`let ${inst.id.description!}\n`, '{\n'])
       } else if (inst instanceof ArkAwaitInst) {
@@ -160,8 +162,6 @@ export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSource
         ])
       } else if (inst instanceof ArkSetPropertyInst) {
         return sourceNode(letAssign(inst.id, `${inst.lexpId.description}.set('${inst.prop}', ${inst.valId.description})`))
-      } else if (inst instanceof ArkLetInst) {
-        return sourceNode(`let ${inst.vars.join(', ')}\n`)
       } else if (inst instanceof ArkObjectLiteralInst) {
         const objInits: string[] = []
         for (const [k, v] of inst.properties.entries()) {

@@ -93,6 +93,12 @@ export class ArkFnBlockOpenInst extends ArkBlockOpenInst {
   }
 }
 
+export class ArkLetBlockOpenInst extends ArkBlockOpenInst {
+  constructor(sourceLoc: Interval | undefined, public vars: string[]) {
+    super(sourceLoc)
+  }
+}
+
 export class ArkBlockCloseInst extends ArkValInst {
   public matchingOpen?: ArkBlockOpenInst
 
@@ -236,12 +242,6 @@ export class ArkMapLiteralInst extends ArkSymInst {
   }
 }
 
-export class ArkLetInst extends ArkSymInst {
-  constructor(sourceLoc: Interval | undefined, public vars: string[]) {
-    super(sourceLoc)
-  }
-}
-
 export class ArkLexpInst extends ArkSymInst {
   constructor(sourceLoc: Interval | undefined, public lexp: ArkLexp) {
     super(sourceLoc)
@@ -351,14 +351,17 @@ export function flattenExp(
     return new ArkInsts([...insts, new ArkMapLiteralInst(exp.sourceLoc, valMap)])
   } else if (exp instanceof ArkLet) {
     const insts: ArkInst[] = []
-    insts.push(new ArkLetInst(exp.sourceLoc, exp.boundVars.map((bv) => bv[0])))
     exp.boundVars.forEach((bv) => {
       const bvInsts = flattenExp(bv[1], innerLoop, innerFn, bv[0])
       insts.push(...bvInsts.insts, new ArkCopyInst(exp.sourceLoc, bvInsts.id, bv[0]))
     })
     const bodyInsts = flattenExp(exp.body, innerLoop, innerFn)
     insts.push(...bodyInsts.insts)
-    return block(exp.sourceLoc, new ArkInsts(insts))
+    return block(
+      exp.sourceLoc,
+      new ArkInsts(insts),
+      new ArkLetBlockOpenInst(exp.sourceLoc, exp.boundVars.map((bv) => bv[0])),
+    )
   } else if (exp instanceof ArkSequence) {
     if (exp.exps.length === 0) {
       return new ArkInsts([new ArkLiteralInst(exp.sourceLoc, ArkNull())])
