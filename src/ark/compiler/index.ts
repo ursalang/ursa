@@ -26,7 +26,7 @@ import {
   ArkLexpInst, ArkListLiteralInst, ArkLiteralInst, ArkMapLiteralInst,
   ArkObjectLiteralInst, ArkPropertyInst, ArkReturnInst,
   ArkSetInst, ArkSetPropertyInst,
-} from './flatten.js'
+} from '../flatten.js'
 import {
   debug, globals as arkGlobals,
   ArkBoolean, ArkBooleanVal, ArkExp, ArkList, ArkMap, ArkNull,
