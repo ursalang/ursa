@@ -25,6 +25,7 @@ export class Frame {
     // allocated and the point at which they are declared.
     public locals: (string | undefined)[],
     public captures: string[],
+    public fnName?: string,
   ) {}
 }
 
@@ -53,6 +54,11 @@ export class Environment {
 
   pushFrame(frame: Frame) {
     return new Environment([frame, ...this.stack], this.externalSyms)
+  }
+
+  popFrame() {
+    assert(this.stack.length > 1)
+    return new Environment([this.stack[1], ...this.stack.slice(2)], this.externalSyms)
   }
 }
 
