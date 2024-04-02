@@ -23,7 +23,7 @@ import {
   ArkBreakInst, ArkCallInst, ArkContinueInst, ArkCopyInst,
   ArkFnBlockOpenInst, ArkFnBlockCloseInst, ArkElseBlockOpenInst,
   ArkLaunchBlockOpenInst, ArkLaunchBlockCloseInst, ArkLetBlockOpenInst, ArkLetCopyInst,
-  ArkLexpInst, ArkListLiteralInst, ArkLiteralInst, ArkMapLiteralInst,
+  ArkLocalInst, ArkCaptureInst, ArkListLiteralInst, ArkLiteralInst, ArkMapLiteralInst,
   ArkObjectLiteralInst, ArkPropertyInst, ArkReturnInst,
   ArkSetInst, ArkSetPropertyInst,
 } from '../flatten.js'
@@ -32,10 +32,23 @@ import {
   ArkBoolean, ArkBooleanVal, ArkExp, ArkList, ArkMap, ArkNull,
   ArkNumber, ArkNullVal, ArkNumberVal, ArkObject, ArkString,
   ArkStringVal, ArkUndefined, ArkVal, NativeFn, ArkPromise,
-} from '../interpreter.js'
+} from '../eval.js'
+import {Environment, Frame} from '../reader.js'
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
+
+class JsRuntimeError extends Error {}
+
+class UrsaStackTracey extends StackTracey {
+  isThirdParty(path: string) {
+    return super.isThirdParty(path) || path.includes('ark/') || path.includes('ursa/') || path.includes('node:')
+  }
+
+  isClean(entry: Entry, index: number) {
+    return super.isClean(entry, index) && !entry.file.includes('node:')
+  }
+}
 
 // Clone interpreter globals
 export const jsGlobals = new ArkObject(new Map())
@@ -89,6 +102,7 @@ function assign(src: string, dest: string) {
 }
 
 function letAssign(instId: symbol, valueJs: string) {
+  assert(valueJs !== undefined, 'valueJs is undefined')
   return `let ${assign(valueJs, instId.description!)}\n`
 }
 
@@ -101,11 +115,11 @@ function sourceLocToLineAndCol(sourceLoc?: Interval): [number | null, number | n
 
 export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSourceMap {
   function instsToJs(insts: ArkInsts): SourceNode {
-    const fnName: (string | undefined)[] = []
+    let env = new Environment()
     function instToJs(inst: ArkInst): SourceNode {
       const [line, col] = sourceLocToLineAndCol(inst.sourceLoc)
       function sourceNode(stmt: string | SourceNode | (string | SourceNode)[]) {
-        return new SourceNode(line, col, file, stmt, fnName[0])
+        return new SourceNode(line, col, file, stmt, env.stack[0].fnName)
       }
       if (inst instanceof ArkLiteralInst) {
         return sourceNode(letAssign(inst.id, valToJs(inst.val)))
@@ -117,7 +131,7 @@ export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSource
           '})())\n',
         ])
       } else if (inst instanceof ArkFnBlockCloseInst) {
-        fnName.shift()
+        env = env.popFrame()
         return sourceNode([
           `return ${inst.blockId.description}\n`,
           '})\n',
@@ -133,7 +147,7 @@ export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSource
       } else if (inst instanceof ArkLaunchBlockOpenInst) {
         return sourceNode([letAssign(inst.id, 'new ArkPromise((async () => {')])
       } else if (inst instanceof ArkFnBlockOpenInst) {
-        fnName.unshift(inst.name)
+        env = env.pushFrame(new Frame(inst.params, [], inst.name))
         return sourceNode([
           letAssign(inst.id, `new NativeFn([${inst.params.map((p) => `'${p}'`).join(', ')}], async (${inst.params.join(', ')}) => {`),
         ])
@@ -178,8 +192,10 @@ export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSource
         return sourceNode(letAssign(inst.id, `new ArkMap(new Map([${mapInits.join(', ')}]))`))
       } else if (inst instanceof ArkPropertyInst) {
         return sourceNode(letAssign(inst.id, `${inst.objId.description}.get('${inst.prop}')`))
-      } else if (inst instanceof ArkLexpInst) {
-        return sourceNode(letAssign(inst.id, inst.lexp.debug.name!))
+      } else if (inst instanceof ArkCaptureInst) {
+        return sourceNode(letAssign(inst.id, inst.name))
+      } else if (inst instanceof ArkLocalInst) {
+        return sourceNode(letAssign(inst.id, inst.name))
       } else {
         console.log('Invalid ArkInst:')
         debug(inst)
@@ -195,7 +211,7 @@ export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSource
 
   const insts = flattenExp(exp)
   const sourceNode = new SourceNode(1, 1, 'src/ursa/flat-to-js.ts', [
-  // FIXME: work out how to eval ESM, so we can use top-level await.
+    // FIXME: work out how to eval ESM, so we can use top-level await.
     '"use strict";\n',
     '(async () => {\n',
     instsToJs(insts),
@@ -207,18 +223,6 @@ export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSource
   }
   return jsCode
 }
-
-class UrsaStackTracey extends StackTracey {
-  isThirdParty(path: string) {
-    return super.isThirdParty(path) || path.includes('ark/') || path.includes('ursa/') || path.includes('node:')
-  }
-
-  isClean(entry: Entry, index: number) {
-    return super.isClean(entry, index) && !entry.file.includes('node:')
-  }
-}
-
-class JsRuntimeError extends Error {}
 
 export async function evalArkJs(source: CodeWithSourceMap | string, file = '(Compiled Ark)'): Promise<ArkVal> {
   let jsSource: string

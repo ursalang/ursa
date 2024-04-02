@@ -1,4 +1,4 @@
-import {ArkObject} from '../interpreter.js'
+import {ArkObject} from '../eval.js'
 
 declare module 'prelude' {
   const prelude: ArkObject

@@ -6,11 +6,11 @@ import assert from 'assert'
 import {Interval} from 'ohm-js'
 
 import {
-  ArkAnd, ArkAwait, ArkBoolean, ArkBreak, ArkCall, ArkContinue, ArkExp, ArkFn,
-  ArkIf, ArkLaunch, ArkLet, ArkLexp, ArkListLiteral, ArkLiteral,
-  ArkLoop, ArkMapLiteral, ArkNull,
+  ArkAnd, ArkAwait, ArkBoolean, ArkBreak, ArkCall, ArkCapture, ArkContinue, ArkExp, ArkFn,
+  ArkIf, ArkLaunch, ArkLet, ArkListLiteral, ArkLiteral,
+  ArkLocal, ArkLoop, ArkMapLiteral, ArkNamedLoc, ArkNull,
   ArkObjectLiteral, ArkOr, ArkProperty, ArkReturn, ArkSequence, ArkSet, ArkVal,
-} from './interpreter.js'
+} from './eval.js'
 
 export class ArkInst {
   constructor(public sourceLoc: Interval | undefined) {}
@@ -85,8 +85,8 @@ export class ArkIfBlockOpenInst extends ArkBlockOpenInst {
 export class ArkFnBlockOpenInst extends ArkBlockOpenInst {
   constructor(
     sourceLoc: Interval | undefined,
-    public params: string [],
-    public capturedVars: ArkLexp[],
+    public params: string[],
+    public capturedVars: ArkNamedLoc[],
     public name?: string,
   ) {
     super(sourceLoc)
@@ -242,11 +242,12 @@ export class ArkMapLiteralInst extends ArkSymInst {
   }
 }
 
-export class ArkLexpInst extends ArkSymInst {
-  constructor(sourceLoc: Interval | undefined, public lexp: ArkLexp) {
+export class ArkLocalInst extends ArkSymInst {
+  constructor(sourceLoc: Interval | undefined, public index: number, public name: string) {
     super(sourceLoc)
   }
 }
+export class ArkCaptureInst extends ArkLocalInst {}
 
 export class ArkPropertyInst extends ArkSymInst {
   constructor(sourceLoc: Interval | undefined, public objId: symbol, public prop: string) {
@@ -351,9 +352,11 @@ export function flattenExp(
     return new ArkInsts([...insts, new ArkMapLiteralInst(exp.sourceLoc, valMap)])
   } else if (exp instanceof ArkLet) {
     const insts: ArkInst[] = []
+    const bvIds: symbol[] = []
     exp.boundVars.forEach((bv) => {
       const bvInsts = flattenExp(bv[1], innerLoop, innerFn, bv[0])
       insts.push(...bvInsts.insts, new ArkCopyInst(exp.sourceLoc, bvInsts.id, bv[0]))
+      bvIds.push(bvInsts.id)
     })
     const bodyInsts = flattenExp(exp.body, innerLoop, innerFn)
     insts.push(...bodyInsts.insts)
@@ -399,8 +402,10 @@ export function flattenExp(
       ...objInsts.insts,
       new ArkPropertyInst(exp.sourceLoc, objInsts.id, exp.prop),
     ])
-  } else if (exp instanceof ArkLexp) {
-    return new ArkInsts([new ArkLexpInst(exp.sourceLoc, exp)])
+  } else if (exp instanceof ArkLocal) {
+    return new ArkInsts([new ArkLocalInst(exp.sourceLoc, exp.index, exp.name)])
+  } else if (exp instanceof ArkCapture) {
+    return new ArkInsts([new ArkCaptureInst(exp.sourceLoc, exp.index, exp.name)])
   } else {
     throw new Error('invalid ArkExp')
   }

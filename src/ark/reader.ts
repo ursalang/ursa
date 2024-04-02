@@ -8,14 +8,13 @@ import preludeJson from './prelude.json' assert {type: 'json'}
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  ArkState, ArkExp, ArkLexp, globals,
+  evalArk, ArkState, ArkExp, ArkLvalue, globals,
   ArkIf, ArkAnd, ArkOr, ArkSequence, ArkLoop, ArkBreak, ArkContinue,
   ArkNull, ArkBoolean, ArkNumber, ArkString,
   ArkSet, ArkLocal, ArkCapture,
   ArkListLiteral, ArkObjectLiteral, ArkMapLiteral,
   ArkFn, ArkReturn, ArkProperty, ArkLet, ArkCall, ArkLiteral, ArkObject,
-} from './interpreter.js'
-import {evalArk} from './eval.js'
+} from './eval.js'
 
 export class ArkCompilerError extends Error {}
 
@@ -25,6 +24,7 @@ export class Frame {
     // allocated and the point at which they are declared.
     public locals: (string | undefined)[],
     public captures: string[],
+    public fnName?: string,
   ) {}
 }
 
@@ -53,6 +53,11 @@ export class Environment {
 
   pushFrame(frame: Frame) {
     return new Environment([frame, ...this.stack], this.externalSyms)
+  }
+
+  popFrame() {
+    assert(this.stack.length > 1)
+    return new Environment([this.stack[1], ...this.stack.slice(2)], this.externalSyms)
   }
 }
 
@@ -90,25 +95,25 @@ function listToVals(env: Environment, l: unknown[]): ArkExp[] {
   return l.map((elem) => doCompile(env, elem))
 }
 
-export function symRef(env: Environment, name: string): ArkLexp {
+export function symRef(env: Environment, name: string): ArkLvalue {
   let lexp
   // Check whether the symbol is a local.
   const j = env.top().locals.lastIndexOf(name)
   if (j !== -1) {
-    lexp = new ArkLocal(j)
+    lexp = new ArkLocal(j, name)
   } else {
     // Otherwise, check if it's a capture.
     // Check whether we already have this capture.
     const k = env.top().captures.lastIndexOf(name)
     if (k !== -1) {
-      lexp = new ArkCapture(k)
+      lexp = new ArkCapture(k, name)
     } else {
       // If not, see if it's on the stack to be captured.
       for (let i = 0; i < env.stack.length; i += 1) {
         const j = env.stack[i].locals.lastIndexOf(name)
         if (j !== -1) {
           const k = env.top().captures.length
-          lexp = new ArkCapture(k)
+          lexp = new ArkCapture(k, name)
           env.top().captures.push(name)
           break
         }
@@ -163,7 +168,11 @@ function doCompile(env: Environment, value: unknown): ArkExp {
           const params = arkParamList(value[1] as string[])
           const innerEnv = env.pushFrame(new Frame(params, []))
           const compiled = doCompile(innerEnv, value[2])
-          return new ArkFn(params, innerEnv.stack[0].captures.map((c) => symRef(env, c)), compiled)
+          return new ArkFn(
+            params,
+            innerEnv.stack[0].captures.map((c) => symRef(env, c) as ArkCapture),
+            compiled,
+          )
         }
         case 'prop': {
           if (value.length !== 3 || typeof value[1] !== 'string') {
@@ -177,7 +186,7 @@ function doCompile(env: Environment, value: unknown): ArkExp {
             throw new ArkCompilerError("Invalid 'set'")
           }
           const compiledRef = doCompile(env, value[1])
-          if (!(compiledRef instanceof ArkLexp)) {
+          if (!(compiledRef instanceof ArkLvalue)) {
             throw new ArkCompilerError('Invalid lvalue')
           }
           const compiledVal = doCompile(env, value[2])

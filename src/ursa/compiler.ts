@@ -13,20 +13,21 @@ import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug, valToString,
   ArkState, ArkRuntimeError,
-  ArkVal, ArkExp, ArkLexp, ArkLiteral,
+  ArkVal, ArkExp, ArkLvalue, ArkLiteral,
   ArkNull, ArkBoolean, ArkNumber, ArkString,
   ArkSequence, ArkIf, ArkLoop, ArkAnd, ArkOr,
   ArkObjectLiteral, ArkListLiteral, ArkMapLiteral,
   ArkCall, ArkLet, ArkFn, ArkProperty, ArkSet, ArkReturn,
   ArkBreak, ArkContinue, ArkAwait, ArkLaunch,
-} from '../ark/interpreter.js'
+  ArkCapture,
+} from '../ark/eval.js'
 import {
   ArkCompilerError, symRef, Frame, Environment, checkParamList,
 } from '../ark/reader.js'
 
 type ParserOperations = {
   toExp(a: ParserArgs): ArkExp
-  toLval(a: ParserArgs): ArkLexp
+  toLval(a: ParserArgs): ArkLvalue
   toDefinition(a: ParserArgs): Definition
   toKeyValue(a: ParserArgs): KeyValue
   toArguments(a: ParserArgs): Arguments
@@ -307,7 +308,9 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     // TODO: ArkFn should be an ArkObject which contains one method.
     return addLoc(new ArkFn(
       paramStrings,
-      innerEnv.stack[0].captures.map((c) => symRef(this.args.a.env, c)),
+      innerEnv.stack[0].captures.map(
+        (c) => symRef(this.args.a.env, c) as ArkCapture,
+      ),
       compiledBody,
     ), this)
   },
@@ -597,7 +600,7 @@ function badLvalue(node: ParserNode): never {
 }
 
 // The node passed to toLval is always a PostfixExp or PrimaryExp.
-semantics.addOperation<ArkLexp>('toLval(a)', {
+semantics.addOperation<ArkLvalue>('toLval(a)', {
   _terminal() {
     badLvalue(this)
   },
