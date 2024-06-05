@@ -10,7 +10,7 @@ import {
   ArkIf, ArkLaunch, ArkLet, ArkLexp, ArkListLiteral, ArkLiteral,
   ArkLocal, ArkLoop, ArkMapLiteral, ArkNull,
   ArkObjectLiteral, ArkOr, ArkProperty, ArkReturn, ArkSequence, ArkSet, ArkVal,
-} from './interpreter.js'
+} from './eval.js'
 
 export class ArkInst {
   constructor(public sourceLoc: Interval | undefined) {}

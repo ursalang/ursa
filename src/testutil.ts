@@ -12,10 +12,9 @@ import {ExecaReturnValue, Options as ExecaOptions, execa} from 'execa'
 import {compareSync, Difference} from 'dir-compare'
 
 import {
-  debug, ArkState, ArkExp, ArkObject,
-} from './ark/interpreter.js'
+  debug, ArkState, ArkExp, ArkObject, toJs,
+} from './ark/eval.js'
 import {compile as doArkCompile} from './ark/reader.js'
-import {toJs} from './ark/ffi.js'
 import {valToJs} from './ark/serialize.js'
 import {compile as ursaCompile} from './ursa/compiler.js'
 import {format} from './ursa/fmt.js'

@@ -13,10 +13,9 @@ import tildify from 'tildify'
 import programVersion from '../version.js'
 import {
   debug, ArkState, ArkExp, ArkNull, ArkList,
-  ArkLet, ArkVal, ArkString, globals, pushLets,
-} from '../ark/interpreter.js'
+  ArkLet, ArkVal, ArkString, globals, pushLets, toJs,
+} from '../ark/eval.js'
 import {Environment, compile as arkCompile} from '../ark/reader.js'
-import {toJs} from '../ark/ffi.js'
 import {serializeVal} from '../ark/serialize.js'
 import {runWithTraceback, compile as ursaCompile} from './compiler.js'
 import {format} from './fmt.js'
@@ -27,7 +26,7 @@ if (process.env.DEBUG) {
 }
 
 const historyFile = process.env.URSA_HISTORY
- ?? path.join(envPaths('ursa', {suffix: ''}).config, 'history')
+  ?? path.join(envPaths('ursa', {suffix: ''}).config, 'history')
 
 // Read and process arguments
 const parser = new ArgumentParser({

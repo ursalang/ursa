@@ -19,7 +19,7 @@ import {
   ArkObjectLiteral, ArkListLiteral, ArkMapLiteral,
   ArkCall, ArkLet, ArkFn, ArkProperty, ArkSet, ArkReturn,
   ArkBreak, ArkContinue, ArkAwait, ArkLaunch,
-} from '../ark/interpreter.js'
+} from '../ark/eval.js'
 import {
   ArkCompilerError, symRef, Frame, Environment, checkParamList,
 } from '../ark/reader.js'

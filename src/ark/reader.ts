@@ -8,14 +8,13 @@ import preludeJson from './prelude.json' assert {type: 'json'}
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  ArkState, ArkExp, ArkLexp, globals,
+  evalArk, ArkState, ArkExp, ArkLexp, globals,
   ArkIf, ArkAnd, ArkOr, ArkSequence, ArkLoop, ArkBreak, ArkContinue,
   ArkNull, ArkBoolean, ArkNumber, ArkString,
   ArkSet, ArkLocal, ArkCapture,
   ArkListLiteral, ArkObjectLiteral, ArkMapLiteral,
   ArkFn, ArkReturn, ArkProperty, ArkLet, ArkCall, ArkLiteral, ArkObject,
-} from './interpreter.js'
-import {evalArk} from './eval.js'
+} from './eval.js'
 
 export class ArkCompilerError extends Error {}
 
