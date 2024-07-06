@@ -31,6 +31,9 @@
 * Streams, and use as interface to files.
 * Code formatting: have blank lines between top-level multiline `let`s, and
   after the last `use` in a series of `use`s.
+* Structs: single-inheritance, data only.
+* Unions == enums. (Only way to do union types.)
+* Interfaces: methods only, can be intersected.
 
 ## Ursa v1
 
