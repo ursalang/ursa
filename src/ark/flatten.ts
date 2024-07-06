@@ -26,7 +26,7 @@ export class ArkSymInst extends ArkValInst {
   static id = 0
 
   constructor(sourceLoc: Interval | undefined) {
-    super(sourceLoc, Symbol(`$${ArkSymInst.id}`))
+    super(sourceLoc, Symbol.for(`$${ArkSymInst.id}`))
     ArkSymInst.id += 1
   }
 }
