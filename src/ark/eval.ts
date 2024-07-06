@@ -49,11 +49,8 @@ export class ArkState {
 }
 
 export class ArkRuntimeError extends Error {
-  sourceLoc: unknown
-
-  constructor(public ark: ArkState, public message: string, public val: ArkExp) {
+  constructor(public ark: ArkState, public message: string, public sourceLoc: unknown) {
     super()
-    this.sourceLoc = val.sourceLoc
   }
 }
 
@@ -643,7 +640,7 @@ export async function evalArk(ark: ArkState, exp: ArkExp): Promise<ArkVal> {
   } else if (exp instanceof ArkAwait) {
     const promise = await evalArk(ark, exp.exp)
     if (!(promise instanceof ArkPromise)) {
-      throw new ArkRuntimeError(ark, "Attempt to 'await' non-Promise", exp)
+      throw new ArkRuntimeError(ark, "Attempt to 'await' non-Promise", exp.sourceLoc)
     }
     const res = await promise.promise
     return res
@@ -667,7 +664,7 @@ export async function evalArk(ark: ArkState, exp: ArkExp): Promise<ArkVal> {
     }
     const fnVal = await evalArk(ark, fn)
     if (!(fnVal instanceof ArkCallable)) {
-      throw new ArkRuntimeError(ark, 'Invalid call', exp)
+      throw new ArkRuntimeError(ark, 'Invalid call', exp.sourceLoc)
     }
     const evaluatedArgs = []
     for (const arg of exp.args) {
@@ -683,7 +680,7 @@ export async function evalArk(ark: ArkState, exp: ArkExp): Promise<ArkVal> {
     if (oldVal !== ArkUndefined
       && oldVal.constructor !== ArkNullVal
       && res.constructor !== oldVal.constructor) {
-      throw new ArkRuntimeError(ark, 'Assignment to different type', exp)
+      throw new ArkRuntimeError(ark, 'Assignment to different type', exp.sourceLoc)
     }
     ref.set(res)
     return res
@@ -772,13 +769,13 @@ async function evalRef(ark: ArkState, lexp: ArkLvalue): Promise<ArkRef> {
   } else if (lexp instanceof ArkProperty) {
     const obj = await evalArk(ark, lexp.obj)
     if (!(obj instanceof ArkAbstractObjectBase)) {
-      throw new ArkRuntimeError(ark, 'Attempt to read property of non-object', lexp)
+      throw new ArkRuntimeError(ark, 'Attempt to read property of non-object', lexp.sourceLoc)
     }
     try {
       return new ArkPropertyRef(obj, lexp.prop)
     } catch (e) {
       if (e instanceof ArkPropertyRefError) {
-        throw new ArkRuntimeError(ark, e.message, lexp)
+        throw new ArkRuntimeError(ark, e.message, lexp.sourceLoc)
       }
     }
   }
