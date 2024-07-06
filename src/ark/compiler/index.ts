@@ -124,7 +124,7 @@ export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSource
       if (inst instanceof ArkLiteralInst) {
         return sourceNode(letAssign(inst.id, valToJs(inst.val)))
       } else if (inst instanceof ArkCopyInst) {
-        return sourceNode(`${assign(inst.src.description!, inst.dest)}\n`)
+        return sourceNode(`${assign(inst.src.description!, inst.dest.description!)}\n`)
       } else if (inst instanceof ArkLaunchBlockCloseInst) {
         return sourceNode([
           `return ${inst.id.description!}\n`,
@@ -164,15 +164,15 @@ export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSource
       } else if (inst instanceof ArkReturnInst) {
         return sourceNode(`return ${inst.argId.description}\n`)
       } else if (inst instanceof ArkLetCopyInst) {
-        return sourceNode(letAssign(inst.id, `${inst.argId.description}`))
+        return sourceNode(letAssign(inst.id, inst.argId.description!))
       } else if (inst instanceof ArkCallInst) {
         return sourceNode(letAssign(inst.id, `await ${inst.fnId.description}.body(${inst.argIds.map((id) => id.description).join(', ')})`))
       } else if (inst instanceof ArkSetInst) {
         return sourceNode([
-          `if (${inst.lexpId} !== ArkUndefined && ${inst.lexpId}.constructor !== ArkNullVal && ${inst.valId.description}.constructor !== ${inst.lexpId}.constructor) {\n`,
+          `if (${inst.lexpId.description} !== ArkUndefined && ${inst.lexpId.description}.constructor !== ArkNullVal && ${inst.valId.description}.constructor !== ${inst.lexpId.description}.constructor) {\n`,
           'throw new JsRuntimeError(\'Assignment to different type\')\n',
           '}\n',
-          letAssign(inst.id, `${inst.lexpId} = ${inst.valId.description}`),
+          letAssign(inst.id, `${inst.lexpId.description} = ${inst.valId.description}`),
         ])
       } else if (inst instanceof ArkSetPropertyInst) {
         return sourceNode(letAssign(inst.id, `${inst.lexpId.description}.set('${inst.prop}', ${inst.valId.description})`))
