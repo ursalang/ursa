@@ -104,7 +104,7 @@ export class ArkBlockCloseInst extends ArkInst {
 export class ArkLaunchBlockCloseInst extends ArkBlockCloseInst {}
 export class ArkFnBlockCloseInst extends ArkBlockCloseInst {}
 
-export function block(
+function block(
   sourceLoc: Interval | undefined,
   bodyInsts: ArkInsts,
   openInst = new ArkBlockOpenInst(sourceLoc),
