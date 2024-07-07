@@ -128,7 +128,7 @@ export function ifElseBlock(
   innerLoop?: ArkLoopBlockOpenInst,
   innerFn?: ArkFnBlockOpenInst,
 ): ArkInsts {
-  const condInsts = new ArkInsts(flattenExp(cond, innerLoop, innerFn).insts)
+  const condInsts = flattenExp(cond, innerLoop, innerFn)
   const thenInsts = thenExp
     ? flattenExp(thenExp, innerLoop, innerFn)
     : new ArkInsts([new ArkLetCopyInst(cond.sourceLoc, condInsts.id)])
