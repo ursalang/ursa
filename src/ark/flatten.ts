@@ -13,16 +13,12 @@ import {
 } from './eval.js'
 
 export class ArkInst {
-  constructor(public sourceLoc: Interval | undefined) {}
+  public next: ArkInst | undefined
+
+  constructor(public sourceLoc: Interval | undefined, public id: symbol) {}
 }
 
-export class ArkValInst extends ArkInst {
-  constructor(sourceLoc: Interval | undefined, public id: symbol) {
-    super(sourceLoc)
-  }
-}
-
-export class ArkSymInst extends ArkValInst {
+export class ArkSymInst extends ArkInst {
   static id = 0
 
   constructor(sourceLoc: Interval | undefined) {
@@ -34,10 +30,13 @@ export class ArkSymInst extends ArkValInst {
 export class ArkInsts {
   constructor(public insts: ArkInst[]) {
     assert(insts.length > 0)
+    for (let i = 0; i < insts.length - 1; i += 1) {
+      insts[i].next = insts[i + 1]
+    }
   }
 
   get id() {
-    return (this.insts[this.insts.length - 1] as ArkValInst).id
+    return this.insts[this.insts.length - 1].id
   }
 }
 
@@ -66,17 +65,12 @@ export class ArkBlockOpenInst extends ArkSymInst {
 export class ArkLoopBlockOpenInst extends ArkBlockOpenInst {}
 export class ArkLaunchBlockOpenInst extends ArkBlockOpenInst {}
 
-export class ArkElseBlockOpenInst extends ArkBlockOpenInst {
-  constructor(sourceLoc: Interval | undefined, public skipAfterInst: ArkInst) {
-    super(sourceLoc)
-  }
-}
+export class ArkElseBlockOpenInst extends ArkBlockOpenInst {}
 
-export class ArkIfBlockOpenInst extends ArkBlockOpenInst {
+export class ArkIfBlockOpenInst extends ArkElseBlockOpenInst {
   constructor(
     sourceLoc: Interval | undefined,
     public condId: symbol,
-    public skipAfterInst: ArkInst,
   ) {
     super(sourceLoc)
   }
@@ -99,7 +93,7 @@ export class ArkLetBlockOpenInst extends ArkBlockOpenInst {
   }
 }
 
-export class ArkBlockCloseInst extends ArkValInst {
+export class ArkBlockCloseInst extends ArkInst {
   public matchingOpen!: ArkBlockOpenInst
 
   constructor(sourceLoc: Interval | undefined, id: symbol, public blockId: symbol) {
@@ -142,7 +136,6 @@ export function ifElseBlock(
   const ifOpenInst = new ArkIfBlockOpenInst(
     thenExp ? thenExp.sourceLoc : cond.sourceLoc,
     condInsts.id,
-    thenInsts.insts[thenInsts.insts.length - 1],
   )
   const blockInsts = block(sourceLoc, thenInsts, ifOpenInst)
   if (elseExp !== undefined) {
@@ -150,10 +143,7 @@ export function ifElseBlock(
     elseBlockInsts = block(
       elseExp.sourceLoc,
       elseInsts,
-      new ArkElseBlockOpenInst(
-        elseExp.sourceLoc,
-        elseInsts.insts[elseInsts.insts.length - 1],
-      ),
+      new ArkElseBlockOpenInst(elseExp.sourceLoc),
       new ArkBlockCloseInst(elseExp.sourceLoc, ifOpenInst.id, elseInsts.id),
     )
   }
