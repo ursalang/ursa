@@ -65,9 +65,7 @@ export class ArkBlockOpenInst extends ArkSymInst {
 export class ArkLoopBlockOpenInst extends ArkBlockOpenInst {}
 export class ArkLaunchBlockOpenInst extends ArkBlockOpenInst {}
 
-export class ArkElseBlockOpenInst extends ArkBlockOpenInst {}
-
-export class ArkIfBlockOpenInst extends ArkElseBlockOpenInst {
+export class ArkIfBlockOpenInst extends ArkBlockOpenInst {
   constructor(
     sourceLoc: Interval | undefined,
     public condId: symbol,
@@ -98,6 +96,19 @@ export class ArkBlockCloseInst extends ArkInst {
 
   constructor(sourceLoc: Interval | undefined, id: symbol, public blockId: symbol) {
     super(sourceLoc, id)
+  }
+}
+
+export class ArkElseBlockInst extends ArkBlockCloseInst {
+  public matchingClose!: ArkBlockCloseInst
+
+  constructor(
+    sourceLoc: Interval | undefined,
+    id: symbol,
+    public ifBlockId: symbol,
+    blockId: symbol,
+  ) {
+    super(sourceLoc, id, blockId)
   }
 }
 
@@ -132,23 +143,31 @@ export function ifElseBlock(
   const thenInsts = thenExp
     ? flattenExp(thenExp, innerLoop, innerFn)
     : new ArkInsts([new ArkLetCopyInst(cond.sourceLoc, condInsts.id)])
-  let elseBlockInsts
   const ifOpenInst = new ArkIfBlockOpenInst(
     thenExp ? thenExp.sourceLoc : cond.sourceLoc,
     condInsts.id,
   )
   const blockInsts = block(sourceLoc, thenInsts, ifOpenInst)
+  let elseBlockInsts
   if (elseExp !== undefined) {
     const elseInsts = flattenExp(elseExp, innerLoop, innerFn)
+    const elseInst = new ArkElseBlockInst(
+      elseExp.sourceLoc,
+      ifOpenInst.id,
+      thenInsts.id,
+      elseInsts.id,
+    )
     elseBlockInsts = block(
       elseExp.sourceLoc,
       elseInsts,
-      new ArkElseBlockOpenInst(elseExp.sourceLoc),
+      elseInst,
       new ArkBlockCloseInst(elseExp.sourceLoc, ifOpenInst.id, elseInsts.id),
     )
+    ifOpenInst.matchingClose = elseInst
   }
   const ifElseInsts = [...condInsts.insts, ...blockInsts.insts]
   if (elseBlockInsts !== undefined) {
+    ifElseInsts.pop() // Remove original block close instruction
     ifElseInsts.push(...elseBlockInsts.insts)
   }
   return new ArkInsts(ifElseInsts)

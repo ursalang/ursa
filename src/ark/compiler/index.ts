@@ -21,7 +21,7 @@ import {
   ArkInst, ArkAwaitInst,
   ArkBlockCloseInst, ArkBlockOpenInst, ArkIfBlockOpenInst, ArkLoopBlockOpenInst,
   ArkBreakInst, ArkCallInst, ArkContinueInst, ArkCopyInst,
-  ArkFnBlockOpenInst, ArkFnBlockCloseInst, ArkElseBlockOpenInst,
+  ArkFnBlockOpenInst, ArkFnBlockCloseInst, ArkElseBlockInst,
   ArkLaunchBlockOpenInst, ArkLaunchBlockCloseInst, ArkLetBlockOpenInst, ArkLetCopyInst,
   ArkLocalInst, ArkCaptureInst, ArkListLiteralInst, ArkLiteralInst, ArkMapLiteralInst,
   ArkObjectLiteralInst, ArkPropertyInst, ArkReturnInst,
@@ -136,12 +136,12 @@ export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSource
           `return ${inst.blockId.description}\n`,
           '})\n',
         ])
-      } else if (inst instanceof ArkBlockCloseInst) {
-        return sourceNode([`${assign(inst.blockId.description!, inst.id.description!)}\n`, '}\n'])
       } else if (inst instanceof ArkIfBlockOpenInst) {
         return sourceNode([letAssign(inst.id, 'ArkNull()'), `if (${inst.condId.description} !== ArkBoolean(false)) {\n`])
-      } else if (inst instanceof ArkElseBlockOpenInst) {
-        return sourceNode('else {\n')
+      } else if (inst instanceof ArkElseBlockInst) {
+        return sourceNode([`${assign(inst.ifBlockId.description!, inst.id.description!)}\n`, '} else {\n'])
+      } else if (inst instanceof ArkBlockCloseInst) {
+        return sourceNode([`${assign(inst.blockId.description!, inst.id.description!)}\n`, '}\n'])
       } else if (inst instanceof ArkLoopBlockOpenInst) {
         return sourceNode([letAssign(inst.id, 'ArkNull()'), 'for (;;) {\n'])
       } else if (inst instanceof ArkLaunchBlockOpenInst) {
