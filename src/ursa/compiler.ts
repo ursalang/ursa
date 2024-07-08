@@ -97,7 +97,7 @@ ${trace.map((s) => `  ${s}`).join('\n')}`
 
 // Base class for parsing the language, extended directly by classes used
 // only during parsing.
-export class AST {}
+class AST {}
 
 class Definition extends AST {
   constructor(public ident: ParserNode, public exp: ArkExp) {

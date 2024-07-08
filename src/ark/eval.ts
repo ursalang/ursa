@@ -19,7 +19,7 @@ export class ArkFrame {
   ) {}
 }
 
-export class ArkFrameDebugInfo {
+class ArkFrameDebugInfo {
   constructor(
     public name: ArkRef | undefined = undefined,
     public source: ArkCall | undefined = undefined,
@@ -91,13 +91,13 @@ export class ArkLiteral extends ArkExp {
   }
 }
 
-export abstract class ArkAbstractObjectBase extends ArkVal {
+abstract class ArkAbstractObjectBase extends ArkVal {
   abstract get(prop: string): ArkVal
 
   abstract set(prop: string, val: ArkVal): ArkVal
 }
 
-export class ArkObjectBase extends ArkAbstractObjectBase {
+class ArkObjectBase extends ArkAbstractObjectBase {
   constructor(public properties: Map<string, ArkVal> = new Map()) {
     super()
     this.addDefaults([
@@ -246,14 +246,16 @@ export class ArkAwait extends ArkExp {
   }
 }
 
-export class ArkNonLocalReturn extends Error {
+class ArkNonLocalReturn extends Error {
   constructor(public readonly val: ArkVal = ArkNull()) {
     super()
   }
 }
 
 export class ArkBreakException extends ArkNonLocalReturn {}
+// ts-unused-exports:disable-next-line
 export class ArkContinueException extends ArkNonLocalReturn {}
+// ts-unused-exports:disable-next-line
 export class ArkReturnException extends ArkNonLocalReturn {}
 
 export class ArkBreak extends ArkExp {
@@ -275,7 +277,7 @@ export class ArkReturn extends ArkExp {
   }
 }
 
-export function makeLocals(names: string[], vals: ArkVal[]): ArkRef[] {
+function makeLocals(names: string[], vals: ArkVal[]): ArkRef[] {
   const locals: ArkValRef[] = names.map((_val, index) => new ArkValRef(vals[index] ?? ArkUndefined))
   if (vals.length > names.length) {
     locals.push(...vals.slice(names.length).map((val) => new ArkValRef(val)))
@@ -283,12 +285,13 @@ export function makeLocals(names: string[], vals: ArkVal[]): ArkRef[] {
   return locals
 }
 
-export abstract class ArkCallable extends ArkVal {
+abstract class ArkCallable extends ArkVal {
   constructor(public params: string[], public captures: ArkRef[]) {
     super()
   }
 }
 
+// ts-unused-exports:disable-next-line
 export class ArkClosure extends ArkCallable {
   constructor(params: string[], captures: ArkRef[], public body: ArkExp) {
     super(params, captures)
@@ -301,6 +304,7 @@ export class NativeFn extends ArkCallable {
   }
 }
 
+// ts-unused-exports:disable-next-line
 export class NativeAsyncFn extends ArkCallable {
   constructor(params: string[], public body: (...args: ArkVal[]) => Promise<ArkVal>) {
     super(params, [])
@@ -346,6 +350,7 @@ export abstract class ArkRef extends Ark {
   abstract set(val: ArkVal): ArkVal
 }
 
+// ts-unused-exports:disable-next-line
 export class ArkValRef extends ArkRef {
   constructor(public val: ArkVal = ArkNull()) {
     super()
@@ -406,8 +411,9 @@ export class ArkProperty extends ArkLvalue {
   }
 }
 
-export class ArkPropertyRefError extends Error {}
+class ArkPropertyRefError extends Error {}
 
+// ts-unused-exports:disable-next-line
 export class ArkPropertyRef extends ArkRef {
   constructor(public obj: ArkAbstractObjectBase, public prop: string) {
     super()
@@ -782,7 +788,7 @@ async function evalRef(ark: ArkState, lexp: ArkLvalue): Promise<ArkRef> {
   throw new Error('invalid ArkLvalue')
 }
 
-export async function call(ark: ArkState, callable: ArkCallable): Promise<ArkVal> {
+async function call(ark: ArkState, callable: ArkCallable): Promise<ArkVal> {
   if (callable instanceof ArkClosure) {
     try {
       return await evalArk(ark, callable.body)
@@ -803,9 +809,9 @@ export async function call(ark: ArkState, callable: ArkCallable): Promise<ArkVal
 }
 
 // FFI
-export class ArkFromJsError extends Error {}
+class ArkFromJsError extends Error {}
 
-export function fromJs(x: unknown, thisObj?: object): ArkVal {
+function fromJs(x: unknown, thisObj?: object): ArkVal {
   if (x === null || x === undefined) {
     return ArkNull()
   }

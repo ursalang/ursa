@@ -68,7 +68,7 @@ export function checkParamList(params: string[]): string[] {
   return params
 }
 
-export function arkParamList(params: string[]): string[] {
+function arkParamList(params: string[]): string[] {
   for (const param of params) {
     if (typeof param !== 'string') {
       throw new ArkCompilerError('Bad type in parameter list')
@@ -77,7 +77,7 @@ export function arkParamList(params: string[]): string[] {
   return checkParamList(params)
 }
 
-export function arkBindingList(env: Environment, params: [string, unknown][]): [string, ArkExp][] {
+function arkBindingList(env: Environment, params: [string, unknown][]): [string, ArkExp][] {
   const bindings: [string, ArkExp][] = []
   for (const p of params) {
     if (!(p instanceof Array) || p.length !== 2 || typeof p[0] !== 'string') {

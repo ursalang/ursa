@@ -43,12 +43,12 @@ function narrowed(a: FormatterArgs): FormatterArgs {
   return {...a, maxWidth: a.maxWidth - a.indentString.length}
 }
 
-export type SpanOpts = {
+type SpanOpts = {
   stringSep: string
   indentString: string
 }
 
-export class Span {
+class Span {
   protected options: SpanOpts
 
   constructor(protected content: SpanContent[], options: Partial<SpanOpts> = {}) {
@@ -77,7 +77,7 @@ export class Span {
   }
 }
 
-export type ListSpanOpts = {
+type ListSpanOpts = {
   addTrailingWhenVertical?: boolean
 }
 

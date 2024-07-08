@@ -13,7 +13,7 @@ function stringifyAST(ast: unknown) {
   return JSON.stringify(ast, null, 2)
 }
 
-export function parse(
+function parse(
   expr: string,
   startRule?: string,
 ): object {

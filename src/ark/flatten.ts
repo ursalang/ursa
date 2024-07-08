@@ -18,7 +18,7 @@ export class ArkInst {
   constructor(public sourceLoc: Interval | undefined, public id: symbol) {}
 }
 
-export class ArkSymInst extends ArkInst {
+class ArkSymInst extends ArkInst {
   static id = 0
 
   constructor(sourceLoc: Interval | undefined) {
@@ -131,7 +131,7 @@ function block(
   ])
 }
 
-export function ifElseBlock(
+function ifElseBlock(
   sourceLoc: Interval | undefined,
   cond: ArkExp,
   thenExp?: ArkExp,
@@ -173,19 +173,13 @@ export function ifElseBlock(
   return new ArkInsts(ifElseInsts)
 }
 
-export function loopBlock(
+function loopBlock(
   sourceLoc: Interval | undefined,
   bodyExp: ArkExp,
   innerFn?: ArkFnBlockOpenInst,
 ): ArkInsts {
   const loopInst = new ArkLoopBlockOpenInst(sourceLoc)
   return block(sourceLoc, flattenExp(bodyExp, loopInst, innerFn), loopInst)
-}
-
-export class ArkBinaryInst extends ArkSymInst {
-  constructor(sourceLoc: Interval | undefined, public leftId: symbol, public rightId: symbol) {
-    super(sourceLoc)
-  }
 }
 
 export class ArkAwaitInst extends ArkLetCopyInst {}
