@@ -42,7 +42,7 @@ testGroup('Conditionals', [
   ['["if",false,3,4]', 4],
   ['["if",true,3,4]', 3],
   ['["if",[["prop","equals",[["prop","add",3],4]],7],1,0]', 1],
-  ['["or",1,2]', 1],
+  ['["or",1,2]', true],
   ['["and",1,2]', 2],
 ])
 

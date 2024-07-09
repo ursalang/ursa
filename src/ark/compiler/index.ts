@@ -22,7 +22,7 @@ import {
   ArkBlockCloseInst, ArkBlockOpenInst, ArkIfBlockOpenInst, ArkLoopBlockOpenInst,
   ArkBreakInst, ArkCallInst, ArkContinueInst, ArkCopyInst,
   ArkFnBlockOpenInst, ArkFnBlockCloseInst, ArkElseBlockInst,
-  ArkLaunchBlockOpenInst, ArkLaunchBlockCloseInst, ArkLetBlockOpenInst, ArkLetCopyInst,
+  ArkLaunchBlockOpenInst, ArkLaunchBlockCloseInst, ArkLetBlockOpenInst,
   ArkLocalInst, ArkCaptureInst, ArkListLiteralInst, ArkLiteralInst, ArkMapLiteralInst,
   ArkObjectLiteralInst, ArkPropertyInst, ArkReturnInst,
   ArkSetInst, ArkSetPropertyInst,
@@ -163,8 +163,6 @@ export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSource
         return sourceNode('continue\n')
       } else if (inst instanceof ArkReturnInst) {
         return sourceNode(`return ${inst.argId.description}\n`)
-      } else if (inst instanceof ArkLetCopyInst) {
-        return sourceNode(letAssign(inst.id, inst.argId.description!))
       } else if (inst instanceof ArkCallInst) {
         return sourceNode(letAssign(inst.id, `await ${inst.fnId.description}.body(${inst.argIds.map((id) => id.description).join(', ')})`))
       } else if (inst instanceof ArkSetInst) {

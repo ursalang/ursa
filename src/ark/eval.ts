@@ -745,7 +745,7 @@ export async function evalArk(ark: ArkState, exp: ArkExp): Promise<ArkVal> {
   } else if (exp instanceof ArkOr) {
     const leftVal = await evalArk(ark, exp.left)
     if (toJs(leftVal)) {
-      return leftVal
+      return ArkBoolean(true)
     }
     return evalArk(ark, exp.right)
   } else if (exp instanceof ArkLoop) {

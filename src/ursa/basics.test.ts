@@ -73,7 +73,7 @@ testGroup('Conditionals', [
   ['if true {3} else {4}', 3],
   ['if false {3} else {4}', 4],
   ['if 3 + 4 == 7 {1} else {0}', 1],
-  ['1 or 2', 1],
+  ['1 or 2', true],
   ['1 and 2', 2],
   ['if 3 + 4 == 8 {1} else if 3 + 4 == 7 {2} else {3}', 2],
 ])
