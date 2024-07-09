@@ -86,7 +86,7 @@ export class ArkFnBlockOpenInst extends ArkBlockOpenInst {
 }
 
 export class ArkLetBlockOpenInst extends ArkBlockOpenInst {
-  constructor(sourceLoc: Interval | undefined, public vars: string[]) {
+  constructor(sourceLoc: Interval | undefined, public vars: string[], public valIds: symbol[]) {
     super(sourceLoc)
   }
 }
@@ -366,7 +366,7 @@ export function flattenExp(
     return block(
       exp.sourceLoc,
       new ArkInsts(insts),
-      new ArkLetBlockOpenInst(exp.sourceLoc, exp.boundVars.map((bv) => bv[0])),
+      new ArkLetBlockOpenInst(exp.sourceLoc, exp.boundVars.map((bv) => bv[0]), bvIds),
     )
   } else if (exp instanceof ArkSequence) {
     if (exp.exps.length === 0) {
