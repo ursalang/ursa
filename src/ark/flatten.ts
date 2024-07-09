@@ -60,10 +60,7 @@ export class ArkLoopBlockOpenInst extends ArkBlockOpenInst {}
 export class ArkLaunchBlockOpenInst extends ArkBlockOpenInst {}
 
 export class ArkIfBlockOpenInst extends ArkBlockOpenInst {
-  constructor(
-    sourceLoc: Interval | undefined,
-    public condId: symbol,
-  ) {
+  constructor(sourceLoc: Interval | undefined, public condId: symbol) {
     super(sourceLoc)
   }
 }
@@ -176,6 +173,15 @@ export class ArkAwaitInst extends ArkSymInst {
   }
 }
 
+export class ArkContinueInst extends ArkLiteralInst {
+  constructor(
+    sourceLoc: Interval | undefined,
+    public loopInst: ArkLoopBlockOpenInst,
+  ) {
+    super(sourceLoc)
+  }
+}
+
 export class ArkBreakInst extends ArkSymInst {
   constructor(
     sourceLoc: Interval | undefined,
@@ -189,13 +195,11 @@ export class ArkReturnInst extends ArkSymInst {
   constructor(
     sourceLoc: Interval | undefined,
     public argId: symbol,
-    public loopInst: ArkLoopBlockOpenInst,
+    public fnInst: ArkLoopBlockOpenInst,
   ) {
     super(sourceLoc)
   }
 }
-
-export class ArkContinueInst extends ArkLiteralInst {}
 
 export class ArkCallInst extends ArkSymInst {
   constructor(sourceLoc: Interval | undefined, public fnId: symbol, public argIds: symbol[]) {
@@ -278,7 +282,10 @@ export function flattenExp(
     }
     return new ArkInsts([...insts.insts, new ArkBreakInst(exp.sourceLoc, insts.id, innerLoop)])
   } else if (exp instanceof ArkContinue) {
-    return new ArkInsts([new ArkContinueInst(exp.sourceLoc)])
+    if (innerLoop === undefined) {
+      throw new Error('continue outside loop')
+    }
+    return new ArkInsts([new ArkContinueInst(exp.sourceLoc, innerLoop)])
   } else if (exp instanceof ArkReturn) {
     if (innerFn === undefined) {
       throw new Error('return outside function')
