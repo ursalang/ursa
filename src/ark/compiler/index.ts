@@ -21,7 +21,7 @@ import {
   ArkInst, ArkAwaitInst,
   ArkBlockCloseInst, ArkBlockOpenInst, ArkIfBlockOpenInst, ArkLoopBlockOpenInst,
   ArkBreakInst, ArkCallInst, ArkContinueInst, ArkCopyInst,
-  ArkFnBlockOpenInst, ArkFnBlockCloseInst, ArkElseBlockInst,
+  ArkFnBlockOpenInst, ArkFnBlockCloseInst, ArkElseBlockInst, ArkElseBlockCloseInst,
   ArkLaunchBlockOpenInst, ArkLaunchBlockCloseInst, ArkLetBlockOpenInst,
   ArkLocalInst, ArkCaptureInst, ArkListLiteralInst, ArkLiteralInst, ArkMapLiteralInst,
   ArkObjectLiteralInst, ArkPropertyInst, ArkReturnInst,
@@ -137,28 +137,30 @@ export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSource
           '})\n',
         ])
       } else if (inst instanceof ArkIfBlockOpenInst) {
-        return sourceNode([letAssign(inst.id, 'ArkNull()'), `if (${inst.condId.description} !== ArkBoolean(false)) {\n`])
+        return sourceNode([letAssign(inst.matchingClose.id, 'ArkNull()'), `if (${inst.condId.description} !== ArkBoolean(false)) {\n`])
       } else if (inst instanceof ArkElseBlockInst) {
         return sourceNode([`${assign(inst.ifBlockId.description!, inst.id.description!)}\n`, '} else {\n'])
+      } else if (inst instanceof ArkElseBlockCloseInst) {
+        return sourceNode([`${assign(inst.blockId.description!, inst.matchingOpen.id.description!)}\n`, '}\n', letAssign(inst.id, inst.matchingOpen.id.description!)])
       } else if (inst instanceof ArkBlockCloseInst) {
         return sourceNode([`${assign(inst.blockId.description!, inst.id.description!)}\n`, '}\n'])
       } else if (inst instanceof ArkLoopBlockOpenInst) {
-        return sourceNode([letAssign(inst.id, 'ArkNull()'), 'for (;;) {\n'])
+        return sourceNode([letAssign(inst.matchingClose.id, 'ArkNull()'), 'for (;;) {\n'])
       } else if (inst instanceof ArkLaunchBlockOpenInst) {
-        return sourceNode([letAssign(inst.id, 'new ArkPromise((async () => {')])
+        return sourceNode([letAssign(inst.matchingClose.id, 'new ArkPromise((async () => {')])
       } else if (inst instanceof ArkFnBlockOpenInst) {
         env = env.pushFrame(new Frame(inst.params, [], inst.name))
         return sourceNode([
-          letAssign(inst.id, `new NativeFn([${inst.params.map((p) => `'${p}'`).join(', ')}], async (${inst.params.join(', ')}) => {`),
+          letAssign(inst.matchingClose.id, `new NativeFn([${inst.params.map((p) => `'${p}'`).join(', ')}], async (${inst.params.join(', ')}) => {`),
         ])
       } else if (inst instanceof ArkLetBlockOpenInst) {
-        return sourceNode([`let ${inst.id.description!}\n`, '{\n', `let ${inst.vars.join(', ')}\n`])
+        return sourceNode([`let ${inst.matchingClose.id.description!}\n`, '{\n', `let ${inst.vars.join(', ')}\n`])
       } else if (inst instanceof ArkBlockOpenInst) {
-        return sourceNode([`let ${inst.id.description!}\n`, '{\n'])
+        return sourceNode([`let ${inst.matchingClose.id.description!}\n`, '{\n'])
       } else if (inst instanceof ArkAwaitInst) {
         return sourceNode(letAssign(inst.id, `await ${inst.argId.description}.promise`))
       } else if (inst instanceof ArkBreakInst) {
-        return sourceNode([`${assign(inst.argId.description!, inst.loopInst.id.description!)}\n`, 'break\n'])
+        return sourceNode([`${assign(inst.argId.description!, inst.loopInst.matchingClose.id.description!)}\n`, 'break\n'])
       } else if (inst instanceof ArkContinueInst) {
         return sourceNode('continue\n')
       } else if (inst instanceof ArkReturnInst) {
