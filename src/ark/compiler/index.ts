@@ -20,7 +20,7 @@ import {
   flattenExp, ArkInsts,
   ArkInst, ArkAwaitInst,
   ArkBlockCloseInst, ArkBlockOpenInst, ArkIfBlockOpenInst, ArkLoopBlockOpenInst,
-  ArkBreakInst, ArkCallInst, ArkContinueInst, ArkCopyInst,
+  ArkBreakInst, ArkCallInst, ArkContinueInst, ArkCopyInst, ArkLetCopyInst,
   ArkFnBlockOpenInst, ArkFnBlockCloseInst, ArkElseBlockInst, ArkElseBlockCloseInst,
   ArkLaunchBlockOpenInst, ArkLaunchBlockCloseInst, ArkLetBlockOpenInst,
   ArkLocalInst, ArkCaptureInst, ArkListLiteralInst, ArkLiteralInst, ArkMapLiteralInst,
@@ -141,8 +141,9 @@ export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSource
       } else if (inst instanceof ArkElseBlockInst) {
         return sourceNode([`${assign(inst.ifBlockId.description!, inst.id.description!)}\n`, '} else {\n'])
       } else if (inst instanceof ArkElseBlockCloseInst) {
-        return sourceNode([`${assign(inst.blockId.description!, inst.matchingOpen.id.description!)}\n`, '}\n', letAssign(inst.id, inst.matchingOpen.id.description!)])
+        return sourceNode([`${assign(inst.blockId.description!, inst.matchingOpen.id.description!)}\n`, '}\n'])
       } else if (inst instanceof ArkBlockCloseInst) {
+        // Also covers ArkLoopBlockCloseInst.
         return sourceNode([`${assign(inst.blockId.description!, inst.id.description!)}\n`, '}\n'])
       } else if (inst instanceof ArkLoopBlockOpenInst) {
         return sourceNode([letAssign(inst.matchingClose.id, 'ArkNull()'), 'for (;;) {\n'])
@@ -165,6 +166,8 @@ export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSource
         return sourceNode('continue\n')
       } else if (inst instanceof ArkReturnInst) {
         return sourceNode(`return ${inst.argId.description}\n`)
+      } else if (inst instanceof ArkLetCopyInst) {
+        return sourceNode(letAssign(inst.id, inst.argId.description!))
       } else if (inst instanceof ArkCallInst) {
         return sourceNode(letAssign(inst.id, `await ${inst.fnId.description}.body(${inst.argIds.map((id) => id.description).join(', ')})`))
       } else if (inst instanceof ArkSetInst) {

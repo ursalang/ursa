@@ -50,6 +50,12 @@ export class ArkCopyInst extends ArkInst {
   }
 }
 
+export class ArkLetCopyInst extends ArkInst {
+  constructor(sourceLoc: Interval | undefined, public argId: symbol) {
+    super(sourceLoc)
+  }
+}
+
 export class ArkBlockOpenInst extends ArkInst {
   public matchingClose!: ArkBlockCloseInst
 }
@@ -97,6 +103,7 @@ export class ArkElseBlockInst extends ArkBlockCloseInst {
 }
 export class ArkElseBlockCloseInst extends ArkBlockCloseInst {}
 
+export class ArkLoopBlockCloseInst extends ArkBlockCloseInst {}
 export class ArkLaunchBlockCloseInst extends ArkBlockCloseInst {}
 export class ArkFnBlockCloseInst extends ArkBlockCloseInst {}
 
@@ -127,7 +134,7 @@ function ifElseBlock(
   const thenInsts = flattenExp(thenExp, innerLoop, innerFn)
   const ifOpenInst = new ArkIfBlockOpenInst(thenExp.sourceLoc, condInsts.id)
   const blockInsts = block(sourceLoc, thenInsts, ifOpenInst)
-  let elseBlockInsts
+  const ifElseInsts = [...condInsts.insts, ...blockInsts.insts]
   if (elseExp !== undefined) {
     const elseInsts = flattenExp(elseExp, innerLoop, innerFn)
     const elseInst = new ArkElseBlockInst(
@@ -136,18 +143,18 @@ function ifElseBlock(
       elseInsts.id,
     )
     elseInst.matchingOpen = ifOpenInst
-    elseBlockInsts = block(
+    const elseBlockInsts = block(
       elseExp.sourceLoc,
       elseInsts,
       elseInst,
       new ArkElseBlockCloseInst(elseExp.sourceLoc, elseInsts.id),
     )
     ifOpenInst.matchingClose = elseInst
-  }
-  const ifElseInsts = [...condInsts.insts, ...blockInsts.insts]
-  if (elseBlockInsts !== undefined) {
     ifElseInsts.pop() // Remove original block close instruction
-    ifElseInsts.push(...elseBlockInsts.insts)
+    ifElseInsts.push(
+      ...elseBlockInsts.insts,
+      new ArkLetCopyInst(elseExp.sourceLoc, elseInst.id),
+    )
   }
   return new ArkInsts(ifElseInsts)
 }
@@ -185,6 +192,7 @@ export class ArkBreakInst extends ArkInst {
     super(sourceLoc)
   }
 }
+
 export class ArkReturnInst extends ArkInst {
   constructor(
     sourceLoc: Interval | undefined,
