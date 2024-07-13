@@ -214,6 +214,17 @@ export class ArkSetInst extends ArkInst {
     super(sourceLoc)
   }
 }
+export class ArkSetLocalInst extends ArkSetInst {
+  constructor(
+    sourceLoc: Interval | undefined,
+    lexpId: symbol,
+    public lexpIndex: number,
+    valId: symbol,
+  ) {
+    super(sourceLoc, lexpId, valId)
+  }
+}
+export class ArkSetCaptureInst extends ArkSetLocalInst {}
 
 export class ArkSetPropertyInst extends ArkInst {
   constructor(
@@ -322,9 +333,17 @@ export function flattenExp(
         new ArkSetPropertyInst(exp.lexp.sourceLoc, objInsts.id, exp.lexp.prop, insts.id),
       ])
     }
+    let SetInst
+    if (exp.lexp instanceof ArkLocal) {
+      SetInst = ArkSetLocalInst
+    } else if (exp.lexp instanceof ArkCapture) {
+      SetInst = ArkSetCaptureInst
+    } else {
+      throw new Error('bad ')
+    }
     return new ArkInsts([
       ...insts.insts,
-      new ArkSetInst(exp.sourceLoc, Symbol.for(exp.lexp.debug.name!), insts.id),
+      new SetInst(exp.sourceLoc, Symbol.for(exp.lexp.debug.name!), exp.lexp.index, insts.id),
     ])
   } else if (exp instanceof ArkObjectLiteral) {
     const insts: ArkInst[] = []
