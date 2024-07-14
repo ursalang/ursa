@@ -113,13 +113,13 @@ function sourceLocToLineAndCol(sourceLoc?: Interval): [number | null, number | n
   return [line, col]
 }
 
-export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSourceMap {
+export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithSourceMap {
   function instsToJs(insts: ArkInsts): SourceNode {
     let env = new Environment()
     function instToJs(inst: ArkInst): SourceNode {
       const [line, col] = sourceLocToLineAndCol(inst.sourceLoc)
       function sourceNode(stmt: string | SourceNode | (string | SourceNode)[]) {
-        return new SourceNode(line, col, file, stmt, env.stack[0].fnName)
+        return new SourceNode(line, col, file, stmt, env.top().fnName)
       }
       if (inst instanceof ArkLiteralInst) {
         return sourceNode(letAssign(inst.id, valToJs(inst.val)))
@@ -214,7 +214,6 @@ export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSource
     return new SourceNode(line, col, file, insts.insts.map((inst) => instToJs(inst)))
   }
 
-  const insts = flattenExp(exp)
   const sourceNode = new SourceNode(1, 1, 'src/ursa/flat-to-js.ts', [
     // FIXME: work out how to eval ESM, so we can use top-level await.
     '"use strict";\n',
@@ -227,6 +226,11 @@ export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSource
     console.log(prettier.format(jsCode.code, {parser: 'babel'}))
   }
   return jsCode
+}
+
+export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSourceMap {
+  const insts = flattenExp(exp)
+  return flatToJs(insts, file)
 }
 
 export async function evalArkJs(source: CodeWithSourceMap | string, file = '(Compiled Ark)'): Promise<ArkVal> {

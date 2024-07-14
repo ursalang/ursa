@@ -12,14 +12,16 @@ import tildify from 'tildify'
 
 import programVersion from '../version.js'
 import {
-  debug, ArkState, ArkExp, ArkNull, ArkList,
-  ArkLet, ArkVal, ArkString, globals, pushLets, toJs,
+  debug, ArkExp, ArkNull, ArkList,
+  ArkLet, ArkVal, ArkString, globals, toJs, pushLets,
+  ArkState,
 } from '../ark/eval.js'
 import {Environment, compile as arkCompile} from '../ark/reader.js'
 import {serializeVal} from '../ark/serialize.js'
 import {runWithTraceback, compile as ursaCompile} from './compiler.js'
 import {format} from './fmt.js'
 import {arkToJs, evalArkJs, jsGlobals} from '../ark/compiler/index.js'
+import {ArkInsts, flattenExp} from '../ark/flatten.js'
 
 if (process.env.DEBUG) {
   Error.stackTraceLimit = Infinity
@@ -194,9 +196,12 @@ async function repl(args: Args): Promise<ArkVal> {
       // Handle new let bindings
       if (compiled instanceof ArkLet) {
         env = env.push(compiled.boundVars.map((bv) => bv[0]))
-        await pushLets(ark, compiled.boundVars)
+        const flatBoundVars: [string, ArkInsts][] = compiled.boundVars.map(
+          (bv) => [bv[0], flattenExp(bv[2])],
+        )
+        await pushLets(ark, flatBoundVars)
       }
-      val = await runWithTraceback(ark, compiled)
+      val = await runWithTraceback(ark, flattenExp(compiled))
       debug(toJs(val))
     } catch (error) {
       if (process.env.DEBUG) {
@@ -230,10 +235,11 @@ async function runCode(source: string, args: Args) {
   if (source !== undefined) {
     const exp = compile(args, source)
     if (args.target === 'ark') {
+      const flat = flattenExp(exp)
       if (args.syntax === 'ursa') {
-        result = await runWithTraceback(ark, exp)
+        result = await runWithTraceback(ark, flat)
       } else {
-        result = await ark.run(exp)
+        result = await ark.run(flat.insts[0])
       }
     } else {
       result = await evalArkJs(arkToJs(exp, prog), prog)

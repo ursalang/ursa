@@ -8,13 +8,13 @@ import preludeJson from './prelude.json' assert {type: 'json'}
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  evalArk, ArkState, ArkExp, ArkLvalue, globals,
+  ArkState, ArkExp, ArkLvalue, globals,
   ArkIf, ArkAnd, ArkOr, ArkSequence, ArkLoop, ArkBreak, ArkContinue,
   ArkNull, ArkBoolean, ArkNumber, ArkString,
-  ArkSet, ArkLocal, ArkCapture,
-  ArkListLiteral, ArkObjectLiteral, ArkMapLiteral,
+  ArkSet, ArkLocal, ArkCapture, ArkListLiteral, ArkObjectLiteral, ArkMapLiteral,
   ArkFn, ArkReturn, ArkProperty, ArkLet, ArkCall, ArkLiteral, ArkObject,
 } from './eval.js'
+import {flattenExp} from './flatten.js'
 
 export class ArkCompilerError extends Error {}
 
@@ -77,16 +77,17 @@ function arkParamList(params: string[]): string[] {
   return checkParamList(params)
 }
 
-function arkBindingList(env: Environment, params: [string, unknown][]): [string, ArkExp][] {
-  const bindings: [string, ArkExp][] = []
+function arkBindingList(env: Environment, params: [string, unknown][]): [string, number, ArkExp][] {
+  const bindings: [string, number, ArkExp][] = []
   for (const p of params) {
     if (!(p instanceof Array) || p.length !== 2 || typeof p[0] !== 'string') {
       throw new ArkCompilerError('invalid let variable binding')
     }
   }
   const paramNames = arkParamList(params.map((p) => p[0]))
-  for (const p of params) {
-    bindings.push([p[0], doCompile(env.push(paramNames), p[1])])
+  const indexBase = env.top().locals.length
+  for (const [i, p] of params.entries()) {
+    bindings.push([p[0], indexBase + i, doCompile(env.push(paramNames), p[1])])
   }
   return bindings
 }
@@ -170,7 +171,7 @@ function doCompile(env: Environment, value: unknown): ArkExp {
           const compiled = doCompile(innerEnv, value[2])
           return new ArkFn(
             params,
-            innerEnv.stack[0].captures.map((c) => symRef(env, c) as ArkCapture),
+            innerEnv.top().captures.map((c) => symRef(env, c) as ArkCapture),
             compiled,
           )
         }
@@ -246,7 +247,7 @@ function doCompile(env: Environment, value: unknown): ArkExp {
             throw new ArkCompilerError("Invalid 'loop'")
           }
           const compiledBody = doCompile(env, value[1])
-          return new ArkLoop(compiledBody)
+          return new ArkLoop(compiledBody, env.top().locals.length)
         }
         case 'break': {
           if (value.length < 1 || value.length > 2) {
@@ -300,6 +301,6 @@ export function compile(expr: unknown, env = new Environment()): ArkExp {
 }
 
 // Compile the prelude and add its values to the globals
-const prelude = compile(preludeJson)
-const preludeObj = await evalArk(new ArkState(), prelude) as ArkObject
+const prelude = flattenExp(compile(preludeJson))
+const preludeObj = await new ArkState().run(prelude.insts[0]) as ArkObject
 preludeObj.properties.forEach((val, sym) => globals.set(sym, val))

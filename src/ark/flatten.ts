@@ -6,20 +6,26 @@ import assert from 'assert'
 import {Interval} from 'ohm-js'
 
 import {
-  ArkAnd, ArkAwait, ArkBoolean, ArkBreak, ArkCall, ArkCapture, ArkContinue, ArkExp, ArkFn,
-  ArkIf, ArkLaunch, ArkLet, ArkListLiteral, ArkLiteral,
+  ArkAnd, ArkAwait, ArkBoolean, ArkBreak, ArkCall, ArkCapture, ArkContinue, ArkDebugInfo,
+  ArkExp, ArkFn, ArkIf, ArkLaunch, ArkLet, ArkListLiteral, ArkLiteral,
   ArkLocal, ArkLoop, ArkMapLiteral, ArkNamedLoc, ArkNull,
   ArkObjectLiteral, ArkOr, ArkProperty, ArkReturn, ArkSequence, ArkSet, ArkVal,
 } from './eval.js'
 
 export class ArkInst {
+  private static nextId = 0
+
+  private static debugEnumerable = process.env.DEBUG_ARK !== undefined
+
   public next: ArkInst | undefined
 
   public readonly id: symbol
 
-  private static nextId = 0
+  debug = new ArkDebugInfo()
 
   constructor(public sourceLoc: Interval | undefined) {
+    Object.defineProperty(this, 'debug', {enumerable: ArkInst.debugEnumerable})
+    Object.defineProperty(this, 'sourceLoc', {enumerable: ArkInst.debugEnumerable})
     this.id = Symbol.for(`$${ArkInst.nextId}`)
     ArkInst.nextId += 1
   }
@@ -54,7 +60,12 @@ export class ArkBlockOpenInst extends ArkInst {
   public matchingClose!: ArkBlockCloseInst
 }
 
-export class ArkLoopBlockOpenInst extends ArkBlockOpenInst {}
+export class ArkLoopBlockOpenInst extends ArkBlockOpenInst {
+  constructor(sourceLoc: Interval | undefined, public localsDepth: number) {
+    super(sourceLoc)
+  }
+}
+
 export class ArkLaunchBlockOpenInst extends ArkBlockOpenInst {}
 
 export class ArkIfBlockOpenInst extends ArkBlockOpenInst {
@@ -87,6 +98,8 @@ export class ArkBlockCloseInst extends ArkInst {
     super(sourceLoc)
   }
 }
+
+export class ArkLetBlockCloseInst extends ArkBlockCloseInst {}
 
 export class ArkElseBlockInst extends ArkBlockCloseInst {
   public matchingClose!: ArkBlockCloseInst
@@ -155,11 +168,18 @@ function ifElseBlock(
 
 function loopBlock(
   sourceLoc: Interval | undefined,
+  localsDepth: number,
   bodyExp: ArkExp,
   innerFn?: ArkFnBlockOpenInst,
 ): ArkInsts {
-  const loopInst = new ArkLoopBlockOpenInst(sourceLoc)
-  return block(sourceLoc, flattenExp(bodyExp, loopInst, innerFn), loopInst)
+  const loopInst = new ArkLoopBlockOpenInst(sourceLoc, localsDepth)
+  const bodyInsts = flattenExp(bodyExp, loopInst, innerFn)
+  return block(
+    sourceLoc,
+    bodyInsts,
+    loopInst,
+    new ArkLoopBlockCloseInst(loopInst.sourceLoc, bodyInsts.id),
+  )
 }
 
 export class ArkAwaitInst extends ArkInst {
@@ -191,14 +211,19 @@ export class ArkReturnInst extends ArkInst {
   constructor(
     sourceLoc: Interval | undefined,
     public argId: symbol,
-    public fnInst: ArkLoopBlockOpenInst,
+    public fnInst: ArkFnBlockOpenInst,
   ) {
     super(sourceLoc)
   }
 }
 
 export class ArkCallInst extends ArkInst {
-  constructor(sourceLoc: Interval | undefined, public fnId: symbol, public argIds: symbol[]) {
+  constructor(
+    sourceLoc: Interval | undefined,
+    public fnId: symbol,
+    public argIds: symbol[],
+    public name?: string,
+  ) {
     super(sourceLoc)
   }
 }
@@ -272,11 +297,10 @@ export function flattenExp(
     return new ArkInsts([new ArkLiteralInst(exp.sourceLoc, exp.val)])
   } else if (exp instanceof ArkLaunch) {
     const insts = flattenExp(exp.exp, innerLoop, innerFn)
-    const openInst = new ArkLaunchBlockOpenInst(exp.sourceLoc)
     return block(
       exp.sourceLoc,
       insts,
-      openInst,
+      new ArkLaunchBlockOpenInst(exp.sourceLoc),
       new ArkLaunchBlockCloseInst(exp.sourceLoc, insts.id),
     )
   } else if (exp instanceof ArkAwait) {
@@ -315,7 +339,7 @@ export function flattenExp(
     return new ArkInsts([
       ...argInsts.map((i) => i.insts).flat(),
       ...fnInsts.insts,
-      new ArkCallInst(exp.fn.sourceLoc, fnInsts.id, argIds),
+      new ArkCallInst(exp.fn.sourceLoc, fnInsts.id, argIds, exp.fn.debug.name),
     ])
   } else if (exp instanceof ArkSet) {
     const insts = flattenExp(exp.exp, innerLoop, innerFn)
@@ -333,7 +357,7 @@ export function flattenExp(
     } else if (exp.lexp instanceof ArkCapture) {
       SetInst = ArkSetCaptureInst
     } else {
-      throw new Error('bad ')
+      throw new Error('bad ArkLvalue')
     }
     return new ArkInsts([
       ...insts.insts,
@@ -371,20 +395,22 @@ export function flattenExp(
   } else if (exp instanceof ArkLet) {
     const insts: ArkInst[] = []
     const bvIds: symbol[] = []
-    for (const [i, bv] of exp.boundVars.entries()) {
-      const bvInsts = flattenExp(bv[1], innerLoop, innerFn, bv[0])
+    for (const bv of exp.boundVars) {
+      const bvInsts = flattenExp(bv[2], innerLoop, innerFn, bv[0])
       insts.push(
         ...bvInsts.insts,
-        new ArkSetLocalInst(exp.sourceLoc, Symbol.for(bv[0]), i, bvInsts.id),
+        new ArkSetLocalInst(exp.sourceLoc, Symbol.for(bv[0]), bv[1], bvInsts.id),
       )
       bvIds.push(bvInsts.id)
     }
     const bodyInsts = flattenExp(exp.body, innerLoop, innerFn)
     insts.push(...bodyInsts.insts)
+    const blockInsts = new ArkInsts(insts)
     return block(
       exp.sourceLoc,
-      new ArkInsts(insts),
+      blockInsts,
       new ArkLetBlockOpenInst(exp.sourceLoc, exp.boundVars.map((bv) => bv[0]), bvIds),
+      new ArkLetBlockCloseInst(exp.sourceLoc, blockInsts.id),
     )
   } else if (exp instanceof ArkSequence) {
     if (exp.exps.length === 0) {
@@ -413,7 +439,7 @@ export function flattenExp(
       innerFn,
     )
   } else if (exp instanceof ArkLoop) {
-    return loopBlock(exp.sourceLoc, exp.body, innerFn)
+    return loopBlock(exp.sourceLoc, exp.localsDepth, exp.body, innerFn)
   } else if (exp instanceof ArkProperty) {
     const objInsts = flattenExp(exp.obj, innerLoop, innerFn)
     return new ArkInsts([

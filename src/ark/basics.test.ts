@@ -7,11 +7,12 @@ import test from 'ava'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  ArkBreakException, ArkState, toJs,
+  ArkState,
 } from './eval.js'
 import {compile} from './reader.js'
 
 import {testArkGroup as testGroup} from '../testutil.js'
+import {flattenExp} from './flatten.js'
 
 testGroup('Concrete values', [
   ['4', 4],
@@ -46,10 +47,10 @@ testGroup('Conditionals', [
   ['["and",1,2]', 2],
 ])
 
-test('Bare break', async (t) => {
-  const error = await t.throwsAsync(() => new ArkState().run(compile(['break'])), {instanceOf: ArkBreakException})
+test('Bare break', (t) => {
+  const error = t.throws(() => new ArkState().run(flattenExp(compile(['break'])).insts[0]))
   t.not(error, undefined)
-  t.is(toJs(error.val), null)
+  t.is(error.message, 'break outside loop')
 })
 
 testGroup('loop and break', [

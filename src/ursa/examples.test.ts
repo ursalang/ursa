@@ -140,10 +140,10 @@ Assignment to different type`)
 ursaTest('Accumulator factory', 'rosettacode/Accumulator factory', [], '8.3')
 ursaTest('Ackermann function', 'rosettacode/Ackermann function', [], '1\n125\n13')
 // Not run, as the program has an unbound variable
-// test('Conditional structures', 'rosettacode/Conditional structures')
+// ursaTest('Conditional structures', 'rosettacode/Conditional structures')
 ursaTest('Hello world-Text', 'rosettacode/Hello world-Text', [], 'hello woods!')
 // Not run, as this program does not terminate
-// test('Integer sequence', 'rosettacode/Integer sequence')
+// ursaTest('Integer sequence', 'rosettacode/Integer sequence')
 
 // Complex tests
 test('Web server', async (t) => {

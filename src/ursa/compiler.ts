@@ -24,6 +24,7 @@ import {
 import {
   ArkCompilerError, symRef, Frame, Environment, checkParamList,
 } from '../ark/reader.js'
+import {ArkInsts} from '../ark/flatten.js'
 
 type ParserOperations = {
   toExp(a: ParserArgs): ArkExp
@@ -115,7 +116,7 @@ class Arguments extends AST {
 }
 
 class LetBinding extends AST {
-  constructor(public boundVars: [string, ArkExp][]) {
+  constructor(public boundVars: [string, number, ArkExp][]) {
     super()
   }
 }
@@ -197,7 +198,10 @@ semantics.addOperation<LetBinding>('toLet(a)', {
       const definition = l.children[1].toDefinition({...this.args.a, env: innerEnv})
       parsedLets.push(definition)
     }
-    return new LetBinding(parsedLets.map((def) => [def.ident.sourceString, def.exp]))
+    const indexBase = this.args.a.env.top().locals.length
+    return new LetBinding(
+      parsedLets.map((def, index) => [def.ident.sourceString, indexBase + index, def.exp]),
+    )
   },
 
   Use(_use, pathList) {
@@ -209,7 +213,8 @@ semantics.addOperation<LetBinding>('toLet(a)', {
     const useProperty = addLoc(new ArkProperty(libValue, 'use'), this)
     const useCallArgs = path.slice(1).map((id) => new ArkLiteral(ArkString(id.sourceString)))
     const useCall = addLoc(new ArkCall(useProperty, useCallArgs), this)
-    return new LetBinding([[ident.sourceString, useCall]])
+    const index = this.args.a.env.top().locals.length
+    return new LetBinding([[ident.sourceString, index, useCall]])
   },
 })
 
@@ -305,7 +310,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     // TODO: ArkFn should be an ArkObject which contains one method.
     return addLoc(new ArkFn(
       paramStrings,
-      innerEnv.stack[0].captures.map(
+      innerEnv.top().captures.map(
         (c) => symRef(this.args.a.env, c) as ArkCapture,
       ),
       compiledBody,
@@ -313,7 +318,13 @@ semantics.addOperation<ArkExp>('toExp(a)', {
   },
 
   Loop(_loop, body) {
-    return addLoc(new ArkLoop(body.toExp({...this.args.a, inLoop: true})), this)
+    return addLoc(
+      new ArkLoop(
+        body.toExp({...this.args.a, inLoop: true}),
+        this.args.a.env.top().locals.length,
+      ),
+      this,
+    )
   },
 
   For(_for, ident, _of, iterator, body) {
@@ -323,8 +334,9 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     const loopEnv = innerEnv.push([forVar])
     const compiledForVar = symRef(loopEnv, forVar)
     const compiledForBody = body.toExp({...this.args.a, env: loopEnv, inLoop: true})
+    const innerIndex = innerEnv.top().locals.length
     const loopBody = new ArkLet(
-      [[forVar, new ArkCall(symRef(loopEnv, '_for'), [])]],
+      [[forVar, innerIndex, new ArkCall(symRef(loopEnv, '_for'), [])]],
       new ArkSequence([
         new ArkIf(
           new ArkCall(new ArkProperty(compiledForVar, 'equals'), [new ArkLiteral(ArkNull())]),
@@ -333,7 +345,8 @@ semantics.addOperation<ArkExp>('toExp(a)', {
         compiledForBody,
       ]),
     )
-    return new ArkLet([['_for', compiledIterator]], new ArkLoop(loopBody))
+    const localsDepth = this.args.a.env.top().locals.length
+    return new ArkLet([['_for', localsDepth, compiledIterator]], new ArkLoop(loopBody, localsDepth + 1))
   },
 
   UnaryExp_bitwise_not(_not, exp) {
@@ -671,9 +684,9 @@ export function compile(
   return ast.toExp(args)
 }
 
-export async function runWithTraceback(ark: ArkState, compiledExp: ArkExp): Promise<ArkVal> {
+export async function runWithTraceback(ark: ArkState, flatExp: ArkInsts): Promise<ArkVal> {
   try {
-    return await ark.run(compiledExp)
+    return await ark.run(flatExp.insts[0])
   } catch (e) {
     if (e instanceof ArkRuntimeError) {
       throw new UrsaRuntimeError(e.ark, e.sourceLoc as Interval, e.message, {cause: e})

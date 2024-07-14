@@ -1,4 +1,4 @@
-// Ark interpreter.
+// Interpreter for flattened Ark.
 // © Reuben Thomas 2023-2024
 // Released under the MIT license.
 
@@ -6,15 +6,25 @@ import assert from 'assert'
 import util from 'util'
 import {Interval} from 'ohm-js'
 
+import {
+  ArkAwaitInst, ArkBlockCloseInst, ArkBlockOpenInst, ArkBreakInst, ArkCallInst,
+  ArkCaptureInst, ArkContinueInst, ArkElseBlockCloseInst, ArkElseBlockInst,
+  ArkFnBlockCloseInst, ArkFnBlockOpenInst, ArkIfBlockOpenInst, ArkInst, ArkInsts,
+  ArkLaunchBlockCloseInst, ArkLaunchBlockOpenInst, ArkLetBlockCloseInst, ArkLetBlockOpenInst,
+  ArkLetCopyInst, ArkListLiteralInst, ArkLiteralInst, ArkLocalInst, ArkLoopBlockCloseInst,
+  ArkLoopBlockOpenInst, ArkMapLiteralInst, ArkObjectLiteralInst, ArkPropertyInst, ArkReturnInst,
+  ArkSetCaptureInst, ArkSetLocalInst, ArkSetPropertyInst,
+} from './flatten.js'
 import programVersion from '../version.js'
 import {FsMap} from './fsmap.js'
 
 // Each stack frame consists of a tuple of local vars, captures, and
 // debug info.
-export class ArkFrame {
+class ArkFrame {
   constructor(
     public locals: ArkRef[] = [],
     public captures: ArkRef[] = [],
+    // FIXME public mem: Map<symbol, ArkVal> = new Map(),
     public debug = new ArkFrameDebugInfo(),
   ) {}
 }
@@ -44,13 +54,17 @@ export class ArkState {
     }
   }
 
-  async run(compiledVal: ArkExp): Promise<ArkVal> {
-    return evalArk(this, compiledVal)
+  async run(compiledVal: ArkInst): Promise<ArkVal> {
+    return evalFlat(this, compiledVal)
   }
 }
 
 export class ArkRuntimeError extends Error {
-  constructor(public ark: ArkState, public message: string, public sourceLoc: unknown) {
+  constructor(
+    public ark: ArkState,
+    public message: string,
+    public sourceLoc: unknown,
+  ) {
     super()
   }
 }
@@ -58,7 +72,7 @@ export class ArkRuntimeError extends Error {
 // Base class for compiled code.
 export class Ark {}
 
-class ArkDebugInfo {
+export class ArkDebugInfo {
   uid: number | undefined
 
   name: string | undefined
@@ -247,30 +261,13 @@ export class ArkAwait extends ArkExp {
   }
 }
 
-class ArkNonLocalReturn extends Error {
-  constructor(public readonly val: ArkVal = ArkNull()) {
-    super()
-  }
-}
-
-export class ArkBreakException extends ArkNonLocalReturn {}
-// ts-unused-exports:disable-next-line
-export class ArkContinueException extends ArkNonLocalReturn {}
-// ts-unused-exports:disable-next-line
-export class ArkReturnException extends ArkNonLocalReturn {}
-
 export class ArkBreak extends ArkExp {
   constructor(public exp: ArkExp = new ArkLiteral(ArkNull())) {
     super()
   }
 }
 
-export class ArkContinue extends ArkExp {
-  // eslint-disable-next-line class-methods-use-this
-  eval(_ark: ArkState): Promise<never> {
-    throw new ArkContinueException()
-  }
-}
+export class ArkContinue extends ArkExp {}
 
 export class ArkReturn extends ArkExp {
   constructor(public exp: ArkExp = new ArkLiteral(ArkNull())) {
@@ -292,13 +289,6 @@ abstract class ArkCallable extends ArkVal {
   }
 }
 
-// ts-unused-exports:disable-next-line
-export class ArkClosure extends ArkCallable {
-  constructor(params: string[], captures: ArkRef[], public body: ArkExp) {
-    super(params, captures)
-  }
-}
-
 export class NativeFn extends ArkCallable {
   constructor(params: string[], public body: (...args: ArkVal[]) => ArkVal) {
     super(params, [])
@@ -313,7 +303,7 @@ export class NativeAsyncFn extends ArkCallable {
 }
 
 export class ArkFn extends ArkExp {
-  constructor(public params: string[], public capturedVars: ArkNamedLoc[], public body: ArkExp) {
+  constructor(public params: string[], public capturedVars: ArkCapture[], public body: ArkExp) {
     super()
   }
 }
@@ -345,7 +335,7 @@ export class ArkCall extends ArkExp {
   }
 }
 
-export abstract class ArkRef extends Ark {
+abstract class ArkRef extends Ark {
   abstract get(): ArkVal
 
   abstract set(val: ArkVal): ArkVal
@@ -530,21 +520,8 @@ export class ArkMapLiteral extends ArkExp {
   }
 }
 
-export async function pushLets(ark: ArkState, boundVars: [string, ArkExp][]) {
-  const lets = makeLocals(boundVars.map((bv) => bv[0]), [])
-  ark.push(lets)
-  const vals: ArkVal[] = []
-  for (const bv of boundVars) {
-    vals.push(await evalArk(ark, bv[1]))
-  }
-  for (let i = 0; i < lets.length; i += 1) {
-    lets[i].set(vals[i])
-  }
-  return lets.length
-}
-
 export class ArkLet extends ArkExp {
-  constructor(public boundVars: [string, ArkExp][], public body: ArkExp) {
+  constructor(public boundVars: [string, number, ArkExp][], public body: ArkExp) {
     super()
   }
 }
@@ -574,7 +551,7 @@ export class ArkOr extends ArkExp {
 }
 
 export class ArkLoop extends ArkExp {
-  constructor(public body: ArkExp) {
+  constructor(public body: ArkExp, public localsDepth: number) {
     super()
   }
 }
@@ -639,172 +616,6 @@ export function debug(x: unknown, depth?: number | null) {
   console.log(valToString(x, depth))
 }
 
-export async function evalArk(ark: ArkState, exp: ArkExp): Promise<ArkVal> {
-  if (exp instanceof ArkLiteral) {
-    return Promise.resolve(exp.val)
-  } else if (exp instanceof ArkLaunch) {
-    return Promise.resolve(new ArkPromise(evalArk(ark, exp.exp)))
-  } else if (exp instanceof ArkAwait) {
-    const promise = await evalArk(ark, exp.exp)
-    if (!(promise instanceof ArkPromise)) {
-      throw new ArkRuntimeError(ark, "Attempt to 'await' non-Promise", exp.sourceLoc)
-    }
-    const res = await promise.promise
-    return res
-  } else if (exp instanceof ArkBreak) {
-    throw new ArkBreakException(await evalArk(ark, exp.exp))
-  } else if (exp instanceof ArkContinue) {
-    throw new ArkContinueException()
-  } else if (exp instanceof ArkReturn) {
-    throw new ArkReturnException(await evalArk(ark, exp.exp))
-  } else if (exp instanceof ArkFn) {
-    const captures = []
-    for (const v of exp.capturedVars) {
-      captures.push(await evalRef(ark, v))
-    }
-    return new ArkClosure(exp.params, captures, exp.body)
-  } else if (exp instanceof ArkCall) {
-    const fn = exp.fn
-    const fnVal = await evalArk(ark, fn)
-    if (!(fnVal instanceof ArkCallable)) {
-      throw new ArkRuntimeError(ark, 'Invalid call', exp.sourceLoc)
-    }
-    const evaluatedArgs = []
-    for (const arg of exp.args) {
-      evaluatedArgs.push(await evalArk(ark, arg))
-    }
-    const locals = makeLocals(fnVal.params, evaluatedArgs)
-    const debugInfo = new ArkFrameDebugInfo(exp.fn.debug.name, exp.sourceLoc)
-    return call(new ArkState(new ArkFrame(locals, fnVal.captures, debugInfo), ark), fnVal)
-  } else if (exp instanceof ArkSet) {
-    const ref = await evalRef(ark, exp.lexp)
-    const res = await evalArk(ark, exp.exp)
-    const oldVal = ref.get()
-    if (oldVal !== ArkUndefined
-      && oldVal.constructor !== ArkNullVal
-      && res.constructor !== oldVal.constructor) {
-      throw new ArkRuntimeError(ark, 'Assignment to different type', exp.sourceLoc)
-    }
-    ref.set(res)
-    return res
-  } else if (exp instanceof ArkObjectLiteral) {
-    const inits = new Map<string, ArkVal>()
-    for (const [k, v] of exp.properties) {
-      inits.set(k, await evalArk(ark, v))
-    }
-    return new ArkObject(inits)
-  } else if (exp instanceof ArkListLiteral) {
-    const evaluatedList = []
-    for (const e of exp.list) {
-      evaluatedList.push(await evalArk(ark, e))
-    }
-    return new ArkList(evaluatedList)
-  } else if (exp instanceof ArkMapLiteral) {
-    const evaluatedMap = new Map<ArkVal, ArkVal>()
-    for (const [k, v] of exp.map) {
-      evaluatedMap.set(await evalArk(ark, k), await evalArk(ark, v))
-    }
-    return new ArkMap(evaluatedMap)
-  } else if (exp instanceof ArkLet) {
-    const nLets = await pushLets(ark, exp.boundVars)
-    let res: ArkVal
-    try {
-      res = await evalArk(ark, exp.body)
-    } catch (e) {
-      if (e instanceof ArkNonLocalReturn) {
-        ark.pop(nLets)
-      }
-      throw e
-    }
-    ark.pop(nLets)
-    return res
-  } else if (exp instanceof ArkSequence) {
-    let res: ArkVal = ArkNull()
-    for (const e of exp.exps) {
-      res = await evalArk(ark, e)
-    }
-    return res
-  } else if (exp instanceof ArkIf) {
-    const condVal = await evalArk(ark, exp.cond)
-    let res: ArkVal
-    if (toJs(condVal)) {
-      res = await evalArk(ark, exp.thenExp)
-    } else {
-      res = exp.elseExp ? await evalArk(ark, exp.elseExp) : ArkNull()
-    }
-    return res
-  } else if (exp instanceof ArkAnd) {
-    const leftVal = await evalArk(ark, exp.left)
-    if (toJs(leftVal)) {
-      return evalArk(ark, exp.right)
-    }
-    return leftVal
-  } else if (exp instanceof ArkOr) {
-    const leftVal = await evalArk(ark, exp.left)
-    if (toJs(leftVal)) {
-      return ArkBoolean(true)
-    }
-    return evalArk(ark, exp.right)
-  } else if (exp instanceof ArkLoop) {
-    for (; ;) {
-      try {
-        await evalArk(ark, exp.body)
-      } catch (e) {
-        if (e instanceof ArkBreakException) {
-          return e.val
-        }
-        if (!(e instanceof ArkContinueException)) {
-          throw e
-        }
-      }
-    }
-  } else if (exp instanceof ArkLvalue) {
-    return (await evalRef(ark, exp)).get()
-  }
-  throw new Error('invalid ArkExp')
-}
-
-async function evalRef(ark: ArkState, lexp: ArkLvalue): Promise<ArkRef> {
-  if (lexp instanceof ArkLocal) {
-    return Promise.resolve(ark.frame.locals[lexp.index])
-  } else if (lexp instanceof ArkCapture) {
-    return Promise.resolve(ark.frame.captures[lexp.index])
-  } else if (lexp instanceof ArkProperty) {
-    const obj = await evalArk(ark, lexp.obj)
-    if (!(obj instanceof ArkAbstractObjectBase)) {
-      throw new ArkRuntimeError(ark, 'Attempt to read property of non-object', lexp.sourceLoc)
-    }
-    try {
-      return new ArkPropertyRef(obj, lexp.prop)
-    } catch (e) {
-      if (e instanceof ArkPropertyRefError) {
-        throw new ArkRuntimeError(ark, e.message, lexp.sourceLoc)
-      }
-    }
-  }
-  throw new Error('invalid ArkLvalue')
-}
-
-async function call(ark: ArkState, callable: ArkCallable): Promise<ArkVal> {
-  if (callable instanceof ArkClosure) {
-    try {
-      return await evalArk(ark, callable.body)
-    } catch (e) {
-      if (e instanceof ArkReturnException) {
-        return e.val
-      }
-      throw e
-    }
-  } else if (callable instanceof NativeFn) {
-    const args = ark.frame.locals.map((ref) => ref.get())
-    return Promise.resolve(callable.body(...args))
-  } else if (callable instanceof NativeAsyncFn) {
-    const args = ark.frame.locals.map((ref) => ref.get())
-    return callable.body(...args)
-  }
-  throw new Error('invalid ArkCallable')
-}
-
 // FFI
 class ArkFromJsError extends Error {}
 
@@ -848,6 +659,253 @@ function fromJs(x: unknown, thisObj?: object): ArkVal {
   throw new ArkFromJsError(`Cannot convert JavaScript value ${x}`)
 }
 
+class ArkFlatClosure extends ArkCallable {
+  constructor(params: string[], captures: ArkRef[], public body: ArkInst) {
+    super(params, captures)
+  }
+}
+
+function evalRef(frame: ArkFrame, lexp: ArkNamedLoc): ArkRef {
+  if (lexp instanceof ArkLocal) {
+    return frame.locals[lexp.index]
+  } else if (lexp instanceof ArkCapture) {
+    return frame.captures[lexp.index]
+  }
+  throw new Error('invalid ArkNamedLoc')
+}
+
+async function callFlat(ark: ArkState, callable: ArkCallable): Promise<ArkVal> {
+  if (callable instanceof ArkFlatClosure) {
+    return evalFlat(ark, callable.body)
+  } else if (callable instanceof NativeFn) {
+    const args = ark.frame.locals.map((ref) => ref.get())
+    return Promise.resolve(callable.body(...args))
+  } else if (callable instanceof NativeAsyncFn) {
+    const args = ark.frame.locals.map((ref) => ref.get())
+    return callable.body(...args)
+  } else {
+    throw new Error('Invalid ArkCallable')
+  }
+}
+
+async function evalFlat(
+  outerArk: ArkState,
+  inst: ArkInst | undefined,
+): Promise<ArkVal> {
+  const stack: [ArkState, Map<symbol, ArkVal>, ArkInst | undefined][] = [
+    [outerArk, new Map<symbol, ArkVal>(), undefined],
+  ]
+  const loopStack: [ArkInst, ArkInst][] = []
+  let prevInst
+  while (inst !== undefined) {
+    prevInst = inst
+    const mem = stack[0][1]
+    if (inst instanceof ArkLiteralInst) {
+      mem.set(inst.id, inst.val)
+      inst = inst.next
+    } else if (inst instanceof ArkLetCopyInst) {
+      mem.set(inst.id, mem.get(inst.argId)!)
+      inst = inst.next
+    } else if (inst instanceof ArkLaunchBlockCloseInst) {
+      const result = mem.get(inst.blockId)!
+      mem.set(inst.id, result)
+      return result
+    } else if (inst instanceof ArkFnBlockCloseInst) {
+      const result = mem.get(inst.blockId)!
+      const caller = stack.shift()![2]!
+      if (caller === undefined) {
+        return result
+      }
+      inst = caller.next
+      prevInst = caller
+      stack[0][1].set(caller.id, result)
+    } else if (inst instanceof ArkElseBlockInst) {
+      mem.set(inst.id, mem.get(inst.ifBlockId)!)
+      inst = inst.matchingClose.next
+    } else if (inst instanceof ArkLoopBlockCloseInst) {
+      inst = inst.matchingOpen.next
+    } else if (inst instanceof ArkElseBlockCloseInst) {
+      const result = mem.get(inst.blockId)!
+      mem.set(inst.matchingOpen.id, result)
+      mem.set(inst.id, result)
+      inst = inst.next
+    } else if (inst instanceof ArkLetBlockCloseInst) {
+      mem.set(inst.id, mem.get(inst.blockId)!)
+      // Pop locals introduced in this block.
+      stack[0][0].pop((inst.matchingOpen as ArkLetBlockOpenInst).vars.length)
+      inst = inst.next
+    } else if (inst instanceof ArkBlockCloseInst) {
+      mem.set(inst.id, mem.get(inst.blockId)!)
+      inst = inst.next
+    } else if (inst instanceof ArkIfBlockOpenInst) {
+      const result = mem.get(inst.condId)!
+      mem.set(inst.id, result)
+      if (result !== ArkBoolean(false)) {
+        inst = inst.next
+      } else {
+        inst = inst.matchingClose.next
+      }
+    } else if (inst instanceof ArkLoopBlockOpenInst) {
+      loopStack.unshift([inst, inst.matchingClose])
+      inst = inst.next
+    } else if (inst instanceof ArkLaunchBlockOpenInst) {
+      const result = Promise.resolve(new ArkPromise(evalFlat(stack[0][0], inst.next)))
+      mem.set(inst.id, result)
+      // The Promise becomes the result of the entire block.
+      mem.set(inst.matchingClose.id, result)
+      inst = inst.matchingClose.next
+    } else if (inst instanceof ArkFnBlockOpenInst) {
+      const captures = []
+      for (const v of inst.capturedVars) {
+        captures.push(evalRef(stack[0][0].frame, v))
+      }
+      const result = new ArkFlatClosure(inst.params, captures, inst.next!)
+      mem.set(inst.matchingClose.id, result)
+      inst = inst.matchingClose.next
+    } else if (inst instanceof ArkLetBlockOpenInst) {
+      stack[0][0].push(makeLocals(inst.vars, []))
+      inst = inst.next
+    } else if (inst instanceof ArkBlockOpenInst) {
+      inst = inst.next
+    } else if (inst instanceof ArkAwaitInst) {
+      const promise = (mem.get(inst.argId)! as ArkPromise).promise
+      mem.set(inst.id, await promise)
+      inst = inst.next
+    } else if (inst instanceof ArkBreakInst) {
+      const result = mem.get(inst.argId)!
+      mem.set(inst.id, result)
+      mem.set(inst.loopInst.matchingClose.id, result)
+      const nPops = stack[0][0].frame.locals.length - inst.loopInst.localsDepth
+      stack[0][0].pop(nPops)
+      inst = loopStack.shift()![1].next
+    } else if (inst instanceof ArkContinueInst) {
+      // FIXME: add localsDepth support
+      inst = loopStack[0][0]
+    } else if (inst instanceof ArkReturnInst) {
+      const result = mem.get(inst.argId)!
+      const caller = stack.shift()![2]!
+      if (caller === undefined) {
+        return result
+      }
+      inst = caller.next
+      prevInst = caller
+      stack[0][1].set(caller.id, result)
+    } else if (inst instanceof ArkCallInst) {
+      const args = inst.argIds.map((id) => mem.get(id)!)
+      // FIXME: deal with extra args
+      const callable: ArkVal = mem.get(inst.fnId)!
+      if (callable instanceof ArkFlatClosure) {
+        const innerMem = new Map<symbol, ArkVal>()
+        for (const argId of inst.argIds) {
+          innerMem.set(argId, mem.get(argId)!)
+        }
+        stack.unshift([
+          new ArkState(
+            new ArkFrame(
+              makeLocals(callable.params, inst.argIds.map((id) => mem.get(id)!)),
+              callable.captures,
+              new ArkFrameDebugInfo(inst.name, inst.sourceLoc),
+            ),
+            stack[0][0],
+          ),
+          innerMem,
+          inst,
+        ])
+        inst = callable.body
+      } else if (callable instanceof NativeFn) {
+        mem.set(inst.id, callable.body(...args))
+        inst = inst.next
+      } else if (callable instanceof NativeAsyncFn) {
+        mem.set(inst.id, await callable.body(...args))
+        inst = inst.next
+      } else {
+        throw new ArkRuntimeError(stack[0][0], 'Invalid call', inst.sourceLoc)
+      }
+    } else if (inst instanceof ArkSetLocalInst) {
+      const result = mem.get(inst.valId)!
+      let ref: ArkRef
+      if (inst instanceof ArkSetCaptureInst) {
+        ref = stack[0][0].frame.captures[inst.lexpIndex]
+      } else {
+        ref = stack[0][0].frame.locals[inst.lexpIndex]
+      }
+      const oldVal = ref.get()
+      if (
+        oldVal !== ArkUndefined
+        && oldVal.constructor !== ArkNullVal
+        && oldVal.constructor !== result.constructor) {
+        throw new ArkRuntimeError(stack[0][0], 'Assignment to different type', inst.sourceLoc)
+      }
+      mem.set(inst.id, result)
+      ref.set(result)
+      inst = inst.next
+    } else if (inst instanceof ArkSetPropertyInst) {
+      const result = mem.get(inst.valId)!
+      const obj = mem.get(inst.lexpId)! as ArkObject
+      if (obj.get(inst.prop) === ArkUndefined) {
+        throw new ArkRuntimeError(stack[0][0], 'Invalid property', inst.sourceLoc)
+      }
+      obj.set(inst.prop, result)
+      mem.set(inst.id, result)
+      inst = inst.next
+    } else if (inst instanceof ArkObjectLiteralInst) {
+      const properties = new Map<string, ArkVal>()
+      for (const [k, v] of inst.properties) {
+        properties.set(k, mem.get(v)!)
+      }
+      mem.set(inst.id, new ArkObject(properties))
+      inst = inst.next
+    } else if (inst instanceof ArkListLiteralInst) {
+      mem.set(inst.id, new ArkList(inst.valIds.map((id) => mem.get(id)!)))
+      inst = inst.next
+    } else if (inst instanceof ArkMapLiteralInst) {
+      const map = new Map<ArkVal, ArkVal>()
+      for (const [k, v] of inst.map) {
+        map.set(mem.get(k)!, mem.get(v)!)
+      }
+      mem.set(inst.id, new ArkMap(map))
+      inst = inst.next
+    } else if (inst instanceof ArkPropertyInst) {
+      const result = (mem.get(inst.objId)! as ArkObject).get(inst.prop)
+      if (result === ArkUndefined) {
+        throw new ArkRuntimeError(stack[0][0], 'Invalid property', inst.sourceLoc)
+      }
+      mem.set(inst.id, result)
+      inst = inst.next
+    } else if (inst instanceof ArkCaptureInst) {
+      const capture = stack[0][0].frame.captures[inst.index].get()
+      if (capture === undefined) {
+        throw new Error('undefined capture')
+      }
+      mem.set(inst.id, capture)
+      inst = inst.next
+    } else if (inst instanceof ArkLocalInst) {
+      const local = stack[0][0].frame.locals[inst.index].get()
+      if (local === undefined) {
+        throw new Error('undefined local')
+      }
+      mem.set(inst.id, local)
+      inst = inst.next
+    } else {
+      throw new Error('invalid ArkInst')
+    }
+  }
+  return prevInst ? stack[0][1].get(prevInst.id)! : ArkUndefined
+}
+
+export async function pushLets(ark: ArkState, boundVars: [string, ArkInsts][]) {
+  const lets = makeLocals(boundVars.map((bv) => bv[0]), [])
+  ark.push(lets)
+  const vals: ArkVal[] = []
+  for (const bv of boundVars) {
+    vals.push(await evalFlat(ark, bv[1].insts[0]))
+  }
+  for (let i = 0; i < lets.length; i += 1) {
+    lets[i].set(vals[i])
+  }
+  return lets.length
+}
+
 export function toJs(val: ArkVal): unknown {
   if (val instanceof ArkConcreteVal) {
     return val.val
@@ -865,10 +923,10 @@ export function toJs(val: ArkVal): unknown {
     return jsMap
   } else if (val instanceof ArkList) {
     return val.list.map(toJs)
-  } else if (val instanceof ArkClosure) {
+  } else if (val instanceof ArkFlatClosure) {
     return async (...args: unknown[]) => {
       const locals = args.map((arg) => new ArkValRef(fromJs(arg)))
-      return call(new ArkState(new ArkFrame(locals, val.captures)), val)
+      return callFlat(new ArkState(new ArkFrame(locals, val.captures)), val)
     }
   } else if (val instanceof NativeFn || val instanceof NativeAsyncFn) {
     return (...args: unknown[]) => toJs(val.body(...args.map((arg) => fromJs(arg))))
