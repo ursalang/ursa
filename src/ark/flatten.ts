@@ -44,12 +44,6 @@ export class ArkLiteralInst extends ArkInst {
   }
 }
 
-export class ArkCopyInst extends ArkInst {
-  constructor(sourceLoc: Interval | undefined, public src: symbol, public dest: symbol) {
-    super(sourceLoc)
-  }
-}
-
 export class ArkLetCopyInst extends ArkInst {
   constructor(sourceLoc: Interval | undefined, public argId: symbol) {
     super(sourceLoc)
@@ -377,11 +371,14 @@ export function flattenExp(
   } else if (exp instanceof ArkLet) {
     const insts: ArkInst[] = []
     const bvIds: symbol[] = []
-    exp.boundVars.forEach((bv) => {
+    for (const [i, bv] of exp.boundVars.entries()) {
       const bvInsts = flattenExp(bv[1], innerLoop, innerFn, bv[0])
-      insts.push(...bvInsts.insts, new ArkCopyInst(exp.sourceLoc, bvInsts.id, Symbol.for(bv[0])))
+      insts.push(
+        ...bvInsts.insts,
+        new ArkSetLocalInst(exp.sourceLoc, Symbol.for(bv[0]), i, bvInsts.id),
+      )
       bvIds.push(bvInsts.id)
-    })
+    }
     const bodyInsts = flattenExp(exp.body, innerLoop, innerFn)
     insts.push(...bodyInsts.insts)
     return block(

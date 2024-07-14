@@ -20,7 +20,7 @@ import {
   flattenExp, ArkInsts,
   ArkInst, ArkAwaitInst,
   ArkBlockCloseInst, ArkBlockOpenInst, ArkIfBlockOpenInst, ArkLoopBlockOpenInst,
-  ArkBreakInst, ArkCallInst, ArkContinueInst, ArkCopyInst, ArkLetCopyInst,
+  ArkBreakInst, ArkCallInst, ArkContinueInst, ArkLetCopyInst,
   ArkFnBlockOpenInst, ArkFnBlockCloseInst, ArkElseBlockInst, ArkElseBlockCloseInst,
   ArkLaunchBlockOpenInst, ArkLaunchBlockCloseInst, ArkLetBlockOpenInst,
   ArkLocalInst, ArkCaptureInst, ArkListLiteralInst, ArkLiteralInst, ArkMapLiteralInst,
@@ -123,8 +123,6 @@ export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSource
       }
       if (inst instanceof ArkLiteralInst) {
         return sourceNode(letAssign(inst.id, valToJs(inst.val)))
-      } else if (inst instanceof ArkCopyInst) {
-        return sourceNode(`${assign(inst.src.description!, inst.dest.description!)}\n`)
       } else if (inst instanceof ArkLaunchBlockCloseInst) {
         return sourceNode([
           `return ${inst.id.description!}\n`,
@@ -155,7 +153,11 @@ export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSource
           letAssign(inst.matchingClose.id, `new NativeFn([${inst.params.map((p) => `'${p}'`).join(', ')}], async (${inst.params.join(', ')}) => {`),
         ])
       } else if (inst instanceof ArkLetBlockOpenInst) {
-        return sourceNode([`let ${inst.matchingClose.id.description!}\n`, '{\n', `let ${inst.vars.join(', ')}\n`])
+        return sourceNode([
+          `let ${inst.matchingClose.id.description!}\n`,
+          '{\n',
+          ...inst.vars.map((v) => `let ${v} = ArkUndefined\n`),
+        ])
       } else if (inst instanceof ArkBlockOpenInst) {
         return sourceNode([`let ${inst.matchingClose.id.description!}\n`, '{\n'])
       } else if (inst instanceof ArkAwaitInst) {
