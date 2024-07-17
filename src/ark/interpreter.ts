@@ -750,7 +750,15 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
       loopStack.unshift([inst, inst.matchingClose])
       inst = inst.next
     } else if (inst instanceof ArkLaunchBlockOpenInst) {
-      const innerArk = new ArkState(ark.frame, ark.outerState) // FIXME: clone ark.frame
+      const innerArk = new ArkState(
+        new ArkFrame(
+          [...ark.frame.locals],
+          [...ark.frame.captures],
+          new Map(ark.frame.memory.entries()),
+          ark.frame.debug,
+        ),
+        ark.outerState,
+      )
       innerArk.inst = inst.next
       const result = Promise.resolve(new ArkPromise(evalFlat(innerArk)))
       mem.set(inst.id, result)
