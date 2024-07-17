@@ -21,7 +21,9 @@ export class ArkFrame {
 
 class ArkFrameDebugInfo {
   constructor(
-    public source: ArkCall | undefined = undefined,
+    public callerName?: string,
+
+    public sourceLoc?: Interval,
   ) {}
 }
 
@@ -672,7 +674,7 @@ export async function evalArk(ark: ArkState, exp: ArkExp): Promise<ArkVal> {
       evaluatedArgs.push(await evalArk(ark, arg))
     }
     const locals = makeLocals(fnVal.params, evaluatedArgs)
-    const debugInfo = new ArkFrameDebugInfo(exp)
+    const debugInfo = new ArkFrameDebugInfo(exp.fn.debug.name, exp.sourceLoc)
     return call(new ArkState(new ArkFrame(locals, fnVal.captures, debugInfo), ark), fnVal)
   } else if (exp instanceof ArkSet) {
     const ref = await evalRef(ark, exp.lexp)

@@ -67,20 +67,17 @@ export class UrsaRuntimeError extends UrsaError {
     const trace = []
     // Exclude top level stack frame from trace-back.
     for (let state: ArkState = ark; state.outerState !== undefined; state = state.outerState) {
-      const callerInfo = state.outerState.frame.debug.source
+      const callerName = state.outerState.frame.debug.callerName
       let fnLocation
       if (state.outerState.outerState !== undefined) {
-        let fnName = '(anonymous function)'
-        if (callerInfo !== undefined && callerInfo.fn.debug.name) {
-          fnName = callerInfo.fn.debug.name
-        }
+        const fnName = callerName ?? '(anonymous function)'
         fnLocation = `in ${fnName}`
       } else {
         fnLocation = 'at top level'
       }
-      const callInfo = state.frame.debug.source
-      if (callInfo !== undefined) {
-        const line = callInfo.sourceLoc!.getLineAndColumn()
+      const sourceLoc = state.frame.debug.sourceLoc
+      if (sourceLoc !== undefined) {
+        const line = sourceLoc.getLineAndColumn()
         trace.push(`line ${line.lineNum}\n    ${line.line}, ${fnLocation}`)
       } else {
         trace.push('(uninstrumented stack frame)')
