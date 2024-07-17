@@ -21,7 +21,6 @@ export class ArkFrame {
 
 class ArkFrameDebugInfo {
   constructor(
-    public name: ArkRef | undefined = undefined,
     public source: ArkCall | undefined = undefined,
   ) {}
 }
@@ -664,10 +663,6 @@ export async function evalArk(ark: ArkState, exp: ArkExp): Promise<ArkVal> {
     return new ArkClosure(exp.params, captures, exp.body)
   } else if (exp instanceof ArkCall) {
     const fn = exp.fn
-    let sym: ArkRef | undefined
-    if (fn instanceof ArkLocal || fn instanceof ArkCapture) {
-      sym = await evalRef(ark, fn)
-    }
     const fnVal = await evalArk(ark, fn)
     if (!(fnVal instanceof ArkCallable)) {
       throw new ArkRuntimeError(ark, 'Invalid call', exp.sourceLoc)
@@ -677,7 +672,7 @@ export async function evalArk(ark: ArkState, exp: ArkExp): Promise<ArkVal> {
       evaluatedArgs.push(await evalArk(ark, arg))
     }
     const locals = makeLocals(fnVal.params, evaluatedArgs)
-    const debugInfo = new ArkFrameDebugInfo(sym, exp)
+    const debugInfo = new ArkFrameDebugInfo(exp)
     return call(new ArkState(new ArkFrame(locals, fnVal.captures, debugInfo), ark), fnVal)
   } else if (exp instanceof ArkSet) {
     const ref = await evalRef(ark, exp.lexp)
