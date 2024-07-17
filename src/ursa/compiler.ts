@@ -20,7 +20,7 @@ import {
   ArkCall, ArkLet, ArkFn, ArkProperty, ArkSet, ArkReturn,
   ArkBreak, ArkContinue, ArkAwait, ArkLaunch,
   ArkCapture,
-} from '../ark/eval.js'
+} from '../ark/interpreter.js'
 import {
   ArkCompilerError, symRef, Frame, Environment, checkParamList,
 } from '../ark/reader.js'

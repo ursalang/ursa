@@ -10,7 +10,7 @@ import {
   ArkExp, ArkFn, ArkIf, ArkLaunch, ArkLet, ArkListLiteral, ArkLiteral,
   ArkLocal, ArkLoop, ArkMapLiteral, ArkNamedLoc, ArkNull,
   ArkObjectLiteral, ArkOr, ArkProperty, ArkReturn, ArkSequence, ArkSet, ArkVal,
-} from './eval.js'
+} from './interpreter.js'
 
 export class ArkInst {
   private static nextId = 0

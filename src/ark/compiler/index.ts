@@ -32,7 +32,7 @@ import {
   ArkBoolean, ArkBooleanVal, ArkExp, ArkList, ArkMap, ArkNull,
   ArkNumber, ArkNullVal, ArkNumberVal, ArkObject, ArkString,
   ArkStringVal, ArkUndefined, ArkVal, NativeFn, ArkPromise,
-} from '../eval.js'
+} from '../interpreter.js'
 import {Environment, Frame} from '../reader.js'
 
 // eslint-disable-next-line @typescript-eslint/naming-convention

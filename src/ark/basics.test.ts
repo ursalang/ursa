@@ -8,7 +8,7 @@ import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
   ArkState,
-} from './eval.js'
+} from './interpreter.js'
 import {compile} from './reader.js'
 
 import {testArkGroup as testGroup} from '../testutil.js'

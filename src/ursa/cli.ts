@@ -15,7 +15,7 @@ import {
   debug, ArkExp, ArkNull, ArkList,
   ArkLet, ArkVal, ArkString, globals, toJs, pushLets,
   ArkState,
-} from '../ark/eval.js'
+} from '../ark/interpreter.js'
 import {Environment, compile as arkCompile} from '../ark/reader.js'
 import {serializeVal} from '../ark/serialize.js'
 import {runWithTraceback, compile as ursaCompile} from './compiler.js'

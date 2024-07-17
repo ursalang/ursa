@@ -13,7 +13,7 @@ import {
   ArkNull, ArkBoolean, ArkNumber, ArkString,
   ArkSet, ArkLocal, ArkCapture, ArkListLiteral, ArkObjectLiteral, ArkMapLiteral,
   ArkFn, ArkReturn, ArkProperty, ArkLet, ArkCall, ArkLiteral, ArkObject,
-} from './eval.js'
+} from './interpreter.js'
 import {flattenExp} from './flatten.js'
 
 export class ArkCompilerError extends Error {}

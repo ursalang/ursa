@@ -9,7 +9,7 @@ import {
   NativeObject, ArkObject, ArkList, ArkMap, ArkProperty,
   ArkLiteral, ArkListLiteral, ArkMapLiteral, ArkObjectLiteral,
   globals,
-} from './eval.js'
+} from './interpreter.js'
 
 export function valToJs(val: Ark, externalSyms = globals) {
   function doValToJs(val: Ark): unknown {

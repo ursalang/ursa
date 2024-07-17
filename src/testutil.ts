@@ -13,7 +13,7 @@ import {compareSync, Difference} from 'dir-compare'
 
 import {
   debug, ArkState, ArkExp, ArkObject, toJs,
-} from './ark/eval.js'
+} from './ark/interpreter.js'
 import {compile as doArkCompile} from './ark/reader.js'
 import {valToJs} from './ark/serialize.js'
 import {compile as ursaCompile} from './ursa/compiler.js'
