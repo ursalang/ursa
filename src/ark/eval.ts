@@ -795,10 +795,6 @@ async function evalFlat(
       // FIXME: deal with extra args
       const callable: ArkVal = mem.get(inst.fnId)!
       if (callable instanceof ArkFlatClosure) {
-        const innerMem = new Map<symbol, ArkVal>()
-        for (const argId of inst.argIds) {
-          innerMem.set(argId, mem.get(argId)!)
-        }
         stack.unshift([
           new ArkState(
             new ArkFrame(
@@ -808,7 +804,7 @@ async function evalFlat(
             ),
             stack[0][0],
           ),
-          innerMem,
+          new Map<symbol, ArkVal>(),
           inst,
         ])
         inst = callable.body
