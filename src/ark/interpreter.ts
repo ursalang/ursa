@@ -24,7 +24,7 @@ class ArkFrame {
   constructor(
     public locals: ArkRef[] = [],
     public captures: ArkRef[] = [],
-    // FIXME public mem: Map<symbol, ArkVal> = new Map(),
+    public memory: Map<symbol, ArkVal> = new Map(),
     public debug = new ArkFrameDebugInfo(),
   ) {}
 }
@@ -692,14 +692,14 @@ async function evalFlat(
   outerArk: ArkState,
   inst: ArkInst | undefined,
 ): Promise<ArkVal> {
-  const stack: [ArkState, Map<symbol, ArkVal>, ArkInst | undefined][] = [
-    [outerArk, new Map<symbol, ArkVal>(), undefined],
+  const stack: [ArkState, ArkInst | undefined][] = [
+    [outerArk, undefined],
   ]
   const loopStack: [ArkInst, ArkInst][] = []
   let prevInst
   while (inst !== undefined) {
     prevInst = inst
-    const mem = stack[0][1]
+    const mem = stack[0][0].frame.memory
     if (inst instanceof ArkLiteralInst) {
       mem.set(inst.id, inst.val)
       inst = inst.next
@@ -712,13 +712,13 @@ async function evalFlat(
       return result
     } else if (inst instanceof ArkFnBlockCloseInst) {
       const result = mem.get(inst.blockId)!
-      const caller = stack.shift()![2]!
+      const caller = stack.shift()![1]!
       if (caller === undefined) {
         return result
       }
       inst = caller.next
       prevInst = caller
-      stack[0][1].set(caller.id, result)
+      stack[0][0].frame.memory.set(caller.id, result)
     } else if (inst instanceof ArkElseBlockInst) {
       mem.set(inst.id, mem.get(inst.ifBlockId)!)
       inst = inst.matchingClose.next
@@ -783,13 +783,13 @@ async function evalFlat(
       inst = loopStack[0][0]
     } else if (inst instanceof ArkReturnInst) {
       const result = mem.get(inst.argId)!
-      const caller = stack.shift()![2]!
+      const caller = stack.shift()![1]!
       if (caller === undefined) {
         return result
       }
       inst = caller.next
       prevInst = caller
-      stack[0][1].set(caller.id, result)
+      stack[0][0].frame.memory.set(caller.id, result)
     } else if (inst instanceof ArkCallInst) {
       const args = inst.argIds.map((id) => mem.get(id)!)
       // FIXME: deal with extra args
@@ -800,11 +800,11 @@ async function evalFlat(
             new ArkFrame(
               makeLocals(callable.params, inst.argIds.map((id) => mem.get(id)!)),
               callable.captures,
+              new Map(),
               new ArkFrameDebugInfo(inst.name, inst.sourceLoc),
             ),
             stack[0][0],
           ),
-          new Map<symbol, ArkVal>(),
           inst,
         ])
         inst = callable.body
@@ -886,7 +886,7 @@ async function evalFlat(
       throw new Error('invalid ArkInst')
     }
   }
-  return prevInst ? stack[0][1].get(prevInst.id)! : ArkUndefined
+  return prevInst ? stack[0][0].frame.memory.get(prevInst.id)! : ArkUndefined
 }
 
 export async function pushLets(ark: ArkState, boundVars: [string, ArkInsts][]) {
