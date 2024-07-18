@@ -17,7 +17,7 @@ import {Interval} from 'ohm-js'
 import prettier from '@prettier/sync'
 
 import {
-  flattenExp, ArkInsts,
+  expToInsts, ArkInsts,
   ArkInst, ArkAwaitInst,
   ArkBlockCloseInst, ArkBlockOpenInst, ArkIfBlockOpenInst, ArkLoopBlockOpenInst,
   ArkBreakInst, ArkCallInst, ArkContinueInst, ArkLetCopyInst,
@@ -226,7 +226,7 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
 }
 
 export function arkToJs(exp: ArkExp, file: string | null = null): CodeWithSourceMap {
-  const insts = flattenExp(exp)
+  const insts = expToInsts(exp)
   return flatToJs(insts, file)
 }
 

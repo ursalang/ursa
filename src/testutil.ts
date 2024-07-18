@@ -19,7 +19,7 @@ import {valToJs} from './ark/serialize.js'
 import {compile as ursaCompile} from './ursa/compiler.js'
 import {format} from './ursa/fmt.js'
 import {flatToJs, evalArkJs} from './ark/compiler/index.js'
-import {flattenExp} from './ark/flatten.js'
+import {expToInsts} from './ark/flatten.js'
 
 const command = process.env.NODE_ENV === 'coverage' ? './bin/test-run.sh' : './bin/run.js'
 
@@ -47,7 +47,7 @@ function doTestGroup(
       if (process.env.DEBUG) {
         debug(compiled, null)
       }
-      const flat = flattenExp(compiled)
+      const flat = expToInsts(compiled)
       const jsSource = flatToJs(flat)
       const resArk = await new ArkState(flat.insts[0]).run()
       const resJs = await evalArkJs(jsSource, title)

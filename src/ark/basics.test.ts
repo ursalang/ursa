@@ -12,7 +12,7 @@ import {
 import {compile} from './reader.js'
 
 import {testArkGroup as testGroup} from '../testutil.js'
-import {flattenExp} from './flatten.js'
+import {expToInst} from './flatten.js'
 
 testGroup('Concrete values', [
   ['4', 4],
@@ -48,7 +48,7 @@ testGroup('Conditionals', [
 ])
 
 test('Bare break', (t) => {
-  const error = t.throws(() => new ArkState(flattenExp(compile(['break'])).insts[0]).run())
+  const error = t.throws(() => new ArkState(expToInst(compile(['break']))).run())
   t.not(error, undefined)
   t.is(error.message, 'break outside loop')
 })

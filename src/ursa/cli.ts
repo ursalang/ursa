@@ -21,7 +21,7 @@ import {serializeVal} from '../ark/serialize.js'
 import {runWithTraceback, compile as ursaCompile} from './compiler.js'
 import {format} from './fmt.js'
 import {arkToJs, evalArkJs, jsGlobals} from '../ark/compiler/index.js'
-import {ArkInsts, flattenExp} from '../ark/flatten.js'
+import {ArkInst, expToInst} from '../ark/flatten.js'
 
 if (process.env.DEBUG) {
   Error.stackTraceLimit = Infinity
@@ -196,12 +196,12 @@ async function repl(args: Args): Promise<ArkVal> {
       // Handle new let bindings
       if (compiled instanceof ArkLet) {
         env = env.push(compiled.boundVars.map((bv) => bv[0]))
-        const flatBoundVars: [string, ArkInsts][] = compiled.boundVars.map(
-          (bv) => [bv[0], flattenExp(bv[2])],
+        const flatBoundVars: [string, ArkInst][] = compiled.boundVars.map(
+          (bv) => [bv[0], expToInst(bv[2])],
         )
         await pushLets(ark, flatBoundVars)
       }
-      ark.inst = flattenExp(compiled).insts[0]
+      ark.inst = expToInst(compiled)
       val = await runWithTraceback(ark)
       debug(toJs(val))
     } catch (error) {
@@ -236,8 +236,8 @@ async function runCode(source: string, args: Args) {
   if (source !== undefined) {
     const exp = compile(args, source)
     if (args.target === 'ark') {
-      const flat = flattenExp(exp)
-      ark.inst = flat.insts[0]
+      const flat = expToInst(exp)
+      ark.inst = flat
       if (args.syntax === 'ursa') {
         result = await runWithTraceback(ark)
       } else {

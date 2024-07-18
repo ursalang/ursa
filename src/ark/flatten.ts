@@ -137,13 +137,13 @@ function ifElseBlock(
   innerLoop?: ArkLoopBlockOpenInst,
   innerFn?: ArkFnBlockOpenInst,
 ): ArkInsts {
-  const condInsts = flattenExp(cond, innerLoop, innerFn)
-  const thenInsts = flattenExp(thenExp, innerLoop, innerFn)
+  const condInsts = expToInsts(cond, innerLoop, innerFn)
+  const thenInsts = expToInsts(thenExp, innerLoop, innerFn)
   const ifOpenInst = new ArkIfBlockOpenInst(thenExp.sourceLoc, condInsts.id)
   const blockInsts = block(sourceLoc, thenInsts, ifOpenInst)
   const ifElseInsts = [...condInsts.insts, ...blockInsts.insts]
   if (elseExp !== undefined) {
-    const elseInsts = flattenExp(elseExp, innerLoop, innerFn)
+    const elseInsts = expToInsts(elseExp, innerLoop, innerFn)
     const elseInst = new ArkElseBlockInst(
       elseExp.sourceLoc,
       thenInsts.id,
@@ -173,7 +173,7 @@ function loopBlock(
   innerFn?: ArkFnBlockOpenInst,
 ): ArkInsts {
   const loopInst = new ArkLoopBlockOpenInst(sourceLoc, localsDepth)
-  const bodyInsts = flattenExp(bodyExp, loopInst, innerFn)
+  const bodyInsts = expToInsts(bodyExp, loopInst, innerFn)
   return block(
     sourceLoc,
     bodyInsts,
@@ -287,7 +287,7 @@ export class ArkPropertyInst extends ArkInst {
   }
 }
 
-export function flattenExp(
+export function expToInsts(
   exp: ArkExp,
   innerLoop?: ArkLoopBlockOpenInst,
   innerFn?: ArkFnBlockOpenInst,
@@ -296,7 +296,7 @@ export function flattenExp(
   if (exp instanceof ArkLiteral) {
     return new ArkInsts([new ArkLiteralInst(exp.sourceLoc, exp.val)])
   } else if (exp instanceof ArkLaunch) {
-    const insts = flattenExp(exp.exp, innerLoop, innerFn)
+    const insts = expToInsts(exp.exp, innerLoop, innerFn)
     return block(
       exp.sourceLoc,
       insts,
@@ -304,10 +304,10 @@ export function flattenExp(
       new ArkLaunchBlockCloseInst(exp.sourceLoc, insts.id),
     )
   } else if (exp instanceof ArkAwait) {
-    const insts = flattenExp(exp.exp, innerLoop, innerFn)
+    const insts = expToInsts(exp.exp, innerLoop, innerFn)
     return new ArkInsts([...insts.insts, new ArkAwaitInst(exp.sourceLoc, insts.id)])
   } else if (exp instanceof ArkBreak) {
-    const insts = flattenExp(exp.exp, innerLoop, innerFn)
+    const insts = expToInsts(exp.exp, innerLoop, innerFn)
     if (innerLoop === undefined) {
       throw new Error('break outside loop')
     }
@@ -321,11 +321,11 @@ export function flattenExp(
     if (innerFn === undefined) {
       throw new Error('return outside function')
     }
-    const insts = flattenExp(exp.exp, innerLoop, innerFn)
+    const insts = expToInsts(exp.exp, innerLoop, innerFn)
     return new ArkInsts([...insts.insts, new ArkReturnInst(exp.sourceLoc, insts.id, innerFn)])
   } else if (exp instanceof ArkFn) {
     const fnInst = new ArkFnBlockOpenInst(exp.sourceLoc, exp.params, exp.capturedVars, sym)
-    const bodyInsts = flattenExp(exp.body, innerLoop, fnInst)
+    const bodyInsts = expToInsts(exp.body, innerLoop, fnInst)
     bodyInsts.insts.push(new ArkReturnInst(exp.sourceLoc, bodyInsts.id, fnInst))
     return block(
       exp.sourceLoc,
@@ -334,18 +334,18 @@ export function flattenExp(
       new ArkFnBlockCloseInst(exp.sourceLoc, bodyInsts.id),
     )
   } else if (exp instanceof ArkCall) {
-    const argInsts = exp.args.map((exp) => flattenExp(exp, innerLoop, innerFn))
+    const argInsts = exp.args.map((exp) => expToInsts(exp, innerLoop, innerFn))
     const argIds = argInsts.map((insts) => insts.id)
-    const fnInsts = flattenExp(exp.fn, innerLoop, innerFn)
+    const fnInsts = expToInsts(exp.fn, innerLoop, innerFn)
     return new ArkInsts([
       ...argInsts.map((i) => i.insts).flat(),
       ...fnInsts.insts,
       new ArkCallInst(exp.fn.sourceLoc, fnInsts.id, argIds, exp.fn.debug.name),
     ])
   } else if (exp instanceof ArkSet) {
-    const insts = flattenExp(exp.exp, innerLoop, innerFn)
+    const insts = expToInsts(exp.exp, innerLoop, innerFn)
     if (exp.lexp instanceof ArkProperty) {
-      const objInsts = flattenExp(exp.lexp.obj, innerLoop, innerFn)
+      const objInsts = expToInsts(exp.lexp.obj, innerLoop, innerFn)
       return new ArkInsts([
         ...objInsts.insts,
         ...insts.insts,
@@ -368,14 +368,14 @@ export function flattenExp(
     const insts: ArkInst[] = []
     const valMap = new Map([...exp.properties.entries()].map(
       ([prop, exp]) => {
-        const valInsts = flattenExp(exp, innerLoop, innerFn)
+        const valInsts = expToInsts(exp, innerLoop, innerFn)
         insts.push(...valInsts.insts)
         return [prop, valInsts.id]
       },
     ))
     return new ArkInsts([...insts, new ArkObjectLiteralInst(exp.sourceLoc, valMap)])
   } else if (exp instanceof ArkListLiteral) {
-    const valInsts = exp.list.map((v) => flattenExp(v, innerLoop, innerFn))
+    const valInsts = exp.list.map((v) => expToInsts(v, innerLoop, innerFn))
     const valIds = valInsts.map((insts) => insts.id)
     return new ArkInsts([
       ...valInsts.map((insts) => insts.insts).flat(),
@@ -385,9 +385,9 @@ export function flattenExp(
     const insts: ArkInst[] = []
     const valMap = new Map([...exp.map.entries()].map(
       ([key, val]) => {
-        const keyInsts = flattenExp(key, innerLoop, innerFn)
+        const keyInsts = expToInsts(key, innerLoop, innerFn)
         insts.push(...keyInsts.insts)
-        const valInsts = flattenExp(val, innerLoop, innerFn)
+        const valInsts = expToInsts(val, innerLoop, innerFn)
         insts.push(...valInsts.insts)
         return [keyInsts.id, valInsts.id]
       },
@@ -397,14 +397,14 @@ export function flattenExp(
     const insts: ArkInst[] = []
     const bvIds: symbol[] = []
     for (const bv of exp.boundVars) {
-      const bvInsts = flattenExp(bv[2], innerLoop, innerFn, bv[0])
+      const bvInsts = expToInsts(bv[2], innerLoop, innerFn, bv[0])
       insts.push(
         ...bvInsts.insts,
         new ArkSetLocalInst(exp.sourceLoc, Symbol.for(bv[0]), bv[1], bvInsts.id),
       )
       bvIds.push(bvInsts.id)
     }
-    const bodyInsts = flattenExp(exp.body, innerLoop, innerFn)
+    const bodyInsts = expToInsts(exp.body, innerLoop, innerFn)
     insts.push(...bodyInsts.insts)
     const blockInsts = new ArkInsts(insts)
     return block(
@@ -417,7 +417,7 @@ export function flattenExp(
     if (exp.exps.length === 0) {
       return new ArkInsts([new ArkLiteralInst(exp.sourceLoc, ArkNull())])
     }
-    const seqInsts = exp.exps.map((exp) => flattenExp(exp, innerLoop, innerFn))
+    const seqInsts = exp.exps.map((exp) => expToInsts(exp, innerLoop, innerFn))
     return new ArkInsts(seqInsts.map((insts) => insts.insts).flat())
   } else if (exp instanceof ArkIf) {
     return ifElseBlock(exp.sourceLoc, exp.cond, exp.thenExp, exp.elseExp, innerLoop, innerFn)
@@ -442,7 +442,7 @@ export function flattenExp(
   } else if (exp instanceof ArkLoop) {
     return loopBlock(exp.sourceLoc, exp.localsDepth, exp.body, innerFn)
   } else if (exp instanceof ArkProperty) {
-    const objInsts = flattenExp(exp.obj, innerLoop, innerFn)
+    const objInsts = expToInsts(exp.obj, innerLoop, innerFn)
     return new ArkInsts([
       ...objInsts.insts,
       new ArkPropertyInst(exp.sourceLoc, objInsts.id, exp.prop),
@@ -454,4 +454,8 @@ export function flattenExp(
   } else {
     throw new Error('invalid ArkExp')
   }
+}
+
+export function expToInst(exp: ArkExp): ArkInst {
+  return expToInsts(exp).insts[0]
 }

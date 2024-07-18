@@ -9,7 +9,7 @@ import {Interval} from 'ohm-js'
 import {
   ArkAwaitInst, ArkBlockCloseInst, ArkBlockOpenInst, ArkBreakInst, ArkCallInst,
   ArkCaptureInst, ArkContinueInst, ArkElseBlockCloseInst, ArkElseBlockInst,
-  ArkFnBlockOpenInst, ArkIfBlockOpenInst, ArkInst, ArkInsts,
+  ArkFnBlockOpenInst, ArkIfBlockOpenInst, ArkInst,
   ArkLaunchBlockCloseInst, ArkLaunchBlockOpenInst, ArkLetBlockCloseInst, ArkLetBlockOpenInst,
   ArkLetCopyInst, ArkListLiteralInst, ArkLiteralInst, ArkLocalInst, ArkLoopBlockCloseInst,
   ArkLoopBlockOpenInst, ArkMapLiteralInst, ArkObjectLiteralInst, ArkPropertyInst, ArkReturnInst,
@@ -889,12 +889,12 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
   return prevInst ? ark.frame.memory.get(prevInst.id)! : ArkUndefined
 }
 
-export async function pushLets(ark: ArkState, boundVars: [string, ArkInsts][]) {
+export async function pushLets(ark: ArkState, boundVars: [string, ArkInst][]) {
   const lets = makeLocals(boundVars.map((bv) => bv[0]), [])
   ark.push(lets)
   const vals: ArkVal[] = []
   for (const bv of boundVars) {
-    ark.inst = bv[1].insts[0]
+    ark.inst = bv[1]
     vals.push(await evalFlat(ark))
   }
   for (let i = 0; i < lets.length; i += 1) {
