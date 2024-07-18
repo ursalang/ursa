@@ -130,10 +130,7 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
         ])
       } else if (inst instanceof ArkFnBlockCloseInst) {
         env = env.popFrame()
-        return sourceNode([
-          `return ${inst.blockId.description}\n`,
-          '})\n',
-        ])
+        return sourceNode(['})\n'])
       } else if (inst instanceof ArkIfBlockOpenInst) {
         return sourceNode([letAssign(inst.matchingClose.id, 'ArkNull()'), `if (${inst.condId.description} !== ArkBoolean(false)) {\n`])
       } else if (inst instanceof ArkElseBlockInst) {

@@ -326,6 +326,7 @@ export function flattenExp(
   } else if (exp instanceof ArkFn) {
     const fnInst = new ArkFnBlockOpenInst(exp.sourceLoc, exp.params, exp.capturedVars, sym)
     const bodyInsts = flattenExp(exp.body, innerLoop, fnInst)
+    bodyInsts.insts.push(new ArkReturnInst(exp.sourceLoc, bodyInsts.id, fnInst))
     return block(
       exp.sourceLoc,
       bodyInsts,

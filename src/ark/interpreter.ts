@@ -9,7 +9,7 @@ import {Interval} from 'ohm-js'
 import {
   ArkAwaitInst, ArkBlockCloseInst, ArkBlockOpenInst, ArkBreakInst, ArkCallInst,
   ArkCaptureInst, ArkContinueInst, ArkElseBlockCloseInst, ArkElseBlockInst,
-  ArkFnBlockCloseInst, ArkFnBlockOpenInst, ArkIfBlockOpenInst, ArkInst, ArkInsts,
+  ArkFnBlockOpenInst, ArkIfBlockOpenInst, ArkInst, ArkInsts,
   ArkLaunchBlockCloseInst, ArkLaunchBlockOpenInst, ArkLetBlockCloseInst, ArkLetBlockOpenInst,
   ArkLetCopyInst, ArkListLiteralInst, ArkLiteralInst, ArkLocalInst, ArkLoopBlockCloseInst,
   ArkLoopBlockOpenInst, ArkMapLiteralInst, ArkObjectLiteralInst, ArkPropertyInst, ArkReturnInst,
@@ -711,16 +711,6 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
       const result = mem.get(inst.blockId)!
       mem.set(inst.id, result)
       return result
-    } else if (inst instanceof ArkFnBlockCloseInst) {
-      const result = mem.get(inst.blockId)!
-      ark = ark.outerState
-      if (ark === undefined) {
-        return result
-      }
-      const caller = ark.inst!
-      inst = caller.next
-      prevInst = caller
-      ark.frame.memory.set(caller.id, result)
     } else if (inst instanceof ArkElseBlockInst) {
       mem.set(inst.id, mem.get(inst.ifBlockId)!)
       inst = inst.matchingClose.next
