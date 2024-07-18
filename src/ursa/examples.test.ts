@@ -251,7 +251,9 @@ ursaTest('Loops-Continue', 'rosettacode/Loops-Continue', [], `\
 
 // Complex tests
 test('Web server', async (t) => {
-  const proc = run(['./test/web-server.ursa'], {buffer: false, stdout: 'pipe', detached: true})
+  const proc = run(['./test/web-server.ursa'], {
+    buffer: false, stdout: 'pipe', detached: true, reject: false,
+  })
   const response = await new Promise((resolve, _reject) => {
     proc.stdout!.on('data', (data: Buffer) => {
       const matches = data.toString().match(/http:\/\/localhost: ([0-9]+)/)

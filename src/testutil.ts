@@ -8,7 +8,7 @@ import fs from 'fs'
 import path from 'path'
 import tmp from 'tmp'
 import test, {ExecutionContext, Macro} from 'ava'
-import {ExecaReturnValue, Options as ExecaOptions, execa} from 'execa'
+import {ExecaError, Options as ExecaOptions, execa} from 'execa'
 import {compareSync, Difference} from 'dir-compare'
 
 import {
@@ -123,16 +123,16 @@ async function doCliTest(
       t.is(stdout, expectedStdout)
     }
     if (expectedStderr !== undefined) {
-      t.is(deleteErrorExtent(stderr), deleteErrorExtent(expectedStderr))
+      t.is(deleteErrorExtent(stderr!.toString()), deleteErrorExtent(expectedStderr))
     }
   } catch (error) {
     if (expectedStderr !== undefined) {
       t.is(
-        deleteErrorExtent((error as ExecaReturnValue).stderr.slice('run.js: '.length)),
+        deleteErrorExtent(((error as ExecaError).stderr as string).slice('run.js: '.length)),
         deleteErrorExtent(expectedStderr),
       )
       if (expectedStdout !== undefined) {
-        t.is((error as ExecaReturnValue).stdout, expectedStdout)
+        t.is((error as ExecaError).stdout, expectedStdout)
       }
     } else {
       throw error
