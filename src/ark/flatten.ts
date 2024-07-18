@@ -188,7 +188,7 @@ export class ArkAwaitInst extends ArkInst {
   }
 }
 
-export class ArkContinueInst extends ArkLiteralInst {
+export class ArkContinueInst extends ArkInst {
   constructor(
     sourceLoc: Interval | undefined,
     public loopInst: ArkLoopBlockOpenInst,

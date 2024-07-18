@@ -695,7 +695,7 @@ async function callFlat(ark: ArkState, callable: ArkCallable): Promise<ArkVal> {
 
 async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
   let ark: ArkState | undefined = outerArk
-  const loopStack: [ArkInst, ArkInst][] = []
+  const loopStack: ArkBlockOpenInst[] = []
   let inst = ark.inst
   let prevInst
   while (inst !== undefined) {
@@ -748,7 +748,7 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
         inst = inst.matchingClose.next
       }
     } else if (inst instanceof ArkLoopBlockOpenInst) {
-      loopStack.unshift([inst, inst.matchingClose])
+      loopStack.unshift(inst)
       inst = inst.next
     } else if (inst instanceof ArkLaunchBlockOpenInst) {
       const innerArk = new ArkState(
@@ -789,10 +789,12 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
       mem.set(inst.loopInst.matchingClose.id, result)
       const nPops = ark.frame.locals.length - inst.loopInst.localsDepth
       ark.pop(nPops)
-      inst = loopStack.shift()![1].next
+      inst = loopStack.shift()!.matchingClose.next
     } else if (inst instanceof ArkContinueInst) {
-      // FIXME: add localsDepth support
-      inst = loopStack[0][0]
+      mem.set(inst.id, ArkNull())
+      const nPops = ark.frame.locals.length - inst.loopInst.localsDepth
+      ark.pop(nPops)
+      inst = loopStack[0]
     } else if (inst instanceof ArkReturnInst) {
       const result = mem.get(inst.argId)!
       ark = ark.outerState

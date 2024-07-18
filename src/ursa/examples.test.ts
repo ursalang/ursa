@@ -245,6 +245,9 @@ Buzz`)
 ursaTest('Hello world-Text', 'rosettacode/Hello world-Text', [], 'hello woods!')
 // Not run, as this program does not terminate
 // ursaTest('Integer sequence', 'rosettacode/Integer sequence')
+ursaTest('Loops-Continue', 'rosettacode/Loops-Continue', [], `\
+1, 2, 3, 4, 5
+6, 7, 8, 9, 10`)
 
 // Complex tests
 test('Web server', async (t) => {
