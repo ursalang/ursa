@@ -807,7 +807,6 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
       ark.frame.memory.set(caller.id, result)
     } else if (inst instanceof ArkCallInst) {
       const args = inst.argIds.map((id) => mem.get(id)!)
-      // FIXME: deal with extra args
       const callable: ArkVal = mem.get(inst.fnId)!
       if (callable instanceof ArkFlatClosure) {
         ark.inst = inst
