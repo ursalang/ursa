@@ -48,7 +48,7 @@ testGroup('Conditionals', [
 ])
 
 test('Bare break', (t) => {
-  const error = t.throws(() => new ArkState().run(flattenExp(compile(['break'])).insts[0]))
+  const error = t.throws(() => new ArkState(flattenExp(compile(['break'])).insts[0]).run())
   t.not(error, undefined)
   t.is(error.message, 'break outside loop')
 })

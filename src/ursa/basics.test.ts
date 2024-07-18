@@ -67,7 +67,7 @@ Line 1, col 1:
       ^~~~~~~~
 
 Bad lvalue`)
-  t.is(toJs(await new ArkState().run(flattenExp(compile('pi := 3')).insts[0])), 3)
+  t.is(toJs(await new ArkState(flattenExp(compile('pi := 3')).insts[0]).run()), 3)
 })
 
 testGroup('Conditionals', [
@@ -88,7 +88,7 @@ Line 1, col 1:
       ^~~~~
 
 break used outside a loop`)
-  t.is(toJs(await new ArkState().run(flattenExp(compile('loop { break 3 }')).insts[0])), 3)
+  t.is(toJs(await new ArkState(flattenExp(compile('loop { break 3 }')).insts[0]).run()), 3)
 })
 
 test('return', async (t) => {
@@ -100,7 +100,7 @@ Line 1, col 1:
       ^~~~~~
 
 return used outside a function`)
-  t.is(toJs(await new ArkState().run(flattenExp(compile('fn (): Int { return 3 }()')).insts[0])), 3)
+  t.is(toJs(await new ArkState(flattenExp(compile('fn (): Int { return 3 }()')).insts[0]).run()), 3)
 })
 
 testGroup('let', [
@@ -128,8 +128,7 @@ testGroup('Objects', [
 
 test('Object assign invalid property', async (t) => {
   const error = await t.throwsAsync(async () => runWithTraceback(
-    new ArkState(),
-    flattenExp(compile('let o = ABC {a = 1; b = 2}; o.c := "abc"')),
+    new ArkState(flattenExp(compile('let o = ABC {a = 1; b = 2}; o.c := "abc"')).insts[0]),
   ), {instanceOf: UrsaRuntimeError})
   t.not(error, undefined)
   t.is(error.message, `\

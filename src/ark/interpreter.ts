@@ -38,9 +38,8 @@ class ArkFrameDebugInfo {
 }
 
 export class ArkState {
-  public inst?: ArkInst
-
   constructor(
+    public inst?: ArkInst,
     public readonly frame = new ArkFrame(),
     public readonly outerState?: ArkState,
   ) {}
@@ -56,8 +55,7 @@ export class ArkState {
     }
   }
 
-  async run(inst: ArkInst): Promise<ArkVal> {
-    this.inst = inst
+  async run(): Promise<ArkVal> {
     return evalFlat(this)
   }
 }
@@ -680,7 +678,6 @@ function evalRef(frame: ArkFrame, lexp: ArkNamedLoc): ArkRef {
 
 async function callFlat(ark: ArkState, callable: ArkCallable): Promise<ArkVal> {
   if (callable instanceof ArkFlatClosure) {
-    ark.inst = callable.body
     return evalFlat(ark)
   } else if (callable instanceof NativeFn) {
     const args = ark.frame.locals.map((ref) => ref.get())
@@ -742,6 +739,7 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
       inst = inst.next
     } else if (inst instanceof ArkLaunchBlockOpenInst) {
       const innerArk = new ArkState(
+        inst.next,
         new ArkFrame(
           [...ark.frame.locals],
           [...ark.frame.captures],
@@ -750,7 +748,6 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
         ),
         ark.outerState,
       )
-      innerArk.inst = inst.next
       const result = Promise.resolve(new ArkPromise(evalFlat(innerArk)))
       mem.set(inst.id, result)
       // The Promise becomes the result of the entire block.
@@ -801,6 +798,7 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
       if (callable instanceof ArkFlatClosure) {
         ark.inst = inst
         ark = new ArkState(
+          callable.body,
           new ArkFrame(
             makeLocals(callable.params, inst.argIds.map((id) => mem.get(id)!)),
             callable.captures,
@@ -809,7 +807,7 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
           ),
           ark,
         )
-        inst = callable.body
+        inst = ark.inst
       } else if (callable instanceof NativeFn) {
         mem.set(inst.id, callable.body(...args))
         inst = inst.next
@@ -925,7 +923,7 @@ export function toJs(val: ArkVal): unknown {
   } else if (val instanceof ArkFlatClosure) {
     return async (...args: unknown[]) => {
       const locals = args.map((arg) => new ArkValRef(fromJs(arg)))
-      return callFlat(new ArkState(new ArkFrame(locals, val.captures)), val)
+      return callFlat(new ArkState(val.body, new ArkFrame(locals, val.captures)), val)
     }
   } else if (val instanceof NativeFn || val instanceof NativeAsyncFn) {
     return (...args: unknown[]) => toJs(val.body(...args.map((arg) => fromJs(arg))))

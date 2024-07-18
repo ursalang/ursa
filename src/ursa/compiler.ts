@@ -24,7 +24,6 @@ import {
 import {
   ArkCompilerError, symRef, Frame, Environment, checkParamList,
 } from '../ark/reader.js'
-import {ArkInsts} from '../ark/flatten.js'
 
 type ParserOperations = {
   toExp(a: ParserArgs): ArkExp
@@ -684,9 +683,9 @@ export function compile(
   return ast.toExp(args)
 }
 
-export async function runWithTraceback(ark: ArkState, flatExp: ArkInsts): Promise<ArkVal> {
+export async function runWithTraceback(ark: ArkState): Promise<ArkVal> {
   try {
-    return await ark.run(flatExp.insts[0])
+    return await ark.run()
   } catch (e) {
     if (e instanceof ArkRuntimeError) {
       throw new UrsaRuntimeError(e.ark, e.sourceLoc as Interval, e.message, {cause: e})

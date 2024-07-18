@@ -49,7 +49,7 @@ function doTestGroup(
       }
       const flat = flattenExp(compiled)
       const jsSource = flatToJs(flat)
-      const resArk = await new ArkState().run(flat.insts[0])
+      const resArk = await new ArkState(flat.insts[0]).run()
       const resJs = await evalArkJs(jsSource, title)
       if (resArk instanceof ArkObject) {
         assert(typeof expected === 'object')

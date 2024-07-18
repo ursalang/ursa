@@ -201,7 +201,8 @@ async function repl(args: Args): Promise<ArkVal> {
         )
         await pushLets(ark, flatBoundVars)
       }
-      val = await runWithTraceback(ark, flattenExp(compiled))
+      ark.inst = flattenExp(compiled).insts[0]
+      val = await runWithTraceback(ark)
       debug(toJs(val))
     } catch (error) {
       if (process.env.DEBUG) {
@@ -236,10 +237,11 @@ async function runCode(source: string, args: Args) {
     const exp = compile(args, source)
     if (args.target === 'ark') {
       const flat = flattenExp(exp)
+      ark.inst = flat.insts[0]
       if (args.syntax === 'ursa') {
-        result = await runWithTraceback(ark, flat)
+        result = await runWithTraceback(ark)
       } else {
-        result = await ark.run(flat.insts[0])
+        result = await ark.run()
       }
     } else {
       result = await evalArkJs(arkToJs(exp, prog), prog)
