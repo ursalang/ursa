@@ -163,6 +163,7 @@ export class ArkNumberVal extends ArkConcreteVal<number> {
   constructor(val: number) {
     super(val)
     this.addDefaults([
+      ['toString', new NativeFn([], () => ArkString(this.val.toString()))],
       ['pos', new NativeFn([], () => ArkNumber(+this.val))],
       ['neg', new NativeFn([], () => ArkNumber(-this.val))],
       ['bitwiseNot', new NativeFn([], () => ArkNumber(~this.val))],
