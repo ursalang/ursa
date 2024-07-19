@@ -286,21 +286,21 @@ function makeLocals(names: string[], vals: ArkVal[]): ArkRef[] {
 }
 
 abstract class ArkCallable extends ArkVal {
-  constructor(public params: string[], public captures: ArkRef[]) {
+  constructor(public params: string[]) {
     super()
   }
 }
 
 export class NativeFn extends ArkCallable {
   constructor(params: string[], public body: (...args: ArkVal[]) => ArkVal) {
-    super(params, [])
+    super(params)
   }
 }
 
 // ts-unused-exports:disable-next-line
 export class NativeAsyncFn extends ArkCallable {
   constructor(params: string[], public body: (...args: ArkVal[]) => Promise<ArkVal>) {
-    super(params, [])
+    super(params)
   }
 }
 
@@ -662,8 +662,8 @@ function fromJs(x: unknown, thisObj?: object): ArkVal {
 }
 
 class ArkFlatClosure extends ArkCallable {
-  constructor(params: string[], captures: ArkRef[], public body: ArkInst) {
-    super(params, captures)
+  constructor(params: string[], public captures: ArkRef[], public body: ArkInst) {
+    super(params)
   }
 }
 
