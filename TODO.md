@@ -2,22 +2,20 @@
 
 ## Version 0.3
 
-* Map interface to internet.
+* `Map` interface to internet.
 * Next Rosetta Code example: [anagrams](https://rosettacode.org/wiki/Anagrams#Python)
 * Classes: properties, names for List and Map
 * Ability to use async JavaScript APIs.
-* Generators and co-routines. A generator in a comprehension gives a lazy
+* Generators and structured concurrency. A generator in a comprehension gives a lazy
   list/map.
 * Make everything objects (arithmetic should be methods of `Num`).
 
-# Ark improvements
+## Ark improvements
 
 * To optimize symbol references, add `var` (mutable `let`), and
   evaluate as much as we can at compile time. Any expression with no free
   variables can be fully evaluated.
-* Study vau, first-class environments (objects), and delimited
-  continuations: https://github.com/catseye/Robin ; also see
-  https://github.com/nukata/little-scheme-in-typescript
+* Study vau and first-class environments (objects)
 * Make code `readonly`. Start with `FreeVars`.
   See https://github.com/immutable-js/immutable-js/
 
@@ -26,13 +24,12 @@
 * Comprehensions: `loop [elem, …]` and `loop {k = v; …}`.
 * 100% test coverage.
 * Tail recursion elimination
-* Co-routines (copy Python?)
 * `self`
 * Streams, and use as interface to files.
 * Code formatting: have blank lines between top-level multiline `let`s, and
   after the last `use` in a series of `use`s.
 * Structs: single-inheritance, data only.
-* Unions == enums. (Only way to do union types.)
+* Unions = enums. (Only way to do union types.)
 * Interfaces: methods only, can be intersected.
 
 ## Ursa v1
