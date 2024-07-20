@@ -333,17 +333,17 @@ semantics.addOperation<Span>('fmt(a)', {
       [(a) => vSpan([type.fmt(a), body.fmt(a)])],
     )
   },
-  FnType(_fn, _open, params, _maybeComma, _close, maybeType) {
+  FnType(fn, _open, params, _maybeComma, _close, maybeType) {
     return tryFormats(
       this.args.a,
       (a) => hSpan(fmtMaybeType(
         a,
-        ['fn', fmtDelimitedList(a, '(', ')', ',', tightSpan, params)],
+        [fn.ctorName, fmtDelimitedList(a, '(', ')', ',', tightSpan, params)],
         maybeType,
       )),
       [(a) => vSpan(fmtMaybeType(
         a,
-        ['fn', fmtDelimitedList(a, '(', ')', ',', tightSpan, params)],
+        [fn.ctorName, fmtDelimitedList(a, '(', ')', ',', tightSpan, params)],
         maybeType,
       )),
       ],
@@ -485,6 +485,13 @@ semantics.addOperation<Span>('fmt(a)', {
       this.args.a,
       (a) => hSpan(['return', ...fmtOptional(a, exp)]),
       [(a) => hSpan(['return', ...fmtOptional(a, exp)])],
+    )
+  },
+  Statement_yield(_yield, exp) {
+    return tryFormats(
+      this.args.a,
+      (a) => hSpan(['yield', ...fmtOptional(a, exp)]),
+      [(a) => hSpan(['yield', ...fmtOptional(a, exp)])],
     )
   },
 

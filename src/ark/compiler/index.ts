@@ -20,11 +20,11 @@ import {
   expToInsts, ArkInsts,
   ArkInst, ArkAwaitInst,
   ArkBlockCloseInst, ArkBlockOpenInst, ArkIfBlockOpenInst, ArkLoopBlockOpenInst,
-  ArkBreakInst, ArkCallInst, ArkContinueInst, ArkLetCopyInst,
-  ArkFnBlockOpenInst, ArkFnBlockCloseInst, ArkElseBlockInst, ArkElseBlockCloseInst,
+  ArkBreakInst, ArkCallInst, ArkContinueInst, ArkElseBlockInst, ArkElseBlockCloseInst,
+  ArkFnBlockOpenInst, ArkFnBlockCloseInst, ArkGeneratorBlockOpenInst, ArkLetCopyInst,
   ArkLaunchBlockOpenInst, ArkLaunchBlockCloseInst, ArkLetBlockOpenInst,
   ArkLocalInst, ArkCaptureInst, ArkListLiteralInst, ArkLiteralInst, ArkMapLiteralInst,
-  ArkObjectLiteralInst, ArkPropertyInst, ArkReturnInst,
+  ArkObjectLiteralInst, ArkPropertyInst, ArkReturnInst, ArkYieldInst,
   ArkSetInst, ArkSetPropertyInst,
 } from '../flatten.js'
 import {
@@ -130,6 +130,9 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
         ])
       } else if (inst instanceof ArkFnBlockCloseInst) {
         env = env.popFrame()
+        if (inst.matchingOpen instanceof ArkGeneratorBlockOpenInst) {
+          return sourceNode(['}()\nreturn new NativeFn([\'x\'], async (x) => {\nconst {value, done} = await gen.next(x)\nreturn done ? ArkNull() : value\n})\n})\n'])
+        }
         return sourceNode(['})\n'])
       } else if (inst instanceof ArkIfBlockOpenInst) {
         return sourceNode([letAssign(inst.matchingClose.id, 'ArkNull()'), `if (${inst.condId.description} !== ArkBoolean(false)) {\n`])
@@ -143,11 +146,16 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
       } else if (inst instanceof ArkLoopBlockOpenInst) {
         return sourceNode([letAssign(inst.matchingClose.id, 'ArkNull()'), 'for (;;) {\n'])
       } else if (inst instanceof ArkLaunchBlockOpenInst) {
-        return sourceNode([letAssign(inst.matchingClose.id, 'new ArkPromise((async () => {')])
+        return sourceNode([letAssign(inst.matchingClose.id, 'new ArkPromise((async function() {')])
+      } else if (inst instanceof ArkGeneratorBlockOpenInst) {
+        env = env.pushFrame(new Frame(inst.params, [], inst.name))
+        return sourceNode([
+          letAssign(inst.matchingClose.id, `new NativeFn([${inst.params.map((p) => `'${p}'`).join(', ')}], function (${inst.params.join(', ')}) {\nconst gen = async function*() {`),
+        ])
       } else if (inst instanceof ArkFnBlockOpenInst) {
         env = env.pushFrame(new Frame(inst.params, [], inst.name))
         return sourceNode([
-          letAssign(inst.matchingClose.id, `new NativeFn([${inst.params.map((p) => `'${p}'`).join(', ')}], async (${inst.params.join(', ')}) => {`),
+          letAssign(inst.matchingClose.id, `new NativeFn([${inst.params.map((p) => `'${p}'`).join(', ')}], async function(${inst.params.join(', ')}) {`),
         ])
       } else if (inst instanceof ArkLetBlockOpenInst) {
         return sourceNode([
@@ -163,6 +171,11 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
         return sourceNode([`${assign(inst.argId.description!, inst.loopInst.matchingClose.id.description!)}\n`, 'break\n'])
       } else if (inst instanceof ArkContinueInst) {
         return sourceNode('continue\n')
+      } else if (inst instanceof ArkYieldInst) {
+        return sourceNode([
+          `yield ${inst.argId.description}\n`,
+          letAssign(inst.id, inst.argId.description!),
+        ])
       } else if (inst instanceof ArkReturnInst) {
         return sourceNode(`return ${inst.argId.description}\n`)
       } else if (inst instanceof ArkLetCopyInst) {

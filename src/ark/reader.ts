@@ -12,7 +12,8 @@ import {
   ArkIf, ArkAnd, ArkOr, ArkSequence, ArkLoop, ArkBreak, ArkContinue,
   ArkNull, ArkBoolean, ArkNumber, ArkString,
   ArkSet, ArkLocal, ArkCapture, ArkListLiteral, ArkObjectLiteral, ArkMapLiteral,
-  ArkFn, ArkReturn, ArkProperty, ArkLet, ArkCall, ArkLiteral, ArkObject,
+  ArkFn, ArkGenerator, ArkReturn, ArkYield,
+  ArkProperty, ArkLet, ArkCall, ArkLiteral, ArkObject,
 } from './interpreter.js'
 import {expToInst} from './flatten.js'
 
@@ -162,14 +163,15 @@ function doCompile(env: Environment, value: unknown): ArkExp {
           const compiled = doCompile(env.push(params.map((p) => p[0])), value[2])
           return new ArkLet(params, compiled)
         }
-        case 'fn': {
+        case 'fn':
+        case 'gen': {
           if (value.length !== 3 || !(value[1] instanceof Array)) {
-            throw new ArkCompilerError("Invalid 'fn'")
+            throw new ArkCompilerError(`Invalid '${value[0]}'`)
           }
           const params = arkParamList(value[1] as string[])
           const innerEnv = env.pushFrame(new Frame(params, []))
           const compiled = doCompile(innerEnv, value[2])
-          return new ArkFn(
+          return new (value[0] === 'fn' ? ArkFn : ArkGenerator)(
             params,
             innerEnv.top().captures.map((c) => symRef(env, c) as ArkCapture),
             compiled,
@@ -265,15 +267,17 @@ function doCompile(env: Environment, value: unknown): ArkExp {
           }
           return new ArkContinue()
         }
-        case 'return': {
+        case 'return':
+        case 'yield': {
           if (value.length < 1 || value.length > 2) {
-            throw new ArkCompilerError("Invalid 'return'")
+            throw new ArkCompilerError(`Invalid '${value[0]}'`)
           }
+          const Constructor = value[0] === 'return' ? ArkReturn : ArkYield
           if (value.length === 2) {
             const compiledBody = doCompile(env, value[1])
-            return new ArkReturn(compiledBody)
+            return new Constructor(compiledBody)
           }
-          return new ArkReturn()
+          return new Constructor()
         }
         default: {
           const compiledFn = doCompile(env, value[0])

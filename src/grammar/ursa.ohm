@@ -47,7 +47,7 @@ Ursa {
   If = if Exp Block
 
   Fn = FnType Block
-  FnType = fn "(" ListOf<Param, ","> ","? ")" TypeAnnotation?
+  FnType = (fn | gen) "(" ListOf<Param, ","> ","? ")" TypeAnnotation?
   Param = ident TypeAnnotation?
 
   Loop = loop Block
@@ -120,6 +120,7 @@ Ursa {
     | continue        -- continue
     | launch Exp      -- launch
     | return Exp?     -- return
+    | yield Exp?      -- yield
     | Exp
 
   Lets = NonemptyListOf<Let, and>
@@ -163,6 +164,7 @@ Ursa {
   else = "else" ~identifierPart
   fn = "fn" ~identifierPart
   for = "for" ~identifierPart
+  gen = "gen" ~identifierPart
   if = "if" ~identifierPart
   launch = "launch" ~identifierPart
   let = "let" ~identifierPart
@@ -176,10 +178,11 @@ Ursa {
   trait = "trait" ~identifierPart
   use = "use" ~identifierPart
   var = "var" ~identifierPart
+  yield = "yield" ~identifierPart
 
-  keyword = and | await | break | class | continue | else | fn | for | if
+  keyword = and | await | break | class | continue | else | fn | for | gen | if
     | launch | let | loop | not | of | or | pub | return | static | trait
-    | use | var
+    | use | var | yield
 
   reservedWord = bool | null | keyword
 

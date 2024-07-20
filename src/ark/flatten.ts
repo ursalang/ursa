@@ -7,9 +7,9 @@ import {Interval} from 'ohm-js'
 
 import {
   ArkAnd, ArkAwait, ArkBoolean, ArkBreak, ArkCall, ArkCapture, ArkContinue, ArkDebugInfo,
-  ArkExp, ArkFn, ArkIf, ArkLaunch, ArkLet, ArkListLiteral, ArkLiteral,
-  ArkLocal, ArkLoop, ArkMapLiteral, ArkNamedLoc, ArkNull,
-  ArkObjectLiteral, ArkOr, ArkProperty, ArkReturn, ArkSequence, ArkSet, ArkVal,
+  ArkExp, ArkFn, ArkGenerator, ArkIf, ArkLaunch, ArkLet, ArkListLiteral, ArkLiteral,
+  ArkLocal, ArkLoop, ArkMapLiteral, ArkNamedLoc, ArkNull, ArkObjectLiteral,
+  ArkOr, ArkProperty, ArkReturn, ArkSequence, ArkSet, ArkVal, ArkYield,
 } from './interpreter.js'
 
 export class ArkInst {
@@ -84,6 +84,7 @@ export class ArkFnBlockOpenInst extends ArkBlockOpenInst {
     super(sourceLoc)
   }
 }
+export class ArkGeneratorBlockOpenInst extends ArkFnBlockOpenInst {}
 
 export class ArkLetBlockOpenInst extends ArkBlockOpenInst {
   constructor(sourceLoc: Interval | undefined, public vars: string[], public valIds: symbol[]) {
@@ -216,6 +217,7 @@ export class ArkReturnInst extends ArkInst {
     super(sourceLoc)
   }
 }
+export class ArkYieldInst extends ArkReturnInst {}
 
 export class ArkCallInst extends ArkInst {
   constructor(
@@ -317,6 +319,12 @@ export function expToInsts(
       throw new Error('continue outside loop')
     }
     return new ArkInsts([new ArkContinueInst(exp.sourceLoc, innerLoop)])
+  } else if (exp instanceof ArkYield) {
+    if (innerFn === undefined) {
+      throw new Error('yield may only be used in a generator')
+    }
+    const insts = expToInsts(exp.exp, innerLoop, innerFn)
+    return new ArkInsts([...insts.insts, new ArkYieldInst(exp.sourceLoc, insts.id, innerFn)])
   } else if (exp instanceof ArkReturn) {
     if (innerFn === undefined) {
       throw new Error('return outside function')
@@ -324,7 +332,8 @@ export function expToInsts(
     const insts = expToInsts(exp.exp, innerLoop, innerFn)
     return new ArkInsts([...insts.insts, new ArkReturnInst(exp.sourceLoc, insts.id, innerFn)])
   } else if (exp instanceof ArkFn) {
-    const fnInst = new ArkFnBlockOpenInst(exp.sourceLoc, exp.params, exp.capturedVars, sym)
+    const Constructor = exp instanceof ArkGenerator ? ArkGeneratorBlockOpenInst : ArkFnBlockOpenInst
+    const fnInst = new Constructor(exp.sourceLoc, exp.params, exp.capturedVars, sym)
     const bodyInsts = expToInsts(exp.body, innerLoop, fnInst)
     bodyInsts.insts.push(new ArkReturnInst(exp.sourceLoc, bodyInsts.id, fnInst))
     return block(

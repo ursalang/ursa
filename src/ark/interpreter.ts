@@ -9,11 +9,11 @@ import {Interval} from 'ohm-js'
 import {
   ArkAwaitInst, ArkBlockCloseInst, ArkBlockOpenInst, ArkBreakInst, ArkCallInst,
   ArkCaptureInst, ArkContinueInst, ArkElseBlockCloseInst, ArkElseBlockInst,
-  ArkFnBlockOpenInst, ArkIfBlockOpenInst, ArkInst,
+  ArkFnBlockOpenInst, ArkGeneratorBlockOpenInst, ArkIfBlockOpenInst, ArkInst,
   ArkLaunchBlockCloseInst, ArkLaunchBlockOpenInst, ArkLetBlockCloseInst, ArkLetBlockOpenInst,
   ArkLetCopyInst, ArkListLiteralInst, ArkLiteralInst, ArkLocalInst, ArkLoopBlockCloseInst,
   ArkLoopBlockOpenInst, ArkMapLiteralInst, ArkObjectLiteralInst, ArkPropertyInst, ArkReturnInst,
-  ArkSetCaptureInst, ArkSetLocalInst, ArkSetPropertyInst,
+  ArkSetCaptureInst, ArkSetLocalInst, ArkSetPropertyInst, ArkYieldInst,
 } from './flatten.js'
 import programVersion from '../version.js'
 import {FsMap} from './fsmap.js'
@@ -38,10 +38,14 @@ class ArkFrameDebugInfo {
 }
 
 export class ArkState {
+  public continuation?: ArkContinuation
+
+  public loopStack: ArkBlockOpenInst[] = []
+
   constructor(
     public inst?: ArkInst,
     public readonly frame = new ArkFrame(),
-    public readonly outerState?: ArkState,
+    public outerState?: ArkState,
   ) {}
 
   push(items: ArkRef[]) {
@@ -277,6 +281,8 @@ export class ArkReturn extends ArkExp {
   }
 }
 
+export class ArkYield extends ArkReturn {}
+
 function makeLocals(names: string[], vals: ArkVal[]): ArkRef[] {
   const locals: ArkValRef[] = names.map((_val, index) => new ArkValRef(vals[index] ?? ArkUndefined))
   if (vals.length > names.length) {
@@ -308,6 +314,11 @@ export class ArkFn extends ArkExp {
   constructor(public params: string[], public capturedVars: ArkCapture[], public body: ArkExp) {
     super()
   }
+}
+export class ArkGenerator extends ArkFn {}
+
+export class ArkFnType {
+  constructor(public Constructor: typeof ArkFn, public params: string[]) {}
 }
 
 // export class ArkType extends Ark {
@@ -661,9 +672,18 @@ function fromJs(x: unknown, thisObj?: object): ArkVal {
   throw new ArkFromJsError(`Cannot convert JavaScript value ${x}`)
 }
 
-class ArkFlatClosure extends ArkCallable {
+class ArkClosure extends ArkCallable {
   constructor(params: string[], public captures: ArkRef[], public body: ArkInst) {
     super(params)
+  }
+}
+class ArkGeneratorClosure extends ArkClosure {}
+
+class ArkContinuation extends ArkCallable {
+  public done = false
+
+  constructor(public state: ArkState) {
+    super(['x'])
   }
 }
 
@@ -677,7 +697,7 @@ function evalRef(frame: ArkFrame, lexp: ArkNamedLoc): ArkRef {
 }
 
 async function callFlat(ark: ArkState, callable: ArkCallable): Promise<ArkVal> {
-  if (callable instanceof ArkFlatClosure) {
+  if (callable instanceof ArkClosure) {
     return evalFlat(ark)
   } else if (callable instanceof NativeFn) {
     const args = ark.frame.locals.map((ref) => ref.get())
@@ -692,7 +712,6 @@ async function callFlat(ark: ArkState, callable: ArkCallable): Promise<ArkVal> {
 
 async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
   let ark: ArkState | undefined = outerArk
-  const loopStack: ArkBlockOpenInst[] = []
   let inst = ark.inst
   let prevInst
   while (inst !== undefined) {
@@ -735,7 +754,7 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
         inst = inst.matchingClose.next
       }
     } else if (inst instanceof ArkLoopBlockOpenInst) {
-      loopStack.unshift(inst)
+      ark.loopStack.unshift(inst)
       inst = inst.next
     } else if (inst instanceof ArkLaunchBlockOpenInst) {
       const innerArk = new ArkState(
@@ -758,7 +777,9 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
       for (const v of inst.capturedVars) {
         captures.push(evalRef(ark.frame, v))
       }
-      const result = new ArkFlatClosure(inst.params, captures, inst.next!)
+      const Constructor = inst instanceof ArkGeneratorBlockOpenInst
+        ? ArkGeneratorClosure : ArkClosure
+      const result = new Constructor(inst.params, captures, inst.next!)
       mem.set(inst.matchingClose.id, result)
       inst = inst.matchingClose.next
     } else if (inst instanceof ArkLetBlockOpenInst) {
@@ -776,17 +797,32 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
       mem.set(inst.loopInst.matchingClose.id, result)
       const nPops = ark.frame.locals.length - inst.loopInst.localsDepth
       ark.pop(nPops)
-      inst = loopStack.shift()!.matchingClose.next
+      inst = ark.loopStack.shift()!.matchingClose.next
     } else if (inst instanceof ArkContinueInst) {
       mem.set(inst.id, ArkNull())
       const nPops = ark.frame.locals.length - inst.loopInst.localsDepth
       ark.pop(nPops)
-      inst = loopStack[0]
+      inst = ark.loopStack[0]
+    } else if (inst instanceof ArkYieldInst) {
+      const result = mem.get(inst.argId)!
+      ark.inst = inst.next
+      if (ark.outerState === undefined || ark.outerState.continuation === undefined) {
+        throw new ArkRuntimeError(ark, 'yield outside a generator', inst.sourceLoc)
+      }
+      ark = ark.outerState
+      const caller = ark.inst!
+      inst = caller.next
+      prevInst = caller
+      ark.frame.memory.set(caller.id, result)
     } else if (inst instanceof ArkReturnInst) {
       const result = mem.get(inst.argId)!
       ark = ark.outerState
       if (ark === undefined) {
         return result
+      }
+      if (ark.continuation !== undefined) {
+        // If we're in a generator, end it.
+        ark.continuation.done = true
       }
       const caller = ark.inst!
       inst = caller.next
@@ -795,7 +831,20 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
     } else if (inst instanceof ArkCallInst) {
       const args = inst.argIds.map((id) => mem.get(id)!)
       const callable: ArkVal = mem.get(inst.fnId)!
-      if (callable instanceof ArkFlatClosure) {
+      if (callable instanceof ArkGeneratorClosure) {
+        const result = new ArkContinuation(new ArkState(
+          callable.body,
+          new ArkFrame(
+            makeLocals(callable.params, inst.argIds.map((id) => mem.get(id)!)),
+            callable.captures,
+            new Map(),
+            new ArkFrameDebugInfo(inst.name, inst.sourceLoc),
+          ),
+          ark,
+        ))
+        mem.set(inst.id, result)
+        inst = inst.next
+      } else if (callable instanceof ArkClosure) {
         ark.inst = inst
         ark = new ArkState(
           callable.body,
@@ -808,6 +857,18 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
           ark,
         )
         inst = ark.inst
+      } else if (callable instanceof ArkContinuation) {
+        if (callable.done) {
+          mem.set(inst.id, ArkNull())
+          inst = inst.next
+        } else {
+          callable.state.frame.memory.set(callable.state.inst!.id, mem.get(inst.argIds[0])!)
+          ark.inst = inst
+          ark.continuation = callable
+          callable.state.outerState = ark
+          ark = callable.state
+          inst = ark.inst
+        }
       } else if (callable instanceof NativeFn) {
         mem.set(inst.id, callable.body(...args))
         inst = inst.next
@@ -920,7 +981,7 @@ export function toJs(val: ArkVal): unknown {
     return jsMap
   } else if (val instanceof ArkList) {
     return val.list.map(toJs)
-  } else if (val instanceof ArkFlatClosure) {
+  } else if (val instanceof ArkClosure) {
     return async (...args: unknown[]) => {
       const locals = args.map((arg) => new ArkValRef(fromJs(arg)))
       return callFlat(new ArkState(val.body, new ArkFrame(locals, val.captures)), val)

@@ -1,5 +1,5 @@
 // Ursa prelude.
-// © Reuben Thomas 2023
+// © Reuben Thomas 2023-2024  
 // Released under the MIT license.
 
 use js.Math
@@ -31,11 +31,12 @@ Object {
   tan = Math.tan
 
   // Range iterator
-  range = fn(n: Int): fn(): Maybe<Int> {
+  range = gen(n) {
     let i = 0
-    fn(): Maybe<Int> {
+    loop {
+      if i == n { return null }
+      yield i
       i := i + 1
-      if i <= n { i - 1 } else { null }
     }
   }
 }

@@ -1,0 +1,7 @@
+let my_range = fn(n) {
+    let i = 0
+    loop {
+        i := i + 1
+        if i <= n { yield i - 1 } else { return null }
+    }
+}

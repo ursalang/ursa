@@ -51,6 +51,19 @@ many
 many
 many
 many`)
+ursaTest('yield', 'test/yield', [], `\
+0
+1
+2
+3
+4
+0
+1
+2
+3
+4
+null
+null`)
 ursaTest('launch', 'test/launch', [], `\
 10 0
 5 0
@@ -135,6 +148,22 @@ Error: Line 3, col 1:
   4 | ` + `
 
 Assignment to different type`)
+
+ursaTest("Test error on 'yield' outside function", 'test/bad-yield', [], undefined, `\
+Error: Line 5, col 21:
+  4 |         i := i + 1
+> 5 |         if i <= n { yield i - 1 } else { return null }
+                          ^
+  6 |     }
+
+yield may only be used in a generator`, undefined, `\
+Error: Line 6, col 13:
+  5 |         if i <= n {
+> 6 |             yield i - 1
+                  ^
+  7 |         } else
+
+yield may only be used in a generator`)
 
 // Rosetta code examples
 ursaTest('Accumulator factory', 'rosettacode/Accumulator factory', [], '8.3')

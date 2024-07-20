@@ -5,9 +5,9 @@
 import {
   Ark, ArkExp, ArkConcreteVal, ArkUndefined, ArkNull, ArkSequence,
   ArkAnd, ArkOr, ArkIf, ArkLoop, ArkBreak, ArkContinue,
-  ArkSet, ArkLet, ArkCall, ArkFn, ArkReturn, ArkPromise,
+  ArkSet, ArkLet, ArkCall, ArkFn, ArkGenerator, ArkReturn, ArkPromise,
   NativeObject, ArkObject, ArkList, ArkMap, ArkProperty,
-  ArkLiteral, ArkListLiteral, ArkMapLiteral, ArkObjectLiteral,
+  ArkLiteral, ArkListLiteral, ArkMapLiteral, ArkObjectLiteral, ArkYield,
   globals,
 } from './interpreter.js'
 
@@ -31,7 +31,7 @@ export function valToJs(val: Ark, externalSyms = globals) {
     } else if (val instanceof ArkLiteral) {
       return doValToJs(val.val)
     } else if (val instanceof ArkFn) {
-      return ['fn', [...val.params], doValToJs(val.body)]
+      return [val instanceof ArkGenerator ? 'gen' : 'fn', [...val.params], doValToJs(val.body)]
     } else if (val instanceof ArkObject || val instanceof ArkObjectLiteral) {
       const obj = {}
       for (const [k, v] of val.properties) {
@@ -80,6 +80,8 @@ export function valToJs(val: Ark, externalSyms = globals) {
       return ['break', doValToJs(val.exp)]
     } else if (val instanceof ArkContinue) {
       return ['continue']
+    } else if (val instanceof ArkYield) {
+      return ['yield', doValToJs(val.exp)]
     } else if (val instanceof ArkReturn) {
       return ['return', doValToJs(val.exp)]
     } else if (val instanceof ArkPromise) {

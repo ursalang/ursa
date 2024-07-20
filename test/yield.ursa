@@ -1,0 +1,19 @@
+let my_range = gen(n) {
+    let i = 0
+    loop {
+        i := i + 1
+        if i <= n { yield i - 1 } else { return null }
+    }
+}
+
+for i of my_range(5) { print(i) }
+
+let h = my_range(5)
+
+print(h())
+print(h())
+print(h())
+print(h())
+print(h())
+print(h())
+print(h())

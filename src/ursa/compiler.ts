@@ -17,9 +17,10 @@ import {
   ArkNull, ArkBoolean, ArkNumber, ArkString,
   ArkSequence, ArkIf, ArkLoop, ArkAnd, ArkOr,
   ArkObjectLiteral, ArkListLiteral, ArkMapLiteral,
-  ArkCall, ArkLet, ArkFn, ArkProperty, ArkSet, ArkReturn,
+  ArkCall, ArkLet, ArkFn, ArkGenerator, ArkProperty, ArkSet, ArkReturn, ArkYield,
   ArkBreak, ArkContinue, ArkAwait, ArkLaunch,
   ArkCapture,
+  ArkFnType,
 } from '../ark/interpreter.js'
 import {
   ArkCompilerError, symRef, Frame, Environment, checkParamList,
@@ -32,7 +33,7 @@ type ParserOperations = {
   toKeyValue(a: ParserArgs): KeyValue
   toArguments(a: ParserArgs): Arguments
   toType(a: ParserArgs): void
-  toMethod(a: ParserArgs): string[]
+  toMethod(a: ParserArgs): ArkFnType
   toParam(a: ParserArgs): string
   toLet(a: ParserArgs): LetBinding
   boundVars: string[]
@@ -42,6 +43,7 @@ type ParserArgs = {
   env: Environment
   inLoop?: boolean
   inFn?: boolean
+  inGenerator?: boolean
   inExp?: boolean
 }
 
@@ -300,15 +302,19 @@ semantics.addOperation<ArkExp>('toExp(a)', {
   },
 
   Fn(type, body) {
-    const paramStrings = type.toMethod(this.args.a)
+    const fnType = type.toMethod(this.args.a)
     // TODO: Environment should contain typed params, not just strings
-    const innerEnv = this.args.a.env.pushFrame(new Frame(paramStrings, []))
+    const innerEnv = this.args.a.env.pushFrame(new Frame(fnType.params, []))
     const compiledBody = body.toExp({
-      env: innerEnv, inLoop: false, inFn: true, inExp: false,
+      env: innerEnv,
+      inLoop: false,
+      inFn: true,
+      inGenerator: fnType.Constructor === ArkGenerator,
+      inExp: false,
     })
     // TODO: ArkFn should be an ArkObject which contains one method.
-    return addLoc(new ArkFn(
-      paramStrings,
+    return addLoc(new fnType.Constructor(
+      fnType.params,
       innerEnv.top().captures.map(
         (c) => symRef(this.args.a.env, c) as ArkCapture,
       ),
@@ -536,6 +542,14 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     }
     return addLoc(new ArkReturn(maybeVal(this.args.a, exp)), this)
   },
+  Statement_yield(yield_, exp) {
+    if (!this.args.a.inGenerator) {
+      throw new UrsaCompilerError(yield_.source, 'yield may only be used in a generator')
+    } else if (this.args.a.inExp) {
+      throw new UrsaCompilerError(yield_.source, 'yield may not be used inside an expression')
+    }
+    return addLoc(new ArkYield(maybeVal(this.args.a, exp)), this)
+  },
 
   Block(_open, seq, _close) {
     return seq.toExp(this.args.a)
@@ -586,8 +600,8 @@ semantics.addOperation<void>('toType(a)', {
 })
 
 // TODO: return types along with parameter names, and return type.
-semantics.addOperation<string[]>('toMethod(a)', {
-  FnType(_fn, _open, params, _maybeComma, _close, maybeType) {
+semantics.addOperation<ArkFnType>('toMethod(a)', {
+  FnType(fn, _open, params, _maybeComma, _close, maybeType) {
     const parsedParams = params.asIteration().children.map((p) => p.toParam(this.args.a))
     try {
       checkParamList(parsedParams)
@@ -600,7 +614,7 @@ semantics.addOperation<string[]>('toMethod(a)', {
     if (maybeType.children.length > 0) {
       maybeType.children[0].children[1].toType(this.args.a)
     }
-    return parsedParams
+    return new ArkFnType(fn.ctorName === 'fn' ? ArkFn : ArkGenerator, parsedParams)
   },
 })
 
