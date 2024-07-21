@@ -1,0 +1,26 @@
+// Rosetta Code version fetches the text from the internet
+// let text = fetch("http://wiki.puzzlers.org/pub/wordlists/unixdict.txt").text()
+
+// We fetch the text from a local file to make the tests easier to run
+use jslib.fs
+let text = fs.readFileSync(argv.get(1), "utf-8")
+
+let words = text.split("\n")
+
+let anagrams = {}
+for word of words.iter() {
+    let sorted = word.split("").sorted().join("")
+    if anagrams.get(sorted) == null {
+        anagrams.set(sorted, [])
+    }
+    anagrams.get(sorted).push(word)
+}
+
+let most_anagrams = 0
+for ana of anagrams.values() {
+    if ana.len() > most_anagrams {most_anagrams := ana.len()}
+}
+
+for ana of anagrams.values() {
+    if ana.len() == most_anagrams {print(ana)}
+}

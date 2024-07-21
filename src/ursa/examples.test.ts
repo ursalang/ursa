@@ -172,6 +172,13 @@ yield may only be used in a generator`)
 // Rosetta code examples
 ursaTest('Accumulator factory', 'rosettacode/Accumulator factory', [], '8.3')
 ursaTest('Ackermann function', 'rosettacode/Ackermann function', [], '1\n125\n13')
+ursaTest('Anagrams', 'rosettacode/Anagrams', ['rosettacode/unixdict.txt'], `\
+[ 'abel', 'able', 'bale', 'bela', 'elba' ]
+[ 'alger', 'glare', 'lager', 'large', 'regal' ]
+[ 'angel', 'angle', 'galen', 'glean', 'lange' ]
+[ 'caret', 'carte', 'cater', 'crate', 'trace' ]
+[ 'elan', 'lane', 'lean', 'lena', 'neal' ]
+[ 'evil', 'levi', 'live', 'veil', 'vile' ]`)
 // Not run, as the program has an unbound variable
 // ursaTest('Conditional structures', 'rosettacode/Conditional structures')
 ursaTest('FizzBuzz', 'rosettacode/FizzBuzz', [], `\
