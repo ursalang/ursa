@@ -291,7 +291,7 @@ export async function evalArkJs(source: CodeWithSourceMap | string, file = '(Com
           prefix += `\n  ${(curFrame.line + 1).toString()} | ${fileSource.resolve({line: curFrame.line + 1, column: 1}).sourceLine}\n`
         }
       } else {
-        prefix = 'unknown location'
+        prefix = '(unknown location)'
       }
       newError.message = `${prefix}\n${message}`
       let consumer
