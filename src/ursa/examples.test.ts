@@ -282,10 +282,21 @@ Fizz
 98
 Fizz
 Buzz`)
-ursaTest('Hello world-Text', 'rosettacode/Hello world-Text', [], 'hello woods!')
+ursaTest('Generator/Exponential', 'rosettacode/Generator-Exponential', [], `\
+529
+576
+625
+676
+784
+841
+900
+961
+1024
+1089`)
+ursaTest('Hello world/Text', 'rosettacode/Hello world-Text', [], 'hello woods!')
 // Not run, as this program does not terminate
 // ursaTest('Integer sequence', 'rosettacode/Integer sequence')
-ursaTest('Loops-Continue', 'rosettacode/Loops-Continue', [], `\
+ursaTest('Loops/Continue', 'rosettacode/Loops-Continue', [], `\
 1, 2, 3, 4, 5
 6, 7, 8, 9, 10`)
 
