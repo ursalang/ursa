@@ -340,18 +340,24 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     const compiledForVar = symRef(loopEnv, forVar)
     const compiledForBody = body.toExp({...this.args.a, env: loopEnv, inLoop: true})
     const innerIndex = innerEnv.top().locals.length
-    const loopBody = new ArkLet(
-      [[forVar, innerIndex, new ArkCall(symRef(loopEnv, '_for'), [])]],
-      new ArkSequence([
-        new ArkIf(
-          new ArkCall(new ArkProperty(compiledForVar, 'equals'), [new ArkLiteral(ArkNull())]),
-          new ArkBreak(),
-        ),
-        compiledForBody,
-      ]),
+    const loopBody = addLoc(
+      new ArkLet(
+        [[forVar, innerIndex, addLoc(new ArkCall(addLoc(symRef(loopEnv, '_for'), iterator), []), this)]],
+        new ArkSequence([
+          new ArkIf(
+            addLoc(new ArkCall(new ArkProperty(compiledForVar, 'equals'), [new ArkLiteral(ArkNull())]), this),
+            new ArkBreak(),
+          ),
+          compiledForBody,
+        ]),
+      ),
+      this,
     )
     const localsDepth = this.args.a.env.top().locals.length
-    return new ArkLet([['_for', localsDepth, compiledIterator]], new ArkLoop(loopBody, localsDepth + 1))
+    return addLoc(
+      new ArkLet([['_for', localsDepth, compiledIterator]], new ArkLoop(loopBody, localsDepth + 1)),
+      this,
+    )
   },
 
   UnaryExp_bitwise_not(_not, exp) {
