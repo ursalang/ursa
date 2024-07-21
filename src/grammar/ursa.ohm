@@ -107,6 +107,7 @@ Ursa {
     | Loop
     | For
     | await Exp       -- await
+    | yield Exp?      -- yield
     | LogicExp
 
   Assignment
@@ -120,7 +121,6 @@ Ursa {
     | continue        -- continue
     | launch Exp      -- launch
     | return Exp?     -- return
-    | yield Exp?      -- yield
     | Exp
 
   Lets = NonemptyListOf<Let, and>

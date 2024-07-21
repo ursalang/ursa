@@ -172,10 +172,7 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
       } else if (inst instanceof ArkContinueInst) {
         return sourceNode('continue\n')
       } else if (inst instanceof ArkYieldInst) {
-        return sourceNode([
-          `yield ${inst.argId.description}\n`,
-          letAssign(inst.id, inst.argId.description!),
-        ])
+        return sourceNode(letAssign(inst.id, `yield ${inst.argId.description}`))
       } else if (inst instanceof ArkReturnInst) {
         return sourceNode(`return ${inst.argId.description}\n`)
       } else if (inst instanceof ArkLetCopyInst) {

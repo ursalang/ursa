@@ -63,7 +63,11 @@ ursaTest('yield', 'test/yield', [], `\
 3
 4
 null
-null`)
+null
+0
+1
+5
+5`)
 ursaTest('generator', 'test/generator', [], `\
 0
 2

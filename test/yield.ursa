@@ -17,3 +17,15 @@ print(h())
 print(h())
 print(h())
 print(h())
+
+let totalizer = gen() {
+    let i = 0
+    loop {
+        i := i + (yield i)
+    }
+}
+let t = totalizer()
+print(t(0))
+print(t(1))
+print(t(4))
+print(t(0))

@@ -525,6 +525,13 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     return addLoc(new ArkAwait(exp.toExp(this.args.a)), this)
   },
 
+  Exp_yield(yield_, exp) {
+    if (!this.args.a.inGenerator) {
+      throw new UrsaCompilerError(yield_.source, 'yield may only be used in a generator')
+    }
+    return addLoc(new ArkYield(maybeVal(this.args.a, exp)), this)
+  },
+
   Statement_break(_break, exp) {
     if (!this.args.a.inLoop) {
       throw new UrsaCompilerError(_break.source, 'break used outside a loop')
@@ -547,14 +554,6 @@ semantics.addOperation<ArkExp>('toExp(a)', {
       throw new UrsaCompilerError(return_.source, 'return may not be used inside an expression')
     }
     return addLoc(new ArkReturn(maybeVal(this.args.a, exp)), this)
-  },
-  Statement_yield(yield_, exp) {
-    if (!this.args.a.inGenerator) {
-      throw new UrsaCompilerError(yield_.source, 'yield may only be used in a generator')
-    } else if (this.args.a.inExp) {
-      throw new UrsaCompilerError(yield_.source, 'yield may not be used inside an expression')
-    }
-    return addLoc(new ArkYield(maybeVal(this.args.a, exp)), this)
   },
 
   Block(_open, seq, _close) {

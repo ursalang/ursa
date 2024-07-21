@@ -814,7 +814,7 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
       inst = ark.loopStack[0]
     } else if (inst instanceof ArkYieldInst) {
       const result = mem.get(inst.argId)!
-      ark.inst = inst.next
+      ark.inst = inst
       if (ark.outerState === undefined || ark.outerState.continuation === undefined) {
         throw new ArkRuntimeError(ark, 'yield outside a generator', inst.sourceLoc)
       }
@@ -877,6 +877,11 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
           callable.state.outerState = ark
           ark = callable.state
           inst = ark.inst
+          // If we're resuming, 'inst' pointed to the ArkYieldInst so we can
+          // set its result, so we need to advance to the next instruction.
+          if (inst instanceof ArkYieldInst) {
+            inst = inst.next
+          }
         }
       } else if (callable instanceof NativeFn) {
         mem.set(inst.id, callable.body(...args))
