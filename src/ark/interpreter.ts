@@ -205,6 +205,7 @@ export class ArkStringVal extends ArkConcreteVal<string> {
         }())
         return new NativeFn([], () => generator.next().value)
       })],
+      ['split', new NativeFn(['sep'], (sep: ArkVal) => new ArkList(this.val.split((sep as ArkStringVal).val).map((s) => ArkString(s))))],
     ])
   }
 }
@@ -467,6 +468,8 @@ export class ArkList extends ArkObjectBase {
         }())
         return new NativeFn([], () => generator.next().value)
       })],
+      ['sorted', new NativeFn([], () => new ArkList(this.list.map(toJs).toSorted().map((v) => fromJs(v))))],
+      ['join', new NativeFn(['sep'], (sep) => ArkString(this.list.map(toJs).join((sep as ArkStringVal).val)))],
     ]))
   }
 }
