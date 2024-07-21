@@ -923,7 +923,11 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
       mem.set(inst.id, new ArkMap(map))
       inst = inst.next
     } else if (inst instanceof ArkPropertyInst) {
-      const result = (mem.get(inst.objId)! as ArkObject).get(inst.prop)
+      const obj = mem.get(inst.objId)!
+      if (!(obj instanceof ArkAbstractObjectBase)) {
+        throw new ArkRuntimeError(ark, 'Invalid object', inst.sourceLoc)
+      }
+      const result = obj.get(inst.prop)
       if (result === ArkUndefined) {
         throw new ArkRuntimeError(ark, 'Invalid property', inst.sourceLoc)
       }
