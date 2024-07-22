@@ -297,6 +297,17 @@ ursaTest('Generator/Exponential', 'rosettacode/Generator-Exponential', [], `\
 961
 1024
 1089`)
+ursaTest('Hailstone seqeunce', 'rosettacode/Hailstone sequence', [], `\
+1
+7
+2
+5
+8
+16
+3
+19
+6
+14`)
 ursaTest('Hello world/Text', 'rosettacode/Hello world-Text', [], 'hello woods!')
 // Not run, as this program does not terminate
 // ursaTest('Integer sequence', 'rosettacode/Integer sequence')

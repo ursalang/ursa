@@ -813,7 +813,7 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
     } else if (inst instanceof ArkYieldInst) {
       const result = mem.get(inst.argId)!
       ark.inst = inst
-      if (ark.outerState === undefined || ark.outerState.continuation === undefined) {
+      if (ark.outerState === undefined || ark.continuation === undefined) {
         throw new ArkRuntimeError(ark, 'yield outside a generator', inst.sourceLoc)
       }
       ark = ark.outerState
@@ -823,13 +823,13 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
       ark.frame.memory.set(caller.id, result)
     } else if (inst instanceof ArkReturnInst) {
       const result = mem.get(inst.argId)!
-      ark = ark.outerState
-      if (ark === undefined) {
-        return result
-      }
       if (ark.continuation !== undefined) {
         // If we're in a generator, end it.
         ark.continuation.done = true
+      }
+      ark = ark.outerState
+      if (ark === undefined) {
+        return result
       }
       const caller = ark.inst!
       inst = caller.next
@@ -871,9 +871,9 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
         } else {
           callable.state.frame.memory.set(callable.state.inst!.id, mem.get(inst.argIds[0])!)
           ark.inst = inst
-          ark.continuation = callable
           callable.state.outerState = ark
           ark = callable.state
+          ark.continuation = callable
           inst = ark.inst
           // If we're resuming, 'inst' pointed to the ArkYieldInst so we can
           // set its result, so we need to advance to the next instruction.
