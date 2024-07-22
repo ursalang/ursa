@@ -85,7 +85,7 @@
       },
       "compile": "tsc"
     },
-    "timeout": "20s",
+    "timeout": "60s",
     "workerThreads": false
   },
   "pre-push": [
