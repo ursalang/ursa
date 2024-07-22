@@ -25,7 +25,9 @@ let totalizer = gen() {
     }
 }
 let t = totalizer()
-print(t(0))
+// FIXME: Add test that an argument is not allowed in the generator call
+// below.
+print(t())
 print(t(1))
 print(t(4))
 print(t(0))

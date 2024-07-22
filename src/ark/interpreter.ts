@@ -879,6 +879,9 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
           ark.inst = inst
           callable.state.outerState = ark
           ark = callable.state
+          if (ark.continuation === undefined && inst.argIds.length > 0) {
+            throw new ArkRuntimeError(ark, 'No argument allowed to initial generator invocation', inst.sourceLoc)
+          }
           ark.continuation = callable
           inst = ark.inst
           // If we're resuming, 'inst' pointed to the ArkYieldInst so we can
