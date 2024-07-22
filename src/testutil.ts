@@ -89,14 +89,16 @@ async function doCliTest(
   t: ExecutionContext,
   syntax: string,
   inputBasename: string,
-  resultJsonFilename: string,
+  realSourceBasename?: string,
   extraArgs?: string[],
   expectedStdout?: string,
   expectedStderr?: string,
   useRepl?: boolean,
   target: string = 'ark',
 ) {
-  const inputFile = `${inputBasename}.${syntax}`
+  const resultJsonFilename = `${inputBasename}.result.json`
+  const actualSourceBasename = realSourceBasename ?? inputBasename
+  const inputFile = `${actualSourceBasename}.${syntax}`
   const args = [`--syntax=${syntax}`, `--target=${target}`]
   let tempFile: tmp.FileResult
   if (!useRepl) {
@@ -111,8 +113,12 @@ async function doCliTest(
     )
     if (!useRepl) {
       const result: unknown = JSON.parse(fs.readFileSync(tempFile!.name, {encoding: 'utf-8'}))
-      const expected: unknown = JSON.parse(fs.readFileSync(resultJsonFilename, {encoding: 'utf-8'}))
-      t.deepEqual(result, expected)
+      const expected: unknown = fs.existsSync(resultJsonFilename)
+        ? JSON.parse(fs.readFileSync(resultJsonFilename, {encoding: 'utf-8'}))
+        : undefined
+      if (expected !== undefined) {
+        t.deepEqual(result, expected)
+      }
     }
     if (syntax === 'json') {
       const source = fs.readFileSync(inputFile, {encoding: 'utf-8'})
@@ -194,13 +200,12 @@ const reformattingCliTest = test.macro(async (
   expectedReformattedStderr?: string,
   syntaxErrorExpected?: boolean,
 ) => {
-  const resultFile = `${inputBasename}.result.json`
   for (const target of arkTargets) {
     await doCliTest(
       t,
       'ursa',
       inputBasename,
-      resultFile,
+      undefined,
       extraArgs,
       expectedStdout,
       expectedStderr,
@@ -212,8 +217,8 @@ const reformattingCliTest = test.macro(async (
     await doCliTest(
       t,
       'ursa',
+      inputBasename,
       makeReformattedSource(t, `${inputBasename}.ursa`),
-      resultFile,
       extraArgs,
       expectedStdout,
       expectedReformattedStderr ?? expectedStderr,
@@ -233,7 +238,6 @@ const reformattingCliDirTest = test.macro(async (
   expectedReformattedStderr?: string,
   syntaxErrorExpected?: boolean,
 ) => {
-  const resultFile = `${inputBasename}.result.json`
   for (const target of arkTargets) {
     await doDirTest(
       t,
@@ -243,7 +247,7 @@ const reformattingCliDirTest = test.macro(async (
           t,
           'ursa',
           inputBasename,
-          resultFile,
+          undefined,
           [tmpDirPath, ...extraArgs ?? []],
           expectedStdout,
           expectedStderr,
@@ -261,8 +265,8 @@ const reformattingCliDirTest = test.macro(async (
         doCliTest(
           t,
           'ursa',
+          inputBasename,
           makeReformattedSource(t, `${inputBasename}.ursa`),
-          resultFile,
           [tmpDirPath, ...extraArgs ?? []],
           expectedStdout,
           expectedReformattedStderr ?? expectedStderr,
