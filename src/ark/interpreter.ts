@@ -169,8 +169,6 @@ export class ArkNumberVal extends ArkConcreteVal<number> {
       ['pos', new NativeFn([], () => ArkNumber(+this.val))],
       ['neg', new NativeFn([], () => ArkNumber(-this.val))],
       ['bitwiseNot', new NativeFn([], () => ArkNumber(~this.val))],
-      ['equals', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val === toJs(right)))],
-      ['notEquals', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val !== toJs(right)))],
       ['lt', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val < (right as ArkNumberVal).val))],
       ['leq', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val <= (right as ArkNumberVal).val))],
       ['gt', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val > (right as ArkNumberVal).val))],
