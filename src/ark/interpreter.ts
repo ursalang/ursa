@@ -456,6 +456,12 @@ export class ArkList extends ArkObjectBase {
         this.list.pop()
         return this
       })],
+      ['slice', new NativeFn(['from', 'to'], (from, to) => new ArkList(
+        this.list.slice(
+          from instanceof ArkNumberVal ? from.val : 0,
+          to instanceof ArkNumberVal ? to.val : undefined,
+        ),
+      ))],
       ['iter', new NativeFn([], () => {
         const list = this.list
         const generator = (function* listGenerator() {

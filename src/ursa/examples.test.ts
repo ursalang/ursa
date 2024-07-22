@@ -298,16 +298,12 @@ ursaTest('Generator/Exponential', 'rosettacode/Generator-Exponential', [], `\
 1024
 1089`)
 ursaTest('Hailstone seqeunce', 'rosettacode/Hailstone sequence', [], `\
-1
-7
-2
-5
-8
-16
-3
-19
-6
-14`)
+The Hailstone sequence for 27 starts with:
+[ 27, 82, 41, 124 ]
+and ends with:
+[ 8, 4, 2, 1 ]
+and its length is:
+112`)
 ursaTest('Hello world/Text', 'rosettacode/Hello world-Text', [], 'hello woods!')
 // Not run, as this program does not terminate
 // ursaTest('Integer sequence', 'rosettacode/Integer sequence')
