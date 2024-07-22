@@ -297,7 +297,7 @@ ursaTest('Generator/Exponential', 'rosettacode/Generator-Exponential', [], `\
 961
 1024
 1089`)
-ursaTest('Hailstone seqeunce', 'rosettacode/Hailstone sequence', [], `\
+ursaTest('Hailstone sequence', 'rosettacode/Hailstone sequence', [], `\
 The Hailstone sequence for 27 starts with:
 [ 27, 82, 41, 124 ]
 and ends with:
