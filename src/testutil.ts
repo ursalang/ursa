@@ -176,16 +176,25 @@ export const dirTest = test.macro(async (
   await doDirTest(t, dir, callback)
 })
 
-function makeReformattedSource(t: ExecutionContext, sourceFile: string) {
+function makeReformattedSource(t: ExecutionContext, inputBasename: string) {
+  const sourceFile = `${inputBasename}.ursa`
   let source = fs.readFileSync(sourceFile, {encoding: 'utf-8'})
   if (source.startsWith('#!')) {
     source = source.substring(source.indexOf('\n'))
   }
   const reformattedSource = format(source)
-  const tempSourceFile = tmp.fileSync({postfix: '.ursa'})
-  t.teardown(() => tempSourceFile.removeCallback())
-  fs.writeFileSync(tempSourceFile.name, reformattedSource)
-  const tempSourcePath = path.parse(tempSourceFile.name)
+  const tempDir = tmp.dirSync({unsafeCleanup: true})
+  t.teardown(tempDir.removeCallback)
+  // Copy optional related files into temporary directory.
+  for (const extraExt of ['.result.json']) {
+    const extraFile = `${inputBasename}${extraExt}`
+    if (fs.existsSync(extraFile)) {
+      fs.copyFileSync(extraFile, path.join(tempDir.name, path.parse(extraFile).base))
+    }
+  }
+  const tempSourceFile = path.join(tempDir.name, path.basename(sourceFile))
+  fs.writeFileSync(tempSourceFile, reformattedSource)
+  const tempSourcePath = path.parse(tempSourceFile)
   const tempSourceName = path.join(tempSourcePath.dir, tempSourcePath.name)
   return tempSourceName
 }
@@ -218,7 +227,7 @@ const reformattingCliTest = test.macro(async (
       t,
       'ursa',
       inputBasename,
-      makeReformattedSource(t, `${inputBasename}.ursa`),
+      makeReformattedSource(t, inputBasename),
       extraArgs,
       expectedStdout,
       expectedReformattedStderr ?? expectedStderr,
@@ -266,7 +275,7 @@ const reformattingCliDirTest = test.macro(async (
           t,
           'ursa',
           inputBasename,
-          makeReformattedSource(t, `${inputBasename}.ursa`),
+          makeReformattedSource(t, inputBasename),
           [tmpDirPath, ...extraArgs ?? []],
           expectedStdout,
           expectedReformattedStderr ?? expectedStderr,
