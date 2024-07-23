@@ -4,3 +4,18 @@ and ends with:
 [ 8, 4, 2, 1 ]
 and its length is:
 112
+Checking sequences up to 100,000
+0
+10000
+20000
+30000
+40000
+50000
+60000
+70000
+80000
+90000
+The longest sequence under 100,000 is for:
+77031
+and has length:
+351

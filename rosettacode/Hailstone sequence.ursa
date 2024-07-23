@@ -15,22 +15,18 @@ print(twentySeven.slice(-4))
 print("and its length is:")
 print(twentySeven.len())
 
-// Don't run this part as part of the test suite until we've improved performance
-// (takes 31s with the JavaScript back-end, 61s with tne interpreter at
-// present, cf. 0.1s for Node.js!)
-
-// print("Checking sequences up to 100,000")
-// let longest = 0
-// let longestLen = 0
-// for i of range(100000) {
-//   let len = hailstone(i).len()
-//   if len > longestLen {
-//     longest := i
-//     longestLen := len
-//   }
-//   if i % 10000 == 0 {print(i)}
-// }
-// print("The longest sequence under 100,000 is for:")
-// print(longest)
-// print("and has length:")
-// print(longestLen)
+print("Checking sequences up to 100,000")
+let longest = 0
+let longestLen = 0
+for i of range(100000) {
+  let len = hailstone(i).len()
+  if len > longestLen {
+    longest := i
+    longestLen := len
+  }
+  if i % 10000 == 0 {print(i)}
+}
+print("The longest sequence under 100,000 is for:")
+print(longest)
+print("and has length:")
+print(longestLen)

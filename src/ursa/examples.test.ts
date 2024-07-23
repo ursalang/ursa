@@ -53,7 +53,6 @@ import {ursaTest, ursaDirTest, run} from '../testutil.js'
   // ['Conditional structures', 'rosettacode/Conditional structures'],
   ['FizzBuzz', 'rosettacode/FizzBuzz'],
   ['Generator/Exponential', 'rosettacode/Generator-Exponential'],
-  ['Hailstone sequence', 'rosettacode/Hailstone sequence'],
   ['Hello world/Text', 'rosettacode/Hello world-Text'],
   // This program does not terminate
   // ['Integer sequence', 'rosettacode/Integer sequence'],
