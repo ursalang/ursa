@@ -1,0 +1,4 @@
+Line 1, col 4:
+> 1 | 4 +
+         ^
+Expected "(", "gen", "fn", "{", "[", "_", a letter, a digit, ".", "r####\"", "r###\"", "r##\"", "r#\"", "r\"", "\"", "true", "false", "null", "-", "+", or "~"

@@ -1,0 +1,6 @@
+The Hailstone sequence for 27 starts with:
+[ 27, 82, 41, 124 ]
+and ends with:
+[ 8, 4, 2, 1 ]
+and its length is:
+112

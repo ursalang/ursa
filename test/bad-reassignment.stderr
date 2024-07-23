@@ -1,0 +1,7 @@
+Error: Line 3, col 1:
+  2 | a := 2
+> 3 | a := "hello"
+      ^~~~~~~~~~~~
+  4 | 
+
+Assignment to different type

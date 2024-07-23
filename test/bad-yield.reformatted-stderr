@@ -1,0 +1,7 @@
+Error: Line 6, col 13:
+  5 |         if i <= n {
+> 6 |             yield i - 1
+                  ^
+  7 |         } else
+
+yield may only be used in a generator

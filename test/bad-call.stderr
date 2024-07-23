@@ -1,0 +1,13 @@
+Error: Line 2, col 21:
+  1 | let h = 3
+> 2 | let g = fn(): Int { h() }
+                          ^~~
+  3 | let f = fn(): Int { g() }
+
+Invalid call
+
+Traceback (most recent call last)
+  line 3
+    let f = fn(): Int { g() }, in f
+  line 4
+    f(), at top level

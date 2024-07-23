@@ -11,6 +11,8 @@ import test, {ExecutionContext, Macro} from 'ava'
 import {ExecaError, Options as ExecaOptions, execa} from 'execa'
 import {compareSync, Difference} from 'dir-compare'
 
+import {flatToJs, evalArkJs} from './ark/compiler/index.js'
+import {expToInsts} from './ark/flatten.js'
 import {
   debug, ArkState, ArkExp, ArkObject, toJs,
 } from './ark/interpreter.js'
@@ -18,8 +20,7 @@ import {compile as doArkCompile} from './ark/reader.js'
 import {valToJs} from './ark/serialize.js'
 import {compile as ursaCompile} from './ursa/compiler.js'
 import {format} from './ursa/fmt.js'
-import {flatToJs, evalArkJs} from './ark/compiler/index.js'
-import {expToInsts} from './ark/flatten.js'
+import version from './version.js'
 
 const command = process.env.NODE_ENV === 'coverage' ? './bin/test-run.sh' : './bin/run.js'
 
@@ -91,13 +92,21 @@ async function doCliTest(
   inputBasename: string,
   realSourceBasename?: string,
   extraArgs?: string[],
-  expectedStdout?: string,
-  expectedStderr?: string,
   useRepl?: boolean,
   target: string = 'ark',
 ) {
-  const resultJsonFilename = `${inputBasename}.result.json`
   const actualSourceBasename = realSourceBasename ?? inputBasename
+  const resultJsonFilename = `${actualSourceBasename}.result.json`
+  const stdoutFilename = `${actualSourceBasename}.stdout`
+  let expectedStdout
+  if (fs.existsSync(stdoutFilename)) {
+    expectedStdout = fs.readFileSync(stdoutFilename, {encoding: 'utf-8'})
+  }
+  const stderrFilename = `${actualSourceBasename}.stderr`
+  let expectedStderr
+  if (fs.existsSync(stderrFilename)) {
+    expectedStderr = fs.readFileSync(stderrFilename, {encoding: 'utf-8'})
+  }
   const inputFile = `${actualSourceBasename}.${syntax}`
   const args = [`--syntax=${syntax}`, `--target=${target}`]
   let tempFile: tmp.FileResult
@@ -111,7 +120,10 @@ async function doCliTest(
       [...args, ...extraArgs ?? []],
       {inputFile: useRepl ? inputFile : undefined},
     )
-    if (!useRepl) {
+    let processedStdout = stdout
+    if (useRepl) {
+      processedStdout = processedStdout?.slice(`Welcome to Ursa ${version}.\n`.length)
+    } else {
       const result: unknown = JSON.parse(fs.readFileSync(tempFile!.name, {encoding: 'utf-8'}))
       const expected: unknown = fs.existsSync(resultJsonFilename)
         ? JSON.parse(fs.readFileSync(resultJsonFilename, {encoding: 'utf-8'}))
@@ -126,7 +138,7 @@ async function doCliTest(
       t.deepEqual(valToJs(compiled), JSON.parse(source))
     }
     if (expectedStdout !== undefined) {
-      t.is(stdout, expectedStdout)
+      t.is(processedStdout, expectedStdout)
     }
     if (expectedStderr !== undefined) {
       t.is(deleteErrorExtent(stderr!.toString()), deleteErrorExtent(expectedStderr))
@@ -137,8 +149,12 @@ async function doCliTest(
         deleteErrorExtent(((error as ExecaError).stderr as string).slice('run.js: '.length)),
         deleteErrorExtent(expectedStderr),
       )
+      let processedStdout = (error as ExecaError).stdout
+      if (useRepl) {
+        processedStdout = processedStdout?.slice(`Welcome to Ursa ${version}.\n`.length)
+      }
       if (expectedStdout !== undefined) {
-        t.is((error as ExecaError).stdout, expectedStdout)
+        t.is(processedStdout, expectedStdout)
       }
     } else {
       throw error
@@ -186,11 +202,25 @@ function makeReformattedSource(t: ExecutionContext, inputBasename: string) {
   const tempDir = tmp.dirSync({unsafeCleanup: true})
   t.teardown(tempDir.removeCallback)
   // Copy optional related files into temporary directory.
-  for (const extraExt of ['.result.json']) {
+  const extraExts = ['.result.json', '.stdout']
+  for (const extraExt of extraExts) {
     const extraFile = `${inputBasename}${extraExt}`
     if (fs.existsSync(extraFile)) {
       fs.copyFileSync(extraFile, path.join(tempDir.name, path.parse(extraFile).base))
     }
+  }
+  const stderrFile = `${inputBasename}.stderr`
+  const reformattedStderrFile = `${inputBasename}.reformatted-stderr`
+  if (fs.existsSync(reformattedStderrFile)) {
+    fs.copyFileSync(
+      reformattedStderrFile,
+      path.join(tempDir.name, `${path.parse(reformattedStderrFile).name}.stderr`),
+    )
+  } else if (fs.existsSync(stderrFile)) {
+    fs.copyFileSync(
+      stderrFile,
+      path.join(tempDir.name, `${path.parse(stderrFile).name}.stderr`),
+    )
   }
   const tempSourceFile = path.join(tempDir.name, path.basename(sourceFile))
   fs.writeFileSync(tempSourceFile, reformattedSource)
@@ -203,10 +233,7 @@ const reformattingCliTest = test.macro(async (
   t: ExecutionContext,
   inputBasename: string,
   extraArgs?: string[],
-  expectedStdout?: string,
-  expectedStderr?: string,
   useRepl?: boolean,
-  expectedReformattedStderr?: string,
   syntaxErrorExpected?: boolean,
 ) => {
   for (const target of arkTargets) {
@@ -216,8 +243,6 @@ const reformattingCliTest = test.macro(async (
       inputBasename,
       undefined,
       extraArgs,
-      expectedStdout,
-      expectedStderr,
       useRepl,
       target,
     )
@@ -229,8 +254,6 @@ const reformattingCliTest = test.macro(async (
       inputBasename,
       makeReformattedSource(t, inputBasename),
       extraArgs,
-      expectedStdout,
-      expectedReformattedStderr ?? expectedStderr,
       useRepl,
     )
   }
@@ -241,10 +264,7 @@ const reformattingCliDirTest = test.macro(async (
   inputBasename: string,
   expectedDirPath: string,
   extraArgs?: string[],
-  expectedStdout?: string,
-  expectedStderr?: string,
   useRepl?: boolean,
-  expectedReformattedStderr?: string,
   syntaxErrorExpected?: boolean,
 ) => {
   for (const target of arkTargets) {
@@ -258,8 +278,6 @@ const reformattingCliDirTest = test.macro(async (
           inputBasename,
           undefined,
           [tmpDirPath, ...extraArgs ?? []],
-          expectedStdout,
-          expectedStderr,
           useRepl,
           target,
         )
@@ -277,8 +295,6 @@ const reformattingCliDirTest = test.macro(async (
           inputBasename,
           makeReformattedSource(t, inputBasename),
           [tmpDirPath, ...extraArgs ?? []],
-          expectedStdout,
-          expectedReformattedStderr ?? expectedStderr,
           useRepl,
         )
       ),
