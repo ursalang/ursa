@@ -432,6 +432,7 @@ export class ArkListLiteral extends ArkExp {
 export class ArkMap extends ArkObjectBase {
   constructor(public map: Map<ArkVal, ArkVal>) {
     super(new Map([
+      ['get', new NativeFn(['index'], (index: ArkVal) => this.map.get(index) ?? ArkNull())],
       ['set', new NativeFn(
         ['index', 'val'],
         (index: ArkVal, val: ArkVal) => {
@@ -439,7 +440,6 @@ export class ArkMap extends ArkObjectBase {
           return this
         },
       )],
-      ['get', new NativeFn(['index'], (index: ArkVal) => this.map.get(index) ?? ArkNull())],
       ['delete', new NativeFn(['index'], (index: ArkVal) => {
         this.map.delete(index)
         return this
