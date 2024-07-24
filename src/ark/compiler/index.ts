@@ -28,7 +28,7 @@ import {
   ArkSetInst, ArkSetPropertyInst,
 } from '../flatten.js'
 import {
-  debug, globals as arkGlobals,
+  debug, globals, jsGlobals,
   ArkBoolean, ArkBooleanVal, ArkExp, ArkList, ArkMap, ArkNull,
   ArkNumber, ArkNullVal, ArkNumberVal, ArkObject, ArkString,
   ArkStringVal, ArkUndefined, ArkVal, NativeFn, ArkPromise,
@@ -48,12 +48,6 @@ class UrsaStackTracey extends StackTracey {
   isClean(entry: Entry, index: number) {
     return super.isClean(entry, index) && !entry.file.includes('node:')
   }
-}
-
-// Clone interpreter globals
-export const jsGlobals = new ArkObject(new Map())
-for (const [k, v] of arkGlobals.properties.entries()) {
-  jsGlobals.set(k, v)
 }
 
 // Compile prelude and add it to globals
@@ -88,7 +82,7 @@ function valToJs(val: ArkVal): string {
     return `ArkNumber(${val.val})`
   } else if (val instanceof ArkStringVal) {
     return `ArkString(${util.inspect(val.val)})`
-  } else if (val === arkGlobals) {
+  } else if (val === globals) {
     // FIXME: We should detect 'externalSyms', not 'jsGlobals'.
     return 'jsGlobals'
   } else {

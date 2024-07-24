@@ -12,7 +12,7 @@ import tildify from 'tildify'
 
 import programVersion from '../version.js'
 import {
-  debug, globals, ArkExp, ArkNull, ArkList, ArkLet, ArkVal, ArkString, toJs,
+  debug, globals, jsGlobals, ArkExp, ArkNull, ArkList, ArkLet, ArkVal, ArkString, toJs,
 } from '../ark/code.js'
 import {
   ArkState, pushLets,
@@ -21,7 +21,7 @@ import {Environment, compile as arkCompile} from '../ark/reader.js'
 import {serializeVal} from '../ark/serialize.js'
 import {runWithTraceback, compile as ursaCompile} from './compiler.js'
 import {format} from './fmt.js'
-import {arkToJs, evalArkJs, jsGlobals} from '../ark/compiler/index.js'
+import {arkToJs, evalArkJs} from '../ark/compiler/index.js'
 import {ArkInst, expToInst} from '../ark/flatten.js'
 
 if (process.env.DEBUG) {

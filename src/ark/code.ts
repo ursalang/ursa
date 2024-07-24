@@ -587,6 +587,12 @@ export const globals = new ArkObject(new Map<string, ArkVal>([
   ]]))],
 ]))
 
+// Clone interpreter globals
+export const jsGlobals = new ArkObject(new Map())
+for (const [k, v] of globals.properties.entries()) {
+  jsGlobals.set(k, v)
+}
+
 // FFI
 class ArkFromJsError extends Error {}
 
