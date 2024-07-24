@@ -36,7 +36,6 @@ type ParserOperations = {
   toMethod(a: ParserArgs): ArkFnType
   toParam(a: ParserArgs): string
   toLet(a: ParserArgs): LetBinding
-  boundVars: string[]
 }
 
 type ParserArgs = {
@@ -651,38 +650,6 @@ semantics.addOperation<ArkLvalue>('toLval(a)', {
   },
   PostfixExp_primary(exp) {
     return exp.toLval(this.args.a)
-  },
-})
-
-function mergeBoundVars(children: ParserNode[]): string[] {
-  const boundVars: string[] = []
-  children.forEach((child) => boundVars.push(...child.boundVars))
-  return boundVars
-}
-
-semantics.addAttribute<string[]>('boundVars', {
-  _terminal() {
-    return []
-  },
-  _nonterminal(...children) {
-    return mergeBoundVars(children)
-  },
-  _iter(...children) {
-    return mergeBoundVars(children)
-  },
-
-  Sequence(_exps, _sc) {
-    return []
-  },
-
-  Let(_let, definition) {
-    return [definition.children[0].sourceString]
-  },
-
-  Use(_use, pathList) {
-    const path = pathList.asIteration().children
-    const ident = path[path.length - 1]
-    return [ident.sourceString]
   },
 })
 
