@@ -3,13 +3,13 @@
 // Released under the MIT license.
 
 import {
+  globals,
   Ark, ArkExp, ArkConcreteVal, ArkUndefined, ArkNull, ArkSequence,
   ArkAnd, ArkOr, ArkIf, ArkLoop, ArkBreak, ArkContinue,
   ArkSet, ArkLet, ArkCall, ArkFn, ArkGenerator, ArkReturn, ArkPromise,
   NativeObject, ArkObject, ArkList, ArkMap, ArkProperty,
   ArkLiteral, ArkListLiteral, ArkMapLiteral, ArkObjectLiteral, ArkYield,
-  globals,
-} from './interpreter.js'
+} from './code.js'
 
 export function valToJs(val: Ark, externalSyms = globals) {
   function doValToJs(val: Ark): unknown {

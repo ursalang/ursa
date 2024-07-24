@@ -14,8 +14,9 @@ import {compareSync, Difference} from 'dir-compare'
 import {flatToJs, evalArkJs} from './ark/compiler/index.js'
 import {expToInsts} from './ark/flatten.js'
 import {
-  debug, ArkState, ArkExp, ArkObject, toJs,
-} from './ark/interpreter.js'
+  debug, ArkExp, ArkObject, toJs,
+} from './ark/code.js'
+import {ArkState} from './ark/interpreter.js'
 import {compile as doArkCompile} from './ark/reader.js'
 import {valToJs} from './ark/serialize.js'
 import {compile as ursaCompile} from './ursa/compiler.js'

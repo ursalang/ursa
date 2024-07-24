@@ -12,16 +12,14 @@ import grammar, {
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug, valToString,
-  ArkState, ArkRuntimeError,
   ArkVal, ArkExp, ArkLvalue, ArkLiteral,
   ArkNull, ArkBoolean, ArkNumber, ArkString,
   ArkSequence, ArkIf, ArkLoop, ArkAnd, ArkOr,
   ArkObjectLiteral, ArkListLiteral, ArkMapLiteral,
   ArkCall, ArkLet, ArkFn, ArkGenerator, ArkProperty, ArkSet, ArkReturn, ArkYield,
-  ArkBreak, ArkContinue, ArkAwait, ArkLaunch,
-  ArkCapture,
-  ArkFnType,
-} from '../ark/interpreter.js'
+  ArkBreak, ArkContinue, ArkAwait, ArkLaunch, ArkCapture, ArkFnType,
+} from '../ark/code.js'
+import {ArkState, ArkRuntimeError} from '../ark/interpreter.js'
 import {
   ArkCompilerError, symRef, Frame, Environment, checkParamList,
 } from '../ark/reader.js'

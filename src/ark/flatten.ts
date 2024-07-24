@@ -10,7 +10,7 @@ import {
   ArkExp, ArkFn, ArkGenerator, ArkIf, ArkLaunch, ArkLet, ArkListLiteral, ArkLiteral,
   ArkLocal, ArkLoop, ArkMapLiteral, ArkNamedLoc, ArkNull, ArkObjectLiteral,
   ArkOr, ArkProperty, ArkReturn, ArkSequence, ArkSet, ArkVal, ArkYield,
-} from './interpreter.js'
+} from './code.js'
 
 export class ArkInst {
   private static nextId = 0

@@ -12,9 +12,10 @@ import tildify from 'tildify'
 
 import programVersion from '../version.js'
 import {
-  debug, ArkExp, ArkNull, ArkList,
-  ArkLet, ArkVal, ArkString, globals, toJs, pushLets,
-  ArkState,
+  debug, globals, ArkExp, ArkNull, ArkList, ArkLet, ArkVal, ArkString, toJs,
+} from '../ark/code.js'
+import {
+  ArkState, pushLets,
 } from '../ark/interpreter.js'
 import {Environment, compile as arkCompile} from '../ark/reader.js'
 import {serializeVal} from '../ark/serialize.js'

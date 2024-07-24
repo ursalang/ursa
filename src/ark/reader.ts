@@ -8,15 +8,15 @@ import preludeJson from './prelude.json' assert {type: 'json'}
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  ArkState, ArkExp, ArkLvalue, globals,
-  ArkIf, ArkAnd, ArkOr, ArkSequence, ArkLoop, ArkBreak, ArkContinue,
+  ArkExp, ArkLvalue, ArkIf, ArkAnd, ArkOr, ArkSequence, ArkLoop, ArkBreak, ArkContinue,
   ArkNull, ArkBoolean, ArkNumber, ArkString,
   ArkSet, ArkLocal, ArkCapture, ArkListLiteral, ArkObjectLiteral, ArkMapLiteral,
   ArkFn, ArkGenerator, ArkReturn, ArkYield,
   ArkProperty, ArkLet, ArkCall, ArkLiteral, ArkObject,
-  ArkUndefined,
-} from './interpreter.js'
+  ArkUndefined, globals,
+} from './code.js'
 import {expToInst} from './flatten.js'
+import {ArkState} from './interpreter.js'
 
 export class ArkCompilerError extends Error {}
 
