@@ -192,13 +192,19 @@ export const dirTest = test.macro(async (
   await doDirTest(t, dir, callback)
 })
 
-function makeReformattedSource(t: ExecutionContext, inputBasename: string) {
+async function makeReformattedSource(t: ExecutionContext, inputBasename: string) {
   const sourceFile = `${inputBasename}.ursa`
   let source = fs.readFileSync(sourceFile, {encoding: 'utf-8'})
   if (source.startsWith('#!')) {
     source = source.substring(source.indexOf('\n'))
   }
-  const reformattedSource = format(source)
+  let reformattedSource: string
+  if (process.env.NODE_ENV === 'coverage') {
+    const {stdout} = await run(['fmt', sourceFile], {stripFinalNewline: false})
+    reformattedSource = stdout as string
+  } else {
+    reformattedSource = format(source)
+  }
   const tempDir = tmp.dirSync({unsafeCleanup: true})
   t.teardown(tempDir.removeCallback)
   // Copy optional related files into temporary directory.
@@ -252,7 +258,7 @@ const reformattingCliTest = test.macro(async (
       t,
       'ursa',
       inputBasename,
-      makeReformattedSource(t, inputBasename),
+      await makeReformattedSource(t, inputBasename),
       extraArgs,
       useRepl,
     )
@@ -293,7 +299,7 @@ const reformattingCliDirTest = test.macro(async (
           t,
           'ursa',
           inputBasename,
-          makeReformattedSource(t, inputBasename),
+          await makeReformattedSource(t, inputBasename),
           [tmpDirPath, ...extraArgs ?? []],
           useRepl,
         )
