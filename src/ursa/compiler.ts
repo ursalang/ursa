@@ -43,7 +43,6 @@ type ParserArgs = {
   inLoop?: boolean
   inFn?: boolean
   inGenerator?: boolean
-  inExp?: boolean
 }
 
 type ParserNode = Node<ParserOperations>
@@ -309,7 +308,6 @@ semantics.addOperation<ArkExp>('toExp(a)', {
       inLoop: false,
       inFn: true,
       inGenerator: fnType.Constructor === ArkGenerator,
-      inExp: false,
     })
     // TODO: ArkFn should be an ArkObject which contains one method.
     return addLoc(new fnType.Constructor(
@@ -499,7 +497,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
   },
 
   LogicExp(node) {
-    return node.toExp({...this.args.a, inExp: true})
+    return node.toExp({...this.args.a})
   },
   LogicExp_and(left, _and, right) {
     return addLoc(
@@ -549,8 +547,6 @@ semantics.addOperation<ArkExp>('toExp(a)', {
   Statement_return(return_, exp) {
     if (!this.args.a.inFn) {
       throw new UrsaCompilerError(return_.source, 'return used outside a function')
-    } else if (this.args.a.inExp) {
-      throw new UrsaCompilerError(return_.source, 'return may not be used inside an expression')
     }
     return addLoc(new ArkReturn(maybeVal(this.args.a, exp)), this)
   },

@@ -1,0 +1,6 @@
+Error: Line 1, col 1:
+> 1 | let a = 1 and let a = 2
+      ^~~~~~~~~~~~~~~~~~~~~~~
+  2 | 
+
+Duplicate identifier in let: a

@@ -43,7 +43,9 @@ import {ursaTest, ursaDirTest, run} from '../testutil.js'
   // Compiler error tests
   ['Test error on bad function call', 'test/bad-call'],
   ['Test error on bad property access', 'test/sum-map-iterator-wrong'],
+  ['Test error on assignment to non-lvalue', 'test/bad-assignment'],
   ['Test error on re-assignment with wrong type', 'test/bad-reassignment'],
+  ["Test error on duplicate identifiers in 'let'", 'test/duplicate-let'],
   ["Test error on 'yield' outside function", 'test/bad-yield'],
 
   // Rosetta code examples

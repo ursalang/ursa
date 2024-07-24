@@ -7,7 +7,7 @@ import test from 'ava'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  ArkState, toJs,
+  ArkState,
 } from '../ark/interpreter.js'
 import {
   compile, runWithTraceback, UrsaCompilerError, UrsaRuntimeError,
@@ -50,7 +50,7 @@ testGroup('Sequences', [
   ['{ pi; 3+4; }', 7],
 ])
 
-test('Assignment', async (t) => {
+test('Assignment errors', (t) => {
   const error1 = t.throws(() => compile('4 := 5'), {instanceOf: UrsaCompilerError})
   t.not(error1, undefined)
   t.is(error1.message, `\
@@ -67,8 +67,11 @@ Line 1, col 1:
       ^~~~~~~~
 
 Bad lvalue`)
-  t.is(toJs(await new ArkState(expToInst(compile('pi := 3'))).run()), 3)
 })
+
+testGroup('Assignment', [
+  ['pi := 3', 3],
+])
 
 testGroup('Conditionals', [
   ['if true {3} else {4}', 3],
@@ -79,19 +82,30 @@ testGroup('Conditionals', [
   ['if 3 + 4 == 8 {1} else if 3 + 4 == 7 {2} else {3}', 2],
 ])
 
-test('loop and break', async (t) => {
-  const error = t.throws(() => compile('break'), {instanceOf: UrsaCompilerError})
-  t.not(error, undefined)
-  t.is(error.message, `\
+test('Loop errors', (t) => {
+  const error1 = t.throws(() => compile('break'), {instanceOf: UrsaCompilerError})
+  t.not(error1, undefined)
+  t.is(error1.message, `\
 Line 1, col 1:
 > 1 | break
       ^~~~~
 
 break used outside a loop`)
-  t.is(toJs(await new ArkState(expToInst(compile('loop { break 3 }'))).run()), 3)
+  const error2 = t.throws(() => compile('continue'), {instanceOf: UrsaCompilerError})
+  t.not(error2, undefined)
+  t.is(error2.message, `\
+Line 1, col 1:
+> 1 | continue
+      ^~~~~~~~
+
+continue used outside a loop`)
 })
 
-test('return', async (t) => {
+testGroup('loop', [
+  ['loop { break 3 }', 3],
+])
+
+test('return outside function', (t) => {
   const error = t.throws(() => compile('return'), {instanceOf: UrsaCompilerError})
   t.not(error, undefined)
   t.is(error.message, `\
@@ -100,8 +114,11 @@ Line 1, col 1:
       ^~~~~~
 
 return used outside a function`)
-  t.is(toJs(await new ArkState(expToInst(compile('fn (): Int { return 3 }()'))).run()), 3)
 })
+
+testGroup('return', [
+  ['fn (): Int { return 3 }()', 3],
+])
 
 testGroup('let', [
   ['let a = 3; a', 3],
@@ -111,6 +128,17 @@ testGroup('let', [
 testGroup('fn', [
   ['let f = fn(x: Int): Int {x + 1}; f(1)', 2],
 ])
+
+test('Duplicate parameters', (t) => {
+  const error = t.throws(() => compile('fn(a,a) {}'), {instanceOf: UrsaCompilerError})
+  t.not(error, undefined)
+  t.is(error.message, `\
+Line 1, col 4:
+> 1 | fn(a,a) {}
+         ^~~
+
+Duplicate parameters in list`)
+})
 
 testGroup('Lists', [
   ['[1, 2, 3]', [1, 2, 3]],

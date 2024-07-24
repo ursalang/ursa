@@ -1,0 +1,6 @@
+Error: Line 1, col 1:
+> 1 | 2 := 1
+      ^
+  2 | 
+
+Bad lvalue
