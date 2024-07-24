@@ -5,13 +5,13 @@
 import {Interval} from 'ohm-js'
 
 import {
-  ArkAwaitInst, ArkBlockCloseInst, ArkBlockOpenInst, ArkBreakInst, ArkCallInst,
-  ArkCaptureInst, ArkContinueInst, ArkElseBlockCloseInst, ArkElseBlockInst,
+  ArkAwaitInst, ArkBlockCloseInst, ArkBlockOpenInst, ArkBreakInst, ArkCallableBlockOpenInst,
+  ArkCallInst, ArkCaptureInst, ArkContinueInst, ArkElseBlockCloseInst, ArkElseBlockInst,
   ArkFnBlockOpenInst, ArkGeneratorBlockOpenInst, ArkIfBlockOpenInst, ArkInst,
   ArkLaunchBlockCloseInst, ArkLaunchBlockOpenInst, ArkLetBlockCloseInst, ArkLetBlockOpenInst,
   ArkLetCopyInst, ArkListLiteralInst, ArkLiteralInst, ArkLocalInst, ArkLoopBlockCloseInst,
   ArkLoopBlockOpenInst, ArkMapLiteralInst, ArkObjectLiteralInst, ArkPropertyInst, ArkReturnInst,
-  ArkSetCaptureInst, ArkSetLocalInst, ArkSetPropertyInst, ArkYieldInst,
+  ArkSetCaptureInst, ArkSetLocalInst, ArkSetNamedLocInst, ArkSetPropertyInst, ArkYieldInst,
 } from './flatten.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -158,13 +158,19 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
       // The Promise becomes the result of the entire block.
       mem.set(inst.matchingClose.id, result)
       inst = inst.matchingClose.next
-    } else if (inst instanceof ArkFnBlockOpenInst) {
+    } else if (inst instanceof ArkCallableBlockOpenInst) {
       const captures = []
       for (const v of inst.capturedVars) {
         captures.push(evalRef(ark.frame, v))
       }
-      const Constructor = inst instanceof ArkGeneratorBlockOpenInst
-        ? ArkGeneratorClosure : ArkClosure
+      let Constructor
+      if (inst instanceof ArkFnBlockOpenInst) {
+        Constructor = ArkClosure
+      } else if (inst instanceof ArkGeneratorBlockOpenInst) {
+        Constructor = ArkGeneratorClosure
+      } else {
+        throw new Error('invalid ArkCallableBlockOpenInst')
+      }
       const result = new Constructor(inst.params, captures, inst.next!)
       mem.set(inst.matchingClose.id, result)
       inst = inst.matchingClose.next
@@ -272,13 +278,15 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
       } else {
         throw new ArkRuntimeError(ark, 'Invalid call', inst.sourceLoc)
       }
-    } else if (inst instanceof ArkSetLocalInst) {
+    } else if (inst instanceof ArkSetNamedLocInst) {
       const result = mem.get(inst.valId)!
       let ref: ArkRef
       if (inst instanceof ArkSetCaptureInst) {
         ref = ark.frame.captures[inst.lexpIndex]
-      } else {
+      } else if (inst instanceof ArkSetLocalInst) {
         ref = ark.frame.locals[inst.lexpIndex]
+      } else {
+        throw new Error('invalid ArkSetNamedLocInst')
       }
       const oldVal = ref.get()
       if (

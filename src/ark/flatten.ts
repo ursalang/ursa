@@ -74,7 +74,7 @@ export class ArkIfBlockOpenInst extends ArkBlockOpenInst {
   }
 }
 
-export class ArkFnBlockOpenInst extends ArkBlockOpenInst {
+export class ArkCallableBlockOpenInst extends ArkBlockOpenInst {
   constructor(
     sourceLoc: Interval | undefined,
     public params: string[],
@@ -84,7 +84,8 @@ export class ArkFnBlockOpenInst extends ArkBlockOpenInst {
     super(sourceLoc)
   }
 }
-export class ArkGeneratorBlockOpenInst extends ArkFnBlockOpenInst {}
+export class ArkFnBlockOpenInst extends ArkCallableBlockOpenInst {}
+export class ArkGeneratorBlockOpenInst extends ArkCallableBlockOpenInst {}
 
 export class ArkLetBlockOpenInst extends ArkBlockOpenInst {
   constructor(sourceLoc: Interval | undefined, public vars: string[], public valIds: symbol[]) {
@@ -208,7 +209,7 @@ export class ArkBreakInst extends ArkInst {
   }
 }
 
-export class ArkReturnInst extends ArkInst {
+class ArkResultInst extends ArkInst {
   constructor(
     sourceLoc: Interval | undefined,
     public argId: symbol,
@@ -217,7 +218,8 @@ export class ArkReturnInst extends ArkInst {
     super(sourceLoc)
   }
 }
-export class ArkYieldInst extends ArkReturnInst {}
+export class ArkReturnInst extends ArkResultInst {}
+export class ArkYieldInst extends ArkResultInst {}
 
 export class ArkCallInst extends ArkInst {
   constructor(
@@ -235,7 +237,7 @@ export class ArkSetInst extends ArkInst {
     super(sourceLoc)
   }
 }
-export class ArkSetLocalInst extends ArkSetInst {
+export class ArkSetNamedLocInst extends ArkSetInst {
   constructor(
     sourceLoc: Interval | undefined,
     lexpId: symbol,
@@ -245,7 +247,8 @@ export class ArkSetLocalInst extends ArkSetInst {
     super(sourceLoc, lexpId, valId)
   }
 }
-export class ArkSetCaptureInst extends ArkSetLocalInst {}
+export class ArkSetLocalInst extends ArkSetNamedLocInst {}
+export class ArkSetCaptureInst extends ArkSetNamedLocInst {}
 
 export class ArkSetPropertyInst extends ArkInst {
   constructor(
@@ -276,12 +279,13 @@ export class ArkMapLiteralInst extends ArkInst {
   }
 }
 
-export class ArkLocalInst extends ArkInst {
+class ArkNamedLocInst extends ArkInst {
   constructor(sourceLoc: Interval | undefined, public index: number, public name: string) {
     super(sourceLoc)
   }
 }
-export class ArkCaptureInst extends ArkLocalInst {}
+export class ArkLocalInst extends ArkNamedLocInst {}
+export class ArkCaptureInst extends ArkNamedLocInst {}
 
 export class ArkPropertyInst extends ArkInst {
   constructor(sourceLoc: Interval | undefined, public objId: symbol, public prop: string) {
