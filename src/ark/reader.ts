@@ -14,6 +14,7 @@ import {
   ArkSet, ArkLocal, ArkCapture, ArkListLiteral, ArkObjectLiteral, ArkMapLiteral,
   ArkFn, ArkGenerator, ArkReturn, ArkYield,
   ArkProperty, ArkLet, ArkCall, ArkLiteral, ArkObject,
+  ArkUndefined,
 } from './interpreter.js'
 import {expToInst} from './flatten.js'
 
@@ -124,7 +125,7 @@ export function symRef(env: Environment, name: string): ArkLvalue {
   }
   // Finally, see if it's a global, and if not, error.
   if (lexp === undefined) {
-    if (env.externalSyms.get(name) === undefined) {
+    if (env.externalSyms.get(name) === ArkUndefined) {
       throw new ArkCompilerError(`Undefined symbol ${name}`)
     }
     lexp = new ArkProperty(new ArkLiteral(env.externalSyms), name)

@@ -14,6 +14,12 @@ import {compile} from './reader.js'
 import {testArkGroup as testGroup} from '../testutil.js'
 import {expToInst} from './flatten.js'
 
+test('Undefined symbol', (t) => {
+  const error = t.throws(() => new ArkState(expToInst(compile(['f']))).run())
+  t.not(error, undefined)
+  t.is(error.message, 'Undefined symbol f')
+})
+
 testGroup('Concrete values', [
   ['4', 4],
   ['["str","hello é"]', 'hello é'],
