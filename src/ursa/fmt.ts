@@ -3,7 +3,7 @@
 // Released under the GPL version 3, or (at your option) any later version.
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import {debug} from '../ark/code.js'
+import {debug} from '../ark/util.js'
 import grammar, {
   Node, NonterminalNode, IterationNode, ThisNode,
   // eslint-disable-next-line import/extensions

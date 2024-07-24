@@ -11,11 +11,11 @@ import test, {ExecutionContext, Macro} from 'ava'
 import {ExecaError, Options as ExecaOptions, execa} from 'execa'
 import {compareSync, Difference} from 'dir-compare'
 
+import {debug} from './ark/util.js'
 import {flatToJs, evalArkJs} from './ark/compiler/index.js'
 import {expToInsts} from './ark/flatten.js'
-import {
-  debug, ArkExp, ArkObject, toJs,
-} from './ark/code.js'
+import {ArkObject, toJs} from './ark/data.js'
+import {ArkExp} from './ark/code.js'
 import {ArkState} from './ark/interpreter.js'
 import {compile as doArkCompile} from './ark/reader.js'
 import {valToJs} from './ark/serialize.js'

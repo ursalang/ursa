@@ -12,8 +12,12 @@ import grammar, {
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug, valToString,
-  ArkVal, ArkExp, ArkLvalue, ArkLiteral,
-  ArkNull, ArkBoolean, ArkNumber, ArkString,
+} from '../ark/util.js'
+import {
+  ArkVal, ArkNull, ArkBoolean, ArkNumber, ArkString,
+} from '../ark/data.js'
+import {
+  ArkExp, ArkLvalue, ArkLiteral,
   ArkSequence, ArkIf, ArkLoop, ArkAnd, ArkOr,
   ArkObjectLiteral, ArkListLiteral, ArkMapLiteral,
   ArkCall, ArkLet, ArkFn, ArkGenerator, ArkProperty, ArkSet, ArkReturn, ArkYield,

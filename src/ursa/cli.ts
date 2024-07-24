@@ -11,9 +11,11 @@ import envPaths from 'env-paths'
 import tildify from 'tildify'
 
 import programVersion from '../version.js'
+import {debug} from '../ark/util.js'
 import {
-  debug, globals, jsGlobals, ArkExp, ArkNull, ArkList, ArkLet, ArkVal, ArkString, toJs,
-} from '../ark/code.js'
+  globals, jsGlobals, toJs, ArkNull, ArkList, ArkVal, ArkString,
+} from '../ark/data.js'
+import {ArkExp, ArkLet} from '../ark/code.js'
 import {
   ArkState, pushLets,
 } from '../ark/interpreter.js'

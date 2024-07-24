@@ -14,14 +14,18 @@ import {
   ArkSetCaptureInst, ArkSetLocalInst, ArkSetNamedLocInst, ArkSetPropertyInst, ArkYieldInst,
 } from './flatten.js'
 import {
+  ArkAbstractObjectBase, ArkBoolean, ArkList, ArkMap, ArkNull, ArkNullVal,
+  ArkObject, ArkPromise, ArkUndefined, ArkVal, NativeAsyncFn, NativeFn,
+  ArkRef, ArkValRef,
+} from './data.js'
+import {
+  ArkCapture, ArkContinuation, ArkFlatClosure, ArkFlatGeneratorClosure,
+  ArkLocal, ArkNamedLoc,
+} from './code.js'
+import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  ArkAbstractObjectBase, ArkBoolean, ArkCapture,
-  ArkList, ArkLocal, ArkMap, ArkNamedLoc, ArkNull, ArkNullVal,
-  ArkObject, ArkPromise, ArkRef, ArkUndefined,
-  ArkVal, ArkValRef, NativeAsyncFn, NativeFn,
-  ArkContinuation, ArkClosure, ArkGeneratorClosure,
-} from './code.js'
+} from './util.js'
 
 // Each stack frame consists of a tuple of local vars, captures, and
 // debug info.
@@ -165,9 +169,9 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
       }
       let Constructor
       if (inst instanceof ArkFnBlockOpenInst) {
-        Constructor = ArkClosure
+        Constructor = ArkFlatClosure
       } else if (inst instanceof ArkGeneratorBlockOpenInst) {
-        Constructor = ArkGeneratorClosure
+        Constructor = ArkFlatGeneratorClosure
       } else {
         throw new Error('invalid ArkCallableBlockOpenInst')
       }
@@ -223,7 +227,7 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
     } else if (inst instanceof ArkCallInst) {
       const args = inst.argIds.map((id) => mem.get(id)!)
       const callable: ArkVal = mem.get(inst.fnId)!
-      if (callable instanceof ArkGeneratorClosure) {
+      if (callable instanceof ArkFlatGeneratorClosure) {
         const result = new ArkContinuation(new ArkState(
           callable.body,
           new ArkFrame(
@@ -236,7 +240,7 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
         ))
         mem.set(inst.id, result)
         inst = inst.next
-      } else if (callable instanceof ArkClosure) {
+      } else if (callable instanceof ArkFlatClosure) {
         ark.inst = inst
         ark = new ArkState(
           callable.body,
@@ -370,7 +374,7 @@ export async function pushLets(ark: ArkState, boundVars: [string, ArkInst][]) {
   return lets.length
 }
 
-export async function callFlat(callable: ArkClosure, locals: ArkValRef[]): Promise<ArkVal> {
+export async function callFlat(callable: ArkFlatClosure, locals: ArkValRef[]): Promise<ArkVal> {
   const ark = new ArkState(callable.body, new ArkFrame(locals, callable.captures))
   return evalFlat(ark)
 }

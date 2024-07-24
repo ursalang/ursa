@@ -28,11 +28,13 @@ import {
   ArkSetInst, ArkSetPropertyInst,
 } from '../flatten.js'
 import {
-  debug, globals, jsGlobals,
-  ArkBoolean, ArkBooleanVal, ArkExp, ArkList, ArkMap, ArkNull,
+  globals, jsGlobals,
+  ArkBoolean, ArkBooleanVal, ArkList, ArkMap, ArkNull,
   ArkNumber, ArkNullVal, ArkNumberVal, ArkObject, ArkString,
   ArkStringVal, ArkUndefined, ArkVal, NativeFn, ArkPromise,
-} from '../code.js'
+} from '../data.js'
+import {ArkExp} from '../code.js'
+import {debug} from '../util.js'
 import {Environment, Frame} from '../reader.js'
 
 // eslint-disable-next-line @typescript-eslint/naming-convention

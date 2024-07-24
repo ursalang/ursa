@@ -7,7 +7,7 @@ import test from 'ava'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-} from '../ark/code.js'
+} from '../ark/util.js'
 import {ArkState} from '../ark/interpreter.js'
 import {
   compile, runWithTraceback, UrsaCompilerError, UrsaRuntimeError,

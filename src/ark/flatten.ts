@@ -6,11 +6,12 @@ import assert from 'assert'
 import {Interval} from 'ohm-js'
 
 import {
-  ArkAnd, ArkAwait, ArkBoolean, ArkBreak, ArkCall, ArkCapture, ArkContinue, ArkDebugInfo,
+  ArkAnd, ArkAwait, ArkBreak, ArkCall, ArkCapture, ArkContinue, ArkDebugInfo,
   ArkExp, ArkFn, ArkGenerator, ArkIf, ArkLaunch, ArkLet, ArkListLiteral, ArkLiteral,
-  ArkLocal, ArkLoop, ArkMapLiteral, ArkNamedLoc, ArkNull, ArkObjectLiteral,
-  ArkOr, ArkProperty, ArkReturn, ArkSequence, ArkSet, ArkVal, ArkYield,
+  ArkLocal, ArkLoop, ArkMapLiteral, ArkNamedLoc, ArkObjectLiteral,
+  ArkOr, ArkProperty, ArkReturn, ArkSequence, ArkSet, ArkYield,
 } from './code.js'
+import {ArkBoolean, ArkNull, ArkVal} from './data.js'
 
 export class ArkInst {
   private static nextId = 0

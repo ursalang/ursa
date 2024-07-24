@@ -3,16 +3,19 @@
 // Released under the MIT license.
 
 import {
-  globals,
-  Ark, ArkExp, ArkConcreteVal, ArkUndefined, ArkNull, ArkSequence,
+  globals, ArkVal,
+  ArkConcreteVal, ArkNull, ArkPromise, ArkList, ArkMap, ArkObject,
+  ArkUndefined, NativeObject,
+} from './data.js'
+import {
+  ArkExp, ArkSequence,
   ArkAnd, ArkOr, ArkIf, ArkLoop, ArkBreak, ArkContinue,
-  ArkSet, ArkLet, ArkCall, ArkFn, ArkGenerator, ArkReturn, ArkPromise,
-  NativeObject, ArkObject, ArkList, ArkMap, ArkProperty,
+  ArkSet, ArkLet, ArkCall, ArkFn, ArkGenerator, ArkReturn, ArkProperty,
   ArkLiteral, ArkListLiteral, ArkMapLiteral, ArkObjectLiteral, ArkYield,
 } from './code.js'
 
-export function valToJs(val: Ark, externalSyms = globals) {
-  function doValToJs(val: Ark): unknown {
+export function valToJs(val: ArkVal | ArkExp, externalSyms = globals) {
+  function doValToJs(val: ArkVal | ArkExp): unknown {
     if (val instanceof NativeObject) {
       return val.obj
     }
@@ -99,6 +102,6 @@ export function valToJs(val: Ark, externalSyms = globals) {
   return doValToJs(val)
 }
 
-export function serializeVal(val: Ark, externalSyms?: ArkObject) {
+export function serializeVal(val: ArkVal | ArkExp, externalSyms?: ArkObject) {
   return JSON.stringify(valToJs(val, externalSyms))
 }
