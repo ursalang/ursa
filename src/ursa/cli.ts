@@ -5,10 +5,12 @@
 import path from 'path'
 import fs, {PathOrFileDescriptor} from 'fs-extra'
 import * as readline from 'readline'
+import {fileURLToPath} from 'url'
 
 import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
 import envPaths from 'env-paths'
 import tildify from 'tildify'
+import {rollup} from 'rollup'
 
 import programVersion from '../version.js'
 import {debug} from '../ark/util.js'
@@ -23,7 +25,7 @@ import {Environment, compile as arkCompile} from '../ark/reader.js'
 import {serializeVal} from '../ark/serialize.js'
 import {runWithTraceback, compile as ursaCompile} from './compiler.js'
 import {format} from './fmt.js'
-import {arkToJs, evalArkJs} from '../ark/compiler/index.js'
+import {arkToJs, evalArkJs, preludeJs} from '../ark/compiler/index.js'
 import {ArkInst, expToInst} from '../ark/flatten.js'
 
 if (process.env.DEBUG) {
@@ -84,6 +86,7 @@ const compileParser = subparsers.add_parser('compile', {aliases: ['c'], descript
 compileParser.set_defaults({func: compileCommand})
 compileParser.add_argument('source', {metavar: 'FILE', help: 'Ursa program to compile'})
 compileParser.add_argument('--output', '-o', {metavar: 'FILE', help: 'JSON output file [default: standard output]'})
+compileParser.add_argument('--executable', '-x', {action: 'store_true', help: 'Output a complete executable'})
 
 const fmtParser = subparsers.add_parser('fmt', {aliases: ['f', 'format'], description: 'Format source code'})
 fmtParser.set_defaults({func: fmtCommand})
@@ -104,6 +107,7 @@ interface Args {
   output: string | undefined
   interactive: boolean
   target: string
+  executable: boolean
 
   // Format arguments
   width: number
@@ -273,21 +277,49 @@ async function interactCommand(args: Args) {
   await repl(args)
 }
 
-function compileCommand(args: Args) {
+async function buildRuntime() {
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  const __dirname = fileURLToPath(new URL('.', import.meta.url))
+  const bundle = await rollup({
+    input: path.join(__dirname, '../../lib/ark/data.js'),
+    onwarn: () => {}, // Discard warnings from rollup
+  })
+  const result = await bundle.generate({})
+  await bundle.close()
+  return result.output[0].code
+}
+
+async function compileCommand(args: Args) {
   const outputFile = getOutputFile(args, true)
   // Any otherwise uncaught exception is reported as an error.
   // Read input
   const inputFile = getInputFile(args)
   const source = readSourceFile(inputFile)
   const exp = compile(args, source)
-  let output
+  let output = ''
   if (args.target === 'ark') {
-    output = serializeVal(exp)
+    if (args.executable) {
+      output += '#!/usr/bin/env -S ursa --syntax=json run\n'
+    }
+    output += serializeVal(exp)
   } else {
-    output = arkToJs(exp, prog).code
+    if (args.executable) {
+      output += '#!/usr/bin/env -S node --no-warnings --\n'
+      output += await buildRuntime()
+      // Read prelude but elide the "use strict" line.
+      const prelude = preludeJs.slice(preludeJs.indexOf('\n') + 1)
+      output += `let prelude = await${prelude}
+prelude.properties.forEach((val, sym) => jsGlobals.set(sym, val))\n`
+      output += `jsGlobals.set('argv', new ArkList(
+  [ArkString(process.argv[1]), ...process.argv.slice(2).map((s) => ArkString(s))],
+))\n`
+    }
+    output += arkToJs(exp, prog).code
   }
   fs.writeFileSync(outputFile, output)
-  return Promise.resolve()
+  if (args.executable && typeof outputFile !== 'number') {
+    fs.chmodSync(outputFile, 0o775)
+  }
 }
 
 function fmtCommand(args: Args) {

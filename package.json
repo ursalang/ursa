@@ -16,6 +16,7 @@
     "fs-extra": "^11.2.0",
     "get-source": "^2.0.12",
     "ohm-js": "^17.1.0",
+    "rollup": "^4.19.0",
     "source-map": "^0.7.4",
     "tildify": "^3.0.0",
     "tslib": "^2.6.3"
