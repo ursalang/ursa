@@ -357,6 +357,9 @@ export class ArkPropertyRef extends ArkRef {
 }
 
 export const globals = new ArkObject(new Map<string, ArkVal>([
+  // Placeholder (will be set at start-up).
+  ['argv', new ArkList([])],
+
   // Ursa's prelude (see also prelude.ursa).
   ['version', ArkString(programVersion)],
   ['debug', new NativeFn(['obj'], (obj: ArkVal) => {
