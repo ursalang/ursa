@@ -202,9 +202,9 @@ async function repl(args: Args): Promise<ArkVal> {
       const compiled = compile(args, line, env)
       // Handle new let bindings
       if (compiled instanceof ArkLet) {
-        env = env.push(compiled.boundVars.map((bv) => bv[0]))
+        env = env.push(compiled.boundVars.map((bv) => bv.name))
         const flatBoundVars: [string, ArkInst][] = compiled.boundVars.map(
-          (bv) => [bv[0], expToInst(bv[2])],
+          (bv) => [bv.name, expToInst(bv.init)],
         )
         await pushLets(ark, flatBoundVars)
       }

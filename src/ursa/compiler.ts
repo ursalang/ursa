@@ -17,7 +17,7 @@ import {
   ArkVal, ArkNull, ArkBoolean, ArkNumber, ArkString,
 } from '../ark/data.js'
 import {
-  ArkExp, ArkLvalue, ArkLiteral,
+  ArkBoundVar, ArkExp, ArkLvalue, ArkLiteral,
   ArkSequence, ArkIf, ArkLoop, ArkAnd, ArkOr,
   ArkObjectLiteral, ArkListLiteral, ArkMapLiteral,
   ArkCall, ArkLet, ArkFn, ArkGenerator, ArkProperty, ArkSet, ArkReturn, ArkYield,
@@ -117,7 +117,7 @@ class Arguments extends AST {
 }
 
 class LetBinding extends AST {
-  constructor(public boundVars: [string, number, ArkExp][]) {
+  constructor(public boundVars: ArkBoundVar[]) {
     super()
   }
 }
@@ -201,7 +201,9 @@ semantics.addOperation<LetBinding>('toLet(a)', {
     }
     const indexBase = this.args.a.env.top().locals.length
     return new LetBinding(
-      parsedLets.map((def, index) => [def.ident.sourceString, indexBase + index, def.exp]),
+      parsedLets.map(
+        (def, index) => new ArkBoundVar(def.ident.sourceString, indexBase + index, def.exp),
+      ),
     )
   },
 
@@ -215,7 +217,7 @@ semantics.addOperation<LetBinding>('toLet(a)', {
     const useCallArgs = path.slice(1).map((id) => new ArkLiteral(ArkString(id.sourceString)))
     const useCall = addLoc(new ArkCall(useProperty, useCallArgs), this)
     const index = this.args.a.env.top().locals.length
-    return new LetBinding([[ident.sourceString, index, useCall]])
+    return new LetBinding([new ArkBoundVar(ident.sourceString, index, useCall)])
   },
 })
 
@@ -224,7 +226,7 @@ function makeSequence(a: ParserArgs, seq: ParserNode, exps: ParserNode[]): ArkEx
   for (const [i, exp] of exps.entries()) {
     if (exp.children[0].ctorName === 'Lets' || exp.children[0].ctorName === 'Use') {
       const compiledLet = exp.toLet(a)
-      const innerEnv = a.env.push(compiledLet.boundVars.map((bv) => bv[0]))
+      const innerEnv = a.env.push(compiledLet.boundVars.map((bv) => bv.name))
       let letBody: ArkExp
       if (i < exps.length - 1) {
         letBody = makeSequence({...a, env: innerEnv}, seq, exps.slice(i + 1))
@@ -341,7 +343,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     const innerIndex = innerEnv.top().locals.length
     const loopBody = addLoc(
       new ArkLet(
-        [[forVar, innerIndex, addLoc(new ArkCall(addLoc(symRef(loopEnv, '_for'), iterator), []), this)]],
+        [new ArkBoundVar(forVar, innerIndex, addLoc(new ArkCall(addLoc(symRef(loopEnv, '_for'), iterator), []), this))],
         new ArkSequence([
           new ArkIf(
             addLoc(new ArkCall(new ArkProperty(compiledForVar, 'equals'), [new ArkLiteral(ArkNull())]), this),
@@ -354,7 +356,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     )
     const localsDepth = this.args.a.env.top().locals.length
     return addLoc(
-      new ArkLet([['_for', localsDepth, compiledIterator]], new ArkLoop(loopBody, localsDepth + 1)),
+      new ArkLet([new ArkBoundVar('_for', localsDepth, compiledIterator)], new ArkLoop(loopBody, localsDepth + 1)),
       this,
     )
   },

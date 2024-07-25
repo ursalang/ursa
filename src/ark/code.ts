@@ -108,7 +108,7 @@ export class ArkCall extends ArkExp {
 export abstract class ArkLvalue extends ArkExp {}
 
 export abstract class ArkNamedLoc extends ArkLvalue {
-  constructor(public index: number, public name: string) {
+  constructor(/* public var_: boolean, */ public index: number, public name: string) {
     super()
   }
 }
@@ -145,8 +145,12 @@ export class ArkMapLiteral extends ArkExp {
   }
 }
 
+export class ArkBoundVar {
+  constructor(public name: string, public index: number, public init: ArkExp) {}
+}
+
 export class ArkLet extends ArkExp {
-  constructor(public boundVars: [string, number, ArkExp][], public body: ArkExp) {
+  constructor(public boundVars: ArkBoundVar[], public body: ArkExp) {
     super()
   }
 }

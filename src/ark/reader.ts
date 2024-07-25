@@ -16,7 +16,7 @@ import {
   ArkExp, ArkLvalue, ArkIf, ArkAnd, ArkOr, ArkSequence, ArkLoop, ArkBreak, ArkContinue,
   ArkSet, ArkLocal, ArkCapture, ArkListLiteral, ArkObjectLiteral, ArkMapLiteral,
   ArkFn, ArkGenerator, ArkReturn, ArkYield,
-  ArkProperty, ArkLet, ArkCall, ArkLiteral,
+  ArkProperty, ArkLet, ArkCall, ArkLiteral, ArkBoundVar,
 } from './code.js'
 import {expToInst} from './flatten.js'
 import {ArkState} from './interpreter.js'
@@ -25,8 +25,8 @@ export class ArkCompilerError extends Error {}
 
 export class Frame {
   constructor(
-    // Local variable names are undefined between the point where they are
-    // allocated and the point at which they are declared.
+    // Locals are undefined between the point where they are allocated and
+    // the point at which they are declared.
     public locals: (string | undefined)[],
     public captures: string[],
     public fnName?: string,
@@ -82,8 +82,8 @@ function arkParamList(params: string[]): string[] {
   return checkParamList(params)
 }
 
-function arkBindingList(env: Environment, params: [string, unknown][]): [string, number, ArkExp][] {
-  const bindings: [string, number, ArkExp][] = []
+function arkBindingList(env: Environment, params: [string, unknown][]): ArkBoundVar[] {
+  const bindings: ArkBoundVar[] = []
   for (const p of params) {
     if (!(p instanceof Array) || p.length !== 2 || typeof p[0] !== 'string') {
       throw new ArkCompilerError('invalid let variable binding')
@@ -92,7 +92,7 @@ function arkBindingList(env: Environment, params: [string, unknown][]): [string,
   const paramNames = arkParamList(params.map((p) => p[0]))
   const indexBase = env.top().locals.length
   for (const [i, p] of params.entries()) {
-    bindings.push([p[0], indexBase + i, doCompile(env.push(paramNames), p[1])])
+    bindings.push(new ArkBoundVar(p[0], indexBase + i, doCompile(env.push(paramNames), p[1])))
   }
   return bindings
 }
@@ -164,7 +164,7 @@ function doCompile(env: Environment, value: unknown): ArkExp {
             throw new ArkCompilerError("Invalid 'let'")
           }
           const params = arkBindingList(env, value[1] as [string, unknown][])
-          const compiled = doCompile(env.push(params.map((p) => p[0])), value[2])
+          const compiled = doCompile(env.push(params.map((p) => p.name)), value[2])
           return new ArkLet(params, compiled)
         }
         case 'fn':

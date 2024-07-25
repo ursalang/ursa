@@ -411,10 +411,10 @@ export function expToInsts(
     const insts: ArkInst[] = []
     const bvIds: symbol[] = []
     for (const bv of exp.boundVars) {
-      const bvInsts = expToInsts(bv[2], innerLoop, innerFn, bv[0])
+      const bvInsts = expToInsts(bv.init, innerLoop, innerFn, bv.name)
       insts.push(
         ...bvInsts.insts,
-        new ArkSetLocalInst(exp.sourceLoc, Symbol.for(bv[0]), bv[1], bvInsts.id),
+        new ArkSetLocalInst(exp.sourceLoc, Symbol.for(bv.name), bv.index, bvInsts.id),
       )
       bvIds.push(bvInsts.id)
     }
@@ -424,7 +424,7 @@ export function expToInsts(
     return block(
       exp.sourceLoc,
       blockInsts,
-      new ArkLetBlockOpenInst(exp.sourceLoc, exp.boundVars.map((bv) => bv[0]), bvIds),
+      new ArkLetBlockOpenInst(exp.sourceLoc, exp.boundVars.map((bv) => bv.name), bvIds),
       new ArkLetBlockCloseInst(exp.sourceLoc, blockInsts.id),
     )
   } else if (exp instanceof ArkSequence) {
