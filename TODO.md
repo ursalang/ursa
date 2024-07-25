@@ -3,18 +3,14 @@
 ## Version 0.3
 
 * `Map` interface to internet.
-* Next Rosetta Code example: [anagrams](https://rosettacode.org/wiki/Anagrams#Python)
 * Classes: properties, names for List and Map
-* Ability to use async JavaScript APIs.
-* Generators and structured concurrency. A generator in a comprehension gives a lazy
-  list/map.
-* Make everything objects (arithmetic should be methods of `Num`).
+* Structured concurrency.
+* A generator in a comprehension gives a lazy list/map.
 
 ## Ark improvements
 
-* To optimize symbol references, add `var` (mutable `let`), and
-  evaluate as much as we can at compile time. Any expression with no free
-  variables can be fully evaluated.
+* To optimize symbol references, evaluate as much as we can at compile time.
+  Any expression with no free variables can be fully evaluated.
 * Study vau and first-class environments (objects)
 * Make code `readonly`. Start with `FreeVars`.
   See https://github.com/immutable-js/immutable-js/
@@ -38,8 +34,9 @@
   APIs to be declared (especially for POSIX; later add GLib introspection),
   and allow C bindings to be generated for Ark values that have C types, and
   any base Ark type.
-* Type checking; extra `for` sugar where when an object `obj` is given as
-  the iterator, `obj.iter()` is automatically used.
+* Type checking
+* Extra `for` sugar where when an object `obj` is given as the iterator,
+  `obj.iter()` is automatically used.
 * Structs
 * Enums
 * Traits (use for built-in operators)
