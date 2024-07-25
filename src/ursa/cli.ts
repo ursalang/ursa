@@ -300,8 +300,8 @@ function fmtCommand(args: Args) {
 }
 
 // Execute given commands and options.
-if (process.argv.length === 3) {
-  // If we have only one argument and it's not a command or option, assume it's a file to run.
+if (process.argv.length >= 3) {
+  // If our first argument is not a command or option, assume it's a file to run.
   const filename = process.argv[2]
   // The next line accesses a private field of subparsers to get the command names.
   // eslint-disable-next-line max-len
