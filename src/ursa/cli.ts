@@ -304,7 +304,7 @@ async function compileCommand(args: Args) {
     output += serializeVal(exp)
   } else {
     if (args.executable) {
-      output += '#!/usr/bin/env -S node --no-warnings --\n'
+      output += '#!/usr/bin/env -S node --experimental-default-type=module --\n'
       output += await buildRuntime()
       // Read prelude but elide the "use strict" line.
       const prelude = preludeJs.slice(preludeJs.indexOf('\n') + 1)

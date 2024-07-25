@@ -4,9 +4,14 @@
 
 import assert from 'assert'
 import test from 'ava'
+import {execa} from 'execa'
+import fs from 'fs'
 import kill from 'tree-kill'
+import tmp from 'tmp'
 
-import {ursaTest, ursaDirTest, run} from '../testutil.js'
+import {
+  ursaTest, ursaDirTest, ursaCommand, run,
+} from '../testutil.js'
 
 [
   ['Increment a variable in a loop', 'test/increment-variable-in-loop'],
@@ -68,6 +73,21 @@ ursaDirTest('fs', 'test/fs', 'test/fs.result')
 
 // Rosetta code examples with command-line arguments
 ursaTest('Anagrams', 'rosettacode/Anagrams', ['rosettacode/unixdict.txt'])
+
+// Test executable script generation
+test('Executable scripts', async (t) => {
+  for (const target of ['ark', 'js']) {
+    const tempExecFile = tmp.fileSync({discardDescriptor: true})
+    // t.teardown(() => tempExecFile.removeCallback())
+    await execa(ursaCommand, [
+      `--target=${target}`,
+      'compile', '--executable', 'test/advent-of-code-2023-day-25.ursa',
+      `--output=${tempExecFile.name}`,
+    ])
+    const {stdout} = await execa(tempExecFile.name, ['test/advent-of-code-2023-day-25-input.txt'])
+    t.deepEqual(stdout, fs.readFileSync('test/advent-of-code-2023-day-25.stdout', {encoding: 'utf-8'}))
+  }
+})
 
 // Complex tests
 test('Web server', async (t) => {

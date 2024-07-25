@@ -23,15 +23,15 @@ import {compile as ursaCompile} from './ursa/compiler.js'
 import {format} from './ursa/fmt.js'
 import version from './version.js'
 
-const command = process.env.NODE_ENV === 'coverage' ? './bin/test-run.sh' : './bin/run.js'
+export const ursaCommand = process.env.NODE_ENV === 'coverage' ? './bin/test-run.sh' : './bin/run.js'
 
 const arkTargets = new Set(['ark', 'js'])
 
 export function run(args: string[], options: ExecaOptions) {
   if (process.env.DEBUG) {
-    console.log(`run ${command} ${args} ${options.inputFile}`)
+    console.log(`run ${ursaCommand} ${args} ${options.inputFile}`)
   }
-  return execa(command, args, options)
+  return execa(ursaCommand, args, options)
 }
 
 function arkCompile(source: string) {
