@@ -91,7 +91,7 @@ fmtParser.add_argument('source', {metavar: 'FILE', help: 'source code to format'
 fmtParser.add_argument('--output', '-o', {metavar: 'FILE', help: 'output file [default: standard output]'})
 fmtParser.add_argument('--width', {metavar: 'COLUMNS', help: 'maximum desired width of formatted code'})
 fmtParser.add_argument('--indent', {metavar: 'STRING', help: 'indent string'})
-fmtParser.add_argument('--onelineFactor', {metavar: 'NUMBER', help: 'factor governing when expressions are wrapped (bigger means try to fit more complex expressions on one line)'})
+fmtParser.add_argument('--onelineFactor', {metavar: 'NUMBER', help: 'factor governing when expressions are wrapped (bigger means try to fit more complex expressions on one line) [default: 0]'})
 
 interface Args {
   // Global arguments
