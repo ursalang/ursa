@@ -72,7 +72,7 @@
     "coverage": "NODE_ENV=coverage c8 --extension .ts npm test",
     "loc": "cloc --exclude-ext=js --force-lang='JavaScript,ohm' --not-match-f='\\.test\\.ts|\\.ohm-bundle\\.d\\.ts|prelude.js*' src",
     "diff-check": "git diff --exit-code",
-    "prepublishOnly": "npm run diff-check && git push --all",
+    "prepublishOnly": "npm run diff-check && git push --all && npm run test-all",
     "postpublish": "git push --tags --no-verify && gh release create $(git describe) -t \"Release $(git describe)\"",
     "no-diff-or-untracked": "git diff --exit-code package.json src/ test/ || ( git ls-files --other --directory --exclude-standard | sed q1; exit 1 )"
   },
