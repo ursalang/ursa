@@ -1,6 +1,7 @@
 let fac = fn(n: Float): fn(f: Float): Void {
+  var tot = n
   fn(f: Float): Void {
-    n := n + f
+    tot := tot + f
   }
 }
 

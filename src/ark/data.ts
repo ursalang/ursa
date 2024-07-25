@@ -192,7 +192,7 @@ export class NativeAsyncFn extends ArkCallable {
 // }
 
 // export class ArkFieldType extends Ark {
-//   constructor(public var_: boolean, public type: ArkType) {
+//   constructor(public isVar: boolean, public type: ArkType) {
 //   super()
 //   }
 // }

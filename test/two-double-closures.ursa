@@ -1,5 +1,5 @@
 let newAccums = fn(): List<fn(x: Int): Void> {
-  let tot = 0
+  var tot = 0
   let l = [
     fn(x: Int): Void {
       tot := tot + x

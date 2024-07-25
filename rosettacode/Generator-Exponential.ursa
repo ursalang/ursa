@@ -1,5 +1,5 @@
 let count = gen() {
-    let n = 0
+    var n = 0
     loop {
         yield n
         n := n + 1
@@ -13,8 +13,8 @@ let powers = gen(m) {
 }
 
 let filtered = gen(s1, s2) {
-    let v = s1()
-    let f = s2()
+    var v = s1()
+    var f = s2()
     loop {
         if v > f {
             f := s2()

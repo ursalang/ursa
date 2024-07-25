@@ -1,5 +1,5 @@
 let sum = fn(m: Map<String, Int>): Int {
-  let tot = 0
+  var tot = 0
   let it = m.iter()
   loop {
     let l = it()

@@ -1,5 +1,5 @@
 let my_range = gen(n) {
-    let i = 0
+    var i = 0
     loop {
         i := i + 1
         if i <= n { yield i - 1 } else { return null }
@@ -19,7 +19,7 @@ print(h())
 print(h())
 
 let totalizer = gen() {
-    let i = 0
+    var i = 0
     loop {
         i := i + (yield i)
     }

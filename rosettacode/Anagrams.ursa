@@ -16,7 +16,7 @@ for word of words.iter() {
     anagrams.get(sorted).push(word)
 }
 
-let most_anagrams = 0
+var most_anagrams = 0
 for ana of anagrams.values() {
     if ana.len() > most_anagrams {most_anagrams := ana.len()}
 }

@@ -1,5 +1,5 @@
 let sum = fn(m) {
-  let tot = 0
+  var tot = 0
   for l of m.iter() {
     let k = l.get(0) and let v = l.get(1)
     print(k)

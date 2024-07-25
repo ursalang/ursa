@@ -1,5 +1,5 @@
---- src/grammar/ursa.ohm-bundle.d.ts	2024-07-19 21:51:27.549455392 +0100
-+++ src/grammar/ursa.ohm-bundle.d.part-patched.ts	2024-07-19 21:51:27.685456065 +0100
+--- src/grammar/ursa.ohm-bundle.d.ts	2024-07-25 19:26:08.992907449 +0100
++++ src/grammar/ursa.ohm-bundle.d.part-patched.ts	2024-07-25 19:26:09.128908027 +0100
 @@ -4,14 +4,33 @@
  import {
    BaseActionDict,

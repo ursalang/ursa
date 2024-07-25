@@ -1,5 +1,5 @@
 let f = fn(initial) {
-  let state = 0
+  var state = 0
   let ret = Object {
     set = fn(y) { state := y }
     get = fn() { state }

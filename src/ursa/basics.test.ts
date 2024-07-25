@@ -122,8 +122,19 @@ testGroup('return', [
 
 testGroup('let', [
   ['let a = 3; a', 3],
-  ['let b = 5; b := 7; b', 7],
+  ['var b = 5; b := 7; b', 7],
 ])
+
+test("Assignment to non-'var'", (t) => {
+  const error = t.throws(() => compile('let a = 5; a := 7'), {instanceOf: UrsaCompilerError})
+  t.not(error, undefined)
+  t.is(error.message, `\
+Line 1, col 12:
+> 1 | let a = 5; a := 7
+                 ^
+
+Cannot assign to non-'var'`)
+})
 
 testGroup('fn', [
   ['let f = fn(x: Int): Int {x + 1}; f(1)', 2],

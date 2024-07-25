@@ -1,4 +1,4 @@
-let tot = 0;
+var tot = 0;
 let accum = fn(x: Int): Void {
   tot := tot + x
 };

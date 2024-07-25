@@ -16,19 +16,23 @@ import {
   ArkExp, ArkLvalue, ArkIf, ArkAnd, ArkOr, ArkSequence, ArkLoop, ArkBreak, ArkContinue,
   ArkSet, ArkLocal, ArkCapture, ArkListLiteral, ArkObjectLiteral, ArkMapLiteral,
   ArkFn, ArkGenerator, ArkReturn, ArkYield,
-  ArkProperty, ArkLet, ArkCall, ArkLiteral, ArkBoundVar,
+  ArkProperty, ArkLet, ArkCall, ArkLiteral, ArkBoundVar, ArkNamedLoc,
 } from './code.js'
 import {expToInst} from './flatten.js'
 import {ArkState} from './interpreter.js'
 
 export class ArkCompilerError extends Error {}
 
+export class Location {
+  constructor(public name: string, public isVar: boolean) {}
+}
+
 export class Frame {
   constructor(
     // Locals are undefined between the point where they are allocated and
     // the point at which they are declared.
-    public locals: (string | undefined)[],
-    public captures: string[],
+    public locals: (Location | undefined)[],
+    public captures: Location[],
     public fnName?: string,
   ) {}
 }
@@ -43,7 +47,7 @@ export class Environment {
     return this.stack[0]
   }
 
-  push(items: (string | undefined)[]) {
+  push(items: (Location | undefined)[]) {
     return new Environment(
       [
         new Frame(
@@ -73,26 +77,29 @@ export function checkParamList(params: string[]): string[] {
   return params
 }
 
-function arkParamList(params: string[]): string[] {
+function arkParamList(params: [string, boolean][]): Location[] {
   for (const param of params) {
-    if (typeof param !== 'string') {
+    if (typeof param[0] !== 'string' || typeof param[1] !== 'boolean') {
       throw new ArkCompilerError('Bad type in parameter list')
     }
   }
-  return checkParamList(params)
+  checkParamList(params.map((p) => p[0]))
+  return params.map((p) => new Location(p[0], p[1]))
 }
 
-function arkBindingList(env: Environment, params: [string, unknown][]): ArkBoundVar[] {
+function arkBindingList(env: Environment, params: [string, boolean, unknown][]): ArkBoundVar[] {
   const bindings: ArkBoundVar[] = []
   for (const p of params) {
-    if (!(p instanceof Array) || p.length !== 2 || typeof p[0] !== 'string') {
+    if (!(p instanceof Array) || p.length !== 3 || typeof p[0] !== 'string' || typeof p[1] !== 'boolean') {
       throw new ArkCompilerError('invalid let variable binding')
     }
   }
-  const paramNames = arkParamList(params.map((p) => p[0]))
+  const paramLocations = arkParamList(params.map((p) => [p[0], p[1]]))
   const indexBase = env.top().locals.length
   for (const [i, p] of params.entries()) {
-    bindings.push(new ArkBoundVar(p[0], indexBase + i, doCompile(env.push(paramNames), p[1])))
+    bindings.push(
+      new ArkBoundVar(p[0], p[1], indexBase + i, doCompile(env.push(paramLocations), p[2])),
+    )
   }
   return bindings
 }
@@ -104,23 +111,27 @@ function listToVals(env: Environment, l: unknown[]): ArkExp[] {
 export function symRef(env: Environment, name: string): ArkLvalue {
   let lexp
   // Check whether the symbol is a local.
-  const j = env.top().locals.lastIndexOf(name)
+  const locals = env.top().locals
+  const j = locals.map((l) => l?.name).lastIndexOf(name)
   if (j !== -1) {
-    lexp = new ArkLocal(j, name)
+    lexp = new ArkLocal(j, name, locals[j]!.isVar)
   } else {
     // Otherwise, check if it's a capture.
     // Check whether we already have this capture.
-    const k = env.top().captures.lastIndexOf(name)
+    const captures = env.top().captures
+    const k = captures.map((c) => c.name).lastIndexOf(name)
     if (k !== -1) {
-      lexp = new ArkCapture(k, name)
+      lexp = new ArkCapture(k, name, captures[k].isVar)
     } else {
       // If not, see if it's on the stack to be captured.
       for (let i = 0; i < env.stack.length; i += 1) {
-        const j = env.stack[i].locals.lastIndexOf(name)
+        const locals = env.stack[i].locals
+        const j = locals.map((l) => l?.name).lastIndexOf(name)
         if (j !== -1) {
           const k = env.top().captures.length
-          lexp = new ArkCapture(k, name)
-          env.top().captures.push(name)
+          const isVar = locals[j]!.isVar
+          lexp = new ArkCapture(k, name, isVar)
+          env.top().captures.push(new Location(name, isVar))
           break
         }
       }
@@ -163,8 +174,11 @@ function doCompile(env: Environment, value: unknown): ArkExp {
           if (value.length !== 3 || !(value[1] instanceof Array)) {
             throw new ArkCompilerError("Invalid 'let'")
           }
-          const params = arkBindingList(env, value[1] as [string, unknown][])
-          const compiled = doCompile(env.push(params.map((p) => p.name)), value[2])
+          const params = arkBindingList(env, value[1] as [string, boolean, unknown][])
+          const compiled = doCompile(
+            env.push(params.map((p) => new Location(p.name, p.isVar))),
+            value[2],
+          )
           return new ArkLet(params, compiled)
         }
         case 'fn':
@@ -172,12 +186,12 @@ function doCompile(env: Environment, value: unknown): ArkExp {
           if (value.length !== 3 || !(value[1] instanceof Array)) {
             throw new ArkCompilerError(`Invalid '${value[0]}'`)
           }
-          const params = arkParamList(value[1] as string[])
+          const params = arkParamList(value[1].map((id) => [id, false]) as [string, boolean][])
           const innerEnv = env.pushFrame(new Frame(params, []))
           const compiled = doCompile(innerEnv, value[2])
           return new (value[0] === 'fn' ? ArkFn : ArkGenerator)(
-            params,
-            innerEnv.top().captures.map((c) => symRef(env, c) as ArkCapture),
+            params.map((p) => p.name),
+            innerEnv.top().captures.map((c) => symRef(env, c.name) as ArkCapture),
             compiled,
           )
         }
@@ -195,6 +209,9 @@ function doCompile(env: Environment, value: unknown): ArkExp {
           const compiledRef = doCompile(env, value[1])
           if (!(compiledRef instanceof ArkLvalue)) {
             throw new ArkCompilerError('Invalid lvalue')
+          }
+          if (compiledRef instanceof ArkNamedLoc && !compiledRef.isVar) {
+            throw new ArkCompilerError("Cannot assign to non-'var'")
           }
           const compiledVal = doCompile(env, value[2])
           return new ArkSet(compiledRef, compiledVal)

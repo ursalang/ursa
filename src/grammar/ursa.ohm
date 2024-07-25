@@ -124,7 +124,7 @@ Ursa {
     | Exp
 
   Lets = NonemptyListOf<Let, and>
-  Let = let Definition
+  Let = (let|var) Definition
 
   Use = use Path
 

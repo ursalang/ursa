@@ -1,5 +1,5 @@
-let total = 0;
-let i = 0;
+var total = 0;
+var i = 0;
 loop {
   i := i + 1;
   total := total + i;

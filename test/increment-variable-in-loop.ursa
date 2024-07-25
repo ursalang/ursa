@@ -1,5 +1,5 @@
 {
-  let a = 0;
+  var a = 0;
   loop {
     a := a + 1;
     if a == 3 {break a} else {a}

@@ -1,5 +1,5 @@
 // Ursa prelude.
-// © Reuben Thomas 2023-2024  
+// © Reuben Thomas 2023-2024
 // Released under the MIT license.
 
 use js.Math
@@ -32,7 +32,7 @@ Object {
 
   // Range iterator
   range = gen(n) {
-    let i = 0
+    var i = 0
     loop {
       if i == n { return null }
       yield i

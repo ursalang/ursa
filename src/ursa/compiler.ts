@@ -21,11 +21,11 @@ import {
   ArkSequence, ArkIf, ArkLoop, ArkAnd, ArkOr,
   ArkObjectLiteral, ArkListLiteral, ArkMapLiteral,
   ArkCall, ArkLet, ArkFn, ArkGenerator, ArkProperty, ArkSet, ArkReturn, ArkYield,
-  ArkBreak, ArkContinue, ArkAwait, ArkLaunch, ArkCapture, ArkFnType,
+  ArkBreak, ArkContinue, ArkAwait, ArkLaunch, ArkCapture, ArkFnType, ArkNamedLoc,
 } from '../ark/code.js'
 import {ArkState, ArkRuntimeError} from '../ark/interpreter.js'
 import {
-  ArkCompilerError, symRef, Frame, Environment, checkParamList,
+  ArkCompilerError, symRef, Frame, Environment, Location, checkParamList,
 } from '../ark/reader.js'
 
 type ParserOperations = {
@@ -186,14 +186,18 @@ semantics.addOperation<string>('toParam(a)', {
 semantics.addOperation<LetBinding>('toLet(a)', {
   Lets(lets) {
     const letIds: string[] = []
+    const letVars: boolean[] = []
     for (const l of (lets.asIteration().children)) {
       const ident = l.children[1].children[0].sourceString
+      const isVar = l.children[0].ctorName === 'var'
+      letVars.push(isVar)
       if (letIds.includes(ident)) {
         throw new UrsaCompilerError(this.source, `Duplicate identifier in let: ${ident}`)
       }
       letIds.push(ident)
     }
-    const innerEnv = this.args.a.env.push(letIds)
+    const locations = letIds.map((id, n) => new Location(id, letVars[n]))
+    const innerEnv = this.args.a.env.push(locations)
     const parsedLets = []
     for (const l of lets.asIteration().children) {
       const definition = l.children[1].toDefinition({...this.args.a, env: innerEnv})
@@ -202,7 +206,12 @@ semantics.addOperation<LetBinding>('toLet(a)', {
     const indexBase = this.args.a.env.top().locals.length
     return new LetBinding(
       parsedLets.map(
-        (def, index) => new ArkBoundVar(def.ident.sourceString, indexBase + index, def.exp),
+        (def, index) => new ArkBoundVar(
+          def.ident.sourceString,
+          letVars[index],
+          indexBase + index,
+          def.exp,
+        ),
       ),
     )
   },
@@ -211,13 +220,13 @@ semantics.addOperation<LetBinding>('toLet(a)', {
     const path = pathList.asIteration().children
     const ident = path[path.length - 1]
     // For path x.y.z, compile `let z = x.use("y", "z")`
-    const innerEnv = this.args.a.env.push([ident.sourceString])
+    const innerEnv = this.args.a.env.push([new Location(ident.sourceString, false)])
     const libValue = path[0].toExp({...this.args.a, env: innerEnv})
     const useProperty = addLoc(new ArkProperty(libValue, 'use'), this)
     const useCallArgs = path.slice(1).map((id) => new ArkLiteral(ArkString(id.sourceString)))
     const useCall = addLoc(new ArkCall(useProperty, useCallArgs), this)
     const index = this.args.a.env.top().locals.length
-    return new LetBinding([new ArkBoundVar(ident.sourceString, index, useCall)])
+    return new LetBinding([new ArkBoundVar(ident.sourceString, false, index, useCall)])
   },
 })
 
@@ -226,7 +235,9 @@ function makeSequence(a: ParserArgs, seq: ParserNode, exps: ParserNode[]): ArkEx
   for (const [i, exp] of exps.entries()) {
     if (exp.children[0].ctorName === 'Lets' || exp.children[0].ctorName === 'Use') {
       const compiledLet = exp.toLet(a)
-      const innerEnv = a.env.push(compiledLet.boundVars.map((bv) => bv.name))
+      const innerEnv = a.env.push(
+        compiledLet.boundVars.map((bv) => new Location(bv.name, bv.isVar)),
+      )
       let letBody: ArkExp
       if (i < exps.length - 1) {
         letBody = makeSequence({...a, env: innerEnv}, seq, exps.slice(i + 1))
@@ -306,7 +317,9 @@ semantics.addOperation<ArkExp>('toExp(a)', {
   Fn(type, body) {
     const fnType = type.toMethod(this.args.a)
     // TODO: Environment should contain typed params, not just strings
-    const innerEnv = this.args.a.env.pushFrame(new Frame(fnType.params, []))
+    const innerEnv = this.args.a.env.pushFrame(
+      new Frame(fnType.params.map((p) => new Location(p, false)), []),
+    )
     const compiledBody = body.toExp({
       env: innerEnv,
       inLoop: false,
@@ -317,7 +330,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     return addLoc(new fnType.Constructor(
       fnType.params,
       innerEnv.top().captures.map(
-        (c) => symRef(this.args.a.env, c) as ArkCapture,
+        (c) => symRef(this.args.a.env, c.name) as ArkCapture,
       ),
       compiledBody,
     ), this)
@@ -335,15 +348,15 @@ semantics.addOperation<ArkExp>('toExp(a)', {
 
   For(_for, ident, _of, iterator, body) {
     const forVar = ident.sourceString
-    const innerEnv = this.args.a.env.push(['_for'])
+    const innerEnv = this.args.a.env.push([new Location('_for', false)])
     const compiledIterator = iterator.toExp({...this.args.a, env: innerEnv})
-    const loopEnv = innerEnv.push([forVar])
+    const loopEnv = innerEnv.push([new Location(forVar, false)])
     const compiledForVar = symRef(loopEnv, forVar)
     const compiledForBody = body.toExp({...this.args.a, env: loopEnv, inLoop: true})
     const innerIndex = innerEnv.top().locals.length
     const loopBody = addLoc(
       new ArkLet(
-        [new ArkBoundVar(forVar, innerIndex, addLoc(new ArkCall(addLoc(symRef(loopEnv, '_for'), iterator), []), this))],
+        [new ArkBoundVar(forVar, false, innerIndex, addLoc(new ArkCall(addLoc(symRef(loopEnv, '_for'), iterator), []), this))],
         new ArkSequence([
           new ArkIf(
             addLoc(new ArkCall(new ArkProperty(compiledForVar, 'equals'), [new ArkLiteral(ArkNull())]), this),
@@ -356,7 +369,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     )
     const localsDepth = this.args.a.env.top().locals.length
     return addLoc(
-      new ArkLet([new ArkBoundVar('_for', localsDepth, compiledIterator)], new ArkLoop(loopBody, localsDepth + 1)),
+      new ArkLet([new ArkBoundVar('_for', false, localsDepth, compiledIterator)], new ArkLoop(loopBody, localsDepth + 1)),
       this,
     )
   },
@@ -519,6 +532,9 @@ semantics.addOperation<ArkExp>('toExp(a)', {
   Assignment_ass(lvalue, _ass, exp) {
     const compiledLvalue = lvalue.toLval(this.args.a)
     const compiledValue = exp.toExp(this.args.a)
+    if (compiledLvalue instanceof ArkNamedLoc && !compiledLvalue.isVar) {
+      throw new UrsaCompilerError(lvalue.source, "Cannot assign to non-'var'")
+    }
     return addLoc(new ArkSet(compiledLvalue, compiledValue), this)
   },
 

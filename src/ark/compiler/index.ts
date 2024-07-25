@@ -35,7 +35,7 @@ import {
 } from '../data.js'
 import {ArkExp} from '../code.js'
 import {debug} from '../util.js'
-import {Environment, Frame} from '../reader.js'
+import {Environment, Frame, Location} from '../reader.js'
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
@@ -144,12 +144,16 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
       } else if (inst instanceof ArkLaunchBlockOpenInst) {
         return sourceNode([letAssign(inst.matchingClose.id, 'new ArkPromise((async function() {')])
       } else if (inst instanceof ArkGeneratorBlockOpenInst) {
-        env = env.pushFrame(new Frame(inst.params, [], inst.name))
+        env = env.pushFrame(
+          new Frame(inst.params.map((p) => new Location(p, false)), [], inst.name),
+        )
         return sourceNode([
           letAssign(inst.matchingClose.id, `new NativeFn([${inst.params.map((p) => `'${p}'`).join(', ')}], function (${inst.params.join(', ')}) {\nconst gen = async function*() {`),
         ])
       } else if (inst instanceof ArkFnBlockOpenInst) {
-        env = env.pushFrame(new Frame(inst.params, [], inst.name))
+        env = env.pushFrame(
+          new Frame(inst.params.map((p) => new Location(p, false)), [], inst.name),
+        )
         return sourceNode([
           letAssign(inst.matchingClose.id, `new NativeFn([${inst.params.map((p) => `'${p}'`).join(', ')}], async function(${inst.params.join(', ')}) {`),
         ])

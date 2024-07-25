@@ -39,9 +39,9 @@ let clone_graph_without_edges = fn(graph, edges) {
     let ret = {}
     for key of graph.keys() {
         ret.set(key, [])
-        let is_empty = true
+        var is_empty = true
         for val of graph.get(key).iter() {
-            let should_add = true
+            var should_add = true
             for edge of edges.iter() {
                 if (key == edge.get(0) and val == edge.get(1)) or (key == edge.get(1) and val == edge.get(0)) {
                     should_add := false
@@ -64,7 +64,7 @@ let dfs = fn(node, graph, visited) {
     if visited.get(node) == true {
         return 0
     }
-    let new_nodes = 1
+    var new_nodes = 1
     visited.set(node, true)
     for child of graph.get(node).iter() {
         if visited.get(child) == null {

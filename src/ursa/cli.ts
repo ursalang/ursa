@@ -21,7 +21,7 @@ import {ArkExp, ArkLet} from '../ark/code.js'
 import {
   ArkState, pushLets,
 } from '../ark/interpreter.js'
-import {Environment, compile as arkCompile} from '../ark/reader.js'
+import {Environment, Location, compile as arkCompile} from '../ark/reader.js'
 import {serializeVal} from '../ark/serialize.js'
 import {runWithTraceback, compile as ursaCompile} from './compiler.js'
 import {format} from './fmt.js'
@@ -202,7 +202,7 @@ async function repl(args: Args): Promise<ArkVal> {
       const compiled = compile(args, line, env)
       // Handle new let bindings
       if (compiled instanceof ArkLet) {
-        env = env.push(compiled.boundVars.map((bv) => bv.name))
+        env = env.push(compiled.boundVars.map((bv) => new Location(bv.name, bv.isVar)))
         const flatBoundVars: [string, ArkInst][] = compiled.boundVars.map(
           (bv) => [bv.name, expToInst(bv.init)],
         )

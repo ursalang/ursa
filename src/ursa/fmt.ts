@@ -503,11 +503,11 @@ semantics.addOperation<Span>('fmt(a)', {
       [(a) => new ListSpan(fmtIter(a, lets), 'and', hSpan, {stringSep: ' '})],
     )
   },
-  Let(_let, definition) {
+  Let(let_, definition) {
     return tryFormats(
       this.args.a,
-      (a) => hSpan(['let', definition.fmt(a)]),
-      [(a) => vSpan(['let', definition.fmt(a)])],
+      (a) => hSpan([let_.ctorName, definition.fmt(a)]),
+      [(a) => vSpan([let_.ctorName, definition.fmt(a)])],
     )
   },
 
