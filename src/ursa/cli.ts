@@ -299,7 +299,10 @@ async function compileCommand(args: Args) {
   let output = ''
   if (args.target === 'ark') {
     if (args.executable) {
-      output += '#!/usr/bin/env -S ursa --syntax=json run\n'
+      if (path.basename(process.argv[1]) === 'cli.ts') {
+        throw new Error('Cannot create executable from test-run.sh')
+      }
+      output += `#!/usr/bin/env -S ${process.argv0} --no-warnings ${process.argv[1]} --syntax=json run\n`
     }
     output += serializeVal(exp)
   } else {

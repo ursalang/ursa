@@ -78,7 +78,7 @@ ursaTest('Anagrams', 'rosettacode/Anagrams', ['rosettacode/unixdict.txt'])
 test('Executable scripts', async (t) => {
   for (const target of ['ark', 'js']) {
     const tempExecFile = tmp.fileSync({discardDescriptor: true})
-    // t.teardown(() => tempExecFile.removeCallback())
+    t.teardown(() => tempExecFile.removeCallback())
     await execa(ursaCommand, [
       `--target=${target}`,
       'compile', '--executable', 'test/advent-of-code-2023-day-25.ursa',
