@@ -3,6 +3,11 @@
 // Released under the MIT license.
 
 import assert from 'assert'
+import {isGeneratorFunction} from 'util/types'
+
+import {
+  action, call, Operation, Reject, Resolve, sleep,
+} from 'effection'
 
 import {FsMap} from './fsmap.js'
 import programVersion from '../version.js'
@@ -147,8 +152,8 @@ export function ArkString(s: string) {
   return ConcreteInterned.value<ArkStringVal, string>(ArkStringVal, s)
 }
 
-export class ArkPromise extends ArkVal {
-  constructor(public promise: Promise<ArkVal>) {
+export class ArkOperation extends ArkVal {
+  constructor(public operation: Operation<ArkVal>) {
     super()
   }
 }
@@ -170,15 +175,35 @@ export abstract class ArkClosure extends ArkCallable {
 export abstract class ArkGeneratorClosure extends ArkClosure {}
 
 export class NativeFn extends ArkCallable {
-  constructor(params: string[], public body: (...args: ArkVal[]) => ArkVal) {
+  public body: (...args: ArkVal[]) => Operation<ArkVal>
+
+  constructor(
+    params: string[],
+    innerBody: (...args: ArkVal[]) => ArkVal | Operation<ArkVal>,
+  ) {
+    super(params)
+    if (isGeneratorFunction(innerBody)) {
+      this.body = innerBody as (...args: ArkVal[]) => Operation<ArkVal>
+    } else {
+      // eslint-disable-next-line require-yield
+      this.body = function* gen(...args: ArkVal[]) { return innerBody(...args) }
+    }
+  }
+}
+
+export class NativeOperation extends ArkCallable {
+  constructor(params: string[], public body: (...args: ArkVal[]) => Operation<ArkVal>) {
     super(params)
   }
 }
 
 // ts-unused-exports:disable-next-line
 export class NativeAsyncFn extends ArkCallable {
-  constructor(params: string[], public body: (...args: ArkVal[]) => Promise<ArkVal>) {
+  public body: (...args: ArkVal[]) => Operation<ArkVal>
+
+  constructor(params: string[], innerBody: (...args: ArkVal[]) => Promise<ArkVal>) {
     super(params)
+    this.body = (...args: ArkVal[]) => call(() => innerBody(...args))
   }
 }
 
@@ -366,17 +391,21 @@ export const globals = new ArkObject(new Map<string, ArkVal>([
     debug(obj)
     return ArkNull()
   })],
-  ['fs', new NativeFn(['path'], (path: ArkVal) => new NativeObject(new FsMap(toJs(path) as string)))],
-
-  ['Promise', new NativeAsyncFn(
+  ['fs', new NativeFn(['path'], (path: ArkVal) => new NativeObject(new FsMap((path as ArkStringVal).val)))],
+  ['sleep', new NativeOperation(['ms'], function* gen(ms: ArkVal) {
+    yield* sleep((ms as ArkNumberVal).val)
+    return ArkNull()
+  })],
+  ['action', new NativeFn(
     ['resolve', 'reject'],
-    (fn: ArkVal) => Promise.resolve(new ArkPromise(
-      new Promise(
-        toJs(fn) as
-        (resolve: (value: unknown) => void, reject: (reason?: unknown) => void) => void,
-      ).then((x) => fromJs(x)),
-    )),
+    function* gen(fn: ArkVal) {
+      const result = yield* action(
+        toJs(fn) as (resolve: Resolve<unknown>, reject: Reject) => Operation<void>,
+      )
+      return fromJs(result)
+    },
   )],
+  // FIXME: should be able to use js.fetch directly.
   ['fetch', new NativeAsyncFn(
     ['url', 'options'],
     async (url: ArkVal, options: ArkVal) => new NativeObject(

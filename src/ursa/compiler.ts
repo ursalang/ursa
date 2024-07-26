@@ -549,6 +549,10 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     return addLoc(new ArkYield(maybeVal(this.args.a, exp)), this)
   },
 
+  Exp_launch(_launch, exp) {
+    return addLoc(new ArkLaunch(exp.toExp(this.args.a)), this)
+  },
+
   Statement_break(_break, exp) {
     if (!this.args.a.inLoop) {
       throw new UrsaCompilerError(_break.source, 'break used outside a loop')
@@ -560,9 +564,6 @@ semantics.addOperation<ArkExp>('toExp(a)', {
       throw new UrsaCompilerError(_continue.source, 'continue used outside a loop')
     }
     return addLoc(new ArkContinue(), this)
-  },
-  Statement_launch(_await, exp) {
-    return addLoc(new ArkLaunch(exp.toExp(this.args.a)), this)
   },
   Statement_return(return_, exp) {
     if (!this.args.a.inFn) {

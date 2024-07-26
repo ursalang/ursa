@@ -10,8 +10,10 @@
   },
   "dependencies": {
     "@prettier/sync": "^0.5.2",
+    "@rollup/plugin-node-resolve": "^15.2.3",
     "@sc3d/stacktracey": "^2.1.9",
     "argparse": "^2.0.1",
+    "effection": "^3.0.3",
     "env-paths": "^3.0.0",
     "fs-extra": "^11.2.0",
     "get-source": "^2.0.12",
@@ -19,6 +21,7 @@
     "rollup": "^4.19.0",
     "source-map": "^0.7.4",
     "tildify": "^3.0.0",
+    "tmp": "^0.2.3",
     "tslib": "^2.6.3"
   },
   "devDependencies": {
@@ -39,7 +42,6 @@
     "eslint-config-airbnb-typescript": "^18.0.0",
     "execa": "^9.3.0",
     "pre-push": "^0.1.4",
-    "tmp": "^0.2.3",
     "tree-kill": "^1.2.2",
     "ts-node": "^10.9.2",
     "ts-unused-exports": "^10.1.0",
@@ -64,7 +66,7 @@
     "patch-diff-ohm": "patch -p0 --output=src/grammar/ursa.ohm-bundle.d.part-patched.ts < src/grammar/ursa.ohm-bundle.d.ts.diff",
     "patch-ohm": "npm run patch-diff-ohm && sed -e 's/this: NonterminalNode/this: ThisNode/' < src/grammar/ursa.ohm-bundle.d.part-patched.ts > src/grammar/ursa.ohm-bundle.d.ts",
     "generate": "npm run generate-only && npm run patch-ohm && mkdir -p lib/grammar/ && cp src/grammar/*ohm-bundle.js src/grammar/*ohm-bundle.d.ts lib/grammar/",
-    "pre-compile-prelude": "echo null > src/ark/prelude.json && echo 'new ArkObject(new Map())' > src/ark/compiler/prelude.js",
+    "pre-compile-prelude": "echo null > src/ark/prelude.json && echo '(function* gen() { return new ArkObject(new Map()) })' > src/ark/compiler/prelude.js",
     "update-ohm-patch": "npm run generate-only && npm run patch-diff-ohm && diff -u src/grammar/ursa.ohm-bundle.d.ts src/grammar/ursa.ohm-bundle.d.part-patched.ts > src/grammar/ursa.ohm-bundle.d.ts.diff; npm run patch-ohm",
     "compile-prelude": "npm run pre-compile-prelude && ./bin/test-run.sh compile --output=src/ark/prelude.json src/ursa/prelude.ursa && ./bin/test-run.sh --target=js compile --output=src/ark/compiler/prelude.js src/ursa/prelude.ursa",
     "test": "npm run generate && npm run build && ava 'src/**/basics.test.ts' 'src/**/examples.test.ts' 'src/**/cli.test.ts' 'src/**/fsmap.test.ts'",

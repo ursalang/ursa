@@ -1,8 +1,10 @@
 let f = fn(n) {
   for i of range(n) {
     print(n, i)
+    sleep(0)
   }
 }
 
-launch f(10)
-launch f(5)
+let fTask = launch f(10)
+let gTask = launch f(5)
+await gTask

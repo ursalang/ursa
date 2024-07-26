@@ -2,6 +2,9 @@
 // © Reuben Thomas 2023-2024
 // Released under the MIT license.
 
+import {
+  Operation, run, spawn,
+} from 'effection'
 import {Interval} from 'ohm-js'
 
 import {
@@ -15,8 +18,8 @@ import {
 } from './flatten.js'
 import {
   ArkAbstractObjectBase, ArkBoolean, ArkList, ArkMap, ArkNull, ArkNullVal,
-  ArkObject, ArkPromise, ArkUndefined, ArkVal, NativeAsyncFn, NativeFn,
-  ArkRef, ArkValRef,
+  ArkObject, ArkOperation, ArkUndefined, ArkVal, NativeAsyncFn, NativeFn,
+  NativeOperation, ArkRef, ArkValRef,
 } from './data.js'
 import {
   ArkCapture, ArkContinuation, ArkFlatClosure, ArkFlatGeneratorClosure,
@@ -101,6 +104,10 @@ function makeLocals(names: string[], vals: ArkVal[]): ArkRef[] {
 }
 
 async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
+  return run(() => doEvalFlat(outerArk))
+}
+
+function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
   let ark: ArkState | undefined = outerArk
   let inst = ark.inst
   let prevInst
@@ -157,9 +164,10 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
         ),
         ark.outerState,
       )
-      const result = Promise.resolve(new ArkPromise(evalFlat(innerArk)))
+      const operation = yield* spawn(() => doEvalFlat(innerArk))
+      const result = new ArkOperation(operation)
       mem.set(inst.id, result)
-      // The Promise becomes the result of the entire block.
+      // The ArkOperation becomes the result of the entire block.
       mem.set(inst.matchingClose.id, result)
       inst = inst.matchingClose.next
     } else if (inst instanceof ArkCallableBlockOpenInst) {
@@ -184,8 +192,9 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
     } else if (inst instanceof ArkBlockOpenInst) {
       inst = inst.next
     } else if (inst instanceof ArkAwaitInst) {
-      const promise = (mem.get(inst.argId)! as ArkPromise).promise
-      mem.set(inst.id, await promise)
+      const operation = (mem.get(inst.argId)! as ArkOperation).operation
+      const result = yield* operation
+      mem.set(inst.id, result)
       inst = inst.next
     } else if (inst instanceof ArkBreakInst) {
       const result = mem.get(inst.argId)!
@@ -273,11 +282,10 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
             inst = inst.next
           }
         }
-      } else if (callable instanceof NativeFn) {
-        mem.set(inst.id, callable.body(...args))
-        inst = inst.next
-      } else if (callable instanceof NativeAsyncFn) {
-        mem.set(inst.id, await callable.body(...args))
+      } else if (callable instanceof NativeFn
+        || callable instanceof NativeAsyncFn
+        || callable instanceof NativeOperation) {
+        mem.set(inst.id, yield* callable.body(...args))
         inst = inst.next
       } else {
         throw new ArkRuntimeError(ark, 'Invalid call', inst.sourceLoc)

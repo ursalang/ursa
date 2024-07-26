@@ -4,7 +4,7 @@
 
 * `Map` interface to internet.
 * Classes: properties, names for List and Map
-* Structured concurrency.
+* Structured concurrency: allow the declaration of new scopes, and to run a task in a new scope.
 * A generator in a comprehension gives a lazy list/map.
 
 ## Ark improvements

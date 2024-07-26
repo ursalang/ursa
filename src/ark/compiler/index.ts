@@ -7,6 +7,8 @@ import fs from 'fs'
 import path from 'path'
 import {fileURLToPath} from 'url'
 import util from 'util'
+
+import {Operation, run, spawn} from 'effection'
 import getSource from 'get-source'
 import {
   CodeWithSourceMap, Position, SourceMapConsumer,
@@ -31,7 +33,7 @@ import {
   globals, jsGlobals,
   ArkBoolean, ArkBooleanVal, ArkList, ArkMap, ArkNull,
   ArkNumber, ArkNullVal, ArkNumberVal, ArkObject, ArkString,
-  ArkStringVal, ArkUndefined, ArkVal, NativeFn, ArkPromise,
+  ArkStringVal, ArkUndefined, ArkVal, NativeFn, ArkOperation,
 } from '../data.js'
 import {ArkExp} from '../code.js'
 import {debug} from '../util.js'
@@ -44,11 +46,15 @@ class JsRuntimeError extends Error {}
 
 class UrsaStackTracey extends StackTracey {
   isThirdParty(path: string) {
-    return super.isThirdParty(path) || path.includes('ark/') || path.includes('ursa/') || path.includes('node:')
+    return super.isThirdParty(path)
+      || path.includes('ark/') || path.includes('ursa/')
+      || path.includes('effection/') || path.includes('deno.land/x/continuation@')
+      || path.includes('node:')
   }
 
   isClean(entry: Entry, index: number) {
-    return super.isClean(entry, index) && !entry.file.includes('node:')
+    return super.isClean(entry, index)
+      && !entry.file.includes('node:') && !(entry.callee === 'Generator.next')
   }
 }
 
@@ -57,22 +63,28 @@ export const preludeJs = fs.readFileSync(path.join(__dirname, 'prelude.js'), {en
 const prelude = await evalArkJs(preludeJs) as ArkObject
 prelude.properties.forEach((val, sym) => jsGlobals.set(sym, val))
 
-// runtimeContext records the values that are needed by JavaScript at
-// runtime, and prevents the TypeScript compiler throwing away their
-// imports.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const runtimeContext: Record<string, unknown> = {
+// Record internal values that are needed by JavaScript at runtime, and
+// prevent the TypeScript compiler throwing away their imports.
+export const runtimeContext: Record<string, unknown> = {
   ArkUndefined,
   ArkNull,
+  ArkNullVal,
   ArkBoolean,
   ArkNumber,
   ArkString,
   ArkObject,
   ArkList,
   ArkMap,
-  ArkPromise,
+  ArkOperation,
   NativeFn,
   jsGlobals,
+}
+
+// Record internal values that are needed by JavaScript at runtime, and
+// prevent the TypeScript compiler throwing away their imports.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const externalRuntimeContext: Record<string, unknown> = {
+  spawn,
 }
 
 function valToJs(val: ArkVal): string {
@@ -121,13 +133,13 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
         return sourceNode(letAssign(inst.id, valToJs(inst.val)))
       } else if (inst instanceof ArkLaunchBlockCloseInst) {
         return sourceNode([
-          `return ${inst.id.description!}\n`,
-          '})())\n',
+          `return ${inst.blockId.description!}\n`,
+          '})\n',
         ])
       } else if (inst instanceof ArkFnBlockCloseInst) {
         env = env.popFrame()
         if (inst.matchingOpen instanceof ArkGeneratorBlockOpenInst) {
-          return sourceNode(['}()\nreturn new NativeFn([\'x\'], async (x) => {\nconst {value, done} = await gen.next(x)\nreturn done ? ArkNull() : value\n})\n})\n'])
+          return sourceNode(['}()\nreturn new NativeFn([\'x\'], (x) => {\nconst {value, done} = gen.next(x)\nreturn done ? ArkNull() : value\n})\n})\n'])
         }
         return sourceNode(['})\n'])
       } else if (inst instanceof ArkIfBlockOpenInst) {
@@ -142,20 +154,20 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
       } else if (inst instanceof ArkLoopBlockOpenInst) {
         return sourceNode([letAssign(inst.matchingClose.id, 'ArkNull()'), 'for (;;) {\n'])
       } else if (inst instanceof ArkLaunchBlockOpenInst) {
-        return sourceNode([letAssign(inst.matchingClose.id, 'new ArkPromise((async function() {')])
+        return sourceNode([letAssign(inst.matchingClose.id, 'yield* spawn(function* () {')])
       } else if (inst instanceof ArkGeneratorBlockOpenInst) {
         env = env.pushFrame(
           new Frame(inst.params.map((p) => new Location(p, false)), [], inst.name),
         )
         return sourceNode([
-          letAssign(inst.matchingClose.id, `new NativeFn([${inst.params.map((p) => `'${p}'`).join(', ')}], function (${inst.params.join(', ')}) {\nconst gen = async function*() {`),
+          letAssign(inst.matchingClose.id, `new NativeFn([${inst.params.map((p) => `'${p}'`).join(', ')}], function (${inst.params.join(', ')}) {\nconst gen = function* () {`),
         ])
       } else if (inst instanceof ArkFnBlockOpenInst) {
         env = env.pushFrame(
           new Frame(inst.params.map((p) => new Location(p, false)), [], inst.name),
         )
         return sourceNode([
-          letAssign(inst.matchingClose.id, `new NativeFn([${inst.params.map((p) => `'${p}'`).join(', ')}], async function(${inst.params.join(', ')}) {`),
+          letAssign(inst.matchingClose.id, `new NativeFn([${inst.params.map((p) => `'${p}'`).join(', ')}], function* (${inst.params.join(', ')}) {`),
         ])
       } else if (inst instanceof ArkLetBlockOpenInst) {
         return sourceNode([
@@ -166,7 +178,7 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
       } else if (inst instanceof ArkBlockOpenInst) {
         return sourceNode([`let ${inst.matchingClose.id.description!}\n`, '{\n'])
       } else if (inst instanceof ArkAwaitInst) {
-        return sourceNode(letAssign(inst.id, `await ${inst.argId.description}.promise`))
+        return sourceNode(letAssign(inst.id, `yield* ${inst.argId.description}`))
       } else if (inst instanceof ArkBreakInst) {
         return sourceNode([`${assign(inst.argId.description!, inst.loopInst.matchingClose.id.description!)}\n`, 'break\n'])
       } else if (inst instanceof ArkContinueInst) {
@@ -178,7 +190,7 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
       } else if (inst instanceof ArkLetCopyInst) {
         return sourceNode(letAssign(inst.id, inst.argId.description!))
       } else if (inst instanceof ArkCallInst) {
-        return sourceNode(letAssign(inst.id, `await ${inst.fnId.description}.body(${inst.argIds.map((id) => id.description).join(', ')})`))
+        return sourceNode(letAssign(inst.id, `yield* ${inst.fnId.description}.body(${inst.argIds.map((id) => id.description).join(', ')})`))
       } else if (inst instanceof ArkSetInst) {
         return sourceNode([
           `if (${inst.lexpId.description} !== ArkUndefined && ${inst.lexpId.description}.constructor !== ArkNullVal && ${inst.valId.description}.constructor !== ${inst.lexpId.description}.constructor) {\n`,
@@ -222,11 +234,10 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
   }
 
   const sourceNode = new SourceNode(1, 1, 'src/ursa/flat-to-js.ts', [
-    // FIXME: work out how to eval ESM, so we can use top-level await.
     '"use strict";\n',
-    '(async () => {\n',
+    '(function* () {\n',
     instsToJs(insts),
-    `return ${insts.id.description}\n})()`,
+    `return ${insts.id.description}\n})`,
   ])
   const jsCode = sourceNode.toStringWithSourceMap({file: file ?? undefined})
   if (process.env.DEBUG) {
@@ -253,7 +264,8 @@ export async function evalArkJs(source: CodeWithSourceMap | string, file = '(Com
   }
   try {
     // eslint-disable-next-line no-eval
-    return await (eval(jsSource) as Promise<ArkVal>)
+    const gen = eval(jsSource) as () => Operation<ArkVal>
+    return await run<ArkVal>(gen)
   } catch (e) {
     assert(e instanceof Error)
     const dirtyStack = new UrsaStackTracey(e).withSources()
@@ -267,7 +279,7 @@ export async function evalArkJs(source: CodeWithSourceMap | string, file = '(Com
       const curFrame = stack.items[0]
       let prefix: string
       if (curFrame.line !== undefined) {
-        if (message.match('is not a function')) {
+        if (message.match('yield\\* \\(intermediate value\\)')) {
           const index = curFrame.column! - 1
           if (curFrame.sourceLine !== undefined && index < curFrame.sourceLine.length) {
             if (curFrame.sourceLine[index + 1] === '(') {

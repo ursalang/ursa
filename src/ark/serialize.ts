@@ -4,7 +4,7 @@
 
 import {
   globals, ArkVal,
-  ArkConcreteVal, ArkNull, ArkPromise, ArkList, ArkMap, ArkObject,
+  ArkConcreteVal, ArkNull, ArkOperation, ArkList, ArkMap, ArkObject,
   ArkUndefined, NativeObject,
 } from './data.js'
 import {
@@ -87,7 +87,7 @@ export function valToJs(val: ArkVal | ArkExp, externalSyms = globals) {
       return ['yield', doValToJs(val.exp)]
     } else if (val instanceof ArkReturn) {
       return ['return', doValToJs(val.exp)]
-    } else if (val instanceof ArkPromise) {
+    } else if (val instanceof ArkOperation) {
       // FIXME: Can we properly serialize a promise?
       return ['promise']
     } else if (val === ArkNull()) {

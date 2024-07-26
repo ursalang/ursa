@@ -471,6 +471,14 @@ semantics.addOperation<Span>('fmt(a)', {
     )
   },
 
+  Exp_launch(_launch, exp) {
+    return tryFormats(
+      this.args.a,
+      (a) => hSpan(['launch', exp.fmt(a)]),
+      [(a) => hSpan(['launch', exp.fmt(a)])],
+    )
+  },
+
   Statement_break(_break, exp) {
     return tryFormats(
       this.args.a,
@@ -480,13 +488,6 @@ semantics.addOperation<Span>('fmt(a)', {
   },
   Statement_continue(_continue) {
     return hSpan(['continue'])
-  },
-  Statement_launch(_await, exp) {
-    return tryFormats(
-      this.args.a,
-      (a) => hSpan(['launch', exp.fmt(a)]),
-      [(a) => hSpan(['launch', exp.fmt(a)])],
-    )
   },
   Statement_return(_return, exp) {
     return tryFormats(

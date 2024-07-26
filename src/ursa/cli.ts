@@ -11,6 +11,8 @@ import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
 import envPaths from 'env-paths'
 import tildify from 'tildify'
 import {rollup} from 'rollup'
+import {nodeResolve} from '@rollup/plugin-node-resolve'
+import tmp from 'tmp'
 
 import programVersion from '../version.js'
 import {debug} from '../ark/util.js'
@@ -25,7 +27,9 @@ import {Environment, Location, compile as arkCompile} from '../ark/reader.js'
 import {serializeVal} from '../ark/serialize.js'
 import {runWithTraceback, compile as ursaCompile} from './compiler.js'
 import {format} from './fmt.js'
-import {arkToJs, evalArkJs, preludeJs} from '../ark/compiler/index.js'
+import {
+  arkToJs, evalArkJs, preludeJs, runtimeContext,
+} from '../ark/compiler/index.js'
 import {ArkInst, expToInst} from '../ark/flatten.js'
 
 if (process.env.DEBUG) {
@@ -277,16 +281,19 @@ async function interactCommand(args: Args) {
   await repl(args)
 }
 
-async function buildRuntime() {
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  const __dirname = fileURLToPath(new URL('.', import.meta.url))
+async function buildRuntime(inputFile: string) {
   const bundle = await rollup({
-    input: path.join(__dirname, '../../lib/ark/data.js'),
+    input: inputFile,
     onwarn: () => {}, // Discard warnings from rollup
+    plugins: [nodeResolve()],
   })
   const result = await bundle.generate({})
   await bundle.close()
   return result.output[0].code
+}
+
+function recordKeys<K extends PropertyKey, T>(object: Record<K, T>) {
+  return Object.keys(object) as (K)[]
 }
 
 async function compileCommand(args: Args) {
@@ -305,18 +312,30 @@ async function compileCommand(args: Args) {
       output += `#!/usr/bin/env -S ${process.argv0} --no-warnings ${process.argv[1]} --syntax=json run\n`
     }
     output += serializeVal(exp)
-  } else {
-    if (args.executable) {
-      output += '#!/usr/bin/env -S node --experimental-default-type=module --\n'
-      output += await buildRuntime()
-      // Read prelude but elide the "use strict" line.
-      const prelude = preludeJs.slice(preludeJs.indexOf('\n') + 1)
-      output += `let prelude = await${prelude}
-prelude.properties.forEach((val, sym) => jsGlobals.set(sym, val))\n`
-      output += `jsGlobals.set('argv', new ArkList(
-  [ArkString(process.argv[1]), ...process.argv.slice(2).map((s) => ArkString(s))],
-))\n`
+  } else if (args.executable) {
+    // Read prelude but elide the "use strict" line.
+    const prelude = preludeJs.slice(preludeJs.indexOf('\n') + 1)
+    const names = []
+    for (const k of recordKeys<string, unknown>(runtimeContext)) {
+      names.push(k)
     }
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    const __dirname = fileURLToPath(new URL('.', import.meta.url))
+    output += `import {${names.join(', ')}} from '${path.join(__dirname, '../../lib/ark/data.js')}'\n`
+    output += `import {run, spawn} from '${path.join(__dirname, '../../node_modules/effection/esm/mod.js')}'\nlet prelude = ${prelude};
+(await (run(prelude))).properties.forEach((val, sym) => jsGlobals.set(sym, val))\n`
+    output += `jsGlobals.set('argv', new ArkList(
+  [ArkString(process.argv[1]), ...process.argv.slice(2).map((s) => ArkString(s))],
+));\n`
+    const code = arkToJs(exp, prog).code
+    const codeTail = code.slice(code.indexOf('\n') + 1)
+    output += `await run${codeTail}\n`
+    const tmpFile = tmp.fileSync()
+    fs.writeFileSync(tmpFile.name, output)
+    output = await buildRuntime(tmpFile.name)
+    tmpFile.removeCallback()
+    output = `#!/usr/bin/env -S node --experimental-default-type=module --\n${output}`
+  } else {
     output += arkToJs(exp, prog).code
   }
   fs.writeFileSync(outputFile, output)

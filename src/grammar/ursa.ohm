@@ -108,6 +108,7 @@ Ursa {
     | For
     | await Exp       -- await
     | yield Exp?      -- yield
+    | launch Exp      -- launch
     | LogicExp
 
   Assignment
@@ -119,7 +120,6 @@ Ursa {
     | Use
     | break Exp?      -- break
     | continue        -- continue
-    | launch Exp      -- launch
     | return Exp?     -- return
     | Exp
 
