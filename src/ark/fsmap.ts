@@ -12,19 +12,12 @@ export type ValueTree =
 export class FsMap {
   directory: string
 
-  // @param path directory path
-  // @param t table to merge with directory
-  // @return table bound to directory
   constructor(fspath: string) {
     if (!path.isAbsolute(fspath)) {
       fspath = path.join(process.cwd(), fspath)
     } else if (!fs.statSync(fspath).isDirectory()) {
       throw new Error(`\`${fspath}' does not exist or is not a directory`)
     }
-    // if (value instanceof ValueDirectory) {
-    //   // To match object semantics we'd hardlink, but that's not allowed for directories
-    //   fs.symlinkSync(value.directory, fspath)
-    // }
     this.directory = fspath
   }
 
