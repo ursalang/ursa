@@ -30,8 +30,7 @@ import {
   ArkSetInst, ArkSetPropertyInst,
 } from '../flatten.js'
 import {
-  globals, jsGlobals,
-  ArkBoolean, ArkBooleanVal, ArkList, ArkMap, ArkNull,
+  jsGlobals, ArkBoolean, ArkBooleanVal, ArkList, ArkMap, ArkNull,
   ArkNumber, ArkNullVal, ArkNumberVal, ArkObject, ArkString,
   ArkStringVal, ArkUndefined, ArkVal, NativeFn, ArkOperation,
 } from '../data.js'
@@ -87,24 +86,6 @@ const externalRuntimeContext: Record<string, unknown> = {
   spawn,
 }
 
-function valToJs(val: ArkVal): string {
-  if (val instanceof ArkNullVal) {
-    return 'ArkNull()'
-  } else if (val instanceof ArkBooleanVal) {
-    return `ArkBoolean(${val.val})`
-  } else if (val instanceof ArkNumberVal) {
-    return `ArkNumber(${val.val})`
-  } else if (val instanceof ArkStringVal) {
-    return `ArkString(${util.inspect(val.val)})`
-  } else if (val === globals) {
-    // FIXME: We should detect 'externalSyms', not 'jsGlobals'.
-    return 'jsGlobals'
-  } else {
-    debug(val)
-    throw new Error('flat-to-js.valToJs: unknown ArkVal')
-  }
-}
-
 function assign(src: string, dest: string) {
   return `${dest} = ${src}`
 }
@@ -124,6 +105,22 @@ function sourceLocToLineAndCol(sourceLoc?: Interval): [number | null, number | n
 export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithSourceMap {
   function instsToJs(insts: ArkInsts): SourceNode {
     let env = new Environment()
+    function valToJs(val: ArkVal): string {
+      if (val instanceof ArkNullVal) {
+        return 'ArkNull()'
+      } else if (val instanceof ArkBooleanVal) {
+        return `ArkBoolean(${val.val})`
+      } else if (val instanceof ArkNumberVal) {
+        return `ArkNumber(${val.val})`
+      } else if (val instanceof ArkStringVal) {
+        return `ArkString(${util.inspect(val.val)})`
+      } else if (val === env.externalSyms) {
+        return 'jsGlobals'
+      } else {
+        debug(val)
+        throw new Error('flat-to-js.valToJs: unknown ArkVal')
+      }
+    }
     function instToJs(inst: ArkInst): SourceNode {
       const [line, col] = sourceLocToLineAndCol(inst.sourceLoc)
       function sourceNode(stmt: string | SourceNode | (string | SourceNode)[]) {
