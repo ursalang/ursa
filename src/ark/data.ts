@@ -405,13 +405,6 @@ export const globals = new ArkObject(new Map<string, ArkVal>([
       return fromJs(result)
     },
   )],
-  // FIXME: should be able to use js.fetch directly.
-  ['fetch', new NativeAsyncFn(
-    ['url', 'options'],
-    async (url: ArkVal, options: ArkVal) => new NativeObject(
-      await fetch((url as ArkStringVal).val, toJs(options as ArkObject) as RequestInit),
-    ),
-  )],
 
   // JavaScript bindings—globals (with "use").
   ['js', new ArkObject(new Map([[

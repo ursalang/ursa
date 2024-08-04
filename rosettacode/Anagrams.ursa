@@ -1,4 +1,5 @@
 // Rosetta Code version fetches the text from the internet
+// use js.fetch
 // let text = fetch("http://wiki.puzzlers.org/pub/wordlists/unixdict.txt").text()
 
 // We fetch the text from a local file to make the tests easier to run
