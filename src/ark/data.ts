@@ -3,7 +3,6 @@
 // Released under the MIT license.
 
 import assert from 'assert'
-import {isGeneratorFunction} from 'util/types'
 
 import {
   action, call, Operation, Reject, Resolve, sleep,
@@ -12,6 +11,13 @@ import {
 import {FsMap} from './fsmap.js'
 import programVersion from '../version.js'
 import {debug} from './util.js'
+
+// A hack that works for us, as browsers do not have util/types library, and
+// is-generator-function doesn't play nice with rollup.
+function isGeneratorFunction(obj: object) {
+  const constructor = obj.constructor
+  return constructor !== undefined && constructor.name === 'GeneratorFunction'
+}
 
 export class ArkVal {}
 
@@ -186,7 +192,9 @@ export class NativeFn extends ArkCallable {
       this.body = innerBody as (...args: ArkVal[]) => Operation<ArkVal>
     } else {
       // eslint-disable-next-line require-yield
-      this.body = function* gen(...args: ArkVal[]) { return innerBody(...args) }
+      this.body = function* gen(...args: ArkVal[]) {
+        return innerBody(...args)
+      }
     }
   }
 }
