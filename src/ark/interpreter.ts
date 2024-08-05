@@ -240,7 +240,7 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
         const result = new ArkContinuation(new ArkState(
           callable.body,
           new ArkFrame(
-            makeLocals(callable.params, inst.argIds.map((id) => mem.get(id)!)),
+            makeLocals(callable.params, args),
             callable.captures,
             new Map(),
             new ArkFrameDebugInfo(inst.name, inst.sourceLoc),
@@ -254,7 +254,7 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
         ark = new ArkState(
           callable.body,
           new ArkFrame(
-            makeLocals(callable.params, inst.argIds.map((id) => mem.get(id)!)),
+            makeLocals(callable.params, args),
             callable.captures,
             new Map(),
             new ArkFrameDebugInfo(inst.name, inst.sourceLoc),
@@ -267,7 +267,7 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
           mem.set(inst.id, ArkNull())
           inst = inst.next
         } else {
-          callable.state.frame.memory.set(callable.state.inst!.id, mem.get(inst.argIds[0])!)
+          callable.state.frame.memory.set(callable.state.inst!.id, args[0])
           ark.inst = inst
           callable.state.outerState = ark
           ark = callable.state
