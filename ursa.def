@@ -1,0 +1,8 @@
+# Ursa language definition for cloc
+Ursa
+    filter rm_comments_in_strings " /* */
+    filter rm_comments_in_strings " //
+    filter call_regexp_common C++
+    extension ursa
+    3rd_gen_scale 2.00
+    end_of_line_continuation \\$

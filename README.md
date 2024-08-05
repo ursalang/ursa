@@ -40,7 +40,13 @@ For the Ursa front-end:
 ursa --help
 ```
 
-For the language, see the [Ursalang web site](https://ursalang.github.io).
+For the language and editor support, see the [Ursalang web site](https://ursalang.github.io).
+
+Code-counting support is available for [cloc](https://github.com/AlDanial/cloc) in the file `ursa.def`. Use as follows:
+
+```sh
+cloc --read-lang-def=/path/to/ursa.def FILE-OR-DIRECTORY
+```
 
 ## Development
 
