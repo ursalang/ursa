@@ -3,7 +3,7 @@
 // Released under the MIT license.
 
 import {
-  Operation, run, spawn,
+  Instruction, Operation, run, spawn,
 } from 'effection'
 import {Interval} from 'ohm-js'
 
@@ -19,7 +19,7 @@ import {
 import {
   ArkAbstractObjectBase, ArkBoolean, ArkList, ArkMap, ArkNull, ArkNullVal,
   ArkObject, ArkOperation, ArkUndefined, ArkVal, NativeAsyncFn, NativeFn,
-  NativeOperation, ArkRef, ArkValRef, ArkClosure,
+  NativeOperation, ArkRef, ArkValRef, ArkClosure, ArkCallable,
 } from './data.js'
 import {
   ArkCapture, ArkContinuation, ArkLocal, ArkNamedLoc,
@@ -115,6 +115,69 @@ function makeLocals(names: string[], vals: ArkVal[]): ArkRef[] {
 
 async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
   return run(() => doEvalFlat(outerArk))
+}
+
+function* call(
+  ark: ArkState,
+  inst: ArkCallInst,
+  callable: ArkCallable,
+  args: ArkVal[],
+): Generator<Instruction, [ArkState, ArkInst | undefined]> {
+  if (callable instanceof ArkFlatGeneratorClosure) {
+    const result = new ArkContinuation(new ArkState(
+      callable.body,
+      new ArkFrame(
+        makeLocals(callable.params, args),
+        callable.captures,
+        new Map(),
+        new ArkFrameDebugInfo(inst.name, inst.sourceLoc),
+      ),
+      ark,
+    ))
+    ark.frame.memory.set(inst.id, result)
+    return [ark, inst.next]
+  } else if (callable instanceof ArkFlatClosure) {
+    ark.inst = inst
+    ark = new ArkState(
+      callable.body,
+      new ArkFrame(
+        makeLocals(callable.params, args),
+        callable.captures,
+        new Map(),
+        new ArkFrameDebugInfo(inst.name, inst.sourceLoc),
+      ),
+      ark,
+    )
+    return [ark, ark.inst]
+  } else if (callable instanceof ArkContinuation) {
+    if (callable.done) {
+      ark.frame.memory.set(inst.id, ArkNull())
+      return [ark, inst.next]
+    } else {
+      callable.state.frame.memory.set(callable.state.inst!.id, args[0])
+      ark.inst = inst
+      callable.state.outerState = ark
+      ark = callable.state
+      if (ark.continuation === undefined && inst.argIds.length > 0) {
+        throw new ArkRuntimeError(ark, 'No argument allowed to initial generator invocation', inst.sourceLoc)
+      }
+      ark.continuation = callable
+      let nextInst = ark.inst
+      // If we're resuming, 'ark.inst' pointed to the ArkYieldInst so we can
+      // set its result, so we need to advance to the next instruction.
+      if (nextInst instanceof ArkYieldInst) {
+        nextInst = nextInst.next
+      }
+      return [ark, nextInst]
+    }
+  } else if (callable instanceof NativeFn
+    || callable instanceof NativeAsyncFn
+    || callable instanceof NativeOperation) {
+    ark.frame.memory.set(inst.id, yield* callable.body(...args))
+    return [ark, inst.next]
+  } else {
+    throw new ArkRuntimeError(ark, 'Invalid call', inst.sourceLoc)
+  }
 }
 
 function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
@@ -244,62 +307,9 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
       prevInst = caller
       ark.frame.memory.set(caller.id, result)
     } else if (inst instanceof ArkCallInst) {
-      const args = inst.argIds.map((id) => mem.get(id)!)
-      const callable: ArkVal = mem.get(inst.fnId)!
-      if (callable instanceof ArkFlatGeneratorClosure) {
-        const result = new ArkContinuation(new ArkState(
-          callable.body,
-          new ArkFrame(
-            makeLocals(callable.params, args),
-            callable.captures,
-            new Map(),
-            new ArkFrameDebugInfo(inst.name, inst.sourceLoc),
-          ),
-          ark,
-        ))
-        mem.set(inst.id, result)
-        inst = inst.next
-      } else if (callable instanceof ArkFlatClosure) {
-        ark.inst = inst
-        ark = new ArkState(
-          callable.body,
-          new ArkFrame(
-            makeLocals(callable.params, args),
-            callable.captures,
-            new Map(),
-            new ArkFrameDebugInfo(inst.name, inst.sourceLoc),
-          ),
-          ark,
-        )
-        inst = ark.inst
-      } else if (callable instanceof ArkContinuation) {
-        if (callable.done) {
-          mem.set(inst.id, ArkNull())
-          inst = inst.next
-        } else {
-          callable.state.frame.memory.set(callable.state.inst!.id, args[0])
-          ark.inst = inst
-          callable.state.outerState = ark
-          ark = callable.state
-          if (ark.continuation === undefined && inst.argIds.length > 0) {
-            throw new ArkRuntimeError(ark, 'No argument allowed to initial generator invocation', inst.sourceLoc)
-          }
-          ark.continuation = callable
-          inst = ark.inst
-          // If we're resuming, 'inst' pointed to the ArkYieldInst so we can
-          // set its result, so we need to advance to the next instruction.
-          if (inst instanceof ArkYieldInst) {
-            inst = inst.next
-          }
-        }
-      } else if (callable instanceof NativeFn
-        || callable instanceof NativeAsyncFn
-        || callable instanceof NativeOperation) {
-        mem.set(inst.id, yield* callable.body(...args))
-        inst = inst.next
-      } else {
-        throw new ArkRuntimeError(ark, 'Invalid call', inst.sourceLoc)
-      }
+      const callable = mem.get(inst.fnId)! as ArkCallable
+      const args = inst.argIds.map((id) => mem.get(id)!);
+      [ark, inst] = yield* call(ark, inst, callable, args)
     } else if (inst instanceof ArkSetNamedLocInst) {
       const result = mem.get(inst.valId)!
       let ref: ArkRef
