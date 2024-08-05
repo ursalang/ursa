@@ -93,6 +93,12 @@ export class ArkCall extends ArkExp {
   }
 }
 
+export class ArkInvoke extends ArkExp {
+  constructor(public obj: ArkExp, public prop: string, public args: ArkExp[]) {
+    super()
+  }
+}
+
 export abstract class ArkLvalue extends ArkExp {}
 
 export abstract class ArkNamedLoc extends ArkLvalue {

@@ -9,7 +9,7 @@ import {
 } from './data.js'
 import {
   ArkExp, ArkSequence,
-  ArkAnd, ArkOr, ArkIf, ArkLoop, ArkBreak, ArkContinue,
+  ArkAnd, ArkOr, ArkIf, ArkLoop, ArkBreak, ArkContinue, ArkInvoke,
   ArkSet, ArkLet, ArkCall, ArkFn, ArkGenerator, ArkReturn, ArkProperty,
   ArkLiteral, ArkListLiteral, ArkMapLiteral, ArkObjectLiteral, ArkYield,
 } from './code.js'
@@ -53,6 +53,8 @@ export function valToJs(val: ArkVal | ArkExp, externalSyms = globals) {
       return ['let', [...val.boundVars.map((bv) => [bv.name, bv.isVar, doValToJs(bv.init)])], doValToJs(val.body)]
     } else if (val instanceof ArkCall) {
       return [doValToJs(val.fn), ...val.args.map(doValToJs)]
+    } else if (val instanceof ArkInvoke) {
+      return ['invoke', doValToJs(val.obj), val.prop, ...val.args.map(doValToJs)]
     } else if (val instanceof ArkSet) {
       return ['set', doValToJs(val.lexp), doValToJs(val.exp)]
     } else if (val instanceof ArkProperty) {

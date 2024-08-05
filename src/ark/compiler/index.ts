@@ -22,8 +22,9 @@ import {
   expToInsts, ArkInsts,
   ArkInst, ArkAwaitInst,
   ArkBlockCloseInst, ArkBlockOpenInst, ArkIfBlockOpenInst, ArkLoopBlockOpenInst,
-  ArkBreakInst, ArkCallInst, ArkContinueInst, ArkElseBlockInst, ArkElseBlockCloseInst,
-  ArkFnBlockOpenInst, ArkFnBlockCloseInst, ArkGeneratorBlockOpenInst, ArkLetCopyInst,
+  ArkBreakInst, ArkCallInst, ArkInvokeInst, ArkContinueInst,
+  ArkElseBlockInst, ArkElseBlockCloseInst, ArkFnBlockOpenInst, ArkFnBlockCloseInst,
+  ArkGeneratorBlockOpenInst, ArkLetCopyInst,
   ArkLaunchBlockOpenInst, ArkLaunchBlockCloseInst, ArkLetBlockOpenInst,
   ArkLocalInst, ArkCaptureInst, ArkListLiteralInst, ArkLiteralInst, ArkMapLiteralInst,
   ArkObjectLiteralInst, ArkPropertyInst, ArkReturnInst, ArkYieldInst,
@@ -188,6 +189,8 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
         return sourceNode(letAssign(inst.id, inst.argId.description!))
       } else if (inst instanceof ArkCallInst) {
         return sourceNode(letAssign(inst.id, `yield* ${inst.fnId.description}.body(${inst.argIds.map((id) => id.description).join(', ')})`))
+      } else if (inst instanceof ArkInvokeInst) {
+        return sourceNode(letAssign(inst.id, `yield* ${inst.objId.description}.get('${inst.prop}').body(${inst.argIds.map((id) => id.description).join(', ')})`))
       } else if (inst instanceof ArkSetNamedLocInst) {
         return sourceNode([
           `if (${inst.lexpId.description} !== ArkUndefined && ${inst.lexpId.description}.constructor !== ArkNullVal && ${inst.valId.description}.constructor !== ${inst.lexpId.description}.constructor) {\n`,

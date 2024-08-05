@@ -7,9 +7,9 @@ import {Interval} from 'ohm-js'
 
 import {
   ArkAnd, ArkAwait, ArkBreak, ArkCall, ArkCapture, ArkContinue, ArkDebugInfo,
-  ArkExp, ArkFn, ArkGenerator, ArkIf, ArkLaunch, ArkLet, ArkListLiteral, ArkLiteral,
-  ArkLocal, ArkLoop, ArkMapLiteral, ArkNamedLoc, ArkObjectLiteral,
-  ArkOr, ArkProperty, ArkReturn, ArkSequence, ArkSet, ArkYield,
+  ArkExp, ArkFn, ArkGenerator, ArkIf, ArkInvoke, ArkLaunch, ArkLet,
+  ArkListLiteral, ArkLiteral, ArkLocal, ArkLoop, ArkMapLiteral, ArkNamedLoc,
+  ArkObjectLiteral, ArkOr, ArkProperty, ArkReturn, ArkSequence, ArkSet, ArkYield,
 } from './code.js'
 import {ArkBoolean, ArkNull, ArkVal} from './data.js'
 
@@ -233,6 +233,18 @@ export class ArkCallInst extends ArkInst {
   }
 }
 
+export class ArkInvokeInst extends ArkInst {
+  constructor(
+    sourceLoc: Interval | undefined,
+    public objId: symbol,
+    public prop: string,
+    public argIds: symbol[],
+    public name?: string,
+  ) {
+    super(sourceLoc)
+  }
+}
+
 export class ArkSetNamedLocInst extends ArkInst {
   constructor(
     sourceLoc: Interval | undefined,
@@ -350,6 +362,15 @@ export function expToInsts(
       ...argInsts.map((i) => i.insts).flat(),
       ...fnInsts.insts,
       new ArkCallInst(exp.fn.sourceLoc, fnInsts.id, argIds, exp.fn.debug.name),
+    ])
+  } else if (exp instanceof ArkInvoke) {
+    const argInsts = exp.args.map((exp) => expToInsts(exp, innerLoop, innerFn))
+    const argIds = argInsts.map((insts) => insts.id)
+    const objInsts = expToInsts(exp.obj, innerLoop, innerFn)
+    return new ArkInsts([
+      ...argInsts.map((i) => i.insts).flat(),
+      ...objInsts.insts,
+      new ArkInvokeInst(exp.obj.sourceLoc, objInsts.id, exp.prop, argIds, `${exp.obj.debug.name}.exp.prop`),
     ])
   } else if (exp instanceof ArkSet) {
     const insts = expToInsts(exp.exp, innerLoop, innerFn)

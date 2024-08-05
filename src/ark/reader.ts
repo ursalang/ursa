@@ -16,7 +16,7 @@ import {
   ArkExp, ArkLvalue, ArkIf, ArkAnd, ArkOr, ArkSequence, ArkLoop, ArkBreak, ArkContinue,
   ArkSet, ArkLocal, ArkCapture, ArkListLiteral, ArkObjectLiteral, ArkMapLiteral,
   ArkFn, ArkGenerator, ArkReturn, ArkYield,
-  ArkProperty, ArkLet, ArkCall, ArkLiteral, ArkBoundVar, ArkNamedLoc,
+  ArkProperty, ArkLet, ArkCall, ArkInvoke, ArkLiteral, ArkBoundVar, ArkNamedLoc,
 } from './code.js'
 import {expToInst} from './flatten.js'
 import {ArkState} from './interpreter.js'
@@ -299,6 +299,14 @@ function doCompile(env: Environment, value: unknown): ArkExp {
             return new Constructor(compiledBody)
           }
           return new Constructor()
+        }
+        case 'invoke': {
+          if (value.length < 3 || typeof value[2] !== 'string') {
+            throw new ArkCompilerError("Invalid 'invoke'")
+          }
+          const compiledObj = doCompile(env, value[1])
+          const args = listToVals(env, value.slice(3))
+          return new ArkInvoke(compiledObj, value[2], args)
         }
         default: {
           const compiledFn = doCompile(env, value[0])

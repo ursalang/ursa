@@ -10,7 +10,7 @@ import {Interval} from 'ohm-js'
 import {
   ArkAwaitInst, ArkBlockCloseInst, ArkBlockOpenInst, ArkBreakInst, ArkCallableBlockOpenInst,
   ArkCallInst, ArkCaptureInst, ArkContinueInst, ArkElseBlockCloseInst, ArkElseBlockInst,
-  ArkFnBlockOpenInst, ArkGeneratorBlockOpenInst, ArkIfBlockOpenInst, ArkInst,
+  ArkFnBlockOpenInst, ArkGeneratorBlockOpenInst, ArkIfBlockOpenInst, ArkInst, ArkInvokeInst,
   ArkLaunchBlockCloseInst, ArkLaunchBlockOpenInst, ArkLetBlockCloseInst, ArkLetBlockOpenInst,
   ArkLetCopyInst, ArkListLiteralInst, ArkLiteralInst, ArkLocalInst, ArkLoopBlockCloseInst,
   ArkLoopBlockOpenInst, ArkMapLiteralInst, ArkObjectLiteralInst, ArkPropertyInst, ArkReturnInst,
@@ -119,7 +119,7 @@ async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
 
 function* call(
   ark: ArkState,
-  inst: ArkCallInst,
+  inst: ArkCallInst | ArkInvokeInst,
   callable: ArkCallable,
   args: ArkVal[],
 ): Generator<Instruction, [ArkState, ArkInst | undefined]> {
@@ -310,6 +310,17 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
       const callable = mem.get(inst.fnId)! as ArkCallable
       const args = inst.argIds.map((id) => mem.get(id)!);
       [ark, inst] = yield* call(ark, inst, callable, args)
+    } else if (inst instanceof ArkInvokeInst) {
+      const obj = mem.get(inst.objId)!
+      if (!(obj instanceof ArkAbstractObjectBase)) {
+        throw new ArkRuntimeError(ark, 'Invalid object', inst.sourceLoc)
+      }
+      const method = obj.get(inst.prop) as ArkCallable
+      if (method === ArkUndefined) {
+        throw new ArkRuntimeError(ark, 'Invalid property', inst.sourceLoc)
+      }
+      const args = inst.argIds.map((id) => mem.get(id)!);
+      [ark, inst] = yield* call(ark, inst, method, args)
     } else if (inst instanceof ArkSetNamedLocInst) {
       const result = mem.get(inst.valId)!
       let ref: ArkRef
