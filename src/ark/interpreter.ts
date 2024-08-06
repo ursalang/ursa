@@ -19,11 +19,10 @@ import {
 import {
   ArkAbstractObjectBase, ArkBoolean, ArkList, ArkMap, ArkNull, ArkNullVal,
   ArkObject, ArkOperation, ArkUndefined, ArkVal, NativeAsyncFn, NativeFn,
-  NativeOperation, ArkRef, ArkValRef,
+  NativeOperation, ArkRef, ArkValRef, ArkClosure,
 } from './data.js'
 import {
-  ArkCapture, ArkContinuation, ArkFlatClosure, ArkFlatGeneratorClosure,
-  ArkLocal, ArkNamedLoc,
+  ArkCapture, ArkContinuation, ArkLocal, ArkNamedLoc,
 } from './code.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -85,6 +84,17 @@ export class ArkRuntimeError extends Error {
     super()
   }
 }
+
+class ArkFlatClosure extends ArkClosure {
+  constructor(params: string[], captures: ArkRef[], public body: ArkInst) {
+    super(params, captures)
+  }
+
+  async call(locals: ArkValRef[]) {
+    return callFlat(this, locals)
+  }
+}
+class ArkFlatGeneratorClosure extends ArkFlatClosure {}
 
 function evalRef(frame: ArkFrame, lexp: ArkNamedLoc): ArkRef {
   if (lexp instanceof ArkLocal) {
@@ -382,7 +392,7 @@ export async function pushLets(ark: ArkState, boundVars: [string, ArkInst][]) {
   return lets.length
 }
 
-export async function callFlat(callable: ArkFlatClosure, locals: ArkValRef[]): Promise<ArkVal> {
+async function callFlat(callable: ArkFlatClosure, locals: ArkValRef[]): Promise<ArkVal> {
   const ark = new ArkState(callable.body, new ArkFrame(locals, callable.captures))
   return evalFlat(ark)
 }

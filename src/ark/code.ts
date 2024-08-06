@@ -5,10 +5,9 @@
 import {Interval} from 'ohm-js'
 
 import {
-  ArkCallable, ArkClosure, ArkNull, ArkRef, ArkVal, ArkValRef,
+  ArkCallable, ArkNull, ArkVal,
 } from './data.js'
-import {type ArkInst} from './flatten.js'
-import {type ArkState, callFlat} from './interpreter.js'
+import {type ArkState} from './interpreter.js'
 
 export class ArkDebugInfo {
   uid: number | undefined
@@ -68,17 +67,6 @@ export class ArkReturn extends ArkExp {
 }
 
 export class ArkYield extends ArkReturn {}
-
-export class ArkFlatClosure extends ArkClosure {
-  constructor(params: string[], captures: ArkRef[], public body: ArkInst) {
-    super(params, captures)
-  }
-
-  async call(locals: ArkValRef[]) {
-    return callFlat(this, locals)
-  }
-}
-export class ArkFlatGeneratorClosure extends ArkFlatClosure {}
 
 export class ArkContinuation extends ArkCallable {
   public done = false
