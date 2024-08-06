@@ -233,19 +233,14 @@ export class ArkCallInst extends ArkInst {
   }
 }
 
-export class ArkSetInst extends ArkInst {
-  constructor(sourceLoc: Interval | undefined, public lexpId: symbol, public valId: symbol) {
-    super(sourceLoc)
-  }
-}
-export class ArkSetNamedLocInst extends ArkSetInst {
+export class ArkSetNamedLocInst extends ArkInst {
   constructor(
     sourceLoc: Interval | undefined,
-    lexpId: symbol,
+    public lexpId: symbol,
     public lexpIndex: number,
-    valId: symbol,
+    public valId: symbol,
   ) {
-    super(sourceLoc, lexpId, valId)
+    super(sourceLoc)
   }
 }
 export class ArkSetLocalInst extends ArkSetNamedLocInst {}

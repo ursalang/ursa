@@ -27,7 +27,7 @@ import {
   ArkLaunchBlockOpenInst, ArkLaunchBlockCloseInst, ArkLetBlockOpenInst,
   ArkLocalInst, ArkCaptureInst, ArkListLiteralInst, ArkLiteralInst, ArkMapLiteralInst,
   ArkObjectLiteralInst, ArkPropertyInst, ArkReturnInst, ArkYieldInst,
-  ArkSetInst, ArkSetPropertyInst,
+  ArkSetNamedLocInst, ArkSetPropertyInst,
 } from '../flatten.js'
 import {
   jsGlobals, ArkBoolean, ArkBooleanVal, ArkList, ArkMap, ArkNull,
@@ -188,7 +188,7 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
         return sourceNode(letAssign(inst.id, inst.argId.description!))
       } else if (inst instanceof ArkCallInst) {
         return sourceNode(letAssign(inst.id, `yield* ${inst.fnId.description}.body(${inst.argIds.map((id) => id.description).join(', ')})`))
-      } else if (inst instanceof ArkSetInst) {
+      } else if (inst instanceof ArkSetNamedLocInst) {
         return sourceNode([
           `if (${inst.lexpId.description} !== ArkUndefined && ${inst.lexpId.description}.constructor !== ArkNullVal && ${inst.valId.description}.constructor !== ${inst.lexpId.description}.constructor) {\n`,
           'throw new JsRuntimeError(\'Assignment to different type\')\n',
