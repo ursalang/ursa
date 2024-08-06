@@ -5,7 +5,7 @@
 import assert from 'assert'
 
 import {
-  action, call, Operation, Reject, Resolve, sleep,
+  action, call, Operation, Reject, Resolve, run, sleep,
 } from 'effection'
 
 import {FsMap} from './fsmap.js'
@@ -512,7 +512,9 @@ export function toJs(val: ArkVal): unknown {
       return val.call(locals)
     }
   } else if (val instanceof NativeFn || val instanceof NativeAsyncFn) {
-    return (...args: unknown[]) => toJs(val.body(...args.map((arg) => fromJs(arg))))
+    return async (...args: unknown[]) => toJs(
+      await run(() => val.body(...args.map((arg) => fromJs(arg)))),
+    )
   }
   return val
 }
