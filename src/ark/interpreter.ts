@@ -193,7 +193,7 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
       } else {
         throw new Error('invalid ArkCallableBlockOpenInst')
       }
-      const result = new Constructor(inst.params, captures, inst.next!)
+      const result = new Constructor(inst.params.map((p) => p.name), captures, inst.next!)
       mem.set(inst.matchingClose.id, result)
       inst = inst.matchingClose.next
     } else if (inst instanceof ArkLetBlockOpenInst) {

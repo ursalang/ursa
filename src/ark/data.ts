@@ -11,6 +11,7 @@ import {
 import {FsMap} from './fsmap.js'
 import programVersion from '../version.js'
 import {debug} from './util.js'
+import {ArkPropertyType, ArkType} from './type.js'
 
 // A hack that works for us, as browsers do not have util/types library, and
 // is-generator-function doesn't play nice with rollup.
@@ -19,7 +20,9 @@ function isGeneratorFunction(obj: object) {
   return constructor !== undefined && constructor.name === 'GeneratorFunction'
 }
 
-export class ArkVal {}
+export class ArkVal {
+  public type!: ArkType
+}
 
 export abstract class ArkAbstractObjectBase extends ArkVal {
   abstract get(prop: string): ArkVal
@@ -34,6 +37,11 @@ class ArkObjectBase extends ArkAbstractObjectBase {
       ['equals', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this === right))],
       ['notEquals', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this !== right))],
     ])
+    const propertyTypes = new Map<string, ArkPropertyType>()
+    for (const [name, val] of this.properties.entries()) {
+      propertyTypes.set(name, new ArkPropertyType(false, val.type))
+    }
+    this.type = new ArkType([], propertyTypes)
   }
 
   get(prop: string) {
@@ -193,7 +201,7 @@ export class NativeFn extends ArkCallable {
     } else {
       // eslint-disable-next-line require-yield
       this.body = function* gen(...args: ArkVal[]) {
-        return innerBody(...args)
+        return (innerBody as (...args: ArkVal[]) => ArkVal)(...args)
       }
     }
   }
@@ -215,32 +223,12 @@ export class NativeAsyncFn extends ArkCallable {
   }
 }
 
-// export class ArkType extends Ark {
-//   constructor(
-//   public superTraits: ArkType[],
-//   public members: Map<string, ArkFieldType | ArkMethodType>,
-//   ) {
-//   super()
-//   }
-// }
-
-// export class ArkFieldType extends Ark {
-//   constructor(public isVar: boolean, public type: ArkType) {
-//   super()
-//   }
-// }
-
-// export class ArkMethodType extends Ark {
-//   constructor(public params: [string, ArkType][], public returnType: ArkType) {
-//   super()
-//   }
-// }
-
 export class ArkObject extends ArkObjectBase {}
 
 export class NativeObject extends ArkAbstractObjectBase {
   constructor(public obj: object) {
     super()
+    this.type = new ArkType([], new Map())
   }
 
   get(prop: string): ArkVal {
@@ -445,6 +433,17 @@ export const jsGlobals = new ArkObject(new Map())
 for (const [k, v] of globals.properties.entries()) {
   jsGlobals.set(k, v)
 }
+
+export const globalTypes = new Map<string, ArkType>([
+  ['Null', ArkNull().type],
+  ['Boolean', ArkBoolean(true).type],
+  ['Number', ArkNumber(0).type],
+  ['String', ArkString('').type],
+
+  ['Object', globals.type],
+  ['List', new ArkList([]).type],
+  ['Map', new ArkMap(new Map()).type],
+])
 
 // FFI
 class ArkFromJsError extends Error {}

@@ -21,12 +21,13 @@ import {
   ArkSequence, ArkIf, ArkLoop, ArkAnd, ArkOr,
   ArkObjectLiteral, ArkListLiteral, ArkMapLiteral,
   ArkCall, ArkLet, ArkFn, ArkGenerator, ArkProperty, ArkSet, ArkReturn, ArkYield,
-  ArkBreak, ArkContinue, ArkAwait, ArkLaunch, ArkCapture, ArkFnType, ArkNamedLoc,
+  ArkBreak, ArkContinue, ArkAwait, ArkLaunch, ArkCapture, ArkNamedLoc,
 } from '../ark/code.js'
 import {ArkState, ArkRuntimeError} from '../ark/interpreter.js'
 import {
-  ArkCompilerError, symRef, Frame, Environment, Location, checkParamList,
+  ArkCompilerError, symRef, Frame, Environment, Location, TypedLocation, checkParamList,
 } from '../ark/reader.js'
+import {ArkFnType, ArkType, ArkTypedId} from '../ark/type.js'
 
 type ParserOperations = {
   toExp(a: ParserArgs): ArkExp
@@ -34,9 +35,9 @@ type ParserOperations = {
   toDefinition(a: ParserArgs): Definition
   toKeyValue(a: ParserArgs): KeyValue
   toArguments(a: ParserArgs): Arguments
-  toType(a: ParserArgs): void
+  toType(a: ParserArgs): ArkType
   toMethod(a: ParserArgs): ArkFnType
-  toParam(a: ParserArgs): string
+  toParam(a: ParserArgs): ArkTypedId
   toLet(a: ParserArgs): LetBinding
 }
 
@@ -174,12 +175,13 @@ semantics.addOperation<Arguments>('toArguments(a)', {
   },
 })
 
-semantics.addOperation<string>('toParam(a)', {
+semantics.addOperation<ArkTypedId>('toParam(a)', {
   Param(ident, maybeType) {
+    let type = new ArkType([], new Map())
     if (maybeType.children.length > 0) {
-      maybeType.children[0].children[1].toType(this.args.a)
+      type = maybeType.children[0].children[1].toType(this.args.a)
     }
-    return ident.sourceString
+    return new ArkTypedId(ident.sourceString, type)
   },
 })
 
@@ -197,7 +199,9 @@ semantics.addOperation<LetBinding>('toLet(a)', {
       letIds.push(ident)
     }
     const locations = letIds.map((id, n) => new Location(id, letVars[n]))
-    const innerEnv = this.args.a.env.push(locations)
+    const innerEnv = this.args.a.env.push(
+      locations.map((l) => new TypedLocation(l.name, new ArkType([], new Map()), l.isVar)),
+    )
     const parsedLets = []
     for (const l of lets.asIteration().children) {
       const definition = l.children[1].toDefinition({...this.args.a, env: innerEnv})
@@ -208,6 +212,7 @@ semantics.addOperation<LetBinding>('toLet(a)', {
       parsedLets.map(
         (def, index) => new ArkBoundVar(
           def.ident.sourceString,
+          def.exp.type,
           letVars[index],
           indexBase + index,
           def.exp,
@@ -220,13 +225,17 @@ semantics.addOperation<LetBinding>('toLet(a)', {
     const path = pathList.asIteration().children
     const ident = path[path.length - 1]
     // For path x.y.z, compile `let z = x.use("y", "z")`
-    const innerEnv = this.args.a.env.push([new Location(ident.sourceString, false)])
+    const innerEnv = this.args.a.env.push(
+      [new TypedLocation(ident.sourceString, new ArkType([], new Map()), false)],
+    )
     const libValue = path[0].toExp({...this.args.a, env: innerEnv})
     const useProperty = addLoc(new ArkProperty(libValue, 'use'), this)
     const useCallArgs = path.slice(1).map((id) => new ArkLiteral(ArkString(id.sourceString)))
     const useCall = addLoc(new ArkCall(useProperty, useCallArgs), this)
     const index = this.args.a.env.top().locals.length
-    return new LetBinding([new ArkBoundVar(ident.sourceString, false, index, useCall)])
+    return new LetBinding(
+      [new ArkBoundVar(ident.sourceString, libValue.type, false, index, useCall)],
+    )
   },
 })
 
@@ -236,7 +245,7 @@ function makeSequence(a: ParserArgs, seq: ParserNode, exps: ParserNode[]): ArkEx
     if (exp.children[0].ctorName === 'Lets' || exp.children[0].ctorName === 'Use') {
       const compiledLet = exp.toLet(a)
       const innerEnv = a.env.push(
-        compiledLet.boundVars.map((bv) => new Location(bv.name, bv.isVar)),
+        compiledLet.boundVars.map((bv) => new TypedLocation(bv.name, bv.type, bv.isVar)),
       )
       let letBody: ArkExp
       if (i < exps.length - 1) {
@@ -316,18 +325,17 @@ semantics.addOperation<ArkExp>('toExp(a)', {
 
   Fn(type, body) {
     const fnType = type.toMethod(this.args.a)
-    // TODO: Environment should contain typed params, not just strings
     const innerEnv = this.args.a.env.pushFrame(
-      new Frame(fnType.params.map((p) => new Location(p, false)), []),
+      new Frame(fnType.params.map((p) => new TypedLocation(p.name, p.type, false)), []),
     )
     const compiledBody = body.toExp({
       env: innerEnv,
       inLoop: false,
       inFn: true,
-      inGenerator: fnType.Constructor === ArkGenerator,
+      inGenerator: fnType.isGenerator,
     })
     // TODO: ArkFn should be an ArkObject which contains one method.
-    return addLoc(new fnType.Constructor(
+    return addLoc(new (fnType.isGenerator ? ArkGenerator : ArkFn)(
       fnType.params,
       innerEnv.top().captures.map(
         (c) => symRef(this.args.a.env, c.name) as ArkCapture,
@@ -348,15 +356,16 @@ semantics.addOperation<ArkExp>('toExp(a)', {
 
   For(_for, ident, _of, iterator, body) {
     const forVar = ident.sourceString
-    const innerEnv = this.args.a.env.push([new Location('_for', false)])
+    const innerEnv = this.args.a.env.push([new TypedLocation('_for', new ArkType([], new Map()), false)])
     const compiledIterator = iterator.toExp({...this.args.a, env: innerEnv})
-    const loopEnv = innerEnv.push([new Location(forVar, false)])
+    const iteratorType = (compiledIterator.type as ArkFnType).returnType
+    const loopEnv = innerEnv.push([new TypedLocation(forVar, iteratorType, false)])
     const compiledForVar = symRef(loopEnv, forVar)
     const compiledForBody = body.toExp({...this.args.a, env: loopEnv, inLoop: true})
     const innerIndex = innerEnv.top().locals.length
     const loopBody = addLoc(
       new ArkLet(
-        [new ArkBoundVar(forVar, false, innerIndex, addLoc(new ArkCall(addLoc(symRef(loopEnv, '_for'), iterator), []), this))],
+        [new ArkBoundVar(forVar, compiledForVar.type, false, innerIndex, addLoc(new ArkCall(addLoc(symRef(loopEnv, '_for'), iterator), []), this))],
         new ArkSequence([
           new ArkIf(
             addLoc(new ArkCall(new ArkProperty(compiledForVar, 'equals'), [new ArkLiteral(ArkNull())]), this),
@@ -369,7 +378,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     )
     const localsDepth = this.args.a.env.top().locals.length
     return addLoc(
-      new ArkLet([new ArkBoundVar('_for', false, localsDepth, compiledIterator)], new ArkLoop(loopBody, localsDepth + 1)),
+      new ArkLet([new ArkBoundVar('_for', iteratorType, false, localsDepth, compiledIterator)], new ArkLoop(loopBody, localsDepth + 1)),
       this,
     )
   },
@@ -604,38 +613,44 @@ semantics.addOperation<ArkExp>('toExp(a)', {
 })
 
 // TODO: actually collect the type information.
-semantics.addOperation<void>('toType(a)', {
-  NamedType(_path, typeArgs) {
+semantics.addOperation<ArkType>('toType(a)', {
+  NamedType(name, typeArgs) {
+    // TODO: Support type args
     if (typeArgs.children.length > 0) {
       typeArgs.children[0].children[1].asIteration().children.map(
         (child) => child.toType(this.args.a),
       )
     }
+    // TODO: add user-defined types to environment
+    const typeName = name.sourceString
+    const type = this.args.a.env.externalTypes.get(typeName)
+    if (type === undefined) {
+      throw new ArkCompilerError(`Unknown type ${typeName}`)
+    }
+    return type
   },
-  Type_intersection(types) {
-    types.asIteration().children.map((child) => child.toType(this.args.a))
-  },
+  // TODO
+  // Type_intersection(types) {
+  //   types.asIteration().children.map((child) => child.toType(this.args.a))
+  // },
   Type_fn(type) {
-    type.toMethod(this.args.a)
+    return type.toMethod(this.args.a)
   },
 })
 
-// TODO: return types along with parameter names, and return type.
 semantics.addOperation<ArkFnType>('toMethod(a)', {
-  FnType(fn, _open, params, _maybeComma, _close, maybeType) {
+  FnType(fn, _open, params, _maybeComma, _close, returnType) {
     const parsedParams = params.asIteration().children.map((p) => p.toParam(this.args.a))
     try {
-      checkParamList(parsedParams)
+      checkParamList(parsedParams.map((p) => p.name))
     } catch (e) {
       if (!(e instanceof ArkCompilerError)) {
         throw e
       }
       throw new UrsaCompilerError(params.source, e.message)
     }
-    if (maybeType.children.length > 0) {
-      maybeType.children[0].children[1].toType(this.args.a)
-    }
-    return new ArkFnType(fn.ctorName === 'fn' ? ArkFn : ArkGenerator, parsedParams)
+    const parsedReturnType = returnType.toType(this.args.a)
+    return new ArkFnType(fn.ctorName === 'gen', parsedParams, parsedReturnType)
   },
 })
 

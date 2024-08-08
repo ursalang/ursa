@@ -12,6 +12,7 @@ import {
   ArkOr, ArkProperty, ArkReturn, ArkSequence, ArkSet, ArkYield,
 } from './code.js'
 import {ArkBoolean, ArkNull, ArkVal} from './data.js'
+import {ArkTypedId} from './type.js'
 
 export class ArkInst {
   private static nextId = 0
@@ -78,7 +79,7 @@ export class ArkIfBlockOpenInst extends ArkBlockOpenInst {
 export class ArkCallableBlockOpenInst extends ArkBlockOpenInst {
   constructor(
     sourceLoc: Interval | undefined,
-    public params: string[],
+    public params: ArkTypedId[],
     public capturedVars: ArkNamedLoc[],
     public name?: string,
   ) {

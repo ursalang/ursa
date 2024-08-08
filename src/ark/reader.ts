@@ -10,7 +10,8 @@ import {
   debug,
 } from './util.js'
 import {
-  globals, ArkNull, ArkBoolean, ArkNumber, ArkString, ArkObject, ArkUndefined,
+  ArkNull, ArkBoolean, ArkNumber, ArkString, ArkObject, ArkUndefined,
+  globals, globalTypes,
 } from './data.js'
 import {
   ArkExp, ArkLvalue, ArkIf, ArkAnd, ArkOr, ArkSequence, ArkLoop, ArkBreak, ArkContinue,
@@ -20,6 +21,7 @@ import {
 } from './code.js'
 import {expToInst} from './flatten.js'
 import {ArkState} from './interpreter.js'
+import {ArkType, ArkTypedId} from './type.js'
 
 export class ArkCompilerError extends Error {}
 
@@ -27,12 +29,16 @@ export class Location {
   constructor(public name: string, public isVar: boolean) {}
 }
 
+export class TypedLocation {
+  constructor(public name: string, public type: ArkType, public isVar: boolean) {}
+}
+
 export class Frame {
   constructor(
     // Locals are undefined between the point where they are allocated and
     // the point at which they are declared.
-    public locals: (Location | undefined)[],
-    public captures: Location[],
+    public locals: (TypedLocation | undefined)[],
+    public captures: TypedLocation[],
     public fnName?: string,
   ) {}
 }
@@ -41,13 +47,14 @@ export class Environment {
   constructor(
     public stack: [Frame, ...Frame[]] = [new Frame([], [])],
     public externalSyms: ArkObject = globals,
+    public externalTypes: Map<string, ArkType> = globalTypes,
   ) {}
 
   top() {
     return this.stack[0]
   }
 
-  push(items: (Location | undefined)[]) {
+  push(items: (TypedLocation | undefined)[]) {
     return new Environment(
       [
         new Frame(
@@ -77,7 +84,7 @@ export function checkParamList(params: string[]): string[] {
   return params
 }
 
-function arkParamList(params: [string, boolean][]): Location[] {
+function paramList(params: [string, boolean][]): Location[] {
   for (const param of params) {
     if (typeof param[0] !== 'string' || typeof param[1] !== 'boolean') {
       throw new ArkCompilerError('Bad type in parameter list')
@@ -87,25 +94,52 @@ function arkParamList(params: [string, boolean][]): Location[] {
   return params.map((p) => new Location(p[0], p[1]))
 }
 
-function arkBindingList(env: Environment, params: [string, boolean, unknown][]): ArkBoundVar[] {
-  const bindings: ArkBoundVar[] = []
-  for (const p of params) {
+function bindingList(env: Environment, bindings: [string, boolean, unknown][]): ArkBoundVar[] {
+  const boundVars: ArkBoundVar[] = []
+  for (const p of bindings) {
     if (!(p instanceof Array) || p.length !== 3 || typeof p[0] !== 'string' || typeof p[1] !== 'boolean') {
       throw new ArkCompilerError('invalid let variable binding')
     }
   }
-  const paramLocations = arkParamList(params.map((p) => [p[0], p[1]]))
+  const boundLocations = paramList(bindings.map((p) => [p[0], p[1]])).map(
+    (bl) => new TypedLocation(bl.name, new ArkType([], new Map()), bl.isVar),
+  )
   const indexBase = env.top().locals.length
-  for (const [i, p] of params.entries()) {
-    bindings.push(
-      new ArkBoundVar(p[0], p[1], indexBase + i, doCompile(env.push(paramLocations), p[2])),
+  for (const [i, p] of bindings.entries()) {
+    const val = doCompile(env.push(boundLocations), p[2])
+    boundVars.push(
+      new ArkBoundVar(p[0], val.type, p[1], indexBase + i, val),
     )
   }
-  return bindings
+  return boundVars
 }
 
 function listToVals(env: Environment, l: unknown[]): ArkExp[] {
   return l.map((elem) => doCompile(env, elem))
+}
+
+function parseType(t: unknown): ArkType {
+  if (!(t instanceof Array && t.length === 3 && typeof t[1] === 'string')) {
+    throw new ArkCompilerError('Invalid type')
+  }
+  // FIXME: actually parse the type!
+  return ArkNull().type
+}
+
+function listToTypes(l: unknown[]): ArkType[] {
+  const types: ArkType[] = []
+  for (const t of l) {
+    if (typeof t === 'string') {
+      const type = globalTypes.get(t)
+      if (type === undefined) {
+        throw new ArkCompilerError(`Invalid type ${t}`)
+      }
+      types.push(type)
+    } else {
+      types.push(parseType(t))
+    }
+  }
+  return types
 }
 
 export function symRef(env: Environment, name: string): ArkLvalue {
@@ -114,14 +148,14 @@ export function symRef(env: Environment, name: string): ArkLvalue {
   const locals = env.top().locals
   const j = locals.map((l) => l?.name).lastIndexOf(name)
   if (j !== -1) {
-    lexp = new ArkLocal(j, name, locals[j]!.isVar)
+    lexp = new ArkLocal(j, name, locals[j]!.type, locals[j]!.isVar)
   } else {
     // Otherwise, check if it's a capture.
     // Check whether we already have this capture.
     const captures = env.top().captures
     const k = captures.map((c) => c.name).lastIndexOf(name)
     if (k !== -1) {
-      lexp = new ArkCapture(k, name, captures[k].isVar)
+      lexp = new ArkCapture(k, name, captures[k].type, captures[k].isVar)
     } else {
       // If not, see if it's on the stack to be captured.
       for (let i = 0; i < env.stack.length; i += 1) {
@@ -130,8 +164,9 @@ export function symRef(env: Environment, name: string): ArkLvalue {
         if (j !== -1) {
           const k = env.top().captures.length
           const isVar = locals[j]!.isVar
-          lexp = new ArkCapture(k, name, isVar)
-          env.top().captures.push(new Location(name, isVar))
+          const type = locals[j]!.type
+          lexp = new ArkCapture(k, name, type, isVar)
+          env.top().captures.push(new TypedLocation(name, type, isVar))
           break
         }
       }
@@ -174,23 +209,36 @@ function doCompile(env: Environment, value: unknown): ArkExp {
           if (value.length !== 3 || !(value[1] instanceof Array)) {
             throw new ArkCompilerError("Invalid 'let'")
           }
-          const params = arkBindingList(env, value[1] as [string, boolean, unknown][])
+          const boundVars = bindingList(env, value[1] as [string, boolean, unknown][])
           const compiled = doCompile(
-            env.push(params.map((p) => new Location(p.name, p.isVar))),
+            env.push(boundVars.map((v) => new TypedLocation(v.name, v.type, v.isVar))),
             value[2],
           )
-          return new ArkLet(params, compiled)
+          return new ArkLet(boundVars, compiled)
         }
         case 'fn':
         case 'gen': {
           if (value.length !== 3 || !(value[1] instanceof Array)) {
             throw new ArkCompilerError(`Invalid '${value[0]}'`)
           }
-          const params = arkParamList(value[1].map((id) => [id, false]) as [string, boolean][])
-          const innerEnv = env.pushFrame(new Frame(params, []))
+          const params: [string, boolean][] = []
+          const types = []
+          for (const param of value[1]) {
+            if (!(param instanceof Array && param.length === 2 && typeof param[0] === 'string')) {
+              throw new ArkCompilerError('Invalid function parameter')
+            }
+            params.push([param[0], false])
+            types.push(param[1])
+          }
+          const compiledParams = paramList(params)
+          const compiledTypes = listToTypes(types)
+          const typedParams = compiledParams.map(
+            (p, i) => new TypedLocation(p.name, compiledTypes[i], p.isVar),
+          )
+          const innerEnv = env.pushFrame(new Frame(typedParams, []))
           const compiled = doCompile(innerEnv, value[2])
           return new (value[0] === 'fn' ? ArkFn : ArkGenerator)(
-            params.map((p) => p.name),
+            typedParams.map((p) => new ArkTypedId(p.name, p.type)),
             innerEnv.top().captures.map((c) => symRef(env, c.name) as ArkCapture),
             compiled,
           )
@@ -223,7 +271,9 @@ function doCompile(env: Environment, value: unknown): ArkExp {
         case 'map': {
           const inits = new Map<ArkExp, ArkExp>()
           for (const pair of value.slice(1)) {
-            assert(pair instanceof Array && pair.length === 2)
+            if (!(pair instanceof Array && pair.length === 2)) {
+              throw new ArkCompilerError('Invalid map element')
+            }
             const compiledKey = doCompile(env, pair[0])
             const compiledVal = doCompile(env, pair[1])
             inits.set(compiledKey, compiledVal)
