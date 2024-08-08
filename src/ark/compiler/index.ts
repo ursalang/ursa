@@ -37,7 +37,9 @@ import {
 } from '../data.js'
 import {ArkExp} from '../code.js'
 import {debug} from '../util.js'
-import {Environment, Frame, Location} from '../compiler-utils.js'
+import {
+  Environment, Frame, TypedLocation,
+} from '../compiler-utils.js'
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
@@ -154,18 +156,22 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
       } else if (inst instanceof ArkLaunchBlockOpenInst) {
         return sourceNode([letAssign(inst.matchingClose.id, 'yield* spawn(function* () {')])
       } else if (inst instanceof ArkGeneratorBlockOpenInst) {
-        env = env.pushFrame(
-          new Frame(inst.params.map((p) => new Location(p, false)), [], inst.name),
-        )
+        env = env.pushFrame(new Frame(
+          inst.params.map((p) => new TypedLocation(p.name, p.type, false)),
+          [],
+          inst.name,
+        ))
         return sourceNode([
-          letAssign(inst.matchingClose.id, `new NativeFn([${inst.params.map((p) => `'${p}'`).join(', ')}], function (${inst.params.join(', ')}) {\nconst gen = function* () {`),
+          letAssign(inst.matchingClose.id, `new NativeFn([${inst.params.map((p) => `'${p.name}'`).join(', ')}], function (${inst.params.join(', ')}) {\nconst gen = function* () {`),
         ])
       } else if (inst instanceof ArkFnBlockOpenInst) {
-        env = env.pushFrame(
-          new Frame(inst.params.map((p) => new Location(p, false)), [], inst.name),
-        )
+        env = env.pushFrame(new Frame(
+          inst.params.map((p) => new TypedLocation(p.name, p.type, false)),
+          [],
+          inst.name,
+        ))
         return sourceNode([
-          letAssign(inst.matchingClose.id, `new NativeFn([${inst.params.map((p) => `'${p}'`).join(', ')}], function* (${inst.params.join(', ')}) {`),
+          letAssign(inst.matchingClose.id, `new NativeFn([${inst.params.map((p) => `'${p.name}'`).join(', ')}], function* (${inst.params.join(', ')}) {`),
         ])
       } else if (inst instanceof ArkLetBlockOpenInst) {
         return sourceNode([
