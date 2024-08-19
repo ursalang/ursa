@@ -7,18 +7,12 @@
     "type": "Use"
   },
   {
-    "0": {
-      "0": "fs",
-      "2": "writeSync",
-      "type": "PostfixExp_property"
-    },
-    "1": {
-      "1": [
-        "1",
-        "\"foo\""
-      ],
-      "type": "Arguments"
-    },
-    "type": "PostfixExp_call"
+    "0": "fs",
+    "2": "writeSync",
+    "5": [
+      "1",
+      "\"foo\""
+    ],
+    "type": "PostfixExp_invoke"
   }
 ]

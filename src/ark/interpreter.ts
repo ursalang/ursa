@@ -315,12 +315,12 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
       if (!(obj instanceof ArkAbstractObjectBase)) {
         throw new ArkRuntimeError(ark, 'Invalid object', inst.sourceLoc)
       }
-      const method = obj.get(inst.prop) as ArkCallable
-      if (method === ArkUndefined) {
-        throw new ArkRuntimeError(ark, 'Invalid property', inst.sourceLoc)
+      const method = obj.getMethod(inst.prop) as ArkCallable
+      if (method === undefined) {
+        throw new ArkRuntimeError(ark, 'Invalid method', inst.sourceLoc)
       }
       const args = inst.argIds.map((id) => mem.get(id)!);
-      [ark, inst] = yield* call(ark, inst, method, args)
+      [ark, inst] = yield* call(ark, inst, method, [obj, ...args])
     } else if (inst instanceof ArkSetNamedLocInst) {
       const result = mem.get(inst.valId)!
       let ref: ArkRef

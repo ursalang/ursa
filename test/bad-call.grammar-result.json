@@ -30,10 +30,7 @@
           "1": [
             {
               "0": "h",
-              "1": {
-                "1": [],
-                "type": "Arguments"
-              },
+              "3": [],
               "type": "PostfixExp_call"
             }
           ],
@@ -65,10 +62,7 @@
           "1": [
             {
               "0": "g",
-              "1": {
-                "1": [],
-                "type": "Arguments"
-              },
+              "3": [],
               "type": "PostfixExp_call"
             }
           ],
@@ -81,10 +75,7 @@
   ],
   {
     "0": "f",
-    "1": {
-      "1": [],
-      "type": "Arguments"
-    },
+    "3": [],
     "type": "PostfixExp_call"
   }
 ]

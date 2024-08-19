@@ -304,15 +304,19 @@ semantics.addOperation<Span>('fmt(a)', {
       [(a) => vSpan([exp.fmt(a), new Span(['.', ident.fmt(a)])])],
     )
   },
-  PostfixExp_call(exp, args) {
+  PostfixExp_invoke(exp, _dot, property, _spaces, _open, args, _maybeComma, _close) {
     return tryFormats(
       this.args.a,
-      (a) => new Span([exp.fmt(a), args.fmt(a)]),
-      [(a) => vSpan([exp.fmt(a), args.fmt(a)])],
+      (a) => new Span([exp.fmt(a), new Span(['.', property.fmt(a), '(']), fmtDelimitedList(a, '', ')', ',', tightSpan, args)]),
+      [(a) => vSpan([exp.fmt(a), new Span(['.', property.fmt(a), '(']), fmtDelimitedList(a, '', ')', ',', tightSpan, args)])],
     )
   },
-  Arguments(_open, args, _maybeComma, _close) {
-    return fmtDelimitedList(this.args.a, '(', ')', ',', tightSpan, args)
+  PostfixExp_call(exp, _spaces, _open, args, _maybeComma, _close) {
+    return tryFormats(
+      this.args.a,
+      (a) => new Span([new Span([exp.fmt(a), '(']), fmtDelimitedList(a, '', ')', ',', tightSpan, args)]),
+      [(a) => vSpan([new Span([exp.fmt(a), '(']), fmtDelimitedList(a, '', ')', ',', tightSpan, args)])],
+    )
   },
 
   Ifs(ifs, _else, elseBlock) {

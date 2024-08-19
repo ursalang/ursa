@@ -1,0 +1,11 @@
+let sum = fn(m: Map<String, Int>): Int {
+  var tot = 0
+  let it = m.iter()
+  loop {
+    let l = it()
+    let k = l.get
+    if l == null { return tot }
+    print(k)
+  }
+}
+sum({"a": 10, "b": 30, "c": 50, "d": 5, "e": 5})

@@ -26,29 +26,29 @@ testGroup('Concrete values', [
 ])
 
 testGroup('Intrinsics', [
-  ['[["prop","add",3],4]', 7],
-  ['[["prop","mul",[["prop","add",3],4]],5]', 35],
+  ['["invoke",3,"add",4]', 7],
+  ['["invoke",["invoke",3,"add",4],"mul",5]', 35],
   ['"pi"', Math.PI],
-  ['["seq","pi",[["prop","add",3],5]]', 8],
-  ['[["prop","equals",[["prop","add",3],4]],7]', true],
-  ['[["prop","not",true]]', false],
-  ['[["prop","bitwiseNot",2]]', -3],
-  ['[["prop","bitwiseAnd",34],48]', 32],
-  ['[["prop","bitwiseOr",34],48]', 50],
-  ['[["prop","bitwiseXor",34],48]', 18],
-  ['[["prop","shiftLeft",34],4]', 544],
-  ['[["prop","shiftRight",-34],4]', -3],
-  ['[["prop","shiftRightArith",34],4]', 2],
+  ['["seq","pi",["invoke",3,"add",5]]', 8],
+  ['["invoke",["invoke",3,"add",4],"equals",7]', true],
+  ['["invoke",true,"not"]', false],
+  ['["invoke",2,"bitwiseNot"]', -3],
+  ['["invoke",34,"bitwiseAnd",48]', 32],
+  ['["invoke",34,"bitwiseOr",48]', 50],
+  ['["invoke",34,"bitwiseXor",48]', 18],
+  ['["invoke",34,"shiftLeft",4]', 544],
+  ['["invoke",-34,"shiftRight",4]', -3],
+  ['["invoke",34,"shiftRightArith",4]', 2],
 ])
 
 testGroup('Sequences', [
-  ['["seq","pi",[["prop","add",3],4]]', 7],
+  ['["seq","pi",["invoke",3,"add",4]]', 7],
 ])
 
 testGroup('Conditionals', [
   ['["if",false,3,4]', 4],
   ['["if",true,3,4]', 3],
-  ['["if",[["prop","equals",[["prop","add",3],4]],7],1,0]', 1],
+  ['["if",["invoke",["invoke",3,"add",4],"equals",7],1,0]', 1],
   ['["or",1,2]', true],
   ['["and",1,2]', 2],
 ])
@@ -73,11 +73,11 @@ testGroup('Objects', [
 
 testGroup('Lists', [
   ['["list",1,2,3]', [1, 2, 3]],
-  ['[["prop","len",["list",1,2,3]]]', 3],
-  ['[["prop","get",["list",4,5,6]],1]', 5],
-  ['[["prop","set",["list",4,5,6]],1,2]', [4, 2, 6]],
+  ['["invoke",["list",1,2,3],"len"]', 3],
+  ['["invoke",["list",4,5,6],"get",1]', 5],
+  ['["invoke",["list",4,5,6],"set",1,2]', [4, 2, 6]],
 ])
 
 testGroup('Maps', [
-  ['["seq",["map",[["str","a"],1],[["str","b"],[["prop","add",2],0]],[3,4]]]', new Map<unknown, unknown>([['a', 1], ['b', 2], [3, 4]])],
+  ['["seq",["map",[["str","a"],1],[["str","b"],["invoke",2,"add",0]],[3,4]]]', new Map<unknown, unknown>([['a', 1], ['b', 2], [3, 4]])],
 ])

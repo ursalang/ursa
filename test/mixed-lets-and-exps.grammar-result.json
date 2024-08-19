@@ -11,12 +11,9 @@
   ],
   {
     "0": "print",
-    "1": {
-      "1": [
-        "\"hello\""
-      ],
-      "type": "Arguments"
-    },
+    "3": [
+      "\"hello\""
+    ],
     "type": "PostfixExp_call"
   },
   [

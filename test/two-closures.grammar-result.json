@@ -116,10 +116,7 @@
         "0": "accum",
         "1": {
           "0": "newAccum",
-          "1": {
-            "1": [],
-            "type": "Arguments"
-          },
+          "3": [],
           "type": "PostfixExp_call"
         },
         "type": "Definition"
@@ -133,10 +130,7 @@
         "0": "accum2",
         "1": {
           "0": "newAccum",
-          "1": {
-            "1": [],
-            "type": "Arguments"
-          },
+          "3": [],
           "type": "PostfixExp_call"
         },
         "type": "Definition"
@@ -148,32 +142,23 @@
     "1": [
       {
         "0": "accum",
-        "1": {
-          "1": [
-            "1"
-          ],
-          "type": "Arguments"
-        },
+        "3": [
+          "1"
+        ],
         "type": "PostfixExp_call"
       },
       {
         "0": "accum",
-        "1": {
-          "1": [
-            "1"
-          ],
-          "type": "Arguments"
-        },
+        "3": [
+          "1"
+        ],
         "type": "PostfixExp_call"
       },
       {
         "0": "accum2",
-        "1": {
-          "1": [
-            "1"
-          ],
-          "type": "Arguments"
-        },
+        "3": [
+          "1"
+        ],
         "type": "PostfixExp_call"
       }
     ],

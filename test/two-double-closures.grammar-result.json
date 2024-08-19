@@ -176,10 +176,7 @@
         "0": "accums",
         "1": {
           "0": "newAccums",
-          "1": {
-            "1": [],
-            "type": "Arguments"
-          },
+          "3": [],
           "type": "PostfixExp_call"
         },
         "type": "Definition"
@@ -191,10 +188,7 @@
         "0": "accums2",
         "1": {
           "0": "newAccums",
-          "1": {
-            "1": [],
-            "type": "Arguments"
-          },
+          "3": [],
           "type": "PostfixExp_call"
         },
         "type": "Definition"
@@ -208,71 +202,44 @@
         "1": [
           {
             "0": {
-              "0": {
-                "0": "accums",
-                "2": "get",
-                "type": "PostfixExp_property"
-              },
-              "1": {
-                "1": [
-                  "0"
-                ],
-                "type": "Arguments"
-              },
-              "type": "PostfixExp_call"
-            },
-            "1": {
-              "1": [
-                "1"
+              "0": "accums",
+              "2": "get",
+              "5": [
+                "0"
               ],
-              "type": "Arguments"
+              "type": "PostfixExp_invoke"
             },
+            "3": [
+              "1"
+            ],
             "type": "PostfixExp_call"
           },
           {
             "0": {
-              "0": {
-                "0": "accums",
-                "2": "get",
-                "type": "PostfixExp_property"
-              },
-              "1": {
-                "1": [
-                  "0"
-                ],
-                "type": "Arguments"
-              },
-              "type": "PostfixExp_call"
-            },
-            "1": {
-              "1": [
-                "1"
+              "0": "accums",
+              "2": "get",
+              "5": [
+                "0"
               ],
-              "type": "Arguments"
+              "type": "PostfixExp_invoke"
             },
+            "3": [
+              "1"
+            ],
             "type": "PostfixExp_call"
           },
           {
             "0": {
-              "0": {
-                "0": "accums2",
-                "2": "get",
-                "type": "PostfixExp_property"
-              },
-              "1": {
-                "1": [
-                  "0"
-                ],
-                "type": "Arguments"
-              },
-              "type": "PostfixExp_call"
-            },
-            "1": {
-              "1": [
-                "1"
+              "0": "accums2",
+              "2": "get",
+              "5": [
+                "0"
               ],
-              "type": "Arguments"
+              "type": "PostfixExp_invoke"
             },
+            "3": [
+              "1"
+            ],
             "type": "PostfixExp_call"
           }
         ],
@@ -282,71 +249,44 @@
         "1": [
           {
             "0": {
-              "0": {
-                "0": "accums",
-                "2": "get",
-                "type": "PostfixExp_property"
-              },
-              "1": {
-                "1": [
-                  "1"
-                ],
-                "type": "Arguments"
-              },
-              "type": "PostfixExp_call"
-            },
-            "1": {
-              "1": [
+              "0": "accums",
+              "2": "get",
+              "5": [
                 "1"
               ],
-              "type": "Arguments"
+              "type": "PostfixExp_invoke"
             },
+            "3": [
+              "1"
+            ],
             "type": "PostfixExp_call"
           },
           {
             "0": {
-              "0": {
-                "0": "accums",
-                "2": "get",
-                "type": "PostfixExp_property"
-              },
-              "1": {
-                "1": [
-                  "1"
-                ],
-                "type": "Arguments"
-              },
-              "type": "PostfixExp_call"
-            },
-            "1": {
-              "1": [
+              "0": "accums",
+              "2": "get",
+              "5": [
                 "1"
               ],
-              "type": "Arguments"
+              "type": "PostfixExp_invoke"
             },
+            "3": [
+              "1"
+            ],
             "type": "PostfixExp_call"
           },
           {
             "0": {
-              "0": {
-                "0": "accums2",
-                "2": "get",
-                "type": "PostfixExp_property"
-              },
-              "1": {
-                "1": [
-                  "1"
-                ],
-                "type": "Arguments"
-              },
-              "type": "PostfixExp_call"
-            },
-            "1": {
-              "1": [
+              "0": "accums2",
+              "2": "get",
+              "5": [
                 "1"
               ],
-              "type": "Arguments"
+              "type": "PostfixExp_invoke"
             },
+            "3": [
+              "1"
+            ],
             "type": "PostfixExp_call"
           }
         ],

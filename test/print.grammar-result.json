@@ -1,12 +1,9 @@
 [
   {
     "0": "print",
-    "1": {
-      "1": [
-        "\"Hello, world!\""
-      ],
-      "type": "Arguments"
-    },
+    "3": [
+      "\"Hello, world!\""
+    ],
     "type": "PostfixExp_call"
   }
 ]

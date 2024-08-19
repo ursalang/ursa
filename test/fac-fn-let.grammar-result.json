@@ -52,16 +52,13 @@
                   "0": "x",
                   "2": {
                     "0": "fac",
-                    "1": {
-                      "1": [
-                        {
-                          "0": "x",
-                          "2": "1",
-                          "type": "SumExp_minus"
-                        }
-                      ],
-                      "type": "Arguments"
-                    },
+                    "3": [
+                      {
+                        "0": "x",
+                        "2": "1",
+                        "type": "SumExp_minus"
+                      }
+                    ],
                     "type": "PostfixExp_call"
                   },
                   "type": "ProductExp_times"
@@ -79,12 +76,9 @@
   ],
   {
     "0": "fac",
-    "1": {
-      "1": [
-        "6"
-      ],
-      "type": "Arguments"
-    },
+    "3": [
+      "6"
+    ],
     "type": "PostfixExp_call"
   }
 ]

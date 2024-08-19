@@ -190,7 +190,7 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
       } else if (inst instanceof ArkCallInst) {
         return sourceNode(letAssign(inst.id, `yield* ${inst.fnId.description}.body(${inst.argIds.map((id) => id.description).join(', ')})`))
       } else if (inst instanceof ArkInvokeInst) {
-        return sourceNode(letAssign(inst.id, `yield* ${inst.objId.description}.get('${inst.prop}').body(${inst.argIds.map((id) => id.description).join(', ')})`))
+        return sourceNode(letAssign(inst.id, `yield* ${inst.objId.description}.getMethod('${inst.prop}').body(${inst.objId.description}, ${inst.argIds.map((id) => id.description).join(', ')})`))
       } else if (inst instanceof ArkSetNamedLocInst) {
         return sourceNode([
           `if (${inst.lexpId.description} !== ArkUndefined && ${inst.lexpId.description}.constructor !== ArkNullVal && ${inst.valId.description}.constructor !== ${inst.lexpId.description}.constructor) {\n`,
@@ -215,7 +215,10 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
         }
         return sourceNode(letAssign(inst.id, `new ArkMap(new Map([${mapInits.join(', ')}]))`))
       } else if (inst instanceof ArkPropertyInst) {
-        return sourceNode(letAssign(inst.id, `${inst.objId.description}.get('${inst.prop}')`))
+        return sourceNode([
+          letAssign(inst.id, `${inst.objId.description}.get('${inst.prop}')`),
+          `if (${inst.id.description} === ArkUndefined) throw new JsRuntimeError('Invalid property')\n`,
+        ])
       } else if (inst instanceof ArkCaptureInst) {
         return sourceNode(letAssign(inst.id, inst.name))
       } else if (inst instanceof ArkLocalInst) {
@@ -279,15 +282,20 @@ export async function evalArkJs(source: CodeWithSourceMap | string, file = '(Com
       const curFrame = stack.items[0]
       let prefix: string
       if (curFrame.line !== undefined) {
-        if (message.match('yield\\* \\(intermediate value\\)')) {
+        if (message.match('yield\\* \\(intermediate value\\)')
+          || message.match("Cannot read properties of undefined \\(reading 'body'\\)")) {
           const index = curFrame.column! - 1
           if (curFrame.sourceLine !== undefined && index < curFrame.sourceLine.length) {
             if (curFrame.sourceLine[index + 1] === '(') {
               message = 'Invalid call'
             } else if (curFrame.sourceLine[index + 1] === '.') {
-              message = 'Invalid property'
+              message = 'Invalid method'
+            } else {
+              console.log(curFrame.sourceLine)
             }
           }
+        } else {
+          console.log(message)
         }
         prefix = `Line ${curFrame.line}, col ${curFrame.column}:`
         const lineNumWidth = (curFrame.line + 1).toString().length

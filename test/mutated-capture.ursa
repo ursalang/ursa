@@ -9,7 +9,7 @@ let f = fn(initial) {
 }
 
 let foo = f(42)
-let result1 = foo.get()
-foo.set(41)
-let result2 = foo.get()
+let result1 = (foo.get)()
+(foo.set)(41)
+let result2 = (foo.get)()
 [result1, result2]

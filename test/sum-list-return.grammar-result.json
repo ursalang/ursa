@@ -74,16 +74,10 @@
                       "1": {
                         "0": "i",
                         "2": {
-                          "0": {
-                            "0": "l",
-                            "2": "len",
-                            "type": "PostfixExp_property"
-                          },
-                          "1": {
-                            "1": [],
-                            "type": "Arguments"
-                          },
-                          "type": "PostfixExp_call"
+                          "0": "l",
+                          "2": "len",
+                          "5": [],
+                          "type": "PostfixExp_invoke"
                         },
                         "type": "CompareExp_eq"
                       },
@@ -105,18 +99,12 @@
                   "2": {
                     "0": "tot",
                     "2": {
-                      "0": {
-                        "0": "l",
-                        "2": "get",
-                        "type": "PostfixExp_property"
-                      },
-                      "1": {
-                        "1": [
-                          "i"
-                        ],
-                        "type": "Arguments"
-                      },
-                      "type": "PostfixExp_call"
+                      "0": "l",
+                      "2": "get",
+                      "5": [
+                        "i"
+                      ],
+                      "type": "PostfixExp_invoke"
                     },
                     "type": "SumExp_plus"
                   },
@@ -144,21 +132,18 @@
   ],
   {
     "0": "sum",
-    "1": {
-      "1": [
-        {
-          "1": [
-            "10",
-            "30",
-            "50",
-            "5",
-            "5"
-          ],
-          "type": "List"
-        }
-      ],
-      "type": "Arguments"
-    },
+    "3": [
+      {
+        "1": [
+          "10",
+          "30",
+          "50",
+          "5",
+          "5"
+        ],
+        "type": "List"
+      }
+    ],
     "type": "PostfixExp_call"
   }
 ]

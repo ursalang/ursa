@@ -370,7 +370,7 @@ export function expToInsts(
     return new ArkInsts([
       ...argInsts.map((i) => i.insts).flat(),
       ...objInsts.insts,
-      new ArkInvokeInst(exp.obj.sourceLoc, objInsts.id, exp.prop, argIds, `${exp.obj.debug.name}.exp.prop`),
+      new ArkInvokeInst(exp.sourceLoc, objInsts.id, exp.prop, argIds, `${exp.obj.debug.name}.exp.prop`),
     ])
   } else if (exp instanceof ArkSet) {
     const insts = expToInsts(exp.exp, innerLoop, innerFn)

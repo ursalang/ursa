@@ -33,19 +33,13 @@
     }
   ],
   {
-    "0": {
-      "0": "t",
-      "2": "set",
-      "type": "PostfixExp_property"
-    },
-    "1": {
-      "1": [
-        "\"b\"",
-        "1"
-      ],
-      "type": "Arguments"
-    },
-    "type": "PostfixExp_call"
+    "0": "t",
+    "2": "set",
+    "5": [
+      "\"b\"",
+      "1"
+    ],
+    "type": "PostfixExp_invoke"
   },
   "t"
 ]

@@ -78,16 +78,10 @@
                       "1": {
                         "0": "i",
                         "2": {
-                          "0": {
-                            "0": "l",
-                            "2": "len",
-                            "type": "PostfixExp_property"
-                          },
-                          "1": {
-                            "1": [],
-                            "type": "Arguments"
-                          },
-                          "type": "PostfixExp_call"
+                          "0": "l",
+                          "2": "len",
+                          "5": [],
+                          "type": "PostfixExp_invoke"
                         },
                         "type": "CompareExp_eq"
                       },
@@ -105,36 +99,24 @@
                   "type": "Ifs"
                 },
                 {
-                  "0": {
-                    "0": "l",
-                    "2": "set",
-                    "type": "PostfixExp_property"
-                  },
-                  "1": {
-                    "1": [
-                      "i",
-                      {
-                        "0": {
-                          "0": {
-                            "0": "l",
-                            "2": "get",
-                            "type": "PostfixExp_property"
-                          },
-                          "1": {
-                            "1": [
-                              "i"
-                            ],
-                            "type": "Arguments"
-                          },
-                          "type": "PostfixExp_call"
-                        },
-                        "2": "2",
-                        "type": "ProductExp_times"
-                      }
-                    ],
-                    "type": "Arguments"
-                  },
-                  "type": "PostfixExp_call"
+                  "0": "l",
+                  "2": "set",
+                  "5": [
+                    "i",
+                    {
+                      "0": {
+                        "0": "l",
+                        "2": "get",
+                        "5": [
+                          "i"
+                        ],
+                        "type": "PostfixExp_invoke"
+                      },
+                      "2": "2",
+                      "type": "ProductExp_times"
+                    }
+                  ],
+                  "type": "PostfixExp_invoke"
                 },
                 {
                   "0": "i",
@@ -158,19 +140,16 @@
   ],
   {
     "0": "double",
-    "1": {
-      "1": [
-        {
-          "1": [
-            "1",
-            "2",
-            "3"
-          ],
-          "type": "List"
-        }
-      ],
-      "type": "Arguments"
-    },
+    "3": [
+      {
+        "1": [
+          "1",
+          "2",
+          "3"
+        ],
+        "type": "List"
+      }
+    ],
     "type": "PostfixExp_call"
   }
 ]

@@ -13,12 +13,9 @@
     "1": [
       {
         "0": "print",
-        "1": {
-          "1": [
-            "i"
-          ],
-          "type": "Arguments"
-        },
+        "3": [
+          "i"
+        ],
         "type": "PostfixExp_call"
       },
       {

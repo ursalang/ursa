@@ -50,16 +50,13 @@
               "2": [
                 {
                   "0": "is_odd",
-                  "1": {
-                    "1": [
-                      {
-                        "0": "n",
-                        "2": "1",
-                        "type": "SumExp_minus"
-                      }
-                    ],
-                    "type": "Arguments"
-                  },
+                  "3": [
+                    {
+                      "0": "n",
+                      "2": "1",
+                      "type": "SumExp_minus"
+                    }
+                  ],
                   "type": "PostfixExp_call"
                 }
               ],
@@ -122,16 +119,13 @@
               "2": [
                 {
                   "0": "is_even",
-                  "1": {
-                    "1": [
-                      {
-                        "0": "n",
-                        "2": "1",
-                        "type": "SumExp_minus"
-                      }
-                    ],
-                    "type": "Arguments"
-                  },
+                  "3": [
+                    {
+                      "0": "n",
+                      "2": "1",
+                      "type": "SumExp_minus"
+                    }
+                  ],
                   "type": "PostfixExp_call"
                 }
               ],
@@ -149,42 +143,30 @@
     "1": [
       {
         "0": "is_even",
-        "1": {
-          "1": [
-            "0"
-          ],
-          "type": "Arguments"
-        },
+        "3": [
+          "0"
+        ],
         "type": "PostfixExp_call"
       },
       {
         "0": "is_even",
-        "1": {
-          "1": [
-            "1"
-          ],
-          "type": "Arguments"
-        },
+        "3": [
+          "1"
+        ],
         "type": "PostfixExp_call"
       },
       {
         "0": "is_odd",
-        "1": {
-          "1": [
-            "5"
-          ],
-          "type": "Arguments"
-        },
+        "3": [
+          "5"
+        ],
         "type": "PostfixExp_call"
       },
       {
         "0": "is_odd",
-        "1": {
-          "1": [
-            "12"
-          ],
-          "type": "Arguments"
-        },
+        "3": [
+          "12"
+        ],
         "type": "PostfixExp_call"
       }
     ],

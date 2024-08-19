@@ -17,19 +17,13 @@
     }
   ],
   {
-    "0": {
-      "0": "l",
-      "2": "set",
-      "type": "PostfixExp_property"
-    },
-    "1": {
-      "1": [
-        "1",
-        "4"
-      ],
-      "type": "Arguments"
-    },
-    "type": "PostfixExp_call"
+    "0": "l",
+    "2": "set",
+    "5": [
+      "1",
+      "4"
+    ],
+    "type": "PostfixExp_invoke"
   },
   "l"
 ]

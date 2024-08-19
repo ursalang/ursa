@@ -47,7 +47,8 @@ import {
 
   // Compiler error tests
   ['Test error on bad function call', 'test/bad-call'],
-  ['Test error on bad property access', 'test/sum-map-iterator-wrong'],
+  ['Test error on invalid method invocation', 'test/sum-map-iterator-invalid-method'],
+  ['Test error on invalid property access', 'test/sum-map-iterator-invalid-property'],
   ['Test error on assignment to non-lvalue', 'test/bad-assignment'],
   ['Test error on re-assignment with wrong type', 'test/bad-reassignment'],
   ["Test error on duplicate identifiers in 'let'", 'test/duplicate-let'],

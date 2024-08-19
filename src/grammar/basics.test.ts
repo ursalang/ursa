@@ -151,15 +151,12 @@ testGroup('Lists', [
   ['[1, 2, 3].get(1)', [
     {
       0: {
-        0: {1: ['1', '2', '3'], type: 'List'},
-        2: 'get',
-        type: 'PostfixExp_property',
+        1: ['1', '2', '3'],
+        type: 'List',
       },
-      1: {
-        1: ['1'],
-        type: 'Arguments',
-      },
-      type: 'PostfixExp_call',
+      2: 'get',
+      5: ['1'],
+      type: 'PostfixExp_invoke',
     },
   ]],
 ])

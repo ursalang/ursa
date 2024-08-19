@@ -4,32 +4,20 @@
       "1": {
         "0": "s",
         "1": {
-          "0": {
-            "0": "fs",
-            "2": "readFileSync",
-            "type": "PostfixExp_property"
-          },
-          "1": {
-            "1": [
-              {
-                "0": {
-                  "0": "argv",
-                  "2": "get",
-                  "type": "PostfixExp_property"
-                },
-                "1": {
-                  "1": [
-                    "1"
-                  ],
-                  "type": "Arguments"
-                },
-                "type": "PostfixExp_call"
-              },
-              "\"utf-8\""
-            ],
-            "type": "Arguments"
-          },
-          "type": "PostfixExp_call"
+          "0": "fs",
+          "2": "readFileSync",
+          "5": [
+            {
+              "0": "argv",
+              "2": "get",
+              "5": [
+                "1"
+              ],
+              "type": "PostfixExp_invoke"
+            },
+            "\"utf-8\""
+          ],
+          "type": "PostfixExp_invoke"
         },
         "type": "Definition"
       },
@@ -42,13 +30,10 @@
         "0": "regex",
         "1": {
           "0": "RegExp",
-          "1": {
-            "1": [
-              "\"\\\\p{L}+\"",
-              "\"ug\""
-            ],
-            "type": "Arguments"
-          },
+          "3": [
+            "\"\\\\p{L}+\"",
+            "\"ug\""
+          ],
           "type": "PostfixExp_call"
         },
         "type": "Definition"
@@ -63,18 +48,12 @@
           "1": {
             "0": "m",
             "1": {
-              "0": {
-                "0": "regex",
-                "2": "exec",
-                "type": "PostfixExp_property"
-              },
-              "1": {
-                "1": [
-                  "s"
-                ],
-                "type": "Arguments"
-              },
-              "type": "PostfixExp_call"
+              "0": "regex",
+              "2": "exec",
+              "5": [
+                "s"
+              ],
+              "type": "PostfixExp_invoke"
             },
             "type": "Definition"
           },
@@ -104,25 +83,16 @@
       },
       {
         "0": "print",
-        "1": {
-          "1": [
-            {
-              "0": {
-                "0": "m",
-                "2": "get",
-                "type": "PostfixExp_property"
-              },
-              "1": {
-                "1": [
-                  "0"
-                ],
-                "type": "Arguments"
-              },
-              "type": "PostfixExp_call"
-            }
-          ],
-          "type": "Arguments"
-        },
+        "3": [
+          {
+            "0": "m",
+            "2": "get",
+            "5": [
+              "0"
+            ],
+            "type": "PostfixExp_invoke"
+          }
+        ],
         "type": "PostfixExp_call"
       }
     ],

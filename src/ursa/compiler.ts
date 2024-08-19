@@ -32,7 +32,6 @@ type ParserOperations = {
   toLval(a: ParserArgs): ArkLvalue
   toDefinition(a: ParserArgs): Definition
   toKeyValue(a: ParserArgs): KeyValue
-  toArguments(a: ParserArgs): Arguments
   toType(a: ParserArgs): void
   toMethod(a: ParserArgs): ArkFnType
   toParam(a: ParserArgs): string
@@ -165,14 +164,6 @@ semantics.addOperation<KeyValue>('toKeyValue(a)', {
   },
 })
 
-semantics.addOperation<Arguments>('toArguments(a)', {
-  Arguments(_open, args, _maybeComma, _close) {
-    return new Arguments(
-      args.asIteration().children.map((x) => x.toExp(this.args.a)),
-    )
-  },
-})
-
 semantics.addOperation<string>('toParam(a)', {
   Param(ident, maybeType) {
     if (maybeType.children.length > 0) {
@@ -255,6 +246,12 @@ function makeSequence(a: ParserArgs, seq: ParserNode, exps: ParserNode[]): ArkEx
   return addLoc(new ArkSequence(res), seq)
 }
 
+function makeArguments(a: ParserArgs, args: ParserNode): Arguments {
+  return new Arguments(
+    args.asIteration().children.map((x) => x.toExp(a)),
+  )
+}
+
 semantics.addOperation<ArkExp>('toExp(a)', {
   Sequence(exps, _sc) {
     return makeSequence(this.args.a, this, exps.asIteration().children)
@@ -296,8 +293,18 @@ semantics.addOperation<ArkExp>('toExp(a)', {
   PostfixExp_property(exp, _dot, property) {
     return makeProperty(this.args.a, this, exp, property)
   },
-  PostfixExp_call(exp, args) {
-    return addLoc(new ArkCall(exp.toExp(this.args.a), args.toArguments(this.args.a).args), this)
+  PostfixExp_invoke(exp, _dot, property, _spaces, _open, args, _maybeComma, _close) {
+    return addLoc(
+      new ArkInvoke(
+        exp.toExp(this.args.a),
+        property.sourceString,
+        makeArguments(this.args.a, args).args,
+      ),
+      this,
+    )
+  },
+  PostfixExp_call(exp, _spaces, _open, args, _maybeComma, _close) {
+    return addLoc(new ArkCall(exp.toExp(this.args.a), makeArguments(this.args.a, args).args), this)
   },
 
   Ifs(ifs, _else, elseBlock) {

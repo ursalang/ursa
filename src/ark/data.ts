@@ -2,8 +2,6 @@
 // © Reuben Thomas 2023-2024
 // Released under the MIT license.
 
-import assert from 'assert'
-
 import {
   action, call, Operation, Reject, Resolve, run, sleep,
 } from 'effection'
@@ -22,21 +20,54 @@ function isGeneratorFunction(obj: object) {
 export class ArkVal {}
 
 export abstract class ArkAbstractObjectBase extends ArkVal {
+  abstract getMethod(prop: string): ArkCallable | undefined
+
   abstract get(prop: string): ArkVal
 
   abstract set(prop: string, val: ArkVal): ArkVal
 }
 
-class ArkObjectBase extends ArkAbstractObjectBase {
-  constructor(public properties: Map<string, ArkVal>) {
-    ArkObjectBase.addDefaults(
-      [
-        ['equals', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this === right))],
-        ['notEquals', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this !== right))],
-      ],
-      properties,
-    )
+export abstract class ArkCallable extends ArkVal {
+  constructor(public params: string[]) {
     super()
+  }
+}
+
+export class NativeFn extends ArkCallable {
+  public body: (...args: ArkVal[]) => Operation<ArkVal>
+
+  constructor(
+    params: string[],
+    innerBody: (...args: ArkVal[]) => ArkVal | Operation<ArkVal>,
+  ) {
+    super(params)
+    if (isGeneratorFunction(innerBody)) {
+      this.body = innerBody as (...args: ArkVal[]) => Operation<ArkVal>
+    } else {
+      // eslint-disable-next-line require-yield
+      this.body = function* gen(...args: ArkVal[]) {
+        return innerBody(...args)
+      }
+    }
+  }
+}
+
+class ArkObjectBase extends ArkAbstractObjectBase {
+  public properties: Map<string, ArkVal> = new Map()
+
+  public static methods = new Map<string, ArkCallable>(
+    [
+      ['equals', new NativeFn(['right'], (right) => ArkBoolean(this === right))],
+      ['notEquals', new NativeFn(['right'], (right) => ArkBoolean(this !== right))],
+    ],
+  )
+
+  static addMethods(properties: [string, ArkCallable][]) {
+    properties.forEach(([name, val]) => this.methods.set(name, val))
+  }
+
+  getMethod(prop: string): ArkCallable | undefined {
+    return (this.constructor as typeof ArkObjectBase).methods.get(prop)
   }
 
   get(prop: string) {
@@ -47,94 +78,88 @@ class ArkObjectBase extends ArkAbstractObjectBase {
     this.properties.set(prop, val)
     return val
   }
-
-  static addDefaults(defaults: [string, ArkVal][], properties: Map<string, ArkVal> = new Map()) {
-    defaults.forEach(([name, val]) => {
-      if (!properties.has(name)) {
-        properties.set(name, val)
-      }
-    })
-    return properties
-  }
 }
 
 export abstract class ArkConcreteVal<T> extends ArkObjectBase {
-  constructor(public properties: Map<string, ArkVal>, public val: T) {
-    super(ArkConcreteVal.addDefaults(
+  static methods: Map<string, ArkCallable> = new Map([...ArkObjectBase.methods])
+
+  static {
+    ArkConcreteVal.addMethods(
       [
-        ['equals', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val === toJs(right)))],
-        ['notEquals', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val !== toJs(right)))],
+        ['equals', new NativeFn(['right'], (thisVal, right) => ArkBoolean((thisVal as ArkConcreteVal<unknown>).val === toJs(right)))],
+        ['notEquals', new NativeFn(['right'], (thisVal, right) => ArkBoolean((thisVal as ArkConcreteVal<unknown>).val !== toJs(right)))],
       ],
-      properties,
-    ))
+    )
+  }
+
+  constructor(public val: T) {
+    super()
   }
 }
 
 export class ArkNullVal extends ArkConcreteVal<null> {
+  static methods: Map<string, ArkCallable> = new Map([...ArkConcreteVal.methods])
+
   constructor() {
-    super(new Map(), null)
+    super(null)
   }
 }
 export class ArkBooleanVal extends ArkConcreteVal<boolean> {
-  constructor(val: boolean) {
-    super(
-      ArkBooleanVal.addDefaults([['not', new NativeFn([], () => ArkBoolean(!this.val))]]),
-      val,
-    )
+  static methods: Map<string, ArkCallable> = new Map([...ArkConcreteVal.methods])
+
+  static {
+    ArkBooleanVal.addMethods([['not', new NativeFn([], (thisVal) => ArkBoolean(!(thisVal as ArkConcreteVal<boolean>).val))]])
   }
 }
 export class ArkNumberVal extends ArkConcreteVal<number> {
-  constructor(val: number) {
-    super(
-      ArkNumberVal.addDefaults(
-        [
-          ['toString', new NativeFn([], () => ArkString(this.val.toString()))],
-          ['pos', new NativeFn([], () => ArkNumber(+this.val))],
-          ['neg', new NativeFn([], () => ArkNumber(-this.val))],
-          ['bitwiseNot', new NativeFn([], () => ArkNumber(~this.val))],
-          ['lt', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val < (right as ArkNumberVal).val))],
-          ['leq', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val <= (right as ArkNumberVal).val))],
-          ['gt', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val > (right as ArkNumberVal).val))],
-          ['geq', new NativeFn(['right'], (right: ArkVal) => ArkBoolean(this.val >= (right as ArkNumberVal).val))],
-          ['add', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val + (right as ArkNumberVal).val))],
-          ['sub', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val - (right as ArkNumberVal).val))],
-          ['mul', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val * (right as ArkNumberVal).val))],
-          ['div', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val / (right as ArkNumberVal).val))],
-          ['mod', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val % (right as ArkNumberVal).val))],
-          ['exp', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val ** (right as ArkNumberVal).val))],
-          ['bitwiseAnd', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val & (right as ArkNumberVal).val))],
-          ['bitwiseOr', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val | (right as ArkNumberVal).val))],
-          ['bitwiseXor', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val ^ (right as ArkNumberVal).val))],
-          ['shiftLeft', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val << (right as ArkNumberVal).val))],
-          ['shiftRight', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val >> (right as ArkNumberVal).val))],
-          ['shiftRightArith', new NativeFn(['right'], (right: ArkVal) => ArkNumber(this.val >>> (right as ArkNumberVal).val))],
-        ],
-      ),
-      val,
+  static methods: Map<string, ArkCallable> = new Map([...ArkConcreteVal.methods])
+
+  static {
+    ArkNumberVal.addMethods(
+      [
+        ['toString', new NativeFn([], (thisVal) => ArkString((thisVal as ArkConcreteVal<number>).val.toString()))],
+        ['pos', new NativeFn([], (thisVal) => ArkNumber(+(thisVal as ArkConcreteVal<number>).val))],
+        ['neg', new NativeFn([], (thisVal) => ArkNumber(-(thisVal as ArkConcreteVal<number>).val))],
+        ['bitwiseNot', new NativeFn([], (thisVal) => ArkNumber(~(thisVal as ArkConcreteVal<number>).val))],
+        ['lt', new NativeFn(['right'], (thisVal, right) => ArkBoolean((thisVal as ArkConcreteVal<number>).val < (right as ArkNumberVal).val))],
+        ['leq', new NativeFn(['right'], (thisVal, right) => ArkBoolean((thisVal as ArkConcreteVal<number>).val <= (right as ArkNumberVal).val))],
+        ['gt', new NativeFn(['right'], (thisVal, right) => ArkBoolean((thisVal as ArkConcreteVal<number>).val > (right as ArkNumberVal).val))],
+        ['geq', new NativeFn(['right'], (thisVal, right) => ArkBoolean((thisVal as ArkConcreteVal<number>).val >= (right as ArkNumberVal).val))],
+        ['add', new NativeFn(['right'], (thisVal, right) => ArkNumber((thisVal as ArkConcreteVal<number>).val + (right as ArkNumberVal).val))],
+        ['sub', new NativeFn(['right'], (thisVal, right) => ArkNumber((thisVal as ArkConcreteVal<number>).val - (right as ArkNumberVal).val))],
+        ['mul', new NativeFn(['right'], (thisVal, right) => ArkNumber((thisVal as ArkConcreteVal<number>).val * (right as ArkNumberVal).val))],
+        ['div', new NativeFn(['right'], (thisVal, right) => ArkNumber((thisVal as ArkConcreteVal<number>).val / (right as ArkNumberVal).val))],
+        ['mod', new NativeFn(['right'], (thisVal, right) => ArkNumber((thisVal as ArkConcreteVal<number>).val % (right as ArkNumberVal).val))],
+        ['exp', new NativeFn(['right'], (thisVal, right) => ArkNumber((thisVal as ArkConcreteVal<number>).val ** (right as ArkNumberVal).val))],
+        ['bitwiseAnd', new NativeFn(['right'], (thisVal, right) => ArkNumber((thisVal as ArkConcreteVal<number>).val & (right as ArkNumberVal).val))],
+        ['bitwiseOr', new NativeFn(['right'], (thisVal, right) => ArkNumber((thisVal as ArkConcreteVal<number>).val | (right as ArkNumberVal).val))],
+        ['bitwiseXor', new NativeFn(['right'], (thisVal, right) => ArkNumber((thisVal as ArkConcreteVal<number>).val ^ (right as ArkNumberVal).val))],
+        ['shiftLeft', new NativeFn(['right'], (thisVal, right) => ArkNumber((thisVal as ArkConcreteVal<number>).val << (right as ArkNumberVal).val))],
+        ['shiftRight', new NativeFn(['right'], (thisVal, right) => ArkNumber((thisVal as ArkConcreteVal<number>).val >> (right as ArkNumberVal).val))],
+        ['shiftRightArith', new NativeFn(['right'], (thisVal, right) => ArkNumber((thisVal as ArkConcreteVal<number>).val >>> (right as ArkNumberVal).val))],
+      ],
     )
   }
 }
 export class ArkStringVal extends ArkConcreteVal<string> {
-  constructor(val: string) {
-    super(
-      ArkStringVal.addDefaults(
-        [
-          ['get', new NativeFn(['index'], (index: ArkVal) => ArkString(this.val[toJs(index) as number]))],
-          ['iter', new NativeFn([], () => {
-            const str = this.val
-            const generator = (function* stringGenerator() {
-              for (const elem of str) {
-                yield ArkString(elem)
-              }
-              return ArkNull()
-            }())
-            return new NativeFn([], () => generator.next().value)
-          })],
-          ['split', new NativeFn(['sep'], (sep: ArkVal) => new ArkList(this.val.split((sep as ArkStringVal).val).map((s) => ArkString(s))))],
-        ],
-        new Map(),
-      ),
-      val,
+  static methods: Map<string, ArkCallable> = new Map([...ArkConcreteVal.methods])
+
+  static {
+    ArkStringVal.addMethods(
+      [
+        ['get', new NativeFn(['index'], (thisVal, index) => ArkString((thisVal as ArkConcreteVal<string>).val[toJs(index) as number]))],
+        ['iter', new NativeFn([], (thisVal) => {
+          const str = (thisVal as ArkConcreteVal<string>).val
+          const generator = (function* stringGenerator() {
+            for (const elem of str) {
+              yield ArkString(elem)
+            }
+            return ArkNull()
+          }())
+          return new NativeFn([], () => generator.next().value)
+        })],
+        ['split', new NativeFn(['sep'], (thisVal, sep) => new ArkList((thisVal as ArkConcreteVal<string>).val.split((sep as ArkStringVal).val).map((s) => ArkString(s))))],
+      ],
     )
   }
 }
@@ -185,12 +210,6 @@ export class ArkOperation extends ArkVal {
   }
 }
 
-export abstract class ArkCallable extends ArkVal {
-  constructor(public params: string[]) {
-    super()
-  }
-}
-
 export abstract class ArkClosure extends ArkCallable {
   constructor(params: string[], public captures: ArkRef[]) {
     super(params)
@@ -200,25 +219,6 @@ export abstract class ArkClosure extends ArkCallable {
 }
 // ts-unused-exports:disable-next-line
 export abstract class ArkGeneratorClosure extends ArkClosure {}
-
-export class NativeFn extends ArkCallable {
-  public body: (...args: ArkVal[]) => Operation<ArkVal>
-
-  constructor(
-    params: string[],
-    innerBody: (...args: ArkVal[]) => ArkVal | Operation<ArkVal>,
-  ) {
-    super(params)
-    if (isGeneratorFunction(innerBody)) {
-      this.body = innerBody as (...args: ArkVal[]) => Operation<ArkVal>
-    } else {
-      // eslint-disable-next-line require-yield
-      this.body = function* gen(...args: ArkVal[]) {
-        return innerBody(...args)
-      }
-    }
-  }
-}
 
 export class NativeOperation extends ArkCallable {
   constructor(params: string[], public body: (...args: ArkVal[]) => Operation<ArkVal>) {
@@ -257,11 +257,32 @@ export class NativeAsyncFn extends ArkCallable {
 //   }
 // }
 
-export class ArkObject extends ArkObjectBase {}
+export class ArkObject extends ArkObjectBase {
+  static properties: Map<string, ArkCallable> = new Map([...ArkObjectBase.methods])
+
+  constructor(properties: Map<string, ArkVal>) {
+    super()
+    this.properties = properties
+  }
+
+  static subClass(properties: Map<string, ArkCallable> = new Map()): typeof ArkObject {
+    return class extends ArkObject {
+      static properties: Map<string, ArkCallable> = new Map([...ArkObject.properties])
+
+      static {
+        this.addMethods([...properties.entries()])
+      }
+    }
+  }
+}
 
 export class NativeObject extends ArkAbstractObjectBase {
   constructor(public obj: object) {
     super()
+  }
+
+  getMethod(prop: string): ArkCallable {
+    return fromJs((this.obj as {[key: string]: unknown})[prop], this.obj, true) as ArkCallable
   }
 
   get(prop: string): ArkVal {
@@ -275,33 +296,35 @@ export class NativeObject extends ArkAbstractObjectBase {
 }
 
 export class ArkList extends ArkObjectBase {
-  constructor(public list: ArkVal[]) {
-    super(new Map([
-      ['len', new NativeFn(['len'], () => ArkNumber(this.list.length))],
-      ['get', new NativeFn(['index'], (index: ArkVal) => this.list[toJs(index) as number])],
+  static methods: Map<string, ArkCallable> = new Map([...ArkObjectBase.methods])
+
+  static {
+    ArkList.addMethods([
+      ['len', new NativeFn(['len'], (thisVal) => ArkNumber((thisVal as ArkList).list.length))],
+      ['get', new NativeFn(['index'], (thisVal, index) => (thisVal as ArkList).list[toJs(index) as number])],
       ['set', new NativeFn(
         ['index', 'val'],
-        (index: ArkVal, val: ArkVal) => {
-          this.list[toJs(index) as number] = val
-          return this
+        (thisVal, index, val) => {
+          (thisVal as ArkList).list[toJs(index) as number] = val
+          return thisVal
         },
       )],
-      ['push', new NativeFn(['item'], (item: ArkVal) => {
-        this.list.push(item)
-        return this
+      ['push', new NativeFn(['item'], (thisVal, item) => {
+        (thisVal as ArkList).list.push(item)
+        return thisVal
       })],
-      ['pop', new NativeFn([], () => {
-        this.list.pop()
-        return this
+      ['pop', new NativeFn([], (thisVal) => {
+        (thisVal as ArkList).list.pop()
+        return thisVal
       })],
-      ['slice', new NativeFn(['from', 'to'], (from, to) => new ArkList(
-        this.list.slice(
+      ['slice', new NativeFn(['from', 'to'], (thisVal, from, to) => new ArkList(
+        (thisVal as ArkList).list.slice(
           from instanceof ArkNumberVal ? from.val : 0,
           to instanceof ArkNumberVal ? to.val : undefined,
         ),
       ))],
-      ['iter', new NativeFn([], () => {
-        const list = this.list
+      ['iter', new NativeFn([], (thisVal) => {
+        const list = (thisVal as ArkList).list
         const generator = (function* listGenerator() {
           for (const elem of list) {
             yield elem
@@ -310,30 +333,36 @@ export class ArkList extends ArkObjectBase {
         }())
         return new NativeFn([], () => generator.next().value)
       })],
-      ['sorted', new NativeFn([], () => new ArkList(this.list.map(toJs).toSorted().map((v) => fromJs(v))))],
-      ['join', new NativeFn(['sep'], (sep) => ArkString(this.list.map(toJs).join((sep as ArkStringVal).val)))],
-    ]))
+      ['sorted', new NativeFn([], (thisVal) => new ArkList((thisVal as ArkList).list.map(toJs).toSorted().map((v) => fromJs(v))))],
+      ['join', new NativeFn(['sep'], (thisVal, sep) => ArkString((thisVal as ArkList).list.map(toJs).join((sep as ArkStringVal).val)))],
+    ])
+  }
+
+  constructor(public list: ArkVal[]) {
+    super()
   }
 }
 
 export class ArkMap extends ArkObjectBase {
-  constructor(public map: Map<ArkVal, ArkVal>) {
-    super(new Map([
-      ['get', new NativeFn(['index'], (index: ArkVal) => this.map.get(index) ?? ArkNull())],
+  static methods: Map<string, ArkCallable> = new Map([...ArkObjectBase.methods])
+
+  static {
+    ArkMap.addMethods([
+      ['get', new NativeFn(['index'], (thisVal, index) => (thisVal as ArkMap).map.get(index) ?? ArkNull())],
       ['set', new NativeFn(
         ['index', 'val'],
-        (index: ArkVal, val: ArkVal) => {
-          this.map.set(index, val)
-          return this
+        (thisVal, index, val) => {
+          (thisVal as ArkMap).map.set(index, val)
+          return thisVal
         },
       )],
-      ['delete', new NativeFn(['index'], (index: ArkVal) => {
-        this.map.delete(index)
-        return this
+      ['delete', new NativeFn(['index'], (thisVal, index) => {
+        (thisVal as ArkMap).map.delete(index)
+        return thisVal
       })],
-      ['has', new NativeFn(['index'], (index: ArkVal) => ArkBoolean(this.map.has(index)))],
-      ['iter', new NativeFn([], () => {
-        const map = this.map
+      ['has', new NativeFn(['index'], (thisVal, index) => ArkBoolean((thisVal as ArkMap).map.has(index)))],
+      ['iter', new NativeFn([], (thisVal) => {
+        const map = (thisVal as ArkMap).map
         const generator = (function* mapEntriesGenerator() {
           for (const [key, value] of map.entries()) {
             yield new ArkList([key, value])
@@ -342,8 +371,8 @@ export class ArkMap extends ArkObjectBase {
         }())
         return new NativeFn([], () => generator.next().value)
       })],
-      ['keys', new NativeFn([], () => {
-        const map = this.map
+      ['keys', new NativeFn([], (thisVal) => {
+        const map = (thisVal as ArkMap).map
         const generator = (function* mapKeysGenerator() {
           for (const key of map.keys()) {
             yield key
@@ -352,8 +381,8 @@ export class ArkMap extends ArkObjectBase {
         }())
         return new NativeFn([], () => generator.next().value)
       })],
-      ['values', new NativeFn([], () => {
-        const map = this.map
+      ['values', new NativeFn([], (thisVal) => {
+        const map = (thisVal as ArkMap).map
         const generator = (function* mapValuesGenerator() {
           for (const value of map.values()) {
             yield value
@@ -362,7 +391,11 @@ export class ArkMap extends ArkObjectBase {
         }())
         return new NativeFn([], () => generator.next().value)
       })],
-    ]))
+    ])
+  }
+
+  constructor(public map: Map<ArkVal, ArkVal>) {
+    super()
   }
 }
 
@@ -416,18 +449,18 @@ export const globals = new ArkObject(new Map<string, ArkVal>([
 
   // Ursa's prelude (see also prelude.ursa).
   ['version', ArkString(programVersion)],
-  ['debug', new NativeFn(['obj'], (obj: ArkVal) => {
+  ['debug', new NativeFn(['obj'], (obj) => {
     debug(obj)
     return ArkNull()
   })],
-  ['fs', new NativeFn(['path'], (path: ArkVal) => new NativeObject(new FsMap((path as ArkStringVal).val)))],
-  ['sleep', new NativeOperation(['ms'], function* gen(ms: ArkVal) {
+  ['fs', new NativeFn(['path'], (path) => new NativeObject(new FsMap((path as ArkStringVal).val)))],
+  ['sleep', new NativeOperation(['ms'], function* gen(ms) {
     yield* sleep((ms as ArkNumberVal).val)
     return ArkNull()
   })],
   ['action', new NativeFn(
     ['resolve', 'reject'],
-    function* gen(fn: ArkVal) {
+    function* gen(fn) {
       const result = yield* action(
         toJs(fn) as (resolve: Resolve<unknown>, reject: Reject) => Operation<void>,
       )
@@ -437,7 +470,7 @@ export const globals = new ArkObject(new Map<string, ArkVal>([
 
   // JavaScript bindings—globals (with "use").
   ['js', new ArkObject(new Map([[
-    'use', new NativeFn([], (arg: ArkVal) => {
+    'use', new NativeFn([], (arg) => {
       const name = toJs(arg) as string
       // eslint-disable-next-line max-len
       // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
@@ -447,16 +480,10 @@ export const globals = new ArkObject(new Map<string, ArkVal>([
 
   // JavaScript bindings—imported libraries (with "use").
   ['jslib', new ArkObject(new Map([[
-    'use', new NativeAsyncFn([], async (...args: ArkVal[]) => {
-      const importPath = (args.map(toJs).join('.'))
+    'use', new NativeAsyncFn([], async (...args) => {
+      const importPath = args.map(toJs).join('.')
       const module: unknown = await import(importPath)
-      assert(typeof module === 'object')
-      const wrappedModule = new Map<string, ArkVal>()
-      // eslint-disable-next-line guard-for-in
-      for (const key in module) {
-        wrappedModule.set(key, fromJs((module as {[key: string]: unknown})[key]))
-      }
-      return new ArkObject(wrappedModule)
+      return fromJs(module)
     }),
   ]]))],
 ]))
@@ -470,7 +497,7 @@ for (const [k, v] of globals.properties.entries()) {
 // FFI
 class ArkFromJsError extends Error {}
 
-function fromJs(x: unknown, thisObj?: object): ArkVal {
+function fromJs(x: unknown, thisObj?: object, asMethod: boolean = false): ArkVal {
   if (x === null || x === undefined) {
     return ArkNull()
   }
@@ -487,11 +514,16 @@ function fromJs(x: unknown, thisObj?: object): ArkVal {
     // eslint-disable-next-line max-len
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/ban-types
     const fn: Function = thisObj ? x.bind(thisObj) : x
-    const nativeFn = new NativeAsyncFn(
+    if (asMethod) {
+      return new NativeAsyncFn(
+        [],
+        async (_this, ...args) => fromJs(await fn(...args.map(toJs))),
+      )
+    }
+    return new NativeAsyncFn(
       [],
-      async (...args: ArkVal[]) => fromJs(await fn(...args.map(toJs))),
+      async (...args) => fromJs(await fn(...args.map(toJs))),
     )
-    return nativeFn
   }
   if (x instanceof Array) {
     return new ArkList(x.map((e) => fromJs(e)))
@@ -515,6 +547,9 @@ export function toJs(val: ArkVal): unknown {
     return val.val
   } else if (val instanceof ArkObject) {
     const obj: {[key: string]: unknown} = {}
+    for (const [k, v] of (val.constructor as typeof ArkObjectBase).methods) {
+      obj[k] = toJs(v)
+    }
     for (const [k, v] of val.properties) {
       obj[k] = toJs(v)
     }

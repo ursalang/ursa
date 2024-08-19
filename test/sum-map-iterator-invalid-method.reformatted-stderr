@@ -1,10 +1,10 @@
 Error: Line 6, col 17:
   5 |         let l = it()
 > 6 |         let k = l.get(0) and let v = l.get(1)
-                      ^~~~~
+                      ^~~~~~~~
   7 |         if l == null {
 
-Invalid property
+Invalid method
 
 Traceback (most recent call last)
   line 14

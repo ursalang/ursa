@@ -35,9 +35,15 @@ export function valToJs(val: ArkVal | ArkExp, externalSyms = globals) {
       return doValToJs(val.val)
     } else if (val instanceof ArkFn) {
       return [val instanceof ArkGenerator ? 'gen' : 'fn', [...val.params], doValToJs(val.body)]
-    } else if (val instanceof ArkObject || val instanceof ArkObjectLiteral) {
+    } else if (val instanceof ArkObjectLiteral) {
       const obj = {}
       for (const [k, v] of val.properties) {
+        (obj as {[key: string]: unknown})[k] = doValToJs(v)
+      }
+      return obj
+    } else if (val instanceof ArkObject) {
+      const obj = {}
+      for (const [k, v] of (val.constructor as typeof ArkObject).properties) {
         (obj as {[key: string]: unknown})[k] = doValToJs(v)
       }
       return obj

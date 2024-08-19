@@ -1,13 +1,13 @@
 // Ursa grammar.
-// © Reuben Thomas 2023
+// © Reuben Thomas 2023-2024
 // Released under the MIT license.
 
 Ursa {
   Sequence = ListOf<Statement, #sc> #sc
 
-  // A semicolon is "automatically inserted" if a newline or the end of the input stream is
-  // reached, or the next token is "}".
-  // NOTE: Applications of this rule *must* appear in a lexical context -- either in the body of a
+  // A semicolon is "automatically inserted" at the end of the input stream,
+  // or if a line terminator or "}" token causes parsing to fail.
+  // NOTE: Applications of this rule *must* appear in a lexical context: either in the body of a
   // lexical rule, or inside `#()`.
   sc = space* (";" | end)
      | spacesNoNL (lineTerminator | &"}")
@@ -37,11 +37,10 @@ Ursa {
   KeyValue = Exp ":" Exp
 
   PostfixExp
-    = PostfixExp "." ident     -- property
-    | PostfixExp Arguments     -- call
-    | PrimaryExp               -- primary
-
-  Arguments = "(" ListOf<Exp, ","> ","? ")"
+    = PostfixExp "." ident #spacesNoNL #"(" ListOf<Exp, ","> ","? ")" -- invoke
+    | PostfixExp "." ident                                            -- property
+    | PostfixExp #spacesNoNL #"(" ListOf<Exp, ","> ","? ")"           -- call
+    | PrimaryExp                                                      -- primary
 
   Ifs = NonemptyListOf<If, else> (else Block)?
   If = if Exp Block
@@ -226,9 +225,9 @@ Ursa {
   unicodeEscapeSequence
     = "u" hexDigit hexDigit hexDigit hexDigit
   lineTerminator
-    = "\n" | "\r" | "\u2028" | "\u2029"
+    = "\n" | "\r" | "\x0B" | "\x0C" | "\u2028" | "\u2029"
   lineTerminatorSequence
-    = "\n" | "\r" ~"\n" | "\u2028" | "\u2029" | "\r\n"
+    = "\n" | "\r" ~"\n" | "\x0B" | "\x0C" | "\u2028" | "\u2029" | "\r\n"
 
   literalString
     = "r\"" (~"\"" any)* "\""
@@ -249,8 +248,6 @@ Ursa {
 
   whitespace
     = "\t"
-    | "\x0B"    -- verticalTab
-    | "\x0C"    -- formFeed
     | " "
     | "\u00A0"  -- noBreakSpace
     | "\uFEFF"  -- byteOrderMark

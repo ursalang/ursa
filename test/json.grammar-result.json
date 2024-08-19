@@ -3,43 +3,31 @@
     "1": [
       {
         "0": {
-          "0": {
-            "0": "JSON",
-            "2": "parse",
-            "type": "PostfixExp_property"
-          },
-          "1": {
-            "1": [
-              "\"1\""
-            ],
-            "type": "Arguments"
-          },
-          "type": "PostfixExp_call"
+          "0": "JSON",
+          "2": "parse",
+          "5": [
+            "\"1\""
+          ],
+          "type": "PostfixExp_invoke"
         },
         "2": "2",
         "type": "SumExp_plus"
       },
       {
         "0": {
-          "0": {
-            "0": "JSON",
-            "2": "stringify",
-            "type": "PostfixExp_property"
-          },
-          "1": {
-            "1": [
-              {
-                "1": [
-                  "1",
-                  "2",
-                  "3"
-                ],
-                "type": "List"
-              }
-            ],
-            "type": "Arguments"
-          },
-          "type": "PostfixExp_call"
+          "0": "JSON",
+          "2": "stringify",
+          "5": [
+            {
+              "1": [
+                "1",
+                "2",
+                "3"
+              ],
+              "type": "List"
+            }
+          ],
+          "type": "PostfixExp_invoke"
         },
         "2": "\"[1,2,3]\"",
         "type": "CompareExp_eq"
