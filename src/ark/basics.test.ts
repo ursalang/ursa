@@ -15,7 +15,7 @@ import {testArkGroup as testGroup} from '../testutil.js'
 import {expToInst} from './flatten.js'
 
 test('Undefined symbol', (t) => {
-  const error = t.throws(() => new ArkState(expToInst(compile(['f']))).run())
+  const error = t.throws(() => new ArkState(expToInst(compile(['f']))))
   t.not(error, undefined)
   t.is(error.message, 'Undefined symbol f')
 })
