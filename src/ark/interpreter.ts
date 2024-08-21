@@ -29,8 +29,8 @@ import {
   debug,
 } from './util.js'
 
-// Each stack frame consists of a tuple of local vars, captures, and
-// debug info.
+// Each stack frame consists of local variabless, captures, temporaries
+// (`memory`), and debug info.
 class ArkFrame {
   constructor(
     public locals: ArkRef[] = [],
