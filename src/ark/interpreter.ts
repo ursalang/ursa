@@ -91,7 +91,7 @@ class ArkFlatClosure extends ArkClosure {
   }
 
   async call(locals: ArkValRef[]) {
-    return callFlat(this, locals)
+    return evalFlat(new ArkState(this.body, new ArkFrame(locals, this.captures)))
   }
 }
 class ArkFlatGeneratorClosure extends ArkFlatClosure {}
@@ -411,9 +411,4 @@ export async function pushLets(ark: ArkState, boundVars: [string, ArkInst][]) {
     lets[i].set(vals[i])
   }
   return lets.length
-}
-
-async function callFlat(callable: ArkFlatClosure, locals: ArkValRef[]): Promise<ArkVal> {
-  const ark = new ArkState(callable.body, new ArkFrame(locals, callable.captures))
-  return evalFlat(ark)
 }
