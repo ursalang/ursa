@@ -57,8 +57,8 @@ class ArkObjectBase extends ArkAbstractObjectBase {
 
   public static methods = new Map<string, ArkCallable>(
     [
-      ['equals', new NativeFn(['right'], (right) => ArkBoolean(this === right))],
-      ['notEquals', new NativeFn(['right'], (right) => ArkBoolean(this !== right))],
+      ['equals', new NativeFn(['right'], (thisVal, right) => ArkBoolean(thisVal === right))],
+      ['notEquals', new NativeFn(['right'], (thisVal, right) => ArkBoolean(thisVal !== right))],
     ],
   )
 
