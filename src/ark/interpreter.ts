@@ -3,7 +3,7 @@
 // Released under the MIT license.
 
 import {
-  Instruction, Operation, run, spawn,
+  Instruction, Operation, run, sleep, spawn,
 } from 'effection'
 import {Interval} from 'ohm-js'
 
@@ -184,8 +184,13 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
   let ark: ArkState | undefined = outerArk
   let inst = ark.inst
   let prevInst
+  let counter = 0
   while (inst !== undefined) {
     prevInst = inst
+    counter += 1
+    if (counter % 100000 === 0) {
+      yield* sleep(0)
+    }
     const mem: Map<symbol, ArkVal> = ark.frame.memory
     if (inst instanceof ArkLiteralInst) {
       mem.set(inst.id, inst.val)
