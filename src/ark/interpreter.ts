@@ -174,9 +174,13 @@ async function call(
       }
       return [ark, nextInst]
     }
-  } else if (callable instanceof NativeFn
-    || callable instanceof NativeAsyncFn
-    || callable instanceof NativeOperation) {
+  } else if (callable instanceof NativeFn) {
+    ark.frame.memory.set(inst.id, callable.body(...args))
+    return [ark, inst.next]
+  } else if (callable instanceof NativeAsyncFn) {
+    ark.frame.memory.set(inst.id, await callable.body(...args))
+    return [ark, inst.next]
+  } else if (callable instanceof NativeOperation) {
     ark.frame.memory.set(inst.id, await scope.run(() => callable.body(...args)))
     return [ark, inst.next]
   } else {
@@ -195,7 +199,7 @@ async function doEvalFlat(scope: Scope, outerArk: ArkState): Promise<ArkVal> {
   let inst = ark.inst
   let prevInst
   while (inst !== undefined) {
-    await setImmediatePromise()
+    // await setImmediatePromise()
     prevInst = inst
     const mem: Map<symbol, ArkVal> = ark.frame.memory
     if (inst instanceof ArkLiteralInst) {

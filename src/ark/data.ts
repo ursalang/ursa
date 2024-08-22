@@ -3,7 +3,7 @@
 // Released under the MIT license.
 
 import {
-  action, call, Operation, Reject, Resolve, run, sleep,
+  action, Operation, Reject, Resolve, sleep,
 } from 'effection'
 
 import {FsMap} from './fsmap.js'
@@ -34,6 +34,15 @@ export abstract class ArkCallable extends ArkVal {
 }
 
 export class NativeFn extends ArkCallable {
+  constructor(
+    params: string[],
+    public body: (...args: ArkVal[]) => ArkVal,
+  ) {
+    super(params)
+  }
+}
+
+export class NativeFnJs extends ArkCallable {
   public body: (...args: ArkVal[]) => Operation<ArkVal>
 
   constructor(
@@ -228,11 +237,8 @@ export class NativeOperation extends ArkCallable {
 
 // ts-unused-exports:disable-next-line
 export class NativeAsyncFn extends ArkCallable {
-  public body: (...args: ArkVal[]) => Operation<ArkVal>
-
-  constructor(params: string[], innerBody: (...args: ArkVal[]) => Promise<ArkVal>) {
+  constructor(params: string[], public body: (...args: ArkVal[]) => Promise<ArkVal>) {
     super(params)
-    this.body = (...args: ArkVal[]) => call(() => innerBody(...args))
   }
 }
 
@@ -567,9 +573,11 @@ export function toJs(val: ArkVal): unknown {
       const locals = args.map((arg) => new ArkValRef(fromJs(arg)))
       return val.call(locals)
     }
-  } else if (val instanceof NativeFn || val instanceof NativeAsyncFn) {
+  } else if (val instanceof NativeFn) {
+    return (...args: unknown[]) => toJs(val.body(...args.map((arg) => fromJs(arg))))
+  } else if (val instanceof NativeAsyncFn) {
     return async (...args: unknown[]) => toJs(
-      await run(() => val.body(...args.map((arg) => fromJs(arg)))),
+      await val.body(...args.map((arg) => fromJs(arg))),
     )
   }
   return val

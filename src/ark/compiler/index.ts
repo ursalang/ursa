@@ -60,8 +60,8 @@ class UrsaStackTracey extends StackTracey {
 
 // Compile prelude and add it to globals
 export const preludeJs = fs.readFileSync(path.join(__dirname, 'prelude.js'), {encoding: 'utf-8'})
-const prelude = await evalArkJs(preludeJs) as ArkObject
-prelude.properties.forEach((val, sym) => jsGlobals.set(sym, val))
+// const prelude = await evalArkJs(preludeJs) as ArkObject
+// prelude.properties.forEach((val, sym) => jsGlobals.set(sym, val))
 
 // Record internal values that are needed by JavaScript at runtime, and
 // prevent the TypeScript compiler throwing away their imports.
