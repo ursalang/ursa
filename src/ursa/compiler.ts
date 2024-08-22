@@ -353,19 +353,19 @@ semantics.addOperation<ArkExp>('toExp(a)', {
   },
 
   For(_for, ident, _of, iterator, body) {
-    const forVar = ident.sourceString
-    const innerEnv = this.args.a.env.push([new Location('_for', false)])
+    const iterVar = ident.sourceString
+    const innerEnv = this.args.a.env.push([new Location('$iter', false)])
     const compiledIterator = iterator.toExp({...this.args.a, env: innerEnv})
-    const loopEnv = innerEnv.push([new Location(forVar, false)])
-    const compiledForVar = symRef(loopEnv, forVar)
+    const loopEnv = innerEnv.push([new Location(iterVar, false)])
+    const compiledIterVar = symRef(loopEnv, iterVar)
     const compiledForBody = body.toExp({...this.args.a, env: loopEnv, inLoop: true})
     const innerIndex = innerEnv.top().locals.length
     const loopBody = addLoc(
       new ArkLet(
-        [new ArkBoundVar(forVar, false, innerIndex, addLoc(new ArkCall(addLoc(symRef(loopEnv, '_for'), iterator), []), this))],
+        [new ArkBoundVar(iterVar, false, innerIndex, addLoc(new ArkCall(addLoc(symRef(loopEnv, '$iter'), iterator), []), this))],
         new ArkSequence([
           new ArkIf(
-            addLoc(new ArkInvoke(compiledForVar, 'equals', [new ArkLiteral(ArkNull())]), this),
+            addLoc(new ArkInvoke(compiledIterVar, 'equals', [new ArkLiteral(ArkNull())]), this),
             new ArkBreak(),
           ),
           compiledForBody,
@@ -375,7 +375,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     )
     const localsDepth = this.args.a.env.top().locals.length
     return addLoc(
-      new ArkLet([new ArkBoundVar('_for', false, localsDepth, compiledIterator)], new ArkLoop(loopBody, localsDepth + 1)),
+      new ArkLet([new ArkBoundVar('$iter', false, localsDepth, compiledIterator)], new ArkLoop(loopBody, localsDepth + 1)),
       this,
     )
   },
