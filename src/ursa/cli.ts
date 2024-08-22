@@ -201,6 +201,11 @@ async function repl(args: Args): Promise<ArkVal> {
   const ark = new ArkState()
   let env = new Environment()
   let val: ArkVal = ArkNull()
+  const sigintHandler = () => {
+    process.removeListener('SIGINT', sigintHandler)
+    process.kill(process.pid, 'SIGINT')
+  }
+  rl.on('SIGINT', sigintHandler)
   for await (const line of rl) {
     try {
       const compiled = compile(args, line, env)
@@ -216,7 +221,9 @@ async function repl(args: Args): Promise<ArkVal> {
       if (process.stdin.isTTY) {
         process.stdin.setRawMode(false)
       }
+      process.addListener('SIGINT', sigintHandler)
       val = await runWithTraceback(ark)
+      process.removeListener('SIGINT', sigintHandler)
       if (process.stdin.isTTY) {
         process.stdin.setRawMode(true)
       }

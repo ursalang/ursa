@@ -3,7 +3,7 @@
 // Released under the MIT license.
 
 import {
-  Instruction, Operation, run, spawn,
+  call as effectionCall, run, Scope, useScope,
 } from 'effection'
 import {Interval} from 'ohm-js'
 
@@ -114,15 +114,19 @@ function makeLocals(names: string[], vals: ArkVal[]): ArkRef[] {
 }
 
 async function evalFlat(outerArk: ArkState): Promise<ArkVal> {
-  return run(() => doEvalFlat(outerArk))
+  return run(function* gen() {
+    const scope = yield* useScope()
+    return yield* effectionCall(() => doEvalFlat(scope, outerArk))
+  })
 }
 
-function* call(
+async function call(
+  scope: Scope,
   ark: ArkState,
   inst: ArkCallInst | ArkInvokeInst,
   callable: ArkCallable,
   args: ArkVal[],
-): Generator<Instruction, [ArkState, ArkInst | undefined]> {
+): Promise<[ArkState, ArkInst | undefined]> {
   if (callable instanceof ArkFlatGeneratorClosure) {
     const result = new ArkContinuation(new ArkState(
       callable.body,
@@ -173,18 +177,25 @@ function* call(
   } else if (callable instanceof NativeFn
     || callable instanceof NativeAsyncFn
     || callable instanceof NativeOperation) {
-    ark.frame.memory.set(inst.id, yield* callable.body(...args))
+    ark.frame.memory.set(inst.id, await scope.run(() => callable.body(...args)))
     return [ark, inst.next]
   } else {
     throw new ArkRuntimeError(ark, 'Invalid call', inst.sourceLoc)
   }
 }
 
-function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
+function setImmediatePromise() {
+  return new Promise<void>((resolve) => {
+    setImmediate(() => resolve())
+  })
+}
+
+async function doEvalFlat(scope: Scope, outerArk: ArkState): Promise<ArkVal> {
   let ark: ArkState | undefined = outerArk
   let inst = ark.inst
   let prevInst
   while (inst !== undefined) {
+    await setImmediatePromise()
     prevInst = inst
     const mem: Map<symbol, ArkVal> = ark.frame.memory
     if (inst instanceof ArkLiteralInst) {
@@ -237,7 +248,7 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
         ),
         ark.outerState,
       )
-      const operation = yield* spawn(() => doEvalFlat(innerArk))
+      const operation = scope.run(() => effectionCall(doEvalFlat(scope, innerArk)))
       const result = new ArkOperation(operation)
       mem.set(inst.id, result)
       // The ArkOperation becomes the result of the entire block.
@@ -266,7 +277,7 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
       inst = inst.next
     } else if (inst instanceof ArkAwaitInst) {
       const operation = (mem.get(inst.argId)! as ArkOperation).operation
-      const result = yield* operation
+      const result = await scope.run(() => operation)
       mem.set(inst.id, result)
       inst = inst.next
     } else if (inst instanceof ArkBreakInst) {
@@ -309,7 +320,7 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
     } else if (inst instanceof ArkCallInst) {
       const callable = mem.get(inst.fnId)! as ArkCallable
       const args = inst.argIds.map((id) => mem.get(id)!);
-      [ark, inst] = yield* call(ark, inst, callable, args)
+      [ark, inst] = await call(scope, ark, inst, callable, args)
     } else if (inst instanceof ArkInvokeInst) {
       const obj = mem.get(inst.objId)!
       if (!(obj instanceof ArkAbstractObjectBase)) {
@@ -320,7 +331,7 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
         throw new ArkRuntimeError(ark, 'Invalid method', inst.sourceLoc)
       }
       const args = inst.argIds.map((id) => mem.get(id)!);
-      [ark, inst] = yield* call(ark, inst, method, [obj, ...args])
+      [ark, inst] = await call(scope, ark, inst, method, [obj, ...args])
     } else if (inst instanceof ArkSetNamedLocInst) {
       const result = mem.get(inst.valId)!
       let ref: ArkRef
