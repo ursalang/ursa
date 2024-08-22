@@ -213,7 +213,13 @@ async function repl(args: Args): Promise<ArkVal> {
         await pushLets(ark, flatBoundVars)
       }
       ark.inst = expToInst(compiled)
+      if (process.stdin.isTTY) {
+        process.stdin.setRawMode(false)
+      }
       val = await runWithTraceback(ark)
+      if (process.stdin.isTTY) {
+        process.stdin.setRawMode(true)
+      }
       debug(toJs(val))
     } catch (error) {
       if (process.env.DEBUG) {
