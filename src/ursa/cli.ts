@@ -197,6 +197,7 @@ async function repl(args: Args): Promise<ArkVal> {
     fs.ensureDirSync(path.dirname(historyFile))
     fs.writeFileSync(historyFile, `${reversedHistory.join('\n')}\n`)
   })
+  rl.on('SIGCONT', () => rl.resume())
   rl.prompt()
   const ark = new ArkState()
   let env = new Environment()
