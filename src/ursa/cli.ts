@@ -201,11 +201,15 @@ async function repl(args: Args): Promise<ArkVal> {
   const ark = new ArkState()
   let env = new Environment()
   let val: ArkVal = ArkNull()
-  const sigintHandler = () => {
-    process.removeListener('SIGINT', sigintHandler)
+  const rlSigintHandler = () => {
+    process.removeAllListeners('SIGINT')
     process.kill(process.pid, 'SIGINT')
   }
-  rl.on('SIGINT', sigintHandler)
+  const interpSigintHandler = () => {
+    process.removeListener('SIGINT', interpSigintHandler)
+    ark.stop = true
+  }
+  rl.on('SIGINT', rlSigintHandler)
   for await (const line of rl) {
     try {
       const compiled = compile(args, line, env)
@@ -221,9 +225,12 @@ async function repl(args: Args): Promise<ArkVal> {
       if (process.stdin.isTTY) {
         process.stdin.setRawMode(false)
       }
-      process.addListener('SIGINT', sigintHandler)
+      process.addListener('SIGINT', interpSigintHandler)
       val = await runWithTraceback(ark)
-      process.removeListener('SIGINT', sigintHandler)
+      process.removeListener('SIGINT', interpSigintHandler)
+      if (ark.stop) {
+        console.log('interrupted!')
+      }
       if (process.stdin.isTTY) {
         process.stdin.setRawMode(true)
       }

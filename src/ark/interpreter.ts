@@ -49,6 +49,8 @@ class ArkFrameDebugInfo {
 }
 
 export class ArkState {
+  public stop: boolean = false
+
   public continuation?: ArkContinuation
 
   public loopStack: ArkBlockOpenInst[] = []
@@ -186,6 +188,9 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
   let prevInst
   let counter = 0
   while (inst !== undefined) {
+    if (ark.stop) {
+      return ArkUndefined
+    }
     prevInst = inst
     counter += 1
     if (counter % 100000 === 0) {
