@@ -107,7 +107,7 @@ function evalRef(frame: ArkFrame, lexp: ArkNamedLoc): ArkRef {
   throw new Error('invalid ArkNamedLoc')
 }
 
-function makeLocals(names: string[], vals: ArkVal[]): ArkRef[] {
+export function makeLocals(names: string[], vals: ArkVal[]): ArkRef[] {
   const locals: ArkValRef[] = names.map((_val, index) => new ArkValRef(vals[index] ?? ArkUndefined))
   if (vals.length > names.length) {
     locals.push(...vals.slice(names.length).map((val) => new ArkValRef(val)))
@@ -407,18 +407,4 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
     }
   }
   return prevInst ? ark.frame.memory.get(prevInst.id)! : ArkUndefined
-}
-
-export async function pushLets(ark: ArkState, boundVars: [string, ArkInst][]) {
-  const lets = makeLocals(boundVars.map((bv) => bv[0]), [])
-  ark.push(lets)
-  const vals: ArkVal[] = []
-  for (const bv of boundVars) {
-    ark.inst = bv[1]
-    vals.push(await evalFlat(ark))
-  }
-  for (let i = 0; i < lets.length; i += 1) {
-    lets[i].set(vals[i])
-  }
-  return lets.length
 }

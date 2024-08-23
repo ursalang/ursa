@@ -4,6 +4,7 @@
 
 import {ursaTest} from '../testutil.js'
 
-ursaTest('Evaluate a number', 'test/repl-number', [], true)
-ursaTest('Test let followed by reference', 'test/repl-let-val', [], true)
-ursaTest('Test syntax error', 'test/repl-syntax-error', [], true, true)
+ursaTest('REPL: Evaluate a number', 'test/repl-number', [], true)
+ursaTest('REPL: Test let followed by reference', 'test/repl-let-val', [], true)
+ursaTest('REPL: Test syntax error', 'test/repl-syntax-error', [], true, true)
+ursaTest('REPL: Run a loop', 'test/repl-loop', [], true)
