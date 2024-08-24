@@ -20,6 +20,8 @@ export class ArkInst {
 
   public next: ArkInst | undefined
 
+  public prev: ArkInst | undefined
+
   public readonly id: symbol
 
   debug = new ArkDebugInfo()
@@ -37,6 +39,7 @@ export class ArkInsts {
     assert(insts.length > 0)
     for (let i = 0; i < insts.length - 1; i += 1) {
       insts[i].next = insts[i + 1]
+      insts[i + 1].prev = insts[i]
     }
   }
 
