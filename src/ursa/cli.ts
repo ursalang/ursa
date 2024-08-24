@@ -228,9 +228,6 @@ async function repl(args: Args): Promise<ArkVal> {
       if (ark.stop) {
         console.log('interrupted!')
       }
-      if (process.stdin.isTTY) {
-        process.stdin.setRawMode(true)
-      }
       debug(toJs(val))
     } catch (error) {
       if (process.env.DEBUG) {
@@ -241,6 +238,9 @@ async function repl(args: Args): Promise<ArkVal> {
       } else {
         console.error(error)
       }
+    }
+    if (process.stdin.isTTY) {
+      process.stdin.setRawMode(true)
     }
     rl.prompt()
   }
