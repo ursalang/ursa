@@ -20,8 +20,9 @@ import {
   globals, jsGlobals, toJs, ArkNull, ArkList, ArkVal, ArkString,
 } from '../ark/data.js'
 import {ArkExp, ArkLet} from '../ark/code.js'
+import {Environment, Location} from '../ark/compiler-utils.js'
 import {ArkState, makeLocals} from '../ark/interpreter.js'
-import {Environment, Location, compile as arkCompile} from '../ark/reader.js'
+import {compile as arkCompile} from '../ark/reader.js'
 import {serializeVal} from '../ark/serialize.js'
 import {runWithTraceback, compile as ursaCompile} from './compiler.js'
 import {format} from './fmt.js'

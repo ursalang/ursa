@@ -22,9 +22,10 @@ import {
   ArkCall, ArkInvoke, ArkLet, ArkFn, ArkGenerator, ArkProperty, ArkSet, ArkReturn, ArkYield,
   ArkBreak, ArkContinue, ArkAwait, ArkLaunch, ArkCapture, ArkFnType, ArkNamedLoc,
 } from '../ark/code.js'
+import {Frame, Environment, Location} from '../ark/compiler-utils.js'
 import {ArkState, ArkRuntimeError} from '../ark/interpreter.js'
 import {
-  ArkCompilerError, symRef, Frame, Environment, Location, checkParamList,
+  ArkCompilerError, symRef, checkParamList,
 } from '../ark/reader.js'
 
 type ParserOperations = {

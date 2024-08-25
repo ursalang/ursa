@@ -270,7 +270,7 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
       mem.set(inst.matchingClose.id, result)
       inst = inst.matchingClose.next
     } else if (inst instanceof ArkLetBlockOpenInst) {
-      ark.push(makeLocals(inst.vars, []))
+      ark.push(makeLocals(inst.vars.map((v) => v.name), []))
       inst = inst.next
     } else if (inst instanceof ArkBlockOpenInst) {
       inst = inst.next

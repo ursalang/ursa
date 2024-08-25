@@ -37,7 +37,7 @@ import {
 } from '../data.js'
 import {ArkExp} from '../code.js'
 import {debug} from '../util.js'
-import {Environment, Frame, Location} from '../reader.js'
+import {Environment, Frame, Location} from '../compiler-utils.js'
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
@@ -171,7 +171,7 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
         return sourceNode([
           `let ${inst.matchingClose.id.description!}\n`,
           '{\n',
-          ...inst.vars.map((v) => `let ${v} = ArkUndefined\n`),
+          ...inst.vars.map((v) => `let ${v.name} = ArkUndefined\n`),
         ])
       } else if (inst instanceof ArkBlockOpenInst) {
         return sourceNode([`let ${inst.matchingClose.id.description!}\n`, '{\n'])

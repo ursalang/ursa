@@ -18,57 +18,11 @@ import {
   ArkFn, ArkGenerator, ArkReturn, ArkYield,
   ArkProperty, ArkLet, ArkCall, ArkInvoke, ArkLiteral, ArkBoundVar, ArkNamedLoc,
 } from './code.js'
+import {Environment, Frame, Location} from './compiler-utils.js'
 import {expToInst} from './flatten.js'
 import {ArkState} from './interpreter.js'
 
 export class ArkCompilerError extends Error {}
-
-export class Location {
-  constructor(public name: string, public isVar: boolean) {}
-}
-
-export class Frame {
-  constructor(
-    // Locals are undefined between the point where they are allocated and
-    // the point at which they are declared.
-    public locals: (Location | undefined)[],
-    public captures: Location[],
-    public fnName?: string,
-  ) {}
-}
-
-export class Environment {
-  constructor(
-    public stack: [Frame, ...Frame[]] = [new Frame([], [])],
-    public externalSyms: ArkObject = globals,
-  ) {}
-
-  top() {
-    return this.stack[0]
-  }
-
-  push(items: (Location | undefined)[]) {
-    return new Environment(
-      [
-        new Frame(
-          [...this.top().locals, ...items],
-          this.top().captures,
-        ),
-        ...this.stack.slice(1),
-      ],
-      this.externalSyms,
-    )
-  }
-
-  pushFrame(frame: Frame) {
-    return new Environment([frame, ...this.stack], this.externalSyms)
-  }
-
-  popFrame() {
-    assert(this.stack.length > 1)
-    return new Environment([this.stack[1], ...this.stack.slice(2)], this.externalSyms)
-  }
-}
 
 export function checkParamList(params: string[]): string[] {
   if (new Set(params).size !== params.length) {

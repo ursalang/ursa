@@ -11,6 +11,7 @@ import {
   ArkListLiteral, ArkLiteral, ArkLocal, ArkLoop, ArkMapLiteral, ArkNamedLoc,
   ArkObjectLiteral, ArkOr, ArkProperty, ArkReturn, ArkSequence, ArkSet, ArkYield,
 } from './code.js'
+import {Location} from './compiler-utils.js'
 import {ArkBoolean, ArkNull, ArkVal} from './data.js'
 
 export class ArkInst {
@@ -92,7 +93,7 @@ export class ArkFnBlockOpenInst extends ArkCallableBlockOpenInst {}
 export class ArkGeneratorBlockOpenInst extends ArkCallableBlockOpenInst {}
 
 export class ArkLetBlockOpenInst extends ArkBlockOpenInst {
-  constructor(sourceLoc: Interval | undefined, public vars: string[], public valIds: symbol[]) {
+  constructor(sourceLoc: Interval | undefined, public vars: Location[], public valIds: symbol[]) {
     super(sourceLoc)
   }
 }
@@ -443,7 +444,11 @@ export function expToInsts(
     return block(
       exp.sourceLoc,
       blockInsts,
-      new ArkLetBlockOpenInst(exp.sourceLoc, exp.boundVars.map((bv) => bv.name), bvIds),
+      new ArkLetBlockOpenInst(
+        exp.sourceLoc,
+        exp.boundVars.map((bv) => new Location(bv.name, bv.isVar)),
+        bvIds,
+      ),
       new ArkLetBlockCloseInst(exp.sourceLoc, blockInsts.id),
     )
   } else if (exp instanceof ArkSequence) {
