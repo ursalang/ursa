@@ -107,7 +107,7 @@ function evalRef(frame: ArkFrame, lexp: ArkNamedLoc): ArkRef {
   throw new Error('invalid ArkNamedLoc')
 }
 
-export function makeLocals(names: string[], vals: ArkVal[]): ArkRef[] {
+function makeLocals(names: string[], vals: ArkVal[]): ArkRef[] {
   const locals: ArkValRef[] = names.map((_val, index) => new ArkValRef(vals[index] ?? ArkUndefined))
   if (vals.length > names.length) {
     locals.push(...vals.slice(names.length).map((val) => new ArkValRef(val)))

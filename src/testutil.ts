@@ -90,13 +90,13 @@ function deleteErrorExtent(msg: string) {
 async function doCliTest(
   t: ExecutionContext,
   syntax: string,
-  inputBasename: string,
+  inputBasename?: string,
   realSourceBasename?: string,
   extraArgs?: string[],
-  useRepl?: boolean,
+  replInputBasename?: string,
   target: string = 'ark',
 ) {
-  const actualSourceBasename = realSourceBasename ?? inputBasename
+  const actualSourceBasename = replInputBasename ?? realSourceBasename ?? inputBasename
   const resultJsonFilename = `${actualSourceBasename}.result.json`
   const stdoutFilename = `${actualSourceBasename}.stdout`
   let expectedStdout
@@ -108,22 +108,25 @@ async function doCliTest(
   if (fs.existsSync(stderrFilename)) {
     expectedStderr = fs.readFileSync(stderrFilename, {encoding: 'utf-8'})
   }
-  const inputFile = `${actualSourceBasename}.${syntax}`
+  const inputFile = `${realSourceBasename ?? inputBasename}.${syntax}`
   const args = [`--syntax=${syntax}`, `--target=${target}`]
   let tempFile: tmp.FileResult
-  if (!useRepl) {
+  if (inputBasename !== undefined) {
     tempFile = tmp.fileSync()
     t.teardown(() => tempFile.removeCallback())
     args.push('run', `--output=${tempFile.name}`, inputFile)
   }
   try {
+    if (inputBasename !== undefined && replInputBasename !== undefined) {
+      args.push('--interactive')
+    }
     const {stdout, stderr} = await run(
       [...args, ...extraArgs ?? []],
-      {inputFile: useRepl ? inputFile : undefined},
+      {inputFile: replInputBasename !== undefined ? `${replInputBasename}.${syntax}` : undefined},
     )
     let processedStdout = stdout
-    if (useRepl) {
-      processedStdout = processedStdout?.slice(`Welcome to Ursa ${version}.\n`.length)
+    if (replInputBasename !== undefined) {
+      processedStdout = (processedStdout as string)?.replace(`Welcome to Ursa ${version}.\n`, '')
     } else {
       const result: unknown = JSON.parse(fs.readFileSync(tempFile!.name, {encoding: 'utf-8'}))
       const expected: unknown = fs.existsSync(resultJsonFilename)
@@ -151,8 +154,8 @@ async function doCliTest(
         deleteErrorExtent(expectedStderr),
       )
       let processedStdout = (error as ExecaError).stdout
-      if (useRepl) {
-        processedStdout = processedStdout?.slice(`Welcome to Ursa ${version}.\n`.length)
+      if (replInputBasename !== undefined) {
+        processedStdout = (processedStdout as string).replace(`Welcome to Ursa ${version}.\n`, '')
       }
       if (expectedStdout !== undefined) {
         t.is(processedStdout, expectedStdout)
@@ -193,7 +196,11 @@ export const dirTest = test.macro(async (
   await doDirTest(t, dir, callback)
 })
 
-async function makeReformattedSource(t: ExecutionContext, inputBasename: string) {
+async function makeReformattedSource(
+  t: ExecutionContext,
+  inputBasename: string,
+  replInputBasename?: string,
+) {
   const sourceFile = `${inputBasename}.ursa`
   let source = fs.readFileSync(sourceFile, {encoding: 'utf-8'})
   if (source.startsWith('#!')) {
@@ -209,9 +216,11 @@ async function makeReformattedSource(t: ExecutionContext, inputBasename: string)
   const tempDir = tmp.dirSync({unsafeCleanup: true})
   t.teardown(tempDir.removeCallback)
   // Copy optional related files into temporary directory.
-  const extraExts = ['.result.json', '.stdout']
-  for (const extraExt of extraExts) {
-    const extraFile = `${inputBasename}${extraExt}`
+  const extraFiles = [`${inputBasename}.result.json`, `${inputBasename}.stdout`]
+  if (replInputBasename !== undefined) {
+    extraFiles.push(replInputBasename)
+  }
+  for (const extraFile of extraFiles) {
     if (fs.existsSync(extraFile)) {
       fs.copyFileSync(extraFile, path.join(tempDir.name, path.parse(extraFile).base))
     }
@@ -238,9 +247,9 @@ async function makeReformattedSource(t: ExecutionContext, inputBasename: string)
 
 const reformattingCliTest = test.macro(async (
   t: ExecutionContext,
-  inputBasename: string,
+  inputBasename?: string,
   extraArgs?: string[],
-  useRepl?: boolean,
+  replInputBasename?: string,
   syntaxErrorExpected?: boolean,
 ) => {
   for (const target of arkTargets) {
@@ -250,28 +259,28 @@ const reformattingCliTest = test.macro(async (
       inputBasename,
       undefined,
       extraArgs,
-      useRepl,
+      replInputBasename,
       target,
     )
   }
-  if (!syntaxErrorExpected && !useRepl) {
+  if (!syntaxErrorExpected && inputBasename !== undefined) {
     await doCliTest(
       t,
       'ursa',
       inputBasename,
       await makeReformattedSource(t, inputBasename),
       extraArgs,
-      useRepl,
+      replInputBasename,
     )
   }
 })
 
 const reformattingCliDirTest = test.macro(async (
   t: ExecutionContext,
-  inputBasename: string,
+  inputBasename: string | undefined,
   expectedDirPath: string,
   extraArgs?: string[],
-  useRepl?: boolean,
+  replInputBasename?: string,
   syntaxErrorExpected?: boolean,
 ) => {
   for (const target of arkTargets) {
@@ -285,13 +294,13 @@ const reformattingCliDirTest = test.macro(async (
           inputBasename,
           undefined,
           [tmpDirPath, ...extraArgs ?? []],
-          useRepl,
+          replInputBasename,
           target,
         )
       ),
     )
   }
-  if (!syntaxErrorExpected && !useRepl) {
+  if (!syntaxErrorExpected && inputBasename !== undefined) {
     await doDirTest(
       t,
       expectedDirPath,
@@ -302,7 +311,7 @@ const reformattingCliDirTest = test.macro(async (
           inputBasename,
           await makeReformattedSource(t, inputBasename),
           [tmpDirPath, ...extraArgs ?? []],
-          useRepl,
+          replInputBasename,
         )
       ),
     )

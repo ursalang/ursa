@@ -2,6 +2,7 @@
 // © Reuben Thomas 2023-2024
 // Released under the GPL version 3, or (at your option) any later version.
 
+import assert from 'assert'
 import path from 'path'
 import fs, {PathOrFileDescriptor} from 'fs-extra'
 import * as readline from 'readline'
@@ -17,11 +18,13 @@ import tmp from 'tmp'
 import programVersion from '../version.js'
 import {debug} from '../ark/util.js'
 import {
-  globals, jsGlobals, toJs, ArkNull, ArkList, ArkVal, ArkString,
+  globals, jsGlobals, toJs, ArkNull, ArkList, ArkVal, ArkString, ArkObject, ArkValRef,
 } from '../ark/data.js'
-import {ArkExp, ArkLet} from '../ark/code.js'
+import {
+  ArkExp, ArkLet, ArkListLiteral, ArkObjectLiteral, ArkSequence,
+} from '../ark/code.js'
 import {Environment, Location} from '../ark/compiler-utils.js'
-import {ArkState, makeLocals} from '../ark/interpreter.js'
+import {ArkState} from '../ark/interpreter.js'
 import {compile as arkCompile} from '../ark/reader.js'
 import {serializeVal} from '../ark/serialize.js'
 import {runWithTraceback, compile as ursaCompile} from './compiler.js'
@@ -177,7 +180,34 @@ function compile(
   return compiled
 }
 
-async function repl(args: Args): Promise<ArkVal> {
+function addReturnValues(exp: ArkExp, topLevelVars: Map<string, ArkExp> = new Map()) {
+  if (exp instanceof ArkLet) {
+    // FIXME: respect var-ness
+    exp.boundVars.forEach((bv) => topLevelVars.set(bv.name, bv.init))
+    exp.body = addReturnValues(exp.body, topLevelVars)
+    return exp
+  } else if (exp instanceof ArkSequence) {
+    exp.exps[exp.exps.length - 1] = addReturnValues(exp.exps[exp.exps.length - 1], topLevelVars)
+    return exp
+  } else {
+    return new ArkListLiteral([exp, new ArkObjectLiteral(topLevelVars)])
+  }
+}
+
+function extractReturnValues(ark: ArkState, env: Environment, result: ArkVal | undefined) {
+  assert(result instanceof ArkList)
+  assert(result.list.length === 2)
+  const newVars = result.list[1] as ArkObject
+  assert(newVars instanceof ArkObject)
+  for (const [k, v] of newVars.properties.entries()) {
+    env = env.push([new Location(k, false)])
+    ark.push([new ArkValRef(v)])
+  }
+  result = result.list[0]
+  return {result, env}
+}
+
+async function repl(args: Args, ark = new ArkState(), env = new Environment()): Promise<ArkVal> {
   console.log(`Welcome to Ursa ${programVersion}.`)
   let history: string[] = []
   if (fs.existsSync(historyFile)) {
@@ -198,9 +228,7 @@ async function repl(args: Args): Promise<ArkVal> {
   })
   rl.on('SIGCONT', () => rl.resume())
   rl.prompt()
-  const ark = new ArkState()
-  let env = new Environment()
-  let val: ArkVal = ArkNull()
+  let result: ArkVal = ArkNull()
   const rlSigintHandler = () => {
     process.removeAllListeners('SIGINT')
     process.kill(process.pid, 'SIGINT')
@@ -212,24 +240,19 @@ async function repl(args: Args): Promise<ArkVal> {
   rl.on('SIGINT', rlSigintHandler)
   for await (const line of rl) {
     try {
-      const compiled = compile(args, line, env)
-      // Handle new let bindings
-      if (compiled instanceof ArkLet) {
-        env = env.push(compiled.boundVars.map((bv) => new Location(bv.name, bv.isVar)))
-        const boundIds = compiled.boundVars.map((bv) => bv.name).filter((bv) => !bv.startsWith('$'))
-        ark.push(makeLocals(boundIds, []))
-      }
-      ark.inst = expToInst(compiled)
+      const exp = addReturnValues(compile(args, line, env))
+      ark.inst = expToInst(exp)
       if (process.stdin.isTTY) {
         process.stdin.setRawMode(false)
       }
       process.addListener('SIGINT', interpSigintHandler)
-      val = await runWithTraceback(ark)
+      result = await runWithTraceback(ark)
       process.removeListener('SIGINT', interpSigintHandler)
       if (ark.stop) {
         console.log('interrupted!')
       }
-      debug(toJs(val))
+      ({result, env} = extractReturnValues(ark, env, result))
+      debug(toJs(result))
     } catch (error) {
       if (process.env.DEBUG) {
         throw error
@@ -245,7 +268,7 @@ async function repl(args: Args): Promise<ArkVal> {
     }
     rl.prompt()
   }
-  return val
+  return result
 }
 
 // Sub-command action routines.
@@ -262,22 +285,25 @@ async function runCode(source: string, args: Args) {
   jsGlobals.set('argv', ursaArgv)
   // Run the program
   let result: ArkVal | undefined
+  let env = new Environment()
   if (source !== undefined) {
-    const exp = compile(args, source)
+    let exp = compile(args, source)
+    if (args.interactive) {
+      exp = addReturnValues(exp)
+    }
     if (args.target === 'ark') {
       const flat = expToInst(exp)
       ark.inst = flat
-      if (args.syntax === 'ursa') {
-        result = await runWithTraceback(ark)
-      } else {
-        result = await ark.run()
-      }
+      result = await runWithTraceback(ark)
     } else {
       result = await evalArkJs(arkToJs(exp, prog), prog)
     }
+    if (args.interactive) {
+      ({result, env} = extractReturnValues(ark, env, result))
+    }
   }
   if (source === undefined || args.interactive) {
-    result = await repl(args)
+    result = await repl(args, ark, env)
   }
   if (outputFile !== undefined) {
     const output = serializeVal(result ?? ArkNull()) ?? 'null'

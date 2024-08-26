@@ -55,7 +55,7 @@ type ParserThisNode = ThisNode<{a: ParserArgs}, ParserOperations>
 const semantics = grammar.createSemantics<ParserNode, ParserNonterminalNode, ParserIterationNode, ParserThisNode, ParserOperations>()
 
 class UrsaError extends Error {
-  constructor(source: Interval, message: string, options: ErrorOptions = {}) {
+  constructor(source: Interval | undefined, message: string, options: ErrorOptions = {}) {
     super(`${source ? source.getLineAndColumnMessage() : '(unknown location)'}\n${message}`, options)
   }
 }
