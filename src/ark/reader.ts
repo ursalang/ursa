@@ -41,18 +41,19 @@ function arkParamList(params: [string, boolean][]): Location[] {
   return params.map((p) => new Location(p[0], p[1]))
 }
 
-function arkBindingList(env: Environment, params: [string, boolean, unknown][]): ArkBoundVar[] {
+function arkBindingList(env: Environment, params: [string, string, unknown][]): ArkBoundVar[] {
   const bindings: ArkBoundVar[] = []
   for (const p of params) {
-    if (!(p instanceof Array) || p.length !== 3 || typeof p[0] !== 'string' || typeof p[1] !== 'boolean') {
+    if (!(p instanceof Array) || p.length !== 3
+      || typeof p[0] !== 'string' || ['const', 'var'].includes(p[1])) {
       throw new ArkCompilerError('invalid let variable binding')
     }
   }
-  const paramLocations = arkParamList(params.map((p) => [p[0], p[1]]))
+  const paramLocations = arkParamList(params.map((p) => [p[1], p[0] === 'var']))
   const indexBase = env.top().locals.length
   for (const [i, p] of params.entries()) {
     bindings.push(
-      new ArkBoundVar(p[0], p[1], indexBase + i, doCompile(env.push(paramLocations), p[2])),
+      new ArkBoundVar(p[1], p[0] === 'var', indexBase + i, doCompile(env.push(paramLocations), p[2])),
     )
   }
   return bindings
@@ -128,7 +129,7 @@ function doCompile(env: Environment, value: unknown): ArkExp {
           if (value.length !== 3 || !(value[1] instanceof Array)) {
             throw new ArkCompilerError("Invalid 'let'")
           }
-          const params = arkBindingList(env, value[1] as [string, boolean, unknown][])
+          const params = arkBindingList(env, value[1] as [string, string, unknown][])
           const compiled = doCompile(
             env.push(params.map((p) => new Location(p.name, p.isVar))),
             value[2],
