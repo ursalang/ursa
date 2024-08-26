@@ -31,7 +31,7 @@ export function checkParamList(params: string[]): string[] {
   return params
 }
 
-function arkParamList(params: [string, boolean][]): Location[] {
+function paramList(params: [string, boolean][]): Location[] {
   for (const param of params) {
     if (typeof param[0] !== 'string' || typeof param[1] !== 'boolean') {
       throw new ArkCompilerError('Bad type in parameter list')
@@ -41,7 +41,7 @@ function arkParamList(params: [string, boolean][]): Location[] {
   return params.map((p) => new Location(p[0], p[1]))
 }
 
-function arkBindingList(env: Environment, params: [string, string, unknown][]): ArkBoundVar[] {
+function bindingList(env: Environment, params: [string, string, unknown][]): ArkBoundVar[] {
   const bindings: ArkBoundVar[] = []
   for (const p of params) {
     if (!(p instanceof Array) || p.length !== 3
@@ -49,11 +49,11 @@ function arkBindingList(env: Environment, params: [string, string, unknown][]): 
       throw new ArkCompilerError('invalid let variable binding')
     }
   }
-  const paramLocations = arkParamList(params.map((p) => [p[1], p[0] === 'var']))
+  const boundLocations = paramList(params.map((p) => [p[1], p[0] === 'var']))
   const indexBase = env.top().locals.length
   for (const [i, p] of params.entries()) {
     bindings.push(
-      new ArkBoundVar(p[1], p[0] === 'var', indexBase + i, doCompile(env.push(paramLocations), p[2])),
+      new ArkBoundVar(p[1], p[0] === 'var', indexBase + i, doCompile(env.push(boundLocations), p[2])),
     )
   }
   return bindings
@@ -129,7 +129,7 @@ function doCompile(env: Environment, value: unknown): ArkExp {
           if (value.length !== 3 || !(value[1] instanceof Array)) {
             throw new ArkCompilerError("Invalid 'let'")
           }
-          const params = arkBindingList(env, value[1] as [string, string, unknown][])
+          const params = bindingList(env, value[1] as [string, string, unknown][])
           const compiled = doCompile(
             env.push(params.map((p) => new Location(p.name, p.isVar))),
             value[2],
@@ -141,7 +141,7 @@ function doCompile(env: Environment, value: unknown): ArkExp {
           if (value.length !== 3 || !(value[1] instanceof Array)) {
             throw new ArkCompilerError(`Invalid '${value[0]}'`)
           }
-          const params = arkParamList(value[1].map((id) => [id, false]) as [string, boolean][])
+          const params = paramList(value[1].map((id) => [id, false]) as [string, boolean][])
           const innerEnv = env.pushFrame(new Frame(params, []))
           const compiled = doCompile(innerEnv, value[2])
           return new (value[0] === 'fn' ? ArkFn : ArkGenerator)(
