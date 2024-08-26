@@ -2,8 +2,6 @@
 // © Reuben Thomas 2023-2024
 // Released under the MIT license.
 
-import assert from 'assert'
-
 import preludeJson from './prelude.json' assert {type: 'json'}
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -178,7 +176,9 @@ function doCompile(env: Environment, value: unknown): ArkExp {
         case 'map': {
           const inits = new Map<ArkExp, ArkExp>()
           for (const pair of value.slice(1)) {
-            assert(pair instanceof Array && pair.length === 2)
+            if (!(pair instanceof Array && pair.length === 2)) {
+              throw new ArkCompilerError('Invalid map element')
+            }
             const compiledKey = doCompile(env, pair[0])
             const compiledVal = doCompile(env, pair[1])
             inits.set(compiledKey, compiledVal)
