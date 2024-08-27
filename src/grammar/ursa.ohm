@@ -29,11 +29,11 @@ Ursa {
   Definition = ident Initializer
   Initializer = "=" Exp
 
-  List = "[" ListOf<Exp, ","> ","? "]"
+  List (a list) = "[" ListOf<Exp, ","> ","? "]"
 
-  Object = NamedType? "{" ListOf<Definition, #sc> #sc "}"
+  Object (an object) = NamedType? "{" ListOf<Definition, #sc> #sc "}"
 
-  Map = "{" ListOf<KeyValue, ","> ","? "}"
+  Map (a map) = "{" ListOf<KeyValue, ","> ","? "}"
   KeyValue = Exp ":" Exp
 
   PostfixExp
@@ -45,8 +45,8 @@ Ursa {
   Ifs = NonemptyListOf<If, else> (else Block)?
   If = if Exp Block
 
-  Fn = FnType Block
-  FnType = (fn | gen) "(" ListOf<Param, ","> ","? ")" TypeAnnotation?
+  Fn (a function) = FnType Block
+  FnType (a function type) = (fn | gen) "(" ListOf<Param, ","> ","? ")" TypeAnnotation?
   Param = ident TypeAnnotation?
 
   Loop = loop Block
@@ -127,7 +127,7 @@ Ursa {
 
   Use = use Path
 
-  Block = "{" Sequence "}"
+  Block (a block) = "{" Sequence "}"
 
   // Types
   NamedType = Path TypeArgs?
@@ -186,7 +186,7 @@ Ursa {
   reservedWord = bool | null | keyword
 
   // Make ident indirect so we can easily get a node with the whole identifier.
-  ident = identName
+  ident (an identifier) = identName
   identName = ~reservedWord identifierStart identifierPart*
   identifierStart = letter | "_"
   identifierPart = identifierStart | digit
@@ -195,13 +195,13 @@ Ursa {
 
   null = "null" ~identifierPart
 
-  bool = ("false" | "true") ~identifierPart
+  bool (a boolean) = ("false" | "true") ~identifierPart
 
-  number
+  number (a number)
     = digit* "." digit+  -- fract
     | digit+             -- whole
 
-  string = "\"" stringCharacter* "\""
+  string (a string) = "\"" stringCharacter* "\""
   stringCharacter
     = ~("\"" | "\\" | lineTerminator) any     -- nonEscaped
     | "\\" escapeSequence    -- escaped
@@ -224,19 +224,19 @@ Ursa {
     = "x" hexDigit hexDigit
   unicodeEscapeSequence
     = "u" hexDigit hexDigit hexDigit hexDigit
-  lineTerminator
+  lineTerminator (a line terminator)
     = "\n" | "\r" | "\x0B" | "\x0C" | "\u2028" | "\u2029"
   lineTerminatorSequence
     = "\n" | "\r" ~"\n" | "\x0B" | "\x0C" | "\u2028" | "\u2029" | "\r\n"
 
-  literalString
+  literalString (a literal string)
     = "r\"" (~"\"" any)* "\""
     | "r#\"" (~"\"#" any)* "\"#"
     | "r##\"" (~"\"##" any)* "\"##"
     | "r###\"" (~"\"###" any)* "\"###"
     | "r####\"" (~"\"####" any)* "\"####"
 
-  comment = blockComment | lineComment
+  comment (a comment) = blockComment | lineComment
   blockComment = "/*" (~("*/" | "/*") any)* blockComment? (~"*/" any)* "*/"
   lineComment = "//" (~lineTerminator any)*
 
@@ -246,7 +246,7 @@ Ursa {
   // Does not accept lineTerminators
   spacesNoNL = (whitespace | comment)*
 
-  whitespace
+  whitespace (whitespace)
     = "\t"
     | " "
     | "\u00A0"  -- noBreakSpace

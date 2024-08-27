@@ -1,4 +1,4 @@
 Line 1, col 4:
 > 1 | 4 +
          ^
-Expected "(", "gen", "fn", "{", "[", "_", a letter, a digit, ".", "r####\"", "r###\"", "r##\"", "r#\"", "r\"", "\"", "true", "false", "null", "-", "+", or "~"
+Expected "(", a function, a block, a list, an identifier, an object, a map, a number, a literal string, a string, a boolean, "null", "-", "+", or "~"
