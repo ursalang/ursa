@@ -280,9 +280,11 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     return addLoc(new ArkMapLiteral(inits), this)
   },
 
-  Object(type, _open, elems, _maybeComma, _close) {
+  Object(maybeType, _open, elems, _maybeComma, _close) {
     // TODO: compile the type, add to ArkObjectLiteral
-    type.toType(this.args.a)
+    if (maybeType.children.length > 0) {
+      maybeType.children[0].toType(this.args.a)
+    }
     const inits = new Map<string, ArkExp>()
     elems.asIteration().children.forEach((value) => {
       const elem = value.toDefinition(this.args.a)

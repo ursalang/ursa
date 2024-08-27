@@ -1,5 +1,5 @@
-// Ursa compiler.
-// © Reuben Thomas 2023
+// Ursa source code formatter.
+// © Reuben Thomas 2023-2024
 // Released under the GPL version 3, or (at your option) any later version.
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -293,8 +293,11 @@ semantics.addOperation<Span>('fmt(a)', {
     )
   },
 
-  Object(type, _open, elems, _maybeComma, _close) {
-    return hSpan([type.fmt(this.args.a), fmtDelimitedList(this.args.a, '{', '}', ';', tightSpan, elems)])
+  Object(maybeType, _open, elems, _maybeComma, _close) {
+    return hSpan([
+      ...fmtOptional(this.args.a, maybeType),
+      fmtDelimitedList(this.args.a, '{', '}', ';', tightSpan, elems),
+    ])
   },
 
   PostfixExp_property(exp, _dot, ident) {

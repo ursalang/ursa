@@ -18,10 +18,10 @@ Ursa {
     | string
     | literalString
     | number
+    | Map
     | Object
     | ident             -- ident
     | List
-    | Map
     | Block
     | Fn
     | "(" Exp ")"       -- paren
@@ -31,7 +31,7 @@ Ursa {
 
   List = "[" ListOf<Exp, ","> ","? "]"
 
-  Object = NamedType "{" ListOf<Definition, #sc> #sc "}"
+  Object = NamedType? "{" ListOf<Definition, #sc> #sc "}"
 
   Map = "{" ListOf<KeyValue, ","> ","? "}"
   KeyValue = Exp ":" Exp

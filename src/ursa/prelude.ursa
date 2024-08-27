@@ -10,7 +10,7 @@ use js.document
 use js.console
 use js.setTimeout
 
-Object {
+{
   // Basic facilities
   print = console.log
 
