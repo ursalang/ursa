@@ -153,6 +153,7 @@ function fmtDelimitedList(
   separator: string,
   spanMaker: (content: SpanContent[]) => Span,
   listNode: FormatterNonterminalNode,
+  vSeparator: string = separator,
 ) {
   return tryFormats(
     a,
@@ -162,14 +163,14 @@ function fmtDelimitedList(
       closeDelim,
     ]),
     [() => new Span([
-      openDelim,
-      new ListSpan(fmtIter(narrowed(a), listNode), separator, spanMaker, {stringSep: '\n', indentString: a.indentString, addTrailingWhenVertical: true}),
-      closeDelim,
+      openDelim, '\n',
+      new ListSpan(fmtIter(narrowed(a), listNode), vSeparator, spanMaker, {stringSep: '\n', indentString: a.indentString, addTrailingWhenVertical: true}),
+      '\n', closeDelim,
     ]),
     () => new Span([
-      openDelim,
-      new ListSpan(fmtIter(narrowed(a), listNode), separator, spanMaker, {stringSep: '\n', indentString: a.indentString, addTrailingWhenVertical: true}),
-      closeDelim,
+      openDelim, '\n',
+      new ListSpan(fmtIter(narrowed(a), listNode), vSeparator, spanMaker, {stringSep: '\n', indentString: a.indentString, addTrailingWhenVertical: true}),
+      '\n', closeDelim,
     ], {stringSep: '\n'})],
   )
 }
@@ -296,7 +297,7 @@ semantics.addOperation<Span>('fmt(a)', {
   Object(maybeType, _open, elems, _maybeComma, _close) {
     return hSpan([
       ...fmtOptional(this.args.a, maybeType),
-      fmtDelimitedList(this.args.a, '{', '}', ';', tightSpan, elems),
+      fmtDelimitedList(this.args.a, '{', '}', ';', tightSpan, elems, ''),
     ])
   },
 
