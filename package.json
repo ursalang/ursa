@@ -4,9 +4,12 @@
   "version": "0.2.31",
   "author": "Reuben Thomas",
   "license": "GPL-3.0-or-later",
-  "repository": "ursalang/ursa",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ursalang/ursa.git"
+  },
   "bin": {
-    "ursa": "./bin/run.js"
+    "ursa": "bin/run.js"
   },
   "dependencies": {
     "@prettier/sync": "^0.5.2",
