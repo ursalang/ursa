@@ -355,7 +355,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     )
   },
 
-  For(_for, ident, _of, iterator, body) {
+  For(_for, ident, _in, iterator, body) {
     const iterVar = ident.sourceString
     const innerEnv = this.args.a.env.push([new Location('$iter', false)])
     const compiledIterator = iterator.toExp({...this.args.a, env: innerEnv})

@@ -7,7 +7,7 @@ let count = gen() {
 }
 
 let powers = gen(m) {
-    for n of count() {
+    for n in count() {
         yield n ** m
     }
 }
@@ -32,6 +32,6 @@ let cubes = powers(3)
 let f = filtered(squares, cubes)
 
 // Drop first 20 items.
-for i of range(20) {f()}
+for i in range(20) {f()}
 // Print next 10 items.
-for i of range(10) {print(f())}
+for i in range(10) {print(f())}

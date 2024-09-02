@@ -1,5 +1,5 @@
 let l = [1,2,3]
-for e of l.iter() {print(e)}
+for e in l.iter() {print(e)}
 
 let s = "abc"
-for c of s.iter() {print(c)}
+for c in s.iter() {print(c)}

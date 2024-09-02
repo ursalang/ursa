@@ -1,6 +1,6 @@
-// From https://gitlab.com/nonreviad/advent-of-code-2023/-/tree/main/day_25
+// From https://gitlab.com/nonreviad/advent-in-code-2023/-/tree/main/day_25
 
-// The answer may not be right! See https://gitlab.com/nonreviad/advent-of-code-2023/-/issues/1
+// The answer may not be right! See https://gitlab.com/nonreviad/advent-in-code-2023/-/issues/1
 
 use jslib.fs
 
@@ -37,12 +37,12 @@ let read_graph = fn(filename) {
 
 let clone_graph_without_edges = fn(graph, edges) {
     let ret = {}
-    for key of graph.keys() {
+    for key in graph.keys() {
         ret.set(key, [])
         var is_empty = true
-        for val of graph.get(key).iter() {
+        for val in graph.get(key).iter() {
             var should_add = true
-            for edge of edges.iter() {
+            for edge in edges.iter() {
                 if (key == edge.get(0) and val == edge.get(1)) or (key == edge.get(1) and val == edge.get(0)) {
                     should_add := false
                     break
@@ -66,7 +66,7 @@ let dfs = fn(node, graph, visited) {
     }
     var new_nodes = 1
     visited.set(node, true)
-    for child of graph.get(node).iter() {
+    for child in graph.get(node).iter() {
         if visited.get(child) == null {
             new_nodes := new_nodes + dfs(child, graph, visited)
         }
@@ -77,7 +77,7 @@ let dfs = fn(node, graph, visited) {
 let component_sizes = fn(graph) {
     let visited = {}
     let sizes = []
-    for node of graph.keys() {
+    for node in graph.keys() {
         let new_component_size = dfs(node, graph, visited)
         if new_component_size > 0 {
             sizes.push(new_component_size)

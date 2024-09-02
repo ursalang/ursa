@@ -51,7 +51,7 @@ Ursa {
 
   Loop = loop Block
 
-  For = for ident of Exp Block
+  For = for ident in Exp Block
 
   UnaryExp
     = "~" UnaryExp    -- bitwise_not
@@ -165,11 +165,11 @@ Ursa {
   for = "for" ~identifierPart
   gen = "gen" ~identifierPart
   if = "if" ~identifierPart
+  in = "in" ~identifierPart
   launch = "launch" ~identifierPart
   let = "let" ~identifierPart
   loop = "loop" ~identifierPart
   not = "not" ~identifierPart
-  of = "of" ~identifierPart
   or = "or" ~identifierPart
   pub = "pub" ~identifierPart
   return = "return" ~identifierPart
@@ -180,7 +180,7 @@ Ursa {
   yield = "yield" ~identifierPart
 
   keyword = and | await | break | class | continue | else | fn | for | gen | if
-    | launch | let | loop | not | of | or | pub | return | static | trait
+    | in | launch | let | loop | not | or | pub | return | static | trait
     | use | var | yield
 
   reservedWord = bool | null | keyword

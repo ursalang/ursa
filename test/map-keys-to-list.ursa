@@ -1,6 +1,6 @@
 let keysToList = fn(m: Map<String, Int>): List<String> {
   let l = []
-  for k of m.keys() {
+  for k in m.keys() {
     l.push(k)
   }
   return l

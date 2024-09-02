@@ -1,5 +1,5 @@
 let f = fn(n) {
-  for i of range(n) {
+  for i in range(n) {
     print(n, i)
     sleep(0)
   }

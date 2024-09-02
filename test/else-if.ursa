@@ -1,4 +1,4 @@
-for i of range(10) {
+for i in range(10) {
   if i == 0 { print("nought") }
   else if i == 1 { print("one") }
   else if i == 2 { print("two") }

@@ -19,7 +19,7 @@ print(twentySeven.len())
 print("Checking sequences up to 100,000")
 var longest = 0
 var longestLen = 0
-for i of range(100000) {
+for i in range(100000) {
   let len = hailstone(i).len()
   if len > longestLen {
     longest := i

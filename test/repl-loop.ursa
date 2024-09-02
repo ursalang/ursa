@@ -1,1 +1,1 @@
-for j of [1, 2, 3].iter() { print(j) }
+for j in [1, 2, 3].iter() { print(j) }

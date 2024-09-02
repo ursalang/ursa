@@ -1,6 +1,6 @@
 let sum = fn(l: List<Int>): Int {
   var tot = 0
-  for e of l.iter() {
+  for e in l.iter() {
     tot := tot + e
   }
   return tot

@@ -1,6 +1,6 @@
 let write = process.stdout.write
 
-for i of range(10) {
+for i in range(10) {
     let n = i + 1
     write(n.toString())
     if (n == 5) {

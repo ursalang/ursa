@@ -369,12 +369,12 @@ semantics.addOperation<Span>('fmt(a)', {
     return hSpan(['loop', body.fmt(this.args.a)])
   },
 
-  For(_for, ident, _of, iterator, body) {
+  For(_for, ident, _in, iterator, body) {
     return tryFormats(
       this.args.a,
-      (a) => hSpan(['for', ident.fmt(a), 'of', iterator.fmt(a), body.fmt(a)]),
+      (a) => hSpan(['for', ident.fmt(a), 'in', iterator.fmt(a), body.fmt(a)]),
       [(a) => vSpan([
-        hSpan(['for', ident.fmt(a), 'of', iterator.fmt(a)]),
+        hSpan(['for', ident.fmt(a), 'in', iterator.fmt(a)]),
         vSpan([body.fmt(a)])])],
     )
   },

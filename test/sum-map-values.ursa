@@ -1,6 +1,6 @@
 let sum = fn(m: Map<String, Int>): Int {
   var tot = 0
-  for v of m.values() {
+  for v in m.values() {
     tot := tot + v
   }
   return tot
