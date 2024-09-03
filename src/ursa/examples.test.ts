@@ -65,6 +65,7 @@ import {
   // This program does not terminate
   // ['Integer sequence', 'rosettacode/Integer sequence'],
   ['Loops/Continue', 'rosettacode/Loops-Continue'],
+  ['Man or boy test', 'rosettacode/Man or boy test'],
 ].map(([title, file]) => ursaTest(title, file))
 
 // Tests with extra arguments
