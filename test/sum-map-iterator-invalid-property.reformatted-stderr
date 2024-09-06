@@ -2,10 +2,10 @@ Error: Line 6, col 17:
   5 |         let l = it()
 > 6 |         let k = l.get
                       ^~~~~
-  7 |         if l == null {
+  7 |         if l == null { return tot }
 
 Invalid property
 
 Traceback (most recent call last)
-  line 13
+  line 11
     sum({"a": 10, "b": 30, "c": 50, "d": 5, "e": 5}), at top level

@@ -4,12 +4,12 @@
 
 import assert from 'assert'
 import path from 'path'
-import fs, {PathOrFileDescriptor} from 'fs-extra'
 import * as readline from 'readline'
 import {fileURLToPath} from 'url'
 
 import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
 import envPaths from 'env-paths'
+import fs, {PathOrFileDescriptor} from 'fs-extra'
 import tildify from 'tildify'
 import {rollup} from 'rollup'
 import {nodeResolve} from '@rollup/plugin-node-resolve'
@@ -33,6 +33,9 @@ import {
   arkToJs, evalArkJs, preludeJs, runtimeContext,
 } from '../ark/compiler/index.js'
 import {expToInst} from '../ark/flatten.js'
+
+// eslint-disable-next-line @typescript-eslint/naming-convention
+const __dirname = fileURLToPath(new URL('.', import.meta.url))
 
 if (process.env.DEBUG) {
   Error.stackTraceLimit = Infinity
@@ -98,9 +101,7 @@ const fmtParser = subparsers.add_parser('fmt', {aliases: ['f', 'format'], descri
 fmtParser.set_defaults({func: fmtCommand})
 fmtParser.add_argument('source', {metavar: 'FILE', help: 'source code to format'})
 fmtParser.add_argument('--output', '-o', {metavar: 'FILE', help: 'output file [default: standard output]'})
-fmtParser.add_argument('--width', {metavar: 'COLUMNS', help: 'maximum desired width of formatted code'})
 fmtParser.add_argument('--indent', {metavar: 'STRING', help: 'indent string'})
-fmtParser.add_argument('--onelineFactor', {metavar: 'NUMBER', help: 'factor governing when expressions are wrapped (bigger means try to fit more complex expressions on one line) [default: 0]'})
 
 interface Args {
   // Global arguments
@@ -142,7 +143,7 @@ function getOutputFile(
 let prog: string
 
 // Use standard input if requested
-function getInputFile(args: Args) {
+function getInputFile(args: Args): PathOrFileDescriptor {
   let inputFile: PathOrFileDescriptor = args.source
   if (args.source !== '-') {
     prog = inputFile
@@ -363,8 +364,6 @@ async function compileCommand(args: Args) {
     for (const k of recordKeys<string, unknown>(runtimeContext)) {
       names.push(k)
     }
-    // eslint-disable-next-line @typescript-eslint/naming-convention
-    const __dirname = fileURLToPath(new URL('.', import.meta.url))
     output += `import {${names.join(', ')}} from '${path.join(__dirname, '../../lib/ark/data.js')}'\n`
     output += `import {run, spawn} from '${path.join(__dirname, '../../node_modules/effection/esm/mod.js')}'\nlet prelude = ${prelude};
 (await (run(prelude))).properties.forEach((val, sym) => jsGlobals.set(sym, val))\n`
@@ -389,11 +388,12 @@ async function compileCommand(args: Args) {
 }
 
 function fmtCommand(args: Args) {
-  const outputFile = getOutputFile(args, true)
   const inputFile = getInputFile(args)
-  const source = readSourceFile(inputFile)
-  const output = format(source, args.width, args.indent, args.onelineFactor)
+  const input = fs.readFileSync(inputFile, {encoding: 'utf-8'})
+  const output = format(input, args.indent)
+  const outputFile = getOutputFile(args, true)
   fs.writeFileSync(outputFile, output)
+  delete process.env.TOPIARY_LANGUAGE_DIR
   return Promise.resolve()
 }
 

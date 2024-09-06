@@ -18,6 +18,7 @@
     "argparse": "^2.0.1",
     "effection": "^3.0.3",
     "env-paths": "^3.0.0",
+    "execa": "^9.3.0",
     "fs-extra": "^11.2.0",
     "get-source": "^2.0.12",
     "ohm-js": "^17.1.0",
@@ -43,7 +44,6 @@
     "dir-compare": "^5.0.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-airbnb-typescript": "^18.0.0",
-    "execa": "^9.3.0",
     "pre-push": "^0.1.4",
     "tree-kill": "^1.2.2",
     "ts-node": "^10.9.2",
@@ -63,7 +63,7 @@
   "scripts": {
     "lint": "eslint . --ext .ts && ts-unused-exports ./tsconfig.json --ignoreFiles=\"./src/grammar/ursa.ohm-bundle.*.ts\" && depcheck",
     "prebuild": "node --print \"'export default \\'' + require('./package.json').version + '\\';'\" > src/version.ts && npm run pre-compile-prelude",
-    "build": "tsc --build && npm run compile-prelude && mkdir -p lib/ark/compiler lib/ursa && cp src/ark/prelude.json lib/ark/ && cp src/ark/compiler/prelude.js lib/ark/compiler/ && cp src/ursa/prelude.ursa lib/ursa/",
+    "build": "tsc --build && npm run compile-prelude && mkdir -p lib/ark/compiler lib/ursa lib/topiary && cp src/ark/prelude.json lib/ark/ && cp src/ark/compiler/prelude.js lib/ark/compiler/ && cp src/ursa/prelude.ursa lib/ursa/ && cp src/topiary/ursa.scm lib/topiary/",
     "clean": "tsc --build --clean && rm -f src/grammar/ursa.ohm-bundle.ts src/grammar/ursa.ohm-bundle.d.ts",
     "generate-only": "ohm generateBundles --withTypes --esm 'src/grammar/*.ohm'",
     "patch-diff-ohm": "patch -p0 --output=src/grammar/ursa.ohm-bundle.d.part-patched.ts < src/grammar/ursa.ohm-bundle.d.ts.diff",
@@ -92,7 +92,7 @@
       },
       "compile": "tsc"
     },
-    "timeout": "30s",
+    "timeout": "60s",
     "workerThreads": false
   },
   "pre-push": [
