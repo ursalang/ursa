@@ -16,7 +16,7 @@ export function format(
   expr: string,
   indentString: string = '    ',
 ): string {
-  const tmpConfigFile = tmp.fileSync({keep: true})
+  const tmpConfigFile = tmp.fileSync()
   fs.writeFileSync(tmpConfigFile.fd, `\
 {
   languages = {
