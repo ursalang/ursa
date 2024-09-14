@@ -25,13 +25,12 @@ export function format(
     },
   },
 }`)
-  process.env.TOPIARY_LANGUAGE_DIR = path.join(__dirname, '../../lib/topiary')
+  const queryFile = path.join(__dirname, '../../lib/topiary/ursa.scm')
   const result = execaSync(
     'topiary',
-    ['format', '--language', 'ursa', '--configuration', tmpConfigFile.name],
+    ['format', '--language', 'ursa', '--configuration', tmpConfigFile.name, '--query', queryFile],
     {input: expr, stripFinalNewline: false},
   )
   tmpConfigFile.removeCallback()
-  delete process.env.TOPIARY_LANGUAGE_DIR
   return result.stdout
 }
