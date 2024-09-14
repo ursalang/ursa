@@ -11,5 +11,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm install
-      - run: npm run test-all
+      - run: mkdir -p ~/.cache # work around https://github.com/tweag/topiary/issues/740
+      - run: git clone https://github.com/rrthomas/topiary ~/topiary && cd ~/topiary && cargo install --path topiary-cli
+      - run: |
+          npm install
+          npm run test-all
