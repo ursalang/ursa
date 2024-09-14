@@ -21,7 +21,6 @@ export function format(
 {
   languages = {
     ursa = {
-      extensions = ["ursa"],
       indent | priority 1 = "${indentString}",
     },
   },
