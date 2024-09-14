@@ -393,7 +393,6 @@ function fmtCommand(args: Args) {
   const output = format(input, args.indent)
   const outputFile = getOutputFile(args, true)
   fs.writeFileSync(outputFile, output)
-  delete process.env.TOPIARY_LANGUAGE_DIR
   return Promise.resolve()
 }
 
