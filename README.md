@@ -32,6 +32,12 @@ Install Ursa with npm (part of [Node](https://nodejs.org/)):
 npm install -g @ursalang/ursa
 ```
 
+Install the Ursa fork of Topiary (code formatter, you will need a [Rust](https://www.rust-lang.org/) toolchain):
+
+```sh
+git clone https://github.com/rrthomas/topiary ~/topiary && cd ~/topiary && cargo install --path topiary-cli
+```
+
 ## Use
 
 For the Ursa front-end:
