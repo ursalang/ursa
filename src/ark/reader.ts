@@ -2,7 +2,7 @@
 // © Reuben Thomas 2023-2024
 // Released under the MIT license.
 
-import preludeJson from './prelude.json' assert {type: 'json'}
+import preludeJson from './prelude.json' with {type: 'json'}
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
