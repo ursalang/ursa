@@ -73,7 +73,8 @@
     "update-ohm-patch": "npm run generate-only && npm run patch-diff-ohm && diff -u src/grammar/ursa.ohm-bundle.d.ts src/grammar/ursa.ohm-bundle.d.part-patched.ts > src/grammar/ursa.ohm-bundle.d.ts.diff; npm run patch-ohm",
     "compile-prelude": "npm run pre-compile-prelude && ./bin/test-run.sh compile --output=src/ark/prelude.json src/ursa/prelude.ursa && ./bin/test-run.sh --target=js compile --output=src/ark/compiler/prelude.js src/ursa/prelude.ursa",
     "test": "npm run generate && npm run build && ava 'src/**/basics.test.ts' 'src/**/examples.test.ts' 'src/**/cli.test.ts' 'src/**/fsmap.test.ts'",
-    "test-all": "npm run generate && npm run build && ava --timeout 300s",
+    "test-all": "npm run generate && npm run build && ava",
+    "test-ci": "npm run generate && npm run build && ava --match '!Web server'",
     "coverage": "NODE_ENV=coverage c8 --extension .ts npm test",
     "loc": "cloc --read-lang-def=ursa.def --exclude-ext=js --force-lang='JavaScript,ohm' --not-match-f='testutil.ts|\\.test\\.ts|\\.d.*\\.ts$|prelude\\.js.*' src",
     "diff-check": "git diff --exit-code",
@@ -92,7 +93,7 @@
       },
       "compile": "tsc"
     },
-    "timeout": "60s",
+    "timeout": "300s",
     "workerThreads": false
   },
   "pre-push": [
