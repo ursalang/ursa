@@ -57,6 +57,7 @@ import {
   // Rosetta code examples
   ['Accumulator factory', 'rosettacode/Accumulator factory'],
   ['Ackermann function', 'rosettacode/Ackermann function'],
+  ['Averages/Root mean square', 'rosettacode/Averages-Root mean square'],
   // This program has an unbound variable
   // ['Conditional structures', 'rosettacode/Conditional structures'],
   ['FizzBuzz', 'rosettacode/FizzBuzz'],
