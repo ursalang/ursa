@@ -58,6 +58,7 @@ import {
   ['Accumulator factory', 'rosettacode/Accumulator factory'],
   ['Ackermann function', 'rosettacode/Ackermann function'],
   ['Averages/Arithmetic mean', 'rosettacode/Averages-Arithmetic mean'],
+  ['Averages/Mode', 'rosettacode/Averages-Mode'],
   ['Averages/Root mean square', 'rosettacode/Averages-Root mean square'],
   // This program has an unbound variable
   // ['Conditional structures', 'rosettacode/Conditional structures'],
