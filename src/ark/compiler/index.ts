@@ -87,6 +87,10 @@ const externalRuntimeContext: Record<string, unknown> = {
   spawn,
 }
 
+function jsMangle(name: string) {
+  return `$${name}`
+}
+
 function assign(src: string, dest: string) {
   return `${dest} = ${src}`
 }
@@ -158,20 +162,20 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
           new Frame(inst.params.map((p) => new Location(p, false)), [], inst.name),
         )
         return sourceNode([
-          letAssign(inst.matchingClose.id, `new NativeFn([${inst.params.map((p) => `'${p}'`).join(', ')}], function (${inst.params.join(', ')}) {\nconst gen = function* () {`),
+          letAssign(inst.matchingClose.id, `new NativeFn([${inst.params.map((p) => `'${p}'`).join(', ')}], function (${inst.params.map(jsMangle).join(', ')}) {\nconst gen = function* () {`),
         ])
       } else if (inst instanceof ArkFnBlockOpenInst) {
         env = env.pushFrame(
           new Frame(inst.params.map((p) => new Location(p, false)), [], inst.name),
         )
         return sourceNode([
-          letAssign(inst.matchingClose.id, `new NativeFn([${inst.params.map((p) => `'${p}'`).join(', ')}], function* (${inst.params.join(', ')}) {`),
+          letAssign(inst.matchingClose.id, `new NativeFn([${inst.params.map((p) => `'${p}'`).join(', ')}], function* (${inst.params.map(jsMangle).join(', ')}) {`),
         ])
       } else if (inst instanceof ArkLetBlockOpenInst) {
         return sourceNode([
           `let ${inst.matchingClose.id.description!}\n`,
           '{\n',
-          ...inst.vars.map((v) => `let ${v.name} = ArkUndefined\n`),
+          ...inst.vars.map((v) => `let ${jsMangle(v.name)} = ArkUndefined\n`),
         ])
       } else if (inst instanceof ArkBlockOpenInst) {
         return sourceNode([`let ${inst.matchingClose.id.description!}\n`, '{\n'])
@@ -193,10 +197,10 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
         return sourceNode(letAssign(inst.id, `yield* ${inst.objId.description}.getMethod('${inst.prop}').body(${inst.objId.description}, ${inst.argIds.map((id) => id.description).join(', ')})`))
       } else if (inst instanceof ArkSetNamedLocInst) {
         return sourceNode([
-          `if (${inst.lexpId.description} !== ArkUndefined && ${inst.lexpId.description}.constructor !== ArkNullVal && ${inst.valId.description}.constructor !== ${inst.lexpId.description}.constructor) {\n`,
+          `if (${jsMangle(inst.lexpId.description!)} !== ArkUndefined && ${jsMangle(inst.lexpId.description!)}.constructor !== ArkNullVal && ${inst.valId.description}.constructor !== ${jsMangle(inst.lexpId.description!)}.constructor) {\n`,
           'throw new JsRuntimeError(\'Assignment to different type\')\n',
           '}\n',
-          letAssign(inst.id, `${inst.lexpId.description} = ${inst.valId.description}`),
+          letAssign(inst.id, `${jsMangle(inst.lexpId.description!)} = ${inst.valId.description}`),
         ])
       } else if (inst instanceof ArkSetPropertyInst) {
         return sourceNode(letAssign(inst.id, `${inst.lexpId.description}.set('${inst.prop}', ${inst.valId.description})`))
@@ -220,9 +224,9 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
           `if (${inst.id.description} === ArkUndefined) throw new JsRuntimeError('Invalid property')\n`,
         ])
       } else if (inst instanceof ArkCaptureInst) {
-        return sourceNode(letAssign(inst.id, inst.name))
+        return sourceNode(letAssign(inst.id, jsMangle(inst.name)))
       } else if (inst instanceof ArkLocalInst) {
-        return sourceNode(letAssign(inst.id, inst.name))
+        return sourceNode(letAssign(inst.id, jsMangle(inst.name)))
       } else {
         console.log('Invalid ArkInst:')
         debug(inst)
