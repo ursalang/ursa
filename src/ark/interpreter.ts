@@ -226,6 +226,7 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
       mem.set(inst.id, mem.get(inst.blockId)!)
       inst = inst.next
     } else if (inst instanceof ArkIfBlockOpenInst) {
+      mem.set(inst.matchingClose.id, ArkNull())
       const result = mem.get(inst.condId)!
       mem.set(inst.id, result)
       if (result !== ArkBoolean(false)) {
