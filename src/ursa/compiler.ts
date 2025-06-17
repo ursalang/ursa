@@ -166,10 +166,8 @@ semantics.addOperation<KeyValue>('toKeyValue(a)', {
 })
 
 semantics.addOperation<string>('toParam(a)', {
-  Param(ident, maybeType) {
-    if (maybeType.children.length > 0) {
-      maybeType.children[0].children[1].toType(this.args.a)
-    }
+  Param(ident, typeAnnotation) {
+    typeAnnotation.children[1].toType(this.args.a)
     return ident.sourceString
   },
 })
@@ -323,8 +321,8 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     return addLoc(new ArkIf(cond.toExp(this.args.a), thenBlock.toExp(this.args.a)), this)
   },
 
-  Fn(type, body) {
-    const fnType = type.toMethod(this.args.a)
+  Fn(ty, body) {
+    const fnType = ty.toMethod(this.args.a)
     // TODO: Environment should contain typed params, not just strings
     const innerEnv = this.args.a.env.pushFrame(
       new Frame(fnType.params.map((p) => new Location(p, false)), []),
@@ -624,14 +622,14 @@ semantics.addOperation<void>('toType(a)', {
   Type_intersection(types) {
     types.asIteration().children.map((child) => child.toType(this.args.a))
   },
-  Type_fn(type) {
-    type.toMethod(this.args.a)
+  Type_fn(ty) {
+    ty.toMethod(this.args.a)
   },
 })
 
 // TODO: return types along with parameter names, and return type.
 semantics.addOperation<ArkFnType>('toMethod(a)', {
-  FnType(fn, _open, params, _maybeComma, _close, maybeType) {
+  FnType(fn, _open, params, _maybeComma, _close, typeAnnotation) {
     const parsedParams = params.asIteration().children.map((p) => p.toParam(this.args.a))
     try {
       checkParamList(parsedParams)
@@ -641,9 +639,7 @@ semantics.addOperation<ArkFnType>('toMethod(a)', {
       }
       throw new UrsaCompilerError(params.source, e.message)
     }
-    if (maybeType.children.length > 0) {
-      maybeType.children[0].children[1].toType(this.args.a)
-    }
+    typeAnnotation.children[1].toType(this.args.a)
     return new ArkFnType(fn.ctorName === 'fn' ? ArkFn : ArkGenerator, parsedParams)
   },
 })

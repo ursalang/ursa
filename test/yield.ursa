@@ -1,4 +1,4 @@
-let my_range = gen(n) {
+let my_range = gen(n: Int): Maybe<Int> {
     var i = 0
     loop {
         i := i + 1
@@ -18,7 +18,7 @@ print(h())
 print(h())
 print(h())
 
-let totalizer = gen() {
+let totalizer = gen(): Int {
     var i = 0
     loop {
         i := i + (yield i)

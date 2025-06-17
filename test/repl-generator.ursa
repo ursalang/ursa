@@ -1,1 +1,1 @@
-let m = gen () {}
+let m = gen (): Any {}

@@ -12,9 +12,7 @@
                   "0": "x",
                   "1": [
                     {
-                      "0": [
-                        "Int"
-                      ],
+                      "0": "Int",
                       "1": null,
                       "type": "NamedType"
                     }
@@ -24,9 +22,7 @@
               ],
               "5": [
                 {
-                  "0": [
-                    "Void"
-                  ],
+                  "0": "Void",
                   "1": null,
                   "type": "NamedType"
                 }
@@ -57,9 +53,7 @@
                           "0": "x",
                           "1": [
                             {
-                              "0": [
-                                "Int"
-                              ],
+                              "0": "Int",
                               "1": null,
                               "type": "NamedType"
                             }
@@ -69,9 +63,7 @@
                       ],
                       "5": [
                         {
-                          "0": [
-                            "Void"
-                          ],
+                          "0": "Void",
                           "1": null,
                           "type": "NamedType"
                         }

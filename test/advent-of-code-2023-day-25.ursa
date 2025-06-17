@@ -4,7 +4,7 @@
 
 use jslib.fs
 
-let read_graph = fn(filename) {
+let read_graph = fn(filename: Str):  List{
     let data = fs.readFileSync(filename, "utf-8")
     let adjacency_list = {}
     let regex = RegExp("(?<node>[a-z]{3}): (?<children>([a-z]{3} ?)+)(\\n|$)", "ug")
@@ -35,7 +35,7 @@ let read_graph = fn(filename) {
     return adjacency_list
 }
 
-let clone_graph_without_edges = fn(graph, edges) {
+let clone_graph_without_edges = fn(graph: List, edges: List): List {
     let ret = {}
     for key in graph.keys() {
         ret.set(key, [])
@@ -60,7 +60,7 @@ let clone_graph_without_edges = fn(graph, edges) {
     return ret
 }
 
-let dfs = fn(node, graph, visited) {
+let dfs = fn(node: List, graph: List, visited: List): List {
     if visited.get(node) == true {
         return 0
     }
@@ -74,7 +74,7 @@ let dfs = fn(node, graph, visited) {
     return new_nodes
 }
 
-let component_sizes = fn(graph) {
+let component_sizes = fn(graph: List): List {
     let visited = {}
     let sizes = []
     for node in graph.keys() {

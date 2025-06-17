@@ -1,4 +1,4 @@
-let g = gen(l) {
+let g = gen(l: List<Num>): Num {
     for n in l.iter() { yield n * 2 }
 }
 

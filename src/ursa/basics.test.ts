@@ -141,12 +141,12 @@ testGroup('fn', [
 ])
 
 test('Duplicate parameters', (t) => {
-  const error = t.throws(() => compile('fn(a,a) {}'), {instanceOf: UrsaCompilerError})
+  const error = t.throws(() => compile('fn(a: T,a: T): U {}'), {instanceOf: UrsaCompilerError})
   t.not(error, undefined)
   t.is(error.message, `\
 Line 1, col 4:
-> 1 | fn(a,a) {}
-         ^~~
+> 1 | fn(a: T,a: T): U {}
+         ^~~~~~~~~
 
 Duplicate parameters in list`)
 })

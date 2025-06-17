@@ -1,4 +1,4 @@
-let mean = fn(l) {
+let mean = fn(l: List<Num>): Num {
   var tot = 0
   for i in l.iter() {
     tot := tot + i
