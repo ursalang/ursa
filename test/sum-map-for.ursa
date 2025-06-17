@@ -1,4 +1,4 @@
-let sum = fn(m) {
+let sum = fn(m: Map<Any, Int>): Int {
   var tot = 0
   for l in m.iter() {
     let k = l.get(0) and let v = l.get(1)

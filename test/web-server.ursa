@@ -1,6 +1,6 @@
 use jslib.http
 
-let requestListener = fn (req, res) {
+let requestListener = fn (req: Callable, res: Callable): Null {
   res.writeHead(200)
   res.end("My first server!")
 }
@@ -8,7 +8,7 @@ let requestListener = fn (req, res) {
 let server = http.createServer(requestListener)
 let host = "localhost"
 let port = 0
-server.listen(port, host, fn () {
+server.listen(port, host, fn (): Null {
   // FIXME: Use string interpolation here
   print("Server is running on http://localhost:", server.address().port)
 })

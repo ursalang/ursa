@@ -1,8 +1,8 @@
-let f = fn(initial) {
+let f = fn(initial: Int): Int {
   var state = 0
   let ret = Object {
-    set = fn(y) { state := y }
-    get = fn() { state }
+    set = fn(y: Int): Int { state := y }
+    get = fn(): Int { state }
   }
   state := initial
   ret

@@ -10,9 +10,7 @@
                 "0": "self",
                 "1": [
                   {
-                    "0": [
-                      "TheTypeOfThisFunction"
-                    ],
+                    "0": "TheTypeOfThisFunction",
                     "1": null,
                     "type": "NamedType"
                   }
@@ -23,9 +21,7 @@
                 "0": "x",
                 "1": [
                   {
-                    "0": [
-                      "Int"
-                    ],
+                    "0": "Int",
                     "1": null,
                     "type": "NamedType"
                   }
@@ -35,9 +31,7 @@
             ],
             "5": [
               {
-                "0": [
-                  "Int"
-                ],
+                "0": "Int",
                 "1": null,
                 "type": "NamedType"
               }

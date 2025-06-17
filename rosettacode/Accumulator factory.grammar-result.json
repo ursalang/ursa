@@ -10,9 +10,7 @@
                 "0": "n",
                 "1": [
                   {
-                    "0": [
-                      "Float"
-                    ],
+                    "0": "Float",
                     "1": null,
                     "type": "NamedType"
                   }
@@ -26,9 +24,7 @@
                   "0": "f",
                   "1": [
                     {
-                      "0": [
-                        "Float"
-                      ],
+                      "0": "Float",
                       "1": null,
                       "type": "NamedType"
                     }
@@ -38,9 +34,7 @@
               ],
               "5": [
                 {
-                  "0": [
-                    "Void"
-                  ],
+                  "0": "Void",
                   "1": null,
                   "type": "NamedType"
                 }
@@ -67,9 +61,7 @@
                     "0": "f",
                     "1": [
                       {
-                        "0": [
-                          "Float"
-                        ],
+                        "0": "Float",
                         "1": null,
                         "type": "NamedType"
                       }
@@ -79,9 +71,7 @@
                 ],
                 "5": [
                   {
-                    "0": [
-                      "Void"
-                    ],
+                    "0": "Void",
                     "1": null,
                     "type": "NamedType"
                   }

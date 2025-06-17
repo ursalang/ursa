@@ -1,4 +1,4 @@
-let hailstone = fn(n_) {
+let hailstone = fn(n_: Num): Num {
   var n = n_
   let steps = [n]
   loop {

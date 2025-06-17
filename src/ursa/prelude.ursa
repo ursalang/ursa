@@ -31,7 +31,7 @@ use js.setTimeout
   tan = Math.tan
 
   // Range iterator
-  range = gen(n) {
+  range = gen(n: int): int {
     var i = 0
     loop {
       if i == n { return null }

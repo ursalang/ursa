@@ -10,9 +10,7 @@
                 "0": "n",
                 "1": [
                   {
-                    "0": [
-                      "Int"
-                    ],
+                    "0": "Int",
                     "1": null,
                     "type": "NamedType"
                   }
@@ -22,9 +20,7 @@
             ],
             "5": [
               {
-                "0": [
-                  "Bool"
-                ],
+                "0": "Bool",
                 "1": null,
                 "type": "NamedType"
               }
@@ -79,9 +75,7 @@
                 "0": "n",
                 "1": [
                   {
-                    "0": [
-                      "Int"
-                    ],
+                    "0": "Int",
                     "1": null,
                     "type": "NamedType"
                   }
@@ -91,9 +85,7 @@
             ],
             "5": [
               {
-                "0": [
-                  "Bool"
-                ],
+                "0": "Bool",
                 "1": null,
                 "type": "NamedType"
               }
