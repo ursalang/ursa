@@ -1,18 +1,46 @@
 // Serialize Ark code to JSON.
-// © Reuben Thomas 2023-2024
+// © Reuben Thomas 2023-2025
 // Released under the MIT license.
 
 import {
   globals, ArkVal,
   ArkConcreteVal, ArkNull, ArkOperation, ArkList, ArkMap, ArkObject,
-  ArkUndefined, NativeObject,
+  ArkUndefinedVal, NativeObject, ArkNullVal, ArkBooleanVal,
+  ArkNumberVal, ArkStringVal, ArkCallable,
 } from './data.js'
 import {
-  ArkExp, ArkSequence,
+  ArkType, ArkExp, ArkSequence,
   ArkAnd, ArkOr, ArkIf, ArkLoop, ArkBreak, ArkContinue, ArkInvoke,
   ArkSet, ArkLet, ArkCall, ArkFn, ArkGenerator, ArkReturn, ArkProperty,
   ArkLiteral, ArkListLiteral, ArkMapLiteral, ArkObjectLiteral, ArkYield,
 } from './code.js'
+
+function typeToJs(ty: ArkType) {
+  switch (ty) {
+    case ArkUndefinedVal:
+      return 'Unknown'
+    case ArkVal:
+      return 'Any'
+    case ArkNullVal:
+      return 'Null'
+    case ArkBooleanVal:
+      return 'Bool'
+    case ArkNumberVal:
+      return 'Num'
+    case ArkStringVal:
+      return 'Str'
+    case ArkList: // TODO Generics
+      return 'List'
+    case ArkMap: // TODO Generics
+      return 'Map'
+    case ArkCallable: // TODO or subclass
+      return 'Fn'
+    case ArkObject: // TODO Or subclass
+      return 'Object'
+    default:
+      throw new Error('unknown type')
+  }
+}
 
 export function valToJs(val: ArkVal | ArkExp, externalSyms = globals) {
   function doValToJs(val: ArkVal | ArkExp): unknown {
@@ -34,7 +62,12 @@ export function valToJs(val: ArkVal | ArkExp, externalSyms = globals) {
     } else if (val instanceof ArkLiteral) {
       return doValToJs(val.val)
     } else if (val instanceof ArkFn) {
-      return [val instanceof ArkGenerator ? 'gen' : 'fn', [...val.params], doValToJs(val.body)]
+      return [
+        val instanceof ArkGenerator ? 'gen' : 'fn',
+        val.params.map((l) => [l.name, typeToJs(l.type)]),
+        typeToJs(val.returnType),
+        doValToJs(val.body),
+      ]
     } else if (val instanceof ArkObjectLiteral) {
       const obj = {}
       for (const [k, v] of val.properties) {
@@ -56,7 +89,7 @@ export function valToJs(val: ArkVal | ArkExp, externalSyms = globals) {
       }
       return obj
     } else if (val instanceof ArkLet) {
-      return ['let', [...val.boundVars.map((bv) => [bv.isVar ? 'var' : 'const', bv.name, doValToJs(bv.init)])], doValToJs(val.body)]
+      return ['let', [...val.boundVars.map((bv) => [bv.isVar ? 'var' : 'const', bv.name, typeToJs(bv.type), doValToJs(bv.init)])], doValToJs(val.body)]
     } else if (val instanceof ArkCall) {
       return [doValToJs(val.fn), ...val.args.map(doValToJs)]
     } else if (val instanceof ArkInvoke) {
@@ -100,7 +133,7 @@ export function valToJs(val: ArkVal | ArkExp, externalSyms = globals) {
       return ['promise']
     } else if (val === ArkNull()) {
       return null
-    } else if (val === ArkUndefined) {
+    } else if (val === ArkUndefinedVal) {
       return undefined
     }
     // eslint-disable-next-line @typescript-eslint/no-base-to-string

@@ -1,8 +1,10 @@
 // Ark utility functions.
-// © Reuben Thomas 2023-2024
+// © Reuben Thomas 2023-2025
 // Released under the MIT license.
 
 import util from 'util'
+
+export type Class<T> = abstract new (...args: never[]) => T
 
 export function valToString(x: unknown, depth: number | null = 1) {
   return util.inspect(

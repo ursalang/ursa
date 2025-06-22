@@ -1,4 +1,4 @@
-let mode = fn(l: List<T>): T {
+let mode = fn(l: List<Any>): Any {
   let m = {}
   for i in l.iter() {
     let old = m.get(i)

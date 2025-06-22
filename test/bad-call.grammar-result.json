@@ -16,13 +16,11 @@
         "1": {
           "0": {
             "2": [],
-            "5": [
-              {
-                "0": "Int",
-                "1": null,
-                "type": "NamedType"
-              }
-            ],
+            "5": {
+              "0": "Num",
+              "1": null,
+              "type": "NamedType"
+            },
             "type": "FnType"
           },
           "1": [
@@ -46,13 +44,11 @@
         "1": {
           "0": {
             "2": [],
-            "5": [
-              {
-                "0": "Int",
-                "1": null,
-                "type": "NamedType"
-              }
-            ],
+            "5": {
+              "0": "Num",
+              "1": null,
+              "type": "NamedType"
+            },
             "type": "FnType"
           },
           "1": [

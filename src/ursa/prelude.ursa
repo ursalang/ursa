@@ -1,5 +1,5 @@
 // Ursa prelude.
-// © Reuben Thomas 2023-2024
+// © Reuben Thomas 2023-2025
 // Released under the MIT license.
 
 use js.Math
@@ -31,7 +31,7 @@ use js.setTimeout
   tan = Math.tan
 
   // Range iterator
-  range = gen(n: int): int {
+  range = gen(n: Num): Num {
     var i = 0
     loop {
       if i == n { return null }

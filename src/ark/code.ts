@@ -6,8 +6,13 @@ import {Interval} from 'ohm-js'
 
 import {
   ArkCallable, ArkNull, ArkVal,
+  ArkNullVal, ArkBooleanVal, ArkNumberVal, ArkStringVal,
+  ArkObject, ArkList, ArkMap,
+  ArkUndefinedVal,
 } from './data.js'
 import {type ArkState} from './interpreter.js'
+import {Class} from './util.js'
+import {TypedLocation} from './compiler-utils.js'
 
 export class ArkDebugInfo {
   uid: number | undefined
@@ -76,7 +81,8 @@ export class ArkContinuation extends ArkCallable {
 
 export class ArkFn extends ArkExp {
   constructor(
-    public params: string[],
+    public params: TypedLocation[],
+    public returnType: ArkType,
     public capturedVars: ArkNamedLoc[],
     public body: ArkExp,
     sourceLoc?: Interval,
@@ -86,9 +92,52 @@ export class ArkFn extends ArkExp {
 }
 export class ArkGenerator extends ArkFn {}
 
-export class ArkFnType {
-  constructor(public Constructor: typeof ArkFn, public params: string[]) {}
+export type ArkType = Class<ArkVal> | ArkGenericType
+
+class ArkGenericType {
+  constructor(
+    public Constructor: Class<ArkVal>,
+    public typeParameters: ArkType[] = [],
+    // TODO: public traits
+  ) {}
 }
+
+// export class ArkFieldType extends ArkType {
+//   constructor(public isVar: boolean, public type: ArkType) {
+//   super()
+//   }
+// }
+
+export class ArkFnType extends ArkGenericType {
+  constructor(
+    public Constructor: Class<ArkCallable>,
+    public typeParameters: ArkType[],
+    public params: TypedLocation[],
+    public returnType: ArkType,
+  ) {
+    super(Constructor, typeParameters)
+  }
+  // public params: [string, ArkType][], public returnType: ArkType
+}
+
+class ArkUnionType extends ArkGenericType {}
+
+export const globalTypes = new Map<string, ArkType>([
+  ['Unknown', ArkUndefinedVal],
+  ['Any', ArkVal],
+  ['Null', ArkNullVal],
+  ['Bool', ArkBooleanVal],
+  ['Num', ArkNumberVal],
+  ['Str', ArkStringVal],
+
+  ['Object', ArkObject],
+  ['List', ArkList],
+  ['Map', ArkMap],
+  ['Fn', ArkCallable],
+
+  // TODO: implement union types.
+  ['Union', new ArkUnionType(ArkUndefinedVal)],
+])
 
 export class ArkCall extends ArkExp {
   constructor(public fn: ArkExp, public args: ArkExp[], sourceLoc?: Interval) {
@@ -155,6 +204,7 @@ export class ArkMapLiteral extends ArkExp {
 export class ArkBoundVar {
   constructor(
     public name: string,
+    public type: ArkType,
     public isVar: boolean,
     public index: number,
     public init: ArkExp,

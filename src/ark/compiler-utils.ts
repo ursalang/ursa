@@ -4,17 +4,24 @@
 
 import assert from 'assert'
 
+import {ArkType} from './code.js'
 import {ArkObject, globals} from './data.js'
 
 export class Location {
   constructor(public name: string, public isVar: boolean) {}
 }
 
+export class TypedLocation extends Location {
+  constructor(public name: string, public type: ArkType, public isVar: boolean) {
+    super(name, isVar)
+  }
+}
+
 export class Frame {
   constructor(
     // Locals are undefined between the point where they are allocated and
     // the point at which they are declared.
-    public locals: (Location | undefined)[],
+    public locals: (TypedLocation | undefined)[],
     public captures: Location[],
     public fnName?: string,
   ) {}
@@ -30,7 +37,7 @@ export class Environment {
     return this.stack[0]
   }
 
-  push(items: (Location | undefined)[]) {
+  push(items: (TypedLocation | undefined)[]) {
     return new Environment(
       [
         new Frame(
