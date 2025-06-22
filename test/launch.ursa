@@ -1,4 +1,4 @@
-let f = fn(n: Int): Int {
+let f = fn(n: Num): Num {
   for i in range(n) {
     print(n, i)
     sleep(0)

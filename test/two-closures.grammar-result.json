@@ -10,23 +10,19 @@
               "2": [
                 {
                   "0": "x",
-                  "1": [
-                    {
-                      "0": "Int",
-                      "1": null,
-                      "type": "NamedType"
-                    }
-                  ],
+                  "1": {
+                    "0": "Num",
+                    "1": null,
+                    "type": "NamedType"
+                  },
                   "type": "Param"
                 }
               ],
-              "5": [
-                {
-                  "0": "Void",
-                  "1": null,
-                  "type": "NamedType"
-                }
-              ],
+              "5": {
+                "0": "Null",
+                "1": null,
+                "type": "NamedType"
+              },
               "type": "FnType"
             },
             "type": "FnType"
@@ -51,23 +47,19 @@
                       "2": [
                         {
                           "0": "x",
-                          "1": [
-                            {
-                              "0": "Int",
-                              "1": null,
-                              "type": "NamedType"
-                            }
-                          ],
+                          "1": {
+                            "0": "Num",
+                            "1": null,
+                            "type": "NamedType"
+                          },
                           "type": "Param"
                         }
                       ],
-                      "5": [
-                        {
-                          "0": "Void",
-                          "1": null,
-                          "type": "NamedType"
-                        }
-                      ],
+                      "5": {
+                        "0": "Null",
+                        "1": null,
+                        "type": "NamedType"
+                      },
                       "type": "FnType"
                     },
                     "1": [

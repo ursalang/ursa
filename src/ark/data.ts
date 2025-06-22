@@ -1,5 +1,5 @@
 // Compiled Ark values.
-// © Reuben Thomas 2023-2024
+// © Reuben Thomas 2023-2025
 // Released under the MIT license.
 
 import {
@@ -71,7 +71,7 @@ class ArkObjectBase extends ArkAbstractObjectBase {
   }
 
   get(prop: string) {
-    return this.properties.get(prop) ?? ArkUndefined
+    return this.properties.get(prop) ?? ArkUndefinedVal
   }
 
   set(prop: string, val: ArkVal) {
@@ -94,6 +94,14 @@ export abstract class ArkConcreteVal<T> extends ArkObjectBase {
 
   constructor(public val: T) {
     super()
+  }
+}
+
+export class ArkUndefinedVal extends ArkConcreteVal<undefined> {
+  static methods: Map<string, ArkCallable> = new Map([...ArkConcreteVal.methods])
+
+  constructor() {
+    super(undefined)
   }
 }
 
@@ -190,7 +198,6 @@ class ConcreteInterned {
   }
 }
 
-export const ArkUndefined = new ArkVal()
 export function ArkNull() {
   return ConcreteInterned.value<ArkNullVal, null>(ArkNullVal, null)
 }
@@ -236,27 +243,6 @@ export class NativeAsyncFn extends ArkCallable {
   }
 }
 
-// export class ArkType extends Ark {
-//   constructor(
-//   public superTraits: ArkType[],
-//   public members: Map<string, ArkFieldType | ArkMethodType>,
-//   ) {
-//   super()
-//   }
-// }
-
-// export class ArkFieldType extends Ark {
-//   constructor(public isVar: boolean, public type: ArkType) {
-//   super()
-//   }
-// }
-
-// export class ArkMethodType extends Ark {
-//   constructor(public params: [string, ArkType][], public returnType: ArkType) {
-//   super()
-//   }
-// }
-
 export class ArkObject extends ArkObjectBase {
   static properties: Map<string, ArkCallable> = new Map([...ArkObjectBase.methods])
 
@@ -286,7 +272,7 @@ export class NativeObject extends ArkAbstractObjectBase {
   }
 
   get(prop: string): ArkVal {
-    return fromJs((this.obj as {[key: string]: unknown})[prop], this.obj) ?? ArkUndefined
+    return fromJs((this.obj as {[key: string]: unknown})[prop], this.obj) ?? ArkUndefinedVal
   }
 
   set(prop: string, val: ArkVal) {
@@ -427,7 +413,7 @@ class ArkPropertyRefError extends Error {}
 export class ArkPropertyRef extends ArkRef {
   constructor(public obj: ArkAbstractObjectBase, public prop: string) {
     super()
-    if (obj.get(prop) === ArkUndefined) {
+    if (obj.get(prop) === ArkUndefinedVal) {
       throw new ArkPropertyRefError('Invalid property')
     }
   }

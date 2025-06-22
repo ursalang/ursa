@@ -1,4 +1,4 @@
-let sum = fn(l: List<Int>): Int {
+let sum = fn(l: List<Num>): Num {
   var tot = 0;
   var i = 0;
   loop {

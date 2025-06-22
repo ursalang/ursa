@@ -1,5 +1,5 @@
 // Ursa tests of basics using inline source snippets.
-// © Reuben Thomas 2023-2024
+// © Reuben Thomas 2023-2025
 // Released under the GPL version 3, or (at your option) any later version.
 
 import test from 'ava'
@@ -117,7 +117,7 @@ return used outside a function`)
 })
 
 testGroup('return', [
-  ['fn (): Int { return 3 }()', 3],
+  ['fn (): Num { return 3 }()', 3],
 ])
 
 testGroup('let', [
@@ -137,16 +137,16 @@ Cannot assign to non-'var'`)
 })
 
 testGroup('fn', [
-  ['let f = fn(x: Int): Int {x + 1}; f(1)', 2],
+  ['let f = fn(x: Num): Num {x + 1}; f(1)', 2],
 ])
 
 test('Duplicate parameters', (t) => {
-  const error = t.throws(() => compile('fn(a: T,a: T): U {}'), {instanceOf: UrsaCompilerError})
+  const error = t.throws(() => compile('fn(a: Any,a: Any): U {}'), {instanceOf: UrsaCompilerError})
   t.not(error, undefined)
   t.is(error.message, `\
 Line 1, col 4:
-> 1 | fn(a: T,a: T): U {}
-         ^~~~~~~~~
+> 1 | fn(a: Any,a: Any): U {}
+         ^~~~~~~~~~~~~
 
 Duplicate parameters in list`)
 })
@@ -163,19 +163,19 @@ testGroup('Lists', [
 testGroup('Objects', [
   ['Object {;}', {}],
   ['let x = {;}; x == x', true],
-  ['ABC {a = 1; b = 2; c=3}', {a: 1, b: 2, c: 3}],
-  ['let o = ABC {a = 1; b = 2}; o.b := 3; o', {a: 1, b: 3}],
+  ['Object {a = 1; b = 2; c=3}', {a: 1, b: 2, c: 3}],
+  ['let o = Object {a = 1; b = 2}; o.b := 3; o', {a: 1, b: 3}],
 ])
 
 test('Object assign invalid property', async (t) => {
   const error = await t.throwsAsync(async () => runWithTraceback(
-    new ArkState(expToInst(compile('let o = ABC {a = 1; b = 2}; o.c := "abc"'))),
+    new ArkState(expToInst(compile('let o = Object {a = 1; b = 2}; o.c := "abc"'))),
   ), {instanceOf: UrsaRuntimeError})
   t.not(error, undefined)
   t.is(error.message, `\
-Line 1, col 29:
-> 1 | let o = ABC {a = 1; b = 2}; o.c := "abc"
-                                  ^~~
+Line 1, col 32:
+> 1 | let o = Object {a = 1; b = 2}; o.c := "abc"
+                                     ^~~
 
 Invalid property`)
 })

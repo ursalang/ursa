@@ -1,5 +1,5 @@
 // Compile JSON into Ark code.
-// © Reuben Thomas 2023-2024
+// © Reuben Thomas 2023-2025
 // Released under the MIT license.
 
 import preludeJson from './prelude.json' with {type: 'json'}
@@ -8,15 +8,19 @@ import {
   debug,
 } from './util.js'
 import {
-  globals, ArkNull, ArkBoolean, ArkNumber, ArkString, ArkObject, ArkUndefined,
+  globals, ArkNull, ArkBoolean, ArkNumber, ArkString, ArkObject, ArkUndefinedVal,
 } from './data.js'
 import {
   ArkExp, ArkLvalue, ArkIf, ArkAnd, ArkOr, ArkSequence, ArkLoop, ArkBreak, ArkContinue,
   ArkSet, ArkLocal, ArkCapture, ArkListLiteral, ArkObjectLiteral, ArkMapLiteral,
   ArkFn, ArkGenerator, ArkReturn, ArkYield,
   ArkProperty, ArkLet, ArkCall, ArkInvoke, ArkLiteral, ArkBoundVar, ArkNamedLoc,
+  globalTypes,
+  ArkType,
 } from './code.js'
-import {Environment, Frame, Location} from './compiler-utils.js'
+import {
+  Environment, Frame, Location, TypedLocation,
+} from './compiler-utils.js'
 import {expToInst} from './flatten.js'
 import {ArkState} from './interpreter.js'
 
@@ -29,36 +33,39 @@ export function checkParamList(params: string[]): string[] {
   return params
 }
 
-function paramList(params: [string, boolean][]): Location[] {
-  for (const param of params) {
-    if (typeof param[0] !== 'string' || typeof param[1] !== 'boolean') {
-      throw new ArkCompilerError('Bad type in parameter list')
-    }
-  }
-  checkParamList(params.map((p) => p[0]))
-  return params.map((p) => new Location(p[0], p[1]))
-}
-
-function bindingList(env: Environment, params: [string, string, unknown][]): ArkBoundVar[] {
+function bindingList(env: Environment, params: [string, string, string, unknown][]): ArkBoundVar[] {
   const bindings: ArkBoundVar[] = []
   for (const p of params) {
-    if (!(p instanceof Array) || p.length !== 3
-      || typeof p[0] !== 'string' || ['const', 'var'].includes(p[1])) {
-      throw new ArkCompilerError('invalid let variable binding')
+    if (!(p instanceof Array) || p.length !== 4
+      || typeof p[0] !== 'string' || ['const', 'var'].includes(p[1]) || typeof p[2] !== 'string') {
+      throw new ArkCompilerError(`invalid let variable binding ${p}`)
     }
   }
-  const boundLocations = paramList(params.map((p) => [p[1], p[0] === 'var']))
+  const boundLocations = params.map((p) => new TypedLocation(p[1], getType(p[2]), p[0] === 'var'))
+  checkParamList(boundLocations.map((l) => l.name))
   const indexBase = env.top().locals.length
-  for (const [i, p] of params.entries()) {
-    bindings.push(
-      new ArkBoundVar(p[1], p[0] === 'var', indexBase + i, doCompile(env.push(boundLocations), p[2])),
-    )
+  for (const [i, l] of boundLocations.entries()) {
+    bindings.push(new ArkBoundVar(
+      l.name,
+      l.type,
+      l.isVar,
+      indexBase + i,
+      doCompile(env.push(boundLocations), params[i][3]),
+    ))
   }
   return bindings
 }
 
 function listToVals(env: Environment, l: unknown[]): ArkExp[] {
   return l.map((elem) => doCompile(env, elem))
+}
+
+function getType(name: string): ArkType {
+  const ty = globalTypes.get(name)
+  if (ty === undefined) {
+    throw new ArkCompilerError(`unknown type ${name}`)
+  }
+  return ty
 }
 
 export function symRef(env: Environment, name: string): ArkLvalue {
@@ -92,7 +99,7 @@ export function symRef(env: Environment, name: string): ArkLvalue {
   }
   // Finally, see if it's a global, and if not, error.
   if (lexp === undefined) {
-    if (env.externalSyms.get(name) === ArkUndefined) {
+    if (env.externalSyms.get(name) === ArkUndefinedVal) {
       throw new ArkCompilerError(`Undefined symbol ${name}`)
     }
     lexp = new ArkProperty(new ArkLiteral(env.externalSyms), name)
@@ -127,23 +134,32 @@ function doCompile(env: Environment, value: unknown): ArkExp {
           if (value.length !== 3 || !(value[1] instanceof Array)) {
             throw new ArkCompilerError("Invalid 'let'")
           }
-          const params = bindingList(env, value[1] as [string, string, unknown][])
+          const params = bindingList(env, value[1] as [string, string, string, unknown][])
           const compiled = doCompile(
-            env.push(params.map((p) => new Location(p.name, p.isVar))),
+            env.push(params.map((p) => new TypedLocation(p.name, p.type, p.isVar))),
             value[2],
           )
           return new ArkLet(params, compiled)
         }
         case 'fn':
         case 'gen': {
-          if (value.length !== 3 || !(value[1] instanceof Array)) {
+          if (value.length !== 4 || !(value[1] instanceof Array) || typeof value[2] !== 'string') {
             throw new ArkCompilerError(`Invalid '${value[0]}'`)
           }
-          const params = paramList(value[1].map((id) => [id, false]) as [string, boolean][])
+          const params = value[1].map(
+            (p) => {
+              if (!(p instanceof Array) || p.length !== 2 || typeof p[0] !== 'string' || typeof p[1] !== 'string') {
+                throw new ArkCompilerError('Invalid function parameter')
+              }
+              return new TypedLocation(p[0], getType(p[1]), false)
+            },
+          )
+          checkParamList(params.map((p) => p.name))
           const innerEnv = env.pushFrame(new Frame(params, []))
-          const compiled = doCompile(innerEnv, value[2])
+          const compiled = doCompile(innerEnv, value[3])
           return new (value[0] === 'fn' ? ArkFn : ArkGenerator)(
-            params.map((p) => p.name),
+            params,
+            getType(value[2]),
             innerEnv.top().captures.map((c) => symRef(env, c.name) as ArkNamedLoc),
             compiled,
           )

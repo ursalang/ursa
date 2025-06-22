@@ -1,2 +1,2 @@
-let f = fn(x: Int): Int { x + 1 }
+let f = fn(x: Num): Num { x + 1 }
 f(1)

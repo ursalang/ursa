@@ -1,5 +1,5 @@
 // Ursa grammar.
-// © Reuben Thomas 2023-2024
+// © Reuben Thomas 2023-2025
 // Released under the MIT license.
 
 Ursa {
@@ -132,9 +132,7 @@ Ursa {
   // Types
   // TODO: Add namespace support: NamedType = Path TypeArgs?
   NamedType = ident TypeArgs?
-  Type
-    = NonemptyListOf<NamedType, "+"> -- intersection
-    | FnType                         -- fn
+  Type = NamedType | FnType
   TypeParams = "<" ListOf<TypeParam, ","> ","? ">"
   TypeParam = ident TypeAnnotation
   TypeArgs

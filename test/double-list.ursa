@@ -1,4 +1,4 @@
-let double = fn(l: List<Int>): List<Int> {
+let double = fn(l: List<Num>): List<Num> {
   var i = 0;
   loop {
     if i == l.len() { return l };

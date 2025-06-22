@@ -1,11 +1,11 @@
-let is_even = fn(n: Int): Bool {
+let is_even = fn(n: Num): Bool {
   if n == 0 {
     true
   } else {
     is_odd(n - 1)
   }
 } and
-let is_odd = fn(n: Int): Bool {
+let is_odd = fn(n: Num): Bool {
   if (n == 0) {
     false
   } else {

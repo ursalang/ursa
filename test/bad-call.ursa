@@ -1,4 +1,4 @@
 let h = 3
-let g = fn(): Int { h() }
-let f = fn(): Int { g() }
+let g = fn(): Num { h() }
+let f = fn(): Num { g() }
 f()

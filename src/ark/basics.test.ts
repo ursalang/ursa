@@ -64,7 +64,7 @@ testGroup('loop and break', [
 ])
 
 testGroup('let', [
-  ['["let",[["const","a",3]],"a"]', 3],
+  ['["let",[["const","a","Num",3]],"a"]', 3],
 ])
 
 testGroup('Objects', [

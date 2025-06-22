@@ -1,5 +1,5 @@
 // Generate JavaScript from Ark.
-// © Reuben Thomas 2024
+// © Reuben Thomas 2025
 // Released under the GPL version 3, or (at your option) any later version.
 
 import assert from 'assert'
@@ -33,11 +33,13 @@ import {
 import {
   jsGlobals, ArkBoolean, ArkBooleanVal, ArkList, ArkMap, ArkNull,
   ArkNumber, ArkNullVal, ArkNumberVal, ArkObject, ArkString,
-  ArkStringVal, ArkUndefined, ArkVal, NativeFn, ArkOperation,
+  ArkStringVal, ArkUndefinedVal, ArkVal, NativeFn, ArkOperation,
 } from '../data.js'
 import {ArkExp} from '../code.js'
 import {debug} from '../util.js'
-import {Environment, Frame, Location} from '../compiler-utils.js'
+import {
+  Environment, Frame, TypedLocation,
+} from '../compiler-utils.js'
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
@@ -66,7 +68,7 @@ prelude.properties.forEach((val, sym) => jsGlobals.set(sym, val))
 // Record internal values that are needed by JavaScript at runtime, and
 // prevent the TypeScript compiler throwing away their imports.
 export const runtimeContext: Record<string, unknown> = {
-  ArkUndefined,
+  ArkUndefinedVal,
   ArkNull,
   ArkNullVal,
   ArkBoolean,
@@ -159,14 +161,22 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
         return sourceNode([letAssign(inst.matchingClose.id, 'yield* spawn(function* () {')])
       } else if (inst instanceof ArkGeneratorBlockOpenInst) {
         env = env.pushFrame(
-          new Frame(inst.params.map((p) => new Location(p, false)), [], inst.name),
+          new Frame(
+            inst.params.map((p) => new TypedLocation(p, ArkVal, false)),
+            [],
+            inst.name,
+          ),
         )
         return sourceNode([
           letAssign(inst.matchingClose.id, `new NativeFn([${inst.params.map((p) => `'${p}'`).join(', ')}], function (${inst.params.map(jsMangle).join(', ')}) {\nconst gen = function* () {`),
         ])
       } else if (inst instanceof ArkFnBlockOpenInst) {
         env = env.pushFrame(
-          new Frame(inst.params.map((p) => new Location(p, false)), [], inst.name),
+          new Frame(
+            inst.params.map((p) => new TypedLocation(p, ArkVal, false)),
+            [],
+            inst.name,
+          ),
         )
         return sourceNode([
           letAssign(inst.matchingClose.id, `new NativeFn([${inst.params.map((p) => `'${p}'`).join(', ')}], function* (${inst.params.map(jsMangle).join(', ')}) {`),
@@ -175,7 +185,7 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
         return sourceNode([
           `let ${inst.matchingClose.id.description!}\n`,
           '{\n',
-          ...inst.vars.map((v) => `let ${jsMangle(v.name)} = ArkUndefined\n`),
+          ...inst.vars.map((v) => `let ${jsMangle(v.name)} = ArkUndefinedVal\n`),
         ])
       } else if (inst instanceof ArkBlockOpenInst) {
         return sourceNode([`let ${inst.matchingClose.id.description!}\n`, '{\n'])
@@ -197,7 +207,7 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
         return sourceNode(letAssign(inst.id, `yield* ${inst.objId.description}.getMethod('${inst.prop}').body(${inst.objId.description}, ${inst.argIds.map((id) => id.description).join(', ')})`))
       } else if (inst instanceof ArkSetNamedLocInst) {
         return sourceNode([
-          `if (${jsMangle(inst.lexpId.description!)} !== ArkUndefined && ${jsMangle(inst.lexpId.description!)}.constructor !== ArkNullVal && ${inst.valId.description}.constructor !== ${jsMangle(inst.lexpId.description!)}.constructor) {\n`,
+          `if (${jsMangle(inst.lexpId.description!)} !== ArkUndefinedVal && ${jsMangle(inst.lexpId.description!)}.constructor !== ArkNullVal && ${inst.valId.description}.constructor !== ${jsMangle(inst.lexpId.description!)}.constructor) {\n`,
           'throw new JsRuntimeError(\'Assignment to different type\')\n',
           '}\n',
           letAssign(inst.id, `${jsMangle(inst.lexpId.description!)} = ${inst.valId.description}`),
@@ -221,7 +231,7 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
       } else if (inst instanceof ArkPropertyInst) {
         return sourceNode([
           letAssign(inst.id, `${inst.objId.description}.get('${inst.prop}')`),
-          `if (${inst.id.description} === ArkUndefined) throw new JsRuntimeError('Invalid property')\n`,
+          `if (${inst.id.description} === ArkUndefinedVal) throw new JsRuntimeError('Invalid property')\n`,
         ])
       } else if (inst instanceof ArkCaptureInst) {
         return sourceNode(letAssign(inst.id, jsMangle(inst.name)))

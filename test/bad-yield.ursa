@@ -1,4 +1,4 @@
-let my_range = fn(n: Int): Int {
+let my_range = fn(n: Num): Num {
     var i = 0
     loop {
         i := i + 1

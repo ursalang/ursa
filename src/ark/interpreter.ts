@@ -1,5 +1,5 @@
 // Interpreter for flattened Ark.
-// © Reuben Thomas 2023-2024
+// © Reuben Thomas 2023-2025
 // Released under the MIT license.
 
 import {
@@ -18,7 +18,7 @@ import {
 } from './flatten.js'
 import {
   ArkAbstractObjectBase, ArkBoolean, ArkList, ArkMap, ArkNull, ArkNullVal,
-  ArkObject, ArkOperation, ArkUndefined, ArkVal, NativeAsyncFn, NativeFn,
+  ArkObject, ArkOperation, ArkUndefinedVal, ArkVal, NativeAsyncFn, NativeFn,
   NativeOperation, ArkRef, ArkValRef, ArkClosure, ArkCallable,
 } from './data.js'
 import {
@@ -108,7 +108,9 @@ function evalRef(frame: ArkFrame, lexp: ArkNamedLoc): ArkRef {
 }
 
 function makeLocals(names: string[], vals: ArkVal[]): ArkRef[] {
-  const locals: ArkValRef[] = names.map((_val, index) => new ArkValRef(vals[index] ?? ArkUndefined))
+  const locals: ArkValRef[] = names.map(
+    (_val, index) => new ArkValRef(vals[index] ?? ArkUndefinedVal),
+  )
   if (vals.length > names.length) {
     locals.push(...vals.slice(names.length).map((val) => new ArkValRef(val)))
   }
@@ -189,7 +191,7 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
   let counter = 0
   while (inst !== undefined) {
     if (ark.stop) {
-      return ArkUndefined
+      return ArkUndefinedVal
     }
     prevInst = inst
     counter += 1
@@ -344,7 +346,7 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
       }
       const oldVal = ref.get()
       if (
-        oldVal !== ArkUndefined
+        oldVal !== ArkUndefinedVal
         && oldVal.constructor !== ArkNullVal
         && oldVal.constructor !== result.constructor) {
         throw new ArkRuntimeError(ark, 'Assignment to different type', inst.sourceLoc)
@@ -355,7 +357,7 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
     } else if (inst instanceof ArkSetPropertyInst) {
       const result = mem.get(inst.valId)!
       const obj = mem.get(inst.lexpId)! as ArkObject
-      if (obj.get(inst.prop) === ArkUndefined) {
+      if (obj.get(inst.prop) === ArkUndefinedVal) {
         throw new ArkRuntimeError(ark, 'Invalid property', inst.sourceLoc)
       }
       obj.set(inst.prop, result)
@@ -384,7 +386,7 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
         throw new ArkRuntimeError(ark, 'Invalid object', inst.sourceLoc)
       }
       const result = obj.get(inst.prop)
-      if (result === ArkUndefined) {
+      if (result === ArkUndefinedVal) {
         throw new ArkRuntimeError(ark, 'Invalid property', inst.sourceLoc)
       }
       mem.set(inst.id, result)
@@ -407,5 +409,5 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
       throw new Error('invalid ArkInst')
     }
   }
-  return prevInst ? ark.frame.memory.get(prevInst.id)! : ArkUndefined
+  return prevInst ? ark.frame.memory.get(prevInst.id)! : ArkUndefinedVal
 }

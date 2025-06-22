@@ -1,4 +1,4 @@
-let count = gen(): Int {
+let count = gen(): Num {
     var n = 0
     loop {
         yield n
@@ -6,7 +6,7 @@ let count = gen(): Int {
     }
 }
 
-let powers = gen(m: Int): Int {
+let powers = gen(m: Num): Num {
     for n in count() {
         yield n ** m
     }

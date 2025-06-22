@@ -8,35 +8,29 @@
             "2": [
               {
                 "0": "l",
-                "1": [
-                  {
-                    "0": "List",
-                    "1": {
-                      "1": [
-                        [
-                          {
-                            "0": "Int",
-                            "1": null,
-                            "type": "NamedType"
-                          }
-                        ]
-                      ],
-                      "2": null,
-                      "type": "TypeArgs"
-                    },
-                    "type": "NamedType"
-                  }
-                ],
+                "1": {
+                  "0": "List",
+                  "1": {
+                    "1": [
+                      {
+                        "0": "Num",
+                        "1": null,
+                        "type": "NamedType"
+                      }
+                    ],
+                    "2": null,
+                    "type": "TypeArgs"
+                  },
+                  "type": "NamedType"
+                },
                 "type": "Param"
               }
             ],
-            "5": [
-              {
-                "0": "Int",
-                "1": null,
-                "type": "NamedType"
-              }
-            ],
+            "5": {
+              "0": "Num",
+              "1": null,
+              "type": "NamedType"
+            },
             "type": "FnType"
           },
           "1": [
