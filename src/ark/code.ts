@@ -35,11 +35,14 @@ export abstract class ArkExp {
   }
 
   debug = new ArkDebugInfo()
+
+  type: ArkType = ArkUndefinedVal
 }
 
 export class ArkLiteral extends ArkExp {
   constructor(public val: ArkVal = ArkNull(), sourceLoc?: Interval) {
     super(sourceLoc)
+    this.type = val.constructor as Class<ArkVal>
   }
 }
 

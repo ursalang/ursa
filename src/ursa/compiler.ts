@@ -187,7 +187,6 @@ semantics.addOperation<LetBinding>('toLet(a)', {
       }
       letIds.push(ident)
     }
-    // FIXME: fix type
     const locations = letIds.map(
       (id, n) => new TypedLocation(id, ArkUndefinedVal, letVars[n]),
     )
@@ -202,7 +201,7 @@ semantics.addOperation<LetBinding>('toLet(a)', {
       parsedLets.map(
         (def, index) => new ArkBoundVar(
           def.ident.sourceString,
-          ArkUndefinedVal, // FIXME
+          def.exp.type,
           letVars[index],
           indexBase + index,
           def.exp,
@@ -361,10 +360,10 @@ semantics.addOperation<ArkExp>('toExp(a)', {
 
   For(_for, ident, _in, iterator, body) {
     const iterVar = ident.sourceString
-    // FIXME: type of $iter
+    // FIXME: type of $iter: ArkFnType
     const innerEnv = this.args.a.env.push([new TypedLocation('$iter', ArkVal, false)])
     const compiledIterator = iterator.toExp({...this.args.a, env: innerEnv})
-    // FIXME: type of iterVar
+    // FIXME: type of iterVar: return type of $iter
     const loopEnv = innerEnv.push([new TypedLocation(iterVar, ArkVal, false)])
     const compiledIterVar = symRef(loopEnv, iterVar)
     const compiledForBody = body.toExp({...this.args.a, env: loopEnv, inLoop: true})
