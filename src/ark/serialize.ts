@@ -3,17 +3,17 @@
 // Released under the MIT license.
 
 import {
-  globals, ArkVal,
-  ArkConcreteVal, ArkNull, ArkOperation, ArkList, ArkMap, ArkObject,
-  ArkUndefinedVal, NativeObject, ArkNullVal, ArkBooleanVal,
+  ArkVal, ArkConcreteVal, ArkNull, ArkOperation, ArkList, ArkMap, ArkObject,
+  ArkUndefined, NativeObject, ArkUndefinedVal, ArkNullVal, ArkBooleanVal,
   ArkNumberVal, ArkStringVal, ArkCallable,
 } from './data.js'
+import {ArkType} from './type.js'
 import {
-  ArkType, ArkExp, ArkSequence,
+  ArkExp, ArkSequence,
   ArkAnd, ArkOr, ArkIf, ArkLoop, ArkBreak, ArkContinue, ArkInvoke,
   ArkSet, ArkLet, ArkCall, ArkFn, ArkGenerator, ArkReturn, ArkProperty,
   ArkLiteral, ArkListLiteral, ArkMapLiteral, ArkObjectLiteral, ArkYield,
-  ArkUnionType,
+  ArkGlobal,
 } from './code.js'
 
 function typeToStr(ty: ArkType) {
@@ -38,14 +38,14 @@ function typeToStr(ty: ArkType) {
       return 'Fn'
     case ArkObject: // TODO Or subclass
       return 'Object'
-    case ArkUnionType:
-      return 'Union'
+    // case ArkUnionType:
+    //   return 'Union'
     default:
       throw new Error('unknown type')
   }
 }
 
-export function valToJs(val: ArkVal | ArkExp, externalSyms = globals) {
+export function valToJs(val: ArkVal | ArkExp) {
   function doValToJs(val: ArkVal | ArkExp): unknown {
     if (val instanceof NativeObject) {
       return val.obj
@@ -64,6 +64,8 @@ export function valToJs(val: ArkVal | ArkExp, externalSyms = globals) {
       return val.val
     } else if (val instanceof ArkLiteral) {
       return doValToJs(val.val)
+    } else if (val instanceof ArkGlobal) {
+      return val.name
     } else if (val instanceof ArkFn) {
       return [
         val instanceof ArkGenerator ? 'gen' : 'fn',
@@ -100,10 +102,6 @@ export function valToJs(val: ArkVal | ArkExp, externalSyms = globals) {
     } else if (val instanceof ArkSet) {
       return ['set', doValToJs(val.lexp), doValToJs(val.exp)]
     } else if (val instanceof ArkProperty) {
-      if (val.obj instanceof ArkLiteral && val.obj.val === externalSyms) {
-        // Serialize globals as simply their name.
-        return val.prop
-      }
       return ['prop', val.prop, doValToJs(val.obj)]
     } else if (val instanceof ArkSequence) {
       return ['seq', ...val.exps.map(doValToJs)]
@@ -136,7 +134,7 @@ export function valToJs(val: ArkVal | ArkExp, externalSyms = globals) {
       return ['promise']
     } else if (val === ArkNull()) {
       return null
-    } else if (val === ArkUndefinedVal) {
+    } else if (val === ArkUndefined()) {
       return undefined
     }
     // eslint-disable-next-line @typescript-eslint/no-base-to-string
@@ -146,6 +144,6 @@ export function valToJs(val: ArkVal | ArkExp, externalSyms = globals) {
   return doValToJs(val)
 }
 
-export function serializeVal(val: ArkVal | ArkExp, externalSyms?: ArkObject) {
-  return JSON.stringify(valToJs(val, externalSyms))
+export function serializeVal(val: ArkVal | ArkExp) {
+  return JSON.stringify(valToJs(val))
 }

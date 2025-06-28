@@ -8,14 +8,17 @@ import {
   debug,
 } from './util.js'
 import {
-  globals, ArkNull, ArkBoolean, ArkNumber, ArkString, ArkObject, ArkUndefinedVal,
+  globals, ArkNull, ArkBoolean, ArkNumber, ArkString, ArkObject, ArkUndefined,
+  globalTypes,
+  ArkTypedId,
 } from './data.js'
+import {ArkType} from './type.js'
 import {
   ArkExp, ArkLvalue, ArkIf, ArkAnd, ArkOr, ArkSequence, ArkLoop, ArkBreak, ArkContinue,
   ArkSet, ArkLocal, ArkCapture, ArkListLiteral, ArkObjectLiteral, ArkMapLiteral,
   ArkFn, ArkGenerator, ArkReturn, ArkYield,
   ArkProperty, ArkLet, ArkCall, ArkInvoke, ArkLiteral, ArkBoundVar, ArkNamedLoc,
-  ArkType, globalTypes,
+  ArkGlobal,
 } from './code.js'
 import {
   Environment, Frame, Location,
@@ -67,20 +70,20 @@ function getType(name: string): ArkType {
   return ty
 }
 
-export function symRef(env: Environment, name: string): ArkLvalue {
-  let lexp
+export function symRef(env: Environment, name: string): ArkExp {
+  let exp
   // Check whether the symbol is a local.
   const locals = env.top().locals
   const j = locals.map((l) => l?.name).lastIndexOf(name)
   if (j !== -1) {
-    lexp = new ArkLocal(j, name, locals[j]!.isVar)
+    exp = new ArkLocal(j, new ArkTypedId(name, locals[j]!.type), locals[j]!.isVar)
   } else {
     // Otherwise, check if it's a capture.
     // Check whether we already have this capture.
     const captures = env.top().captures
     const k = captures.map((c) => c.name).lastIndexOf(name)
     if (k !== -1) {
-      lexp = new ArkCapture(k, name, captures[k].isVar)
+      exp = new ArkCapture(k, new ArkTypedId(name, captures[k].type), captures[k].isVar)
     } else {
       // If not, see if it's on the stack to be captured.
       for (let i = 0; i < env.stack.length; i += 1) {
@@ -89,7 +92,7 @@ export function symRef(env: Environment, name: string): ArkLvalue {
         if (j !== -1) {
           const k = env.top().captures.length
           const isVar = locals[j]!.isVar
-          lexp = new ArkCapture(k, name, isVar)
+          exp = new ArkCapture(k, new ArkTypedId(name, locals[j]!.type), isVar)
           env.top().captures.push(new Location(name, locals[j]!.type, isVar))
           break
         }
@@ -97,15 +100,16 @@ export function symRef(env: Environment, name: string): ArkLvalue {
     }
   }
   // Finally, see if it's a global, and if not, error.
-  if (lexp === undefined) {
-    if (env.externalSyms.get(name) === ArkUndefinedVal) {
+  if (exp === undefined) {
+    const extern = env.externalSyms.get(name)
+    if (extern === undefined || extern === ArkUndefined()) {
       throw new ArkCompilerError(`Undefined symbol ${name}`)
     }
-    lexp = new ArkProperty(new ArkLiteral(env.externalSyms), name)
+    exp = new ArkGlobal(name, extern, extern.type)
   }
-  lexp.debug.name = name
-  lexp.debug.env = JSON.stringify(env)
-  return lexp
+  exp.debug.name = name
+  exp.debug.env = JSON.stringify(env)
+  return exp
 }
 
 function doCompile(env: Environment, value: unknown): ArkExp {

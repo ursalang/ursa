@@ -16,13 +16,14 @@ import {
 import {
   ArkVal, ArkNull, ArkBoolean, ArkNumber, ArkString,
   ArkClosure, ArkGeneratorClosure, ArkUndefinedVal,
+  globalTypes,
 } from '../ark/data.js'
+import {ArkType, ArkFnType} from '../ark/type.js'
 import {
   ArkBoundVar, ArkExp, ArkLvalue, ArkLiteral, ArkSequence, ArkIf, ArkLoop, ArkAnd, ArkOr,
   ArkObjectLiteral, ArkListLiteral, ArkMapLiteral,
   ArkCall, ArkInvoke, ArkLet, ArkFn, ArkGenerator, ArkProperty, ArkSet, ArkReturn, ArkYield,
-  ArkBreak, ArkContinue, ArkAwait, ArkLaunch, ArkType, ArkFnType, ArkNamedLoc,
-  globalTypes,
+  ArkBreak, ArkContinue, ArkAwait, ArkLaunch, ArkNamedLoc,
 } from '../ark/code.js'
 import {
   Frame, Environment, Location,

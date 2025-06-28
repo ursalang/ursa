@@ -70,7 +70,7 @@ Bad lvalue`)
 })
 
 testGroup('Assignment', [
-  ['pi := 3', 3],
+  ['var a = 0; a := 3', 3],
 ])
 
 testGroup('Conditionals', [

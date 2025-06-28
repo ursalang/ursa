@@ -6,10 +6,10 @@ import {
   action, call, Operation, Reject, Resolve, run, sleep,
 } from 'effection'
 
-import {ArkType} from './code.js'
+import {ArkFnType, ArkType, ArkUnionType} from './type.js'
 import {FsMap} from './fsmap.js'
 import programVersion from '../version.js'
-import {debug} from './util.js'
+import {Class, debug} from './util.js'
 import {type ArkState} from './interpreter.js'
 
 // A hack that works for us, as browsers do not have util/types library, and
@@ -23,7 +23,9 @@ export class ArkTypedId {
   constructor(public name: string, public type: ArkType) {}
 }
 
-export class ArkVal {}
+export class ArkVal {
+  type: ArkType = this.constructor as Class<ArkVal>
+}
 
 export abstract class ArkAbstractObjectBase extends ArkVal {
   abstract getMethod(prop: string): ArkCallable | undefined
@@ -36,6 +38,7 @@ export abstract class ArkAbstractObjectBase extends ArkVal {
 export abstract class ArkCallable extends ArkVal {
   constructor(public params: ArkTypedId[], public returnType: ArkType) {
     super()
+    this.type = new ArkFnType(this.constructor as Class<ArkCallable>, this.params, this.returnType)
   }
 }
 
@@ -62,12 +65,13 @@ export class NativeFn<T extends ArkVal[]> extends ArkCallable {
       // eslint-disable-next-line require-yield
       this.body = function* gen(...args: [...T]) {
         return innerBody(...args)
-      }
+      } as (...args: [...T]) => Operation<ArkVal>
     }
+    this.type = new ArkFnType(NativeFn, params, returnType)
   }
 }
 
-class ArkObjectBase extends ArkAbstractObjectBase {
+export class ArkObjectBase extends ArkAbstractObjectBase {
   public properties: Map<string, ArkVal> = new Map()
 
   public static methods = new Map<string, ArkCallable>()
@@ -81,7 +85,7 @@ class ArkObjectBase extends ArkAbstractObjectBase {
   }
 
   get(prop: string) {
-    return this.properties.get(prop) ?? ArkUndefinedVal
+    return this.properties.get(prop) ?? ArkUndefined()
   }
 
   set(prop: string, val: ArkVal) {
@@ -119,7 +123,7 @@ ArkConcreteVal.methods = new Map<string, ArkCallable>(
 )
 
 // Now we have set up super-class methods, wire up ArkBoolean
-ArkBooleanVal.addMethods([['not', new NativeFn([], ArkBooleanVal, (thisVal: ArkBooleanVal) => ArkBoolean(!thisVal.val))]])
+ArkBooleanVal.methods = new Map([...ArkConcreteVal.methods, ['not', new NativeFn([], ArkBooleanVal, (thisVal: ArkBooleanVal) => ArkBoolean(!thisVal.val))]])
 
 export class ArkUndefinedVal extends ArkConcreteVal<undefined> {
   static methods: Map<string, ArkCallable> = new Map([...ArkConcreteVal.methods])
@@ -207,6 +211,9 @@ class ConcreteInterned {
   }
 }
 
+export function ArkUndefined() {
+  return ConcreteInterned.value<ArkUndefinedVal, undefined>(ArkUndefinedVal, undefined)
+}
 export function ArkNull() {
   return ConcreteInterned.value<ArkNullVal, null>(ArkNullVal, null)
 }
@@ -247,33 +254,39 @@ export class NativeOperation extends ArkCallable {
 }
 
 // ts-unused-exports:disable-next-line
-export class NativeAsyncFn extends ArkCallable {
-  public body: (...args: ArkVal[]) => Operation<ArkVal>
+export class NativeAsyncFn<T extends ArkVal[]> extends ArkCallable {
+  public body: (...args: [...T]) => Operation<ArkVal>
 
   constructor(
     params: ArkTypedId[],
     returnType: ArkType,
-    innerBody: (...args: ArkVal[]) => Promise<ArkVal>,
+    innerBody: (...args: [...T]) => Promise<ArkVal>,
   ) {
     super(params, returnType)
-    this.body = (...args: ArkVal[]) => call(() => innerBody(...args))
+    this.body = (...args: [...T]) => call(() => innerBody(...args))
   }
 }
 
 export class ArkObject extends ArkObjectBase {
-  static properties: Map<string, ArkCallable> = new Map([...ArkObjectBase.methods])
+  // FIXME: sort out methods vs properties
+  static properties: Map<string, ArkVal> = new Map([...ArkObjectBase.methods])
 
   constructor(properties: Map<string, ArkVal>) {
     super()
     this.properties = properties
   }
 
-  static subClass(properties: Map<string, ArkCallable> = new Map()): typeof ArkObject {
-    return class extends ArkObject {
-      static properties: Map<string, ArkCallable> = new Map([...ArkObject.properties])
+  static extend(
+    properties: Map<string, ArkVal> = new Map(),
+    methods: Map<string, ArkCallable> = new Map(),
+  ): typeof ArkObject {
+    return class extends this {
+      static properties = new Map(
+        [...super.properties, ...properties],
+      )
 
       static {
-        this.addMethods([...properties.entries()])
+        this.addMethods([...methods.entries()])
       }
     }
   }
@@ -289,7 +302,7 @@ export class NativeObject extends ArkAbstractObjectBase {
   }
 
   get(prop: string): ArkVal {
-    return fromJs((this.obj as {[key: string]: unknown})[prop], this.obj) ?? ArkUndefinedVal
+    return fromJs((this.obj as {[key: string]: unknown})[prop], this.obj) ?? ArkUndefined()
   }
 
   set(prop: string, val: ArkVal) {
@@ -439,7 +452,7 @@ class ArkPropertyRefError extends Error {}
 export class ArkPropertyRef extends ArkRef {
   constructor(public obj: ArkAbstractObjectBase, public prop: string) {
     super()
-    if (obj.get(prop) === ArkUndefinedVal) {
+    if (obj.get(prop) === ArkUndefined()) {
       throw new ArkPropertyRefError('Invalid property')
     }
   }
@@ -455,7 +468,7 @@ export class ArkPropertyRef extends ArkRef {
   }
 }
 
-export const globals = new ArkObject(new Map<string, ArkVal>([
+export const globals = new Map<string, ArkVal>([
   // Placeholder (will be set at start-up).
   ['argv', new ArkList([])],
 
@@ -484,7 +497,7 @@ export const globals = new ArkObject(new Map<string, ArkVal>([
 
   // JavaScript bindings—globals (with "use").
   ['js', new ArkObject(new Map([[
-    'use', new NativeFn([], ArkVal, (arg: ArkStringVal) => {
+    'use', new NativeFn([new ArkTypedId('id', ArkStringVal)], ArkVal, (arg: ArkStringVal) => {
       const name = arg.val
       // eslint-disable-next-line max-len
       // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
@@ -494,18 +507,17 @@ export const globals = new ArkObject(new Map<string, ArkVal>([
 
   // JavaScript bindings—imported libraries (with "use").
   ['jslib', new ArkObject(new Map([[
-    // FIXME: type
-    'use', new NativeAsyncFn([], ArkVal, async (...args) => {
-      const importPath = args.map(toJs).join('.')
+    'use', new NativeAsyncFn([new ArkTypedId('id', ArkStringVal)], ArkVal, async (arg: ArkStringVal) => {
+      const importPath = arg.val
       const module: unknown = await import(importPath)
       return fromJs(module)
     }),
   ]]))],
-]))
+])
 
 // Clone interpreter globals
 export const jsGlobals = new ArkObject(new Map())
-for (const [k, v] of globals.properties.entries()) {
+for (const [k, v] of globals.entries()) {
   jsGlobals.set(k, v)
 }
 
@@ -532,13 +544,13 @@ function fromJs(x: unknown, thisObj?: object, asMethod: boolean = false): ArkVal
     if (asMethod) {
       return new NativeAsyncFn(
         [],
-        NativeAsyncFn,
+        ArkVal, // FIXME: should be at least ArkCallable
         async (_this, ...args) => fromJs(await fn(...args.map(toJs))),
       )
     }
     return new NativeAsyncFn(
       [],
-      NativeAsyncFn,
+      ArkVal, // FIXME: should be at least ArkCallable
       async (...args) => fromJs(await fn(...args.map(toJs))),
     )
   }
@@ -591,3 +603,20 @@ export function toJs(val: ArkVal): unknown {
   }
   return val
 }
+
+export const globalTypes = new Map<string, ArkType>([
+  ['Unknown', ArkUndefinedVal],
+  ['Any', ArkVal],
+  ['Null', ArkNullVal],
+  ['Bool', ArkBooleanVal],
+  ['Num', ArkNumberVal],
+  ['Str', ArkStringVal],
+
+  ['Object', ArkObject],
+  ['List', ArkList],
+  ['Map', ArkMap],
+  ['Fn', ArkCallable],
+
+  // TODO: implement union types.
+  ['Union', new ArkUnionType(ArkUndefinedVal)],
+])
