@@ -1,15 +1,15 @@
-let f = fn(initial: Num): Num {
+let f = fn(initial: Num): Fn {
   var state = 0
-  let ret = Object {
-    set = fn(y: Num): Num { state := y }
-    get = fn(): Num { state }
+  let ret = fn(y: Num): Num {
+    if (y != 0) { state := y }
+    return state
   }
   state := initial
-  ret
+  return ret
 }
 
 let foo = f(42)
-let result1 = (foo.get)()
-(foo.set)(41)
-let result2 = (foo.get)()
+let result1 = foo(0)
+foo(41)
+let result2 = foo(0)
 [result1, result2]

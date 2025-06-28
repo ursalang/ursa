@@ -4,4 +4,4 @@ Error: Line 3, col 1:
       ^~~~~~~~~~~~
   4 | 
 
-Assignment to different type
+Type error in assignment
