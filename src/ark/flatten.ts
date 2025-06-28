@@ -9,10 +9,13 @@ import {
   ArkAnd, ArkAwait, ArkBreak, ArkCall, ArkCapture, ArkContinue, ArkDebugInfo,
   ArkExp, ArkFn, ArkGenerator, ArkIf, ArkInvoke, ArkLaunch, ArkLet,
   ArkListLiteral, ArkLiteral, ArkLocal, ArkLoop, ArkMapLiteral, ArkNamedLoc,
-  ArkObjectLiteral, ArkOr, ArkProperty, ArkReturn, ArkSequence, ArkSet, ArkYield,
+  ArkObjectLiteral, ArkOr, ArkProperty, ArkReturn, ArkSequence, ArkSet,
+  ArkType, ArkYield,
 } from './code.js'
 import {Location} from './compiler-utils.js'
-import {ArkBoolean, ArkNull, ArkVal} from './data.js'
+import {
+  ArkBoolean, ArkNull, ArkTypedId, ArkVal,
+} from './data.js'
 
 export class ArkInst {
   private static nextId = 0
@@ -82,7 +85,8 @@ export class ArkIfBlockOpenInst extends ArkBlockOpenInst {
 export class ArkCallableBlockOpenInst extends ArkBlockOpenInst {
   constructor(
     sourceLoc: Interval | undefined,
-    public params: string[],
+    public params: ArkTypedId[],
+    public returnType: ArkType,
     public capturedVars: ArkNamedLoc[],
     public name?: string,
   ) {
@@ -93,7 +97,11 @@ export class ArkFnBlockOpenInst extends ArkCallableBlockOpenInst {}
 export class ArkGeneratorBlockOpenInst extends ArkCallableBlockOpenInst {}
 
 export class ArkLetBlockOpenInst extends ArkBlockOpenInst {
-  constructor(sourceLoc: Interval | undefined, public vars: Location[], public valIds: symbol[]) {
+  constructor(
+    sourceLoc: Interval | undefined,
+    public vars: Location[],
+    public valIds: symbol[],
+  ) {
     super(sourceLoc)
   }
 }
@@ -351,7 +359,8 @@ export function expToInsts(
     const Constructor = exp instanceof ArkGenerator ? ArkGeneratorBlockOpenInst : ArkFnBlockOpenInst
     const fnInst = new Constructor(
       exp.sourceLoc,
-      exp.params.map((p) => p.name),
+      exp.params.map((p) => new ArkTypedId(p.name, p.type)),
+      exp.returnType,
       exp.capturedVars,
       sym,
     )
@@ -379,7 +388,7 @@ export function expToInsts(
     return new ArkInsts([
       ...argInsts.map((i) => i.insts).flat(),
       ...objInsts.insts,
-      new ArkInvokeInst(exp.sourceLoc, objInsts.id, exp.prop, argIds, `${exp.obj.debug.name}.exp.prop`),
+      new ArkInvokeInst(exp.sourceLoc, objInsts.id, exp.prop, argIds, `${exp.obj.debug.name}.${exp.prop}`),
     ])
   } else if (exp instanceof ArkSet) {
     const insts = expToInsts(exp.exp, innerLoop, innerFn)
@@ -451,7 +460,7 @@ export function expToInsts(
       blockInsts,
       new ArkLetBlockOpenInst(
         exp.sourceLoc,
-        exp.boundVars.map((bv) => new Location(bv.name, bv.isVar)),
+        exp.boundVars.map((bv) => new Location(bv.name, bv.type, bv.isVar)),
         bvIds,
       ),
       new ArkLetBlockCloseInst(exp.sourceLoc, blockInsts.id),

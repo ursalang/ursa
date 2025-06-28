@@ -15,11 +15,10 @@ import {
   ArkSet, ArkLocal, ArkCapture, ArkListLiteral, ArkObjectLiteral, ArkMapLiteral,
   ArkFn, ArkGenerator, ArkReturn, ArkYield,
   ArkProperty, ArkLet, ArkCall, ArkInvoke, ArkLiteral, ArkBoundVar, ArkNamedLoc,
-  globalTypes,
-  ArkType,
+  ArkType, globalTypes,
 } from './code.js'
 import {
-  Environment, Frame, Location, TypedLocation,
+  Environment, Frame, Location,
 } from './compiler-utils.js'
 import {expToInst} from './flatten.js'
 import {ArkState} from './interpreter.js'
@@ -41,7 +40,7 @@ function bindingList(env: Environment, params: [string, string, string, unknown]
       throw new ArkCompilerError(`invalid let variable binding ${p}`)
     }
   }
-  const boundLocations = params.map((p) => new TypedLocation(p[1], getType(p[2]), p[0] === 'var'))
+  const boundLocations = params.map((p) => new Location(p[1], getType(p[2]), p[0] === 'var'))
   checkParamList(boundLocations.map((l) => l.name))
   const indexBase = env.top().locals.length
   for (const [i, l] of boundLocations.entries()) {
@@ -91,7 +90,7 @@ export function symRef(env: Environment, name: string): ArkLvalue {
           const k = env.top().captures.length
           const isVar = locals[j]!.isVar
           lexp = new ArkCapture(k, name, isVar)
-          env.top().captures.push(new Location(name, isVar))
+          env.top().captures.push(new Location(name, locals[j]!.type, isVar))
           break
         }
       }
@@ -136,7 +135,7 @@ function doCompile(env: Environment, value: unknown): ArkExp {
           }
           const params = bindingList(env, value[1] as [string, string, string, unknown][])
           const compiled = doCompile(
-            env.push(params.map((p) => new TypedLocation(p.name, p.type, p.isVar))),
+            env.push(params.map((p) => new Location(p.name, p.type, p.isVar))),
             value[2],
           )
           return new ArkLet(params, compiled)
@@ -151,7 +150,7 @@ function doCompile(env: Environment, value: unknown): ArkExp {
               if (!(p instanceof Array) || p.length !== 2 || typeof p[0] !== 'string' || typeof p[1] !== 'string') {
                 throw new ArkCompilerError('Invalid function parameter')
               }
-              return new TypedLocation(p[0], getType(p[1]), false)
+              return new Location(p[0], getType(p[1]), false)
             },
           )
           checkParamList(params.map((p) => p.name))

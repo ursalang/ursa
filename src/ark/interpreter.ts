@@ -20,9 +20,10 @@ import {
   ArkAbstractObjectBase, ArkBoolean, ArkList, ArkMap, ArkNull, ArkNullVal,
   ArkObject, ArkOperation, ArkUndefinedVal, ArkVal, NativeAsyncFn, NativeFn,
   NativeOperation, ArkRef, ArkValRef, ArkClosure, ArkCallable,
+  ArkContinuation, ArkTypedId,
 } from './data.js'
 import {
-  ArkCapture, ArkContinuation, ArkLocal, ArkNamedLoc,
+  ArkCapture, ArkLocal, ArkNamedLoc, ArkType,
 } from './code.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -88,8 +89,8 @@ export class ArkRuntimeError extends Error {
 }
 
 class ArkFlatClosure extends ArkClosure {
-  constructor(params: string[], captures: ArkRef[], public body: ArkInst) {
-    super(params, captures)
+  constructor(params: ArkTypedId[], returnType: ArkType, captures: ArkRef[], public body: ArkInst) {
+    super(params, returnType, captures)
   }
 
   async call(locals: ArkValRef[]) {
@@ -107,12 +108,12 @@ function evalRef(frame: ArkFrame, lexp: ArkNamedLoc): ArkRef {
   throw new Error('invalid ArkNamedLoc')
 }
 
-function makeLocals(names: string[], vals: ArkVal[]): ArkRef[] {
-  const locals: ArkValRef[] = names.map(
+function makeLocals(typedIds: ArkTypedId[], vals: ArkVal[]): ArkRef[] {
+  const locals: ArkValRef[] = typedIds.map(
     (_val, index) => new ArkValRef(vals[index] ?? ArkUndefinedVal),
   )
-  if (vals.length > names.length) {
-    locals.push(...vals.slice(names.length).map((val) => new ArkValRef(val)))
+  if (vals.length > typedIds.length) {
+    locals.push(...vals.slice(typedIds.length).map((val) => new ArkValRef(val)))
   }
   return locals
 }
@@ -269,11 +270,11 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
       } else {
         throw new Error('invalid ArkCallableBlockOpenInst')
       }
-      const result = new Constructor(inst.params, captures, inst.next!)
+      const result = new Constructor(inst.params, inst.returnType, captures, inst.next!)
       mem.set(inst.matchingClose.id, result)
       inst = inst.matchingClose.next
     } else if (inst instanceof ArkLetBlockOpenInst) {
-      ark.push(makeLocals(inst.vars.map((v) => v.name), []))
+      ark.push(makeLocals(inst.vars.map((v) => new ArkTypedId(v.name, v.type)), []))
       inst = inst.next
     } else if (inst instanceof ArkBlockOpenInst) {
       inst = inst.next

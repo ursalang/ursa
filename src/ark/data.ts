@@ -6,15 +6,21 @@ import {
   action, call, Operation, Reject, Resolve, run, sleep,
 } from 'effection'
 
+import {ArkType} from './code.js'
 import {FsMap} from './fsmap.js'
 import programVersion from '../version.js'
 import {debug} from './util.js'
+import {type ArkState} from './interpreter.js'
 
 // A hack that works for us, as browsers do not have util/types library, and
 // is-generator-function doesn't play nice with rollup.
 function isGeneratorFunction(obj: object) {
   const constructor = obj.constructor
   return constructor !== undefined && constructor.name === 'GeneratorFunction'
+}
+
+export class ArkTypedId {
+  constructor(public name: string, public type: ArkType) {}
 }
 
 export class ArkVal {}
@@ -28,8 +34,16 @@ export abstract class ArkAbstractObjectBase extends ArkVal {
 }
 
 export abstract class ArkCallable extends ArkVal {
-  constructor(public params: string[]) {
+  constructor(public params: ArkTypedId[], public returnType: ArkType) {
     super()
+  }
+}
+
+export class ArkContinuation extends ArkCallable {
+  public done = false
+
+  constructor(public state: ArkState) {
+    super([new ArkTypedId('x', ArkVal)], ArkVal) // FIXME: correct type
   }
 }
 
@@ -37,10 +51,11 @@ export class NativeFn<T extends ArkVal[]> extends ArkCallable {
   public body: (...args: [...T]) => Operation<ArkVal>
 
   constructor(
-    params: string[],
+    params: ArkTypedId[],
+    returnType: ArkType,
     innerBody: (...args: [...T]) => ArkVal | Operation<ArkVal>,
   ) {
-    super(params)
+    super(params, returnType)
     if (isGeneratorFunction(innerBody)) {
       this.body = innerBody as (...args: [...T]) => Operation<ArkVal>
     } else {
@@ -55,15 +70,10 @@ export class NativeFn<T extends ArkVal[]> extends ArkCallable {
 class ArkObjectBase extends ArkAbstractObjectBase {
   public properties: Map<string, ArkVal> = new Map()
 
-  public static methods = new Map<string, ArkCallable>(
-    [
-      ['equals', new NativeFn(['right'], (thisVal, right) => ArkBoolean(thisVal === right))],
-      ['notEquals', new NativeFn(['right'], (thisVal, right) => ArkBoolean(thisVal !== right))],
-    ],
-  )
+  public static methods = new Map<string, ArkCallable>()
 
-  static addMethods(properties: [string, ArkCallable][]) {
-    properties.forEach(([name, val]) => this.methods.set(name, val))
+  static addMethods(methods: [string, ArkCallable][]) {
+    methods.forEach(([name, val]) => this.methods.set(name, val))
   }
 
   getMethod(prop: string): ArkCallable | undefined {
@@ -81,21 +91,35 @@ class ArkObjectBase extends ArkAbstractObjectBase {
 }
 
 export abstract class ArkConcreteVal<T> extends ArkObjectBase {
-  static methods: Map<string, ArkCallable> = new Map([...ArkObjectBase.methods])
-
-  static {
-    ArkConcreteVal.addMethods(
-      [
-        ['equals', new NativeFn(['right'], (thisVal: ArkConcreteVal<unknown>, right: ArkVal) => ArkBoolean(thisVal.val === toJs(right)))],
-        ['notEquals', new NativeFn(['right'], (thisVal: ArkConcreteVal<unknown>, right: ArkVal) => ArkBoolean(thisVal.val !== toJs(right)))],
-      ],
-    )
-  }
-
   constructor(public val: T) {
     super()
   }
 }
+
+export class ArkNullVal extends ArkConcreteVal<null> {
+  constructor() {
+    super(null)
+  }
+}
+
+export class ArkBooleanVal extends ArkConcreteVal<boolean> {}
+
+// Avoid forward reference to ArkBooleanVal
+ArkObjectBase.methods = new Map<string, ArkCallable>(
+  [
+    ['equals', new NativeFn([new ArkTypedId('right', ArkObjectBase)], ArkBooleanVal, (thisVal, right) => ArkBoolean(thisVal === right))],
+    ['notEquals', new NativeFn([new ArkTypedId('right', ArkObjectBase)], ArkBooleanVal, (thisVal, right) => ArkBoolean(thisVal !== right))],
+  ],
+)
+ArkConcreteVal.methods = new Map<string, ArkCallable>(
+  [
+    ['equals', new NativeFn([new ArkTypedId('right', ArkConcreteVal<unknown>)], ArkBooleanVal, (thisVal: ArkConcreteVal<unknown>, right: ArkVal) => ArkBoolean(thisVal.val === toJs(right)))],
+    ['notEquals', new NativeFn([new ArkTypedId('right', ArkConcreteVal<unknown>)], ArkBooleanVal, (thisVal: ArkConcreteVal<unknown>, right: ArkVal) => ArkBoolean(thisVal.val !== toJs(right)))],
+  ],
+)
+
+// Now we have set up super-class methods, wire up ArkBoolean
+ArkBooleanVal.addMethods([['not', new NativeFn([], ArkBooleanVal, (thisVal: ArkBooleanVal) => ArkBoolean(!thisVal.val))]])
 
 export class ArkUndefinedVal extends ArkConcreteVal<undefined> {
   static methods: Map<string, ArkCallable> = new Map([...ArkConcreteVal.methods])
@@ -105,46 +129,32 @@ export class ArkUndefinedVal extends ArkConcreteVal<undefined> {
   }
 }
 
-export class ArkNullVal extends ArkConcreteVal<null> {
-  static methods: Map<string, ArkCallable> = new Map([...ArkConcreteVal.methods])
-
-  constructor() {
-    super(null)
-  }
-}
-export class ArkBooleanVal extends ArkConcreteVal<boolean> {
-  static methods: Map<string, ArkCallable> = new Map([...ArkConcreteVal.methods])
-
-  static {
-    ArkBooleanVal.addMethods([['not', new NativeFn([], (thisVal: ArkBooleanVal) => ArkBoolean(!thisVal.val))]])
-  }
-}
 export class ArkNumberVal extends ArkConcreteVal<number> {
   static methods: Map<string, ArkCallable> = new Map([...ArkConcreteVal.methods])
 
   static {
     ArkNumberVal.addMethods(
       [
-        ['toString', new NativeFn([], (thisVal: ArkNumberVal) => ArkString(thisVal.val.toString()))],
-        ['pos', new NativeFn([], (thisVal: ArkNumberVal) => ArkNumber(+thisVal.val))],
-        ['neg', new NativeFn([], (thisVal: ArkNumberVal) => ArkNumber(-thisVal.val))],
-        ['bitwiseNot', new NativeFn([], (thisVal: ArkNumberVal) => ArkNumber(~thisVal.val))],
-        ['lt', new NativeFn(['right'], (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkBoolean(thisVal.val < right.val))],
-        ['leq', new NativeFn(['right'], (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkBoolean(thisVal.val <= right.val))],
-        ['gt', new NativeFn(['right'], (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkBoolean(thisVal.val > right.val))],
-        ['geq', new NativeFn(['right'], (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkBoolean(thisVal.val >= right.val))],
-        ['add', new NativeFn(['right'], (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val + right.val))],
-        ['sub', new NativeFn(['right'], (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val - right.val))],
-        ['mul', new NativeFn(['right'], (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val * right.val))],
-        ['div', new NativeFn(['right'], (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val / right.val))],
-        ['mod', new NativeFn(['right'], (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val % right.val))],
-        ['exp', new NativeFn(['right'], (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val ** right.val))],
-        ['bitwiseAnd', new NativeFn(['right'], (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val & right.val))],
-        ['bitwiseOr', new NativeFn(['right'], (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val | right.val))],
-        ['bitwiseXor', new NativeFn(['right'], (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val ^ right.val))],
-        ['shiftLeft', new NativeFn(['right'], (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val << right.val))],
-        ['shiftRight', new NativeFn(['right'], (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val >> right.val))],
-        ['shiftRightArith', new NativeFn(['right'], (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val >>> right.val))],
+        ['toString', new NativeFn([], ArkNumberVal, (thisVal: ArkNumberVal) => ArkString(thisVal.val.toString()))],
+        ['pos', new NativeFn([], ArkNumberVal, (thisVal: ArkNumberVal) => ArkNumber(+thisVal.val))],
+        ['neg', new NativeFn([], ArkNumberVal, (thisVal: ArkNumberVal) => ArkNumber(-thisVal.val))],
+        ['bitwiseNot', new NativeFn([], ArkNumberVal, (thisVal: ArkNumberVal) => ArkNumber(~thisVal.val))],
+        ['lt', new NativeFn([new ArkTypedId('right', ArkNumberVal)], ArkNumberVal, (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkBoolean(thisVal.val < right.val))],
+        ['leq', new NativeFn([new ArkTypedId('right', ArkNumberVal)], ArkNumberVal, (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkBoolean(thisVal.val <= right.val))],
+        ['gt', new NativeFn([new ArkTypedId('right', ArkNumberVal)], ArkNumberVal, (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkBoolean(thisVal.val > right.val))],
+        ['geq', new NativeFn([new ArkTypedId('right', ArkNumberVal)], ArkNumberVal, (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkBoolean(thisVal.val >= right.val))],
+        ['add', new NativeFn([new ArkTypedId('right', ArkNumberVal)], ArkNumberVal, (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val + right.val))],
+        ['sub', new NativeFn([new ArkTypedId('right', ArkNumberVal)], ArkNumberVal, (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val - right.val))],
+        ['mul', new NativeFn([new ArkTypedId('right', ArkNumberVal)], ArkNumberVal, (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val * right.val))],
+        ['div', new NativeFn([new ArkTypedId('right', ArkNumberVal)], ArkNumberVal, (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val / right.val))],
+        ['mod', new NativeFn([new ArkTypedId('right', ArkNumberVal)], ArkNumberVal, (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val % right.val))],
+        ['exp', new NativeFn([new ArkTypedId('right', ArkNumberVal)], ArkNumberVal, (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val ** right.val))],
+        ['bitwiseAnd', new NativeFn([new ArkTypedId('right', ArkNumberVal)], ArkNumberVal, (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val & right.val))],
+        ['bitwiseOr', new NativeFn([new ArkTypedId('right', ArkNumberVal)], ArkNumberVal, (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val | right.val))],
+        ['bitwiseXor', new NativeFn([new ArkTypedId('right', ArkNumberVal)], ArkNumberVal, (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val ^ right.val))],
+        ['shiftLeft', new NativeFn([new ArkTypedId('right', ArkNumberVal)], ArkNumberVal, (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val << right.val))],
+        ['shiftRight', new NativeFn([new ArkTypedId('right', ArkNumberVal)], ArkNumberVal, (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val >> right.val))],
+        ['shiftRightArith', new NativeFn([new ArkTypedId('right', ArkNumberVal)], ArkNumberVal, (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val >>> right.val))],
       ],
     )
   }
@@ -155,8 +165,8 @@ export class ArkStringVal extends ArkConcreteVal<string> {
   static {
     ArkStringVal.addMethods(
       [
-        ['get', new NativeFn(['index'], (thisVal: ArkStringVal, index: ArkNumberVal) => ArkString(thisVal.val[index.val]))],
-        ['iter', new NativeFn([], (thisVal: ArkStringVal) => {
+        ['get', new NativeFn([new ArkTypedId('index', ArkNumberVal)], ArkStringVal, (thisVal: ArkStringVal, index: ArkNumberVal) => ArkString(thisVal.val[index.val]))],
+        ['iter', new NativeFn([], ArkStringVal, (thisVal: ArkStringVal) => {
           const str = thisVal.val
           const generator = (function* stringGenerator() {
             for (const elem of str) {
@@ -164,9 +174,8 @@ export class ArkStringVal extends ArkConcreteVal<string> {
             }
             return ArkNull()
           }())
-          return new NativeFn([], () => generator.next().value)
+          return new NativeFn([], ArkStringVal, () => generator.next().value)
         })],
-        ['split', new NativeFn(['sep'], (thisVal: ArkStringVal, sep: ArkStringVal) => new ArkList(thisVal.val.split(sep.val).map((s) => ArkString(s))))],
       ],
     )
   }
@@ -218,8 +227,8 @@ export class ArkOperation extends ArkVal {
 }
 
 export abstract class ArkClosure extends ArkCallable {
-  constructor(params: string[], public captures: ArkRef[]) {
-    super(params)
+  constructor(params: ArkTypedId[], returnType: ArkType, public captures: ArkRef[]) {
+    super(params, returnType)
   }
 
   abstract call(locals: ArkValRef[]): Promise<ArkVal>
@@ -228,8 +237,12 @@ export abstract class ArkClosure extends ArkCallable {
 export abstract class ArkGeneratorClosure extends ArkClosure {}
 
 export class NativeOperation extends ArkCallable {
-  constructor(params: string[], public body: (...args: ArkVal[]) => Operation<ArkVal>) {
-    super(params)
+  constructor(
+    params: ArkTypedId[],
+    returnType: ArkType,
+    public body: (...args: ArkVal[]) => Operation<ArkVal>,
+  ) {
+    super(params, returnType)
   }
 }
 
@@ -237,8 +250,12 @@ export class NativeOperation extends ArkCallable {
 export class NativeAsyncFn extends ArkCallable {
   public body: (...args: ArkVal[]) => Operation<ArkVal>
 
-  constructor(params: string[], innerBody: (...args: ArkVal[]) => Promise<ArkVal>) {
-    super(params)
+  constructor(
+    params: ArkTypedId[],
+    returnType: ArkType,
+    innerBody: (...args: ArkVal[]) => Promise<ArkVal>,
+  ) {
+    super(params, returnType)
     this.body = (...args: ArkVal[]) => call(() => innerBody(...args))
   }
 }
@@ -286,31 +303,32 @@ export class ArkList extends ArkObjectBase {
 
   static {
     ArkList.addMethods([
-      ['len', new NativeFn(['len'], (thisVal: ArkList) => ArkNumber(thisVal.list.length))],
-      ['get', new NativeFn(['index'], (thisVal: ArkList, index: ArkNumberVal) => (thisVal.list[index.val]))],
+      ['len', new NativeFn([new ArkTypedId('len', ArkNumberVal)], ArkNumberVal, (thisVal: ArkList) => ArkNumber(thisVal.list.length))],
+      ['get', new NativeFn([new ArkTypedId('index', ArkNumberVal)], ArkVal, (thisVal: ArkList, index: ArkNumberVal) => (thisVal.list[index.val]))],
       ['set', new NativeFn(
-        ['index', 'val'],
+        [new ArkTypedId('index', ArkNumberVal), new ArkTypedId('val', ArkVal)],
+        ArkList,
         (thisVal: ArkList, index: ArkNumberVal, val: ArkVal) => {
           thisVal.list[index.val] = val
           return thisVal
         },
       )],
-      ['push', new NativeFn(['item'], (thisVal: ArkList, item: ArkVal) => {
+      ['push', new NativeFn([new ArkTypedId('item', ArkVal)], ArkList, (thisVal: ArkList, item: ArkVal) => {
         thisVal.list.push(item)
         return thisVal
       })],
-      ['pop', new NativeFn([], (thisVal: ArkList) => {
+      ['pop', new NativeFn([], ArkList, (thisVal: ArkList) => {
         thisVal.list.pop()
         return thisVal
       })],
-      ['slice', new NativeFn(['from', 'to'], (thisVal: ArkList, from: ArkNumberVal, to: ArkNumberVal) => new ArkList(
+      ['slice', new NativeFn([new ArkTypedId('from', ArkNumberVal), new ArkTypedId('to', ArkNumberVal)], ArkList, (thisVal: ArkList, from: ArkNumberVal, to: ArkNumberVal) => new ArkList(
         // FIXME: type of from and to is Maybe<Num>
         thisVal.list.slice(
           from instanceof ArkNumberVal ? from.val : 0,
           to instanceof ArkNumberVal ? to.val : undefined,
         ),
       ))],
-      ['iter', new NativeFn([], (thisVal: ArkList) => {
+      ['iter', new NativeFn([], ArkCallable, (thisVal: ArkList) => {
         const list = thisVal.list
         const generator = (function* listGenerator() {
           for (const elem of list) {
@@ -318,11 +336,11 @@ export class ArkList extends ArkObjectBase {
           }
           return ArkNull()
         }())
-        return new NativeFn([], () => generator.next().value)
+        return new NativeFn([], ArkVal, () => generator.next().value)
       })],
-      ['sorted', new NativeFn([], (thisVal: ArkList) => new ArkList(thisVal.list.map(toJs).toSorted().map((v) => fromJs(v))))],
+      ['sorted', new NativeFn([], ArkList, (thisVal: ArkList) => new ArkList(thisVal.list.map(toJs).toSorted().map((v) => fromJs(v))))],
       // FIXME: This should only work for List<Str>
-      ['join', new NativeFn(['sep'], (thisVal: ArkList, sep: ArkStringVal) => ArkString(thisVal.list.map(toJs).join(sep.val)))],
+      ['join', new NativeFn([new ArkTypedId('sep', ArkStringVal)], ArkStringVal, (thisVal: ArkList, sep: ArkStringVal) => ArkString(thisVal.list.map(toJs).join(sep.val)))],
     ])
   }
 
@@ -331,25 +349,31 @@ export class ArkList extends ArkObjectBase {
   }
 }
 
+// Avoid a forward reference to ArkList
+ArkStringVal.addMethods([
+  ['split', new NativeFn([new ArkTypedId('sep', ArkStringVal)], ArkList, (thisVal: ArkStringVal, sep: ArkStringVal) => new ArkList(thisVal.val.split(sep.val).map((s) => ArkString(s))))],
+])
+
 export class ArkMap extends ArkObjectBase {
   static methods: Map<string, ArkCallable> = new Map([...ArkObjectBase.methods])
 
   static {
     ArkMap.addMethods([
-      ['get', new NativeFn(['index'], (thisVal: ArkMap, index: ArkVal) => thisVal.map.get(index) ?? ArkNull())],
+      ['get', new NativeFn([new ArkTypedId('index', ArkNumberVal)], ArkVal, (thisVal: ArkMap, index: ArkVal) => thisVal.map.get(index) ?? ArkNull())],
       ['set', new NativeFn(
-        ['index', 'val'],
+        [new ArkTypedId('index', ArkVal), new ArkTypedId('val', ArkVal)],
+        ArkMap,
         (thisVal: ArkMap, index: ArkVal, val: ArkVal) => {
           thisVal.map.set(index, val)
           return thisVal
         },
       )],
-      ['delete', new NativeFn(['index'], (thisVal: ArkMap, index: ArkVal) => {
+      ['delete', new NativeFn([new ArkTypedId('index', ArkVal)], ArkMap, (thisVal: ArkMap, index: ArkVal) => {
         thisVal.map.delete(index)
         return thisVal
       })],
-      ['has', new NativeFn(['index'], (thisVal: ArkMap, index: ArkVal) => ArkBoolean(thisVal.map.has(index)))],
-      ['iter', new NativeFn([], (thisVal: ArkMap) => {
+      ['has', new NativeFn([new ArkTypedId('index', ArkVal)], ArkBooleanVal, (thisVal: ArkMap, index: ArkVal) => ArkBoolean(thisVal.map.has(index)))],
+      ['iter', new NativeFn([], ArkCallable, (thisVal: ArkMap) => {
         const map = thisVal.map
         const generator = (function* mapEntriesGenerator() {
           for (const [key, value] of map.entries()) {
@@ -357,9 +381,9 @@ export class ArkMap extends ArkObjectBase {
           }
           return ArkNull()
         }())
-        return new NativeFn([], () => generator.next().value)
+        return new NativeFn([], ArkVal, () => generator.next().value)
       })],
-      ['keys', new NativeFn([], (thisVal: ArkMap) => {
+      ['keys', new NativeFn([], ArkCallable, (thisVal: ArkMap) => {
         const map = thisVal.map
         const generator = (function* mapKeysGenerator() {
           for (const key of map.keys()) {
@@ -367,9 +391,9 @@ export class ArkMap extends ArkObjectBase {
           }
           return ArkNull()
         }())
-        return new NativeFn([], () => generator.next().value)
+        return new NativeFn([], ArkVal, () => generator.next().value)
       })],
-      ['values', new NativeFn([], (thisVal: ArkMap) => {
+      ['values', new NativeFn([], ArkCallable, (thisVal: ArkMap) => {
         const map = thisVal.map
         const generator = (function* mapValuesGenerator() {
           for (const value of map.values()) {
@@ -377,7 +401,7 @@ export class ArkMap extends ArkObjectBase {
           }
           return ArkNull()
         }())
-        return new NativeFn([], () => generator.next().value)
+        return new NativeFn([], ArkVal, () => generator.next().value)
       })],
     ])
   }
@@ -437,18 +461,19 @@ export const globals = new ArkObject(new Map<string, ArkVal>([
 
   // Ursa's prelude (see also prelude.ursa).
   ['version', ArkString(programVersion)],
-  ['debug', new NativeFn(['obj'], (obj) => {
+  ['debug', new NativeFn([new ArkTypedId('obj', ArkVal)], ArkNullVal, (obj) => {
     debug(obj)
     return ArkNull()
   })],
-  ['fs', new NativeFn(['path'], (path: ArkStringVal) => new NativeObject(new FsMap(path.val)))],
+  ['fs', new NativeFn([new ArkTypedId('path', ArkStringVal)], NativeObject, (path: ArkStringVal) => new NativeObject(new FsMap(path.val)))],
   // FIXME: type
-  ['sleep', new NativeOperation(['ms'], function* gen(ms) {
+  ['sleep', new NativeOperation([new ArkTypedId('ms', ArkNumberVal)], ArkNullVal, function* gen(ms) {
     yield* sleep((ms as ArkNumberVal).val)
     return ArkNull()
   })],
   ['action', new NativeFn(
-    ['resolve', 'reject'],
+    [new ArkTypedId('resolve', ArkCallable), new ArkTypedId('reject', ArkCallable)],
+    ArkVal,
     function* gen(fn) {
       const result = yield* action(
         toJs(fn) as (resolve: Resolve<unknown>, reject: Reject) => Operation<void>,
@@ -459,7 +484,7 @@ export const globals = new ArkObject(new Map<string, ArkVal>([
 
   // JavaScript bindings—globals (with "use").
   ['js', new ArkObject(new Map([[
-    'use', new NativeFn([], (arg: ArkStringVal) => {
+    'use', new NativeFn([], ArkVal, (arg: ArkStringVal) => {
       const name = arg.val
       // eslint-disable-next-line max-len
       // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
@@ -470,7 +495,7 @@ export const globals = new ArkObject(new Map<string, ArkVal>([
   // JavaScript bindings—imported libraries (with "use").
   ['jslib', new ArkObject(new Map([[
     // FIXME: type
-    'use', new NativeAsyncFn([], async (...args) => {
+    'use', new NativeAsyncFn([], ArkVal, async (...args) => {
       const importPath = args.map(toJs).join('.')
       const module: unknown = await import(importPath)
       return fromJs(module)
@@ -507,11 +532,13 @@ function fromJs(x: unknown, thisObj?: object, asMethod: boolean = false): ArkVal
     if (asMethod) {
       return new NativeAsyncFn(
         [],
+        NativeAsyncFn,
         async (_this, ...args) => fromJs(await fn(...args.map(toJs))),
       )
     }
     return new NativeAsyncFn(
       [],
+      NativeAsyncFn,
       async (...args) => fromJs(await fn(...args.map(toJs))),
     )
   }

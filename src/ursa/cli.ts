@@ -23,7 +23,7 @@ import {
 import {
   ArkExp, ArkLet, ArkListLiteral, ArkObjectLiteral, ArkSequence,
 } from '../ark/code.js'
-import {Environment, TypedLocation} from '../ark/compiler-utils.js'
+import {Environment, Location} from '../ark/compiler-utils.js'
 import {ArkState} from '../ark/interpreter.js'
 import {compile as arkCompile} from '../ark/reader.js'
 import {serializeVal} from '../ark/serialize.js'
@@ -201,7 +201,7 @@ function extractReturnValues(ark: ArkState, env: Environment, result: ArkVal | u
   const newVars = result.list[1] as ArkObject
   assert(newVars instanceof ArkObject)
   for (const [k, v] of newVars.properties.entries()) {
-    env = env.push([new TypedLocation(k, ArkVal, false)])
+    env = env.push([new Location(k, ArkVal, false)])
     ark.push([new ArkValRef(v)])
   }
   result = result.list[0]
