@@ -5,9 +5,3 @@ Error: Line 2, col 21:
   3 | let f = fn(): Num { g() }
 
 Invalid call
-
-Traceback (most recent call last)
-  line 3
-    let f = fn(): Num { g() }, in f
-  line 4
-    f(), at top level

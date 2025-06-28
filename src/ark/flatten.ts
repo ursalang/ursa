@@ -1,20 +1,22 @@
 // Generate instruction lists from ArkExps.
-// © Reuben Thomas 2024
+// © Reuben Thomas 2024-2025
 // Released under the GPL version 3, or (at your option) any later version.
 
 import assert from 'assert'
 import {Interval} from 'ohm-js'
 
+import {ArkType} from './type.js'
 import {
   ArkAnd, ArkAwait, ArkBreak, ArkCall, ArkCapture, ArkContinue, ArkDebugInfo,
-  ArkExp, ArkFn, ArkGenerator, ArkIf, ArkInvoke, ArkLaunch, ArkLet,
+  ArkExp, ArkFn, ArkGenerator, ArkGlobal, ArkIf, ArkInvoke, ArkLaunch, ArkLet,
   ArkListLiteral, ArkLiteral, ArkLocal, ArkLoop, ArkMapLiteral, ArkNamedLoc,
   ArkObjectLiteral, ArkOr, ArkProperty, ArkReturn, ArkSequence, ArkSet,
-  ArkType, ArkYield,
+  ArkYield,
 } from './code.js'
 import {Location} from './compiler-utils.js'
 import {
   ArkBoolean, ArkNull, ArkTypedId, ArkVal,
+  globals,
 } from './data.js'
 
 export class ArkInst {
@@ -54,6 +56,12 @@ export class ArkInsts {
 
 export class ArkLiteralInst extends ArkInst {
   constructor(sourceLoc: Interval | undefined, public val: ArkVal = ArkNull()) {
+    super(sourceLoc)
+  }
+}
+
+export class ArkGlobalInst extends ArkLiteralInst {
+  constructor(sourceLoc: Interval | undefined, public val: ArkVal, public name: string) {
     super(sourceLoc)
   }
 }
@@ -142,59 +150,6 @@ function block(
     ...bodyInsts.insts,
     closeInst,
   ])
-}
-
-function ifElseBlock(
-  sourceLoc: Interval | undefined,
-  cond: ArkExp,
-  thenExp: ArkExp,
-  elseExp?: ArkExp,
-  innerLoop?: ArkLoopBlockOpenInst,
-  innerFn?: ArkFnBlockOpenInst,
-): ArkInsts {
-  const condInsts = expToInsts(cond, innerLoop, innerFn)
-  const thenInsts = expToInsts(thenExp, innerLoop, innerFn)
-  const ifOpenInst = new ArkIfBlockOpenInst(thenExp.sourceLoc, condInsts.id)
-  const blockInsts = block(sourceLoc, thenInsts, ifOpenInst)
-  const ifElseInsts = [...condInsts.insts, ...blockInsts.insts]
-  if (elseExp !== undefined) {
-    const elseInsts = expToInsts(elseExp, innerLoop, innerFn)
-    const elseInst = new ArkElseBlockInst(
-      elseExp.sourceLoc,
-      thenInsts.id,
-      elseInsts.id,
-    )
-    elseInst.matchingOpen = ifOpenInst
-    const elseBlockInsts = block(
-      elseExp.sourceLoc,
-      elseInsts,
-      elseInst,
-      new ArkElseBlockCloseInst(elseExp.sourceLoc, elseInsts.id),
-    )
-    ifOpenInst.matchingClose = elseInst
-    ifElseInsts.pop() // Remove original block close instruction
-    ifElseInsts.push(
-      ...elseBlockInsts.insts,
-      new ArkLetCopyInst(elseExp.sourceLoc, elseInst.id),
-    )
-  }
-  return new ArkInsts(ifElseInsts)
-}
-
-function loopBlock(
-  sourceLoc: Interval | undefined,
-  localsDepth: number,
-  bodyExp: ArkExp,
-  innerFn?: ArkFnBlockOpenInst,
-): ArkInsts {
-  const loopInst = new ArkLoopBlockOpenInst(sourceLoc, localsDepth)
-  const bodyInsts = expToInsts(bodyExp, loopInst, innerFn)
-  return block(
-    sourceLoc,
-    bodyInsts,
-    loopInst,
-    new ArkLoopBlockCloseInst(loopInst.sourceLoc, bodyInsts.id),
-  )
 }
 
 export class ArkAwaitInst extends ArkInst {
@@ -313,199 +268,261 @@ export class ArkPropertyInst extends ArkInst {
   }
 }
 
-export function expToInsts(
-  exp: ArkExp,
-  innerLoop?: ArkLoopBlockOpenInst,
-  innerFn?: ArkFnBlockOpenInst,
-  sym?: string,
-): ArkInsts {
-  if (exp instanceof ArkLiteral) {
-    return new ArkInsts([new ArkLiteralInst(exp.sourceLoc, exp.val)])
-  } else if (exp instanceof ArkLaunch) {
-    const insts = expToInsts(exp.exp, innerLoop, innerFn)
+export function expToInsts(exp: ArkExp, externalSyms = globals): ArkInsts {
+  function ifElseBlock(
+    sourceLoc: Interval | undefined,
+    cond: ArkExp,
+    thenExp: ArkExp,
+    elseExp?: ArkExp,
+    innerLoop?: ArkLoopBlockOpenInst,
+    innerFn?: ArkFnBlockOpenInst,
+  ): ArkInsts {
+    const condInsts = doExpToInsts(cond, innerLoop, innerFn)
+    const thenInsts = doExpToInsts(thenExp, innerLoop, innerFn)
+    const ifOpenInst = new ArkIfBlockOpenInst(thenExp.sourceLoc, condInsts.id)
+    const blockInsts = block(sourceLoc, thenInsts, ifOpenInst)
+    const ifElseInsts = [...condInsts.insts, ...blockInsts.insts]
+    if (elseExp !== undefined) {
+      const elseInsts = doExpToInsts(elseExp, innerLoop, innerFn)
+      const elseInst = new ArkElseBlockInst(
+        elseExp.sourceLoc,
+        thenInsts.id,
+        elseInsts.id,
+      )
+      elseInst.matchingOpen = ifOpenInst
+      const elseBlockInsts = block(
+        elseExp.sourceLoc,
+        elseInsts,
+        elseInst,
+        new ArkElseBlockCloseInst(elseExp.sourceLoc, elseInsts.id),
+      )
+      ifOpenInst.matchingClose = elseInst
+      ifElseInsts.pop() // Remove original block close instruction
+      ifElseInsts.push(
+        ...elseBlockInsts.insts,
+        new ArkLetCopyInst(elseExp.sourceLoc, elseInst.id),
+      )
+    }
+    return new ArkInsts(ifElseInsts)
+  }
+
+  function loopBlock(
+    sourceLoc: Interval | undefined,
+    localsDepth: number,
+    bodyExp: ArkExp,
+    innerFn?: ArkFnBlockOpenInst,
+  ): ArkInsts {
+    const loopInst = new ArkLoopBlockOpenInst(sourceLoc, localsDepth)
+    const bodyInsts = doExpToInsts(bodyExp, loopInst, innerFn)
     return block(
-      exp.sourceLoc,
-      insts,
-      new ArkLaunchBlockOpenInst(exp.sourceLoc),
-      new ArkLaunchBlockCloseInst(exp.sourceLoc, insts.id),
-    )
-  } else if (exp instanceof ArkAwait) {
-    const insts = expToInsts(exp.exp, innerLoop, innerFn)
-    return new ArkInsts([...insts.insts, new ArkAwaitInst(exp.sourceLoc, insts.id)])
-  } else if (exp instanceof ArkBreak) {
-    const insts = expToInsts(exp.exp, innerLoop, innerFn)
-    if (innerLoop === undefined) {
-      throw new Error('break outside loop')
-    }
-    return new ArkInsts([...insts.insts, new ArkBreakInst(exp.sourceLoc, insts.id, innerLoop)])
-  } else if (exp instanceof ArkContinue) {
-    if (innerLoop === undefined) {
-      throw new Error('continue outside loop')
-    }
-    return new ArkInsts([new ArkContinueInst(exp.sourceLoc, innerLoop)])
-  } else if (exp instanceof ArkYield) {
-    if (innerFn === undefined) {
-      throw new Error('yield may only be used in a generator')
-    }
-    const insts = expToInsts(exp.exp, innerLoop, innerFn)
-    return new ArkInsts([...insts.insts, new ArkYieldInst(exp.sourceLoc, insts.id, innerFn)])
-  } else if (exp instanceof ArkReturn) {
-    if (innerFn === undefined) {
-      throw new Error('return outside function')
-    }
-    const insts = expToInsts(exp.exp, innerLoop, innerFn)
-    return new ArkInsts([...insts.insts, new ArkReturnInst(exp.sourceLoc, insts.id, innerFn)])
-  } else if (exp instanceof ArkFn) {
-    const Constructor = exp instanceof ArkGenerator ? ArkGeneratorBlockOpenInst : ArkFnBlockOpenInst
-    const fnInst = new Constructor(
-      exp.sourceLoc,
-      exp.params.map((p) => new ArkTypedId(p.name, p.type)),
-      exp.returnType,
-      exp.capturedVars,
-      sym,
-    )
-    const bodyInsts = expToInsts(exp.body, innerLoop, fnInst)
-    bodyInsts.insts.push(new ArkReturnInst(exp.sourceLoc, bodyInsts.id, fnInst))
-    return block(
-      exp.sourceLoc,
+      sourceLoc,
       bodyInsts,
-      fnInst,
-      new ArkFnBlockCloseInst(exp.sourceLoc, bodyInsts.id),
+      loopInst,
+      new ArkLoopBlockCloseInst(loopInst.sourceLoc, bodyInsts.id),
     )
-  } else if (exp instanceof ArkCall) {
-    const argInsts = exp.args.map((exp) => expToInsts(exp, innerLoop, innerFn))
-    const argIds = argInsts.map((insts) => insts.id)
-    const fnInsts = expToInsts(exp.fn, innerLoop, innerFn)
-    return new ArkInsts([
-      ...argInsts.map((i) => i.insts).flat(),
-      ...fnInsts.insts,
-      new ArkCallInst(exp.fn.sourceLoc, fnInsts.id, argIds, exp.fn.debug.name),
-    ])
-  } else if (exp instanceof ArkInvoke) {
-    const argInsts = exp.args.map((exp) => expToInsts(exp, innerLoop, innerFn))
-    const argIds = argInsts.map((insts) => insts.id)
-    const objInsts = expToInsts(exp.obj, innerLoop, innerFn)
-    return new ArkInsts([
-      ...argInsts.map((i) => i.insts).flat(),
-      ...objInsts.insts,
-      new ArkInvokeInst(exp.sourceLoc, objInsts.id, exp.prop, argIds, `${exp.obj.debug.name}.${exp.prop}`),
-    ])
-  } else if (exp instanceof ArkSet) {
-    const insts = expToInsts(exp.exp, innerLoop, innerFn)
-    if (exp.lexp instanceof ArkProperty) {
-      const objInsts = expToInsts(exp.lexp.obj, innerLoop, innerFn)
+  }
+
+  function doExpToInsts(
+    exp: ArkExp,
+    innerLoop?: ArkLoopBlockOpenInst,
+    innerFn?: ArkFnBlockOpenInst,
+    sym?: string,
+  ): ArkInsts {
+    if (exp instanceof ArkLiteral) {
+      return new ArkInsts([new ArkLiteralInst(exp.sourceLoc, exp.val)])
+    } else if (exp instanceof ArkGlobal) {
+      // FIXME: error if no value
+      return new ArkInsts([new ArkGlobalInst(exp.sourceLoc, externalSyms.get(exp.name)!, exp.name)])
+    } else if (exp instanceof ArkLaunch) {
+      const insts = doExpToInsts(exp.exp, innerLoop, innerFn)
+      return block(
+        exp.sourceLoc,
+        insts,
+        new ArkLaunchBlockOpenInst(exp.sourceLoc),
+        new ArkLaunchBlockCloseInst(exp.sourceLoc, insts.id),
+      )
+    } else if (exp instanceof ArkAwait) {
+      const insts = doExpToInsts(exp.exp, innerLoop, innerFn)
+      return new ArkInsts([...insts.insts, new ArkAwaitInst(exp.sourceLoc, insts.id)])
+    } else if (exp instanceof ArkBreak) {
+      const insts = doExpToInsts(exp.exp, innerLoop, innerFn)
+      if (innerLoop === undefined) {
+        throw new Error('break outside loop')
+      }
+      return new ArkInsts([...insts.insts, new ArkBreakInst(exp.sourceLoc, insts.id, innerLoop)])
+    } else if (exp instanceof ArkContinue) {
+      if (innerLoop === undefined) {
+        throw new Error('continue outside loop')
+      }
+      return new ArkInsts([new ArkContinueInst(exp.sourceLoc, innerLoop)])
+    } else if (exp instanceof ArkYield) {
+      if (innerFn === undefined) {
+        throw new Error('yield may only be used in a generator')
+      }
+      const insts = doExpToInsts(exp.exp, innerLoop, innerFn)
+      return new ArkInsts([...insts.insts, new ArkYieldInst(exp.sourceLoc, insts.id, innerFn)])
+    } else if (exp instanceof ArkReturn) {
+      if (innerFn === undefined) {
+        throw new Error('return outside function')
+      }
+      const insts = doExpToInsts(exp.exp, innerLoop, innerFn)
+      return new ArkInsts([...insts.insts, new ArkReturnInst(exp.sourceLoc, insts.id, innerFn)])
+    } else if (exp instanceof ArkFn) {
+      const Constructor = exp instanceof ArkGenerator
+        ? ArkGeneratorBlockOpenInst
+        : ArkFnBlockOpenInst
+      const fnInst = new Constructor(
+        exp.sourceLoc,
+        exp.params.map((p) => new ArkTypedId(p.name, p.type)),
+        exp.returnType,
+        exp.capturedVars,
+        sym,
+      )
+      const bodyInsts = doExpToInsts(exp.body, innerLoop, fnInst)
+      bodyInsts.insts.push(new ArkReturnInst(exp.sourceLoc, bodyInsts.id, fnInst))
+      return block(
+        exp.sourceLoc,
+        bodyInsts,
+        fnInst,
+        new ArkFnBlockCloseInst(exp.sourceLoc, bodyInsts.id),
+      )
+    } else if (exp instanceof ArkCall) {
+      const argInsts = exp.args.map((exp) => doExpToInsts(exp, innerLoop, innerFn))
+      const argIds = argInsts.map((insts) => insts.id)
+      const fnInsts = doExpToInsts(exp.fn, innerLoop, innerFn)
+      return new ArkInsts([
+        ...argInsts.map((i) => i.insts).flat(),
+        ...fnInsts.insts,
+        new ArkCallInst(exp.fn.sourceLoc, fnInsts.id, argIds, exp.fn.debug.name),
+      ])
+    } else if (exp instanceof ArkInvoke) {
+      const argInsts = exp.args.map((exp) => doExpToInsts(exp, innerLoop, innerFn))
+      const argIds = argInsts.map((insts) => insts.id)
+      const objInsts = doExpToInsts(exp.obj, innerLoop, innerFn)
+      return new ArkInsts([
+        ...argInsts.map((i) => i.insts).flat(),
+        ...objInsts.insts,
+        new ArkInvokeInst(exp.sourceLoc, objInsts.id, exp.prop, argIds, `${exp.obj.debug.name}.${exp.prop}`),
+      ])
+    } else if (exp instanceof ArkSet) {
+      const insts = doExpToInsts(exp.exp, innerLoop, innerFn)
+      if (exp.lexp instanceof ArkProperty) {
+        const objInsts = doExpToInsts(exp.lexp.obj, innerLoop, innerFn)
+        return new ArkInsts([
+          ...objInsts.insts,
+          ...insts.insts,
+          new ArkSetPropertyInst(exp.lexp.sourceLoc, objInsts.id, exp.lexp.prop, insts.id),
+        ])
+      }
+      let SetInst
+      if (exp.lexp instanceof ArkLocal) {
+        SetInst = ArkSetLocalInst
+      } else if (exp.lexp instanceof ArkCapture) {
+        SetInst = ArkSetCaptureInst
+      } else {
+        throw new Error('bad ArkLvalue')
+      }
+      return new ArkInsts([
+        ...insts.insts,
+        new SetInst(exp.sourceLoc, Symbol.for(exp.lexp.debug.name!), exp.lexp.index, insts.id),
+      ])
+    } else if (exp instanceof ArkObjectLiteral) {
+      const insts: ArkInst[] = []
+      const valMap = new Map([...exp.properties.entries()].map(
+        ([prop, exp]) => {
+          const valInsts = doExpToInsts(exp, innerLoop, innerFn)
+          insts.push(...valInsts.insts)
+          return [prop, valInsts.id]
+        },
+      ))
+      return new ArkInsts([...insts, new ArkObjectLiteralInst(exp.sourceLoc, valMap)])
+    } else if (exp instanceof ArkListLiteral) {
+      const valInsts = exp.list.map((v) => doExpToInsts(v, innerLoop, innerFn))
+      const valIds = valInsts.map((insts) => insts.id)
+      return new ArkInsts([
+        ...valInsts.map((insts) => insts.insts).flat(),
+        new ArkListLiteralInst(exp.sourceLoc, valIds),
+      ])
+    } else if (exp instanceof ArkMapLiteral) {
+      const insts: ArkInst[] = []
+      const valMap = new Map([...exp.map.entries()].map(
+        ([key, val]) => {
+          const keyInsts = doExpToInsts(key, innerLoop, innerFn)
+          insts.push(...keyInsts.insts)
+          const valInsts = doExpToInsts(val, innerLoop, innerFn)
+          insts.push(...valInsts.insts)
+          return [keyInsts.id, valInsts.id]
+        },
+      ))
+      return new ArkInsts([...insts, new ArkMapLiteralInst(exp.sourceLoc, valMap)])
+    } else if (exp instanceof ArkLet) {
+      const insts: ArkInst[] = []
+      const bvIds: symbol[] = []
+      for (const bv of exp.boundVars) {
+        const bvInsts = doExpToInsts(bv.init, innerLoop, innerFn, bv.location.name)
+        insts.push(
+          ...bvInsts.insts,
+          new ArkSetLocalInst(exp.sourceLoc, Symbol.for(bv.location.name), bv.index, bvInsts.id),
+        )
+        bvIds.push(bvInsts.id)
+      }
+      const bodyInsts = doExpToInsts(exp.body, innerLoop, innerFn)
+      insts.push(...bodyInsts.insts)
+      const blockInsts = new ArkInsts(insts)
+      return block(
+        exp.sourceLoc,
+        blockInsts,
+        new ArkLetBlockOpenInst(
+          exp.sourceLoc,
+          exp.boundVars.map((bv) => bv.location),
+          bvIds,
+        ),
+        new ArkLetBlockCloseInst(exp.sourceLoc, blockInsts.id),
+      )
+    } else if (exp instanceof ArkSequence) {
+      if (exp.exps.length === 0) {
+        return new ArkInsts([new ArkLiteralInst(exp.sourceLoc, ArkNull())])
+      }
+      const seqInsts = exp.exps.map((exp) => doExpToInsts(exp, innerLoop, innerFn))
+      return new ArkInsts(seqInsts.map((insts) => insts.insts).flat())
+    } else if (exp instanceof ArkIf) {
+      return ifElseBlock(exp.sourceLoc, exp.cond, exp.thenExp, exp.elseExp, innerLoop, innerFn)
+    } else if (exp instanceof ArkAnd) {
+      return ifElseBlock(
+        exp.sourceLoc,
+        exp.left,
+        exp.right,
+        new ArkLiteral(ArkBoolean(false)),
+        innerLoop,
+        innerFn,
+      )
+    } else if (exp instanceof ArkOr) {
+      return ifElseBlock(
+        exp.sourceLoc,
+        exp.left,
+        new ArkLiteral(ArkBoolean(true)),
+        exp.right,
+        innerLoop,
+        innerFn,
+      )
+    } else if (exp instanceof ArkLoop) {
+      return loopBlock(exp.sourceLoc, exp.localsDepth, exp.body, innerFn)
+    } else if (exp instanceof ArkProperty) {
+      const objInsts = doExpToInsts(exp.obj, innerLoop, innerFn)
       return new ArkInsts([
         ...objInsts.insts,
-        ...insts.insts,
-        new ArkSetPropertyInst(exp.lexp.sourceLoc, objInsts.id, exp.lexp.prop, insts.id),
+        new ArkPropertyInst(exp.sourceLoc, objInsts.id, exp.prop),
       ])
-    }
-    let SetInst
-    if (exp.lexp instanceof ArkLocal) {
-      SetInst = ArkSetLocalInst
-    } else if (exp.lexp instanceof ArkCapture) {
-      SetInst = ArkSetCaptureInst
+    } else if (exp instanceof ArkLocal) {
+      return new ArkInsts([new ArkLocalInst(exp.sourceLoc, exp.index, exp.location.name)])
+    } else if (exp instanceof ArkCapture) {
+      return new ArkInsts([new ArkCaptureInst(exp.sourceLoc, exp.index, exp.location.name)])
     } else {
-      throw new Error('bad ArkLvalue')
+      throw new Error('invalid ArkExp')
     }
-    return new ArkInsts([
-      ...insts.insts,
-      new SetInst(exp.sourceLoc, Symbol.for(exp.lexp.debug.name!), exp.lexp.index, insts.id),
-    ])
-  } else if (exp instanceof ArkObjectLiteral) {
-    const insts: ArkInst[] = []
-    const valMap = new Map([...exp.properties.entries()].map(
-      ([prop, exp]) => {
-        const valInsts = expToInsts(exp, innerLoop, innerFn)
-        insts.push(...valInsts.insts)
-        return [prop, valInsts.id]
-      },
-    ))
-    return new ArkInsts([...insts, new ArkObjectLiteralInst(exp.sourceLoc, valMap)])
-  } else if (exp instanceof ArkListLiteral) {
-    const valInsts = exp.list.map((v) => expToInsts(v, innerLoop, innerFn))
-    const valIds = valInsts.map((insts) => insts.id)
-    return new ArkInsts([
-      ...valInsts.map((insts) => insts.insts).flat(),
-      new ArkListLiteralInst(exp.sourceLoc, valIds),
-    ])
-  } else if (exp instanceof ArkMapLiteral) {
-    const insts: ArkInst[] = []
-    const valMap = new Map([...exp.map.entries()].map(
-      ([key, val]) => {
-        const keyInsts = expToInsts(key, innerLoop, innerFn)
-        insts.push(...keyInsts.insts)
-        const valInsts = expToInsts(val, innerLoop, innerFn)
-        insts.push(...valInsts.insts)
-        return [keyInsts.id, valInsts.id]
-      },
-    ))
-    return new ArkInsts([...insts, new ArkMapLiteralInst(exp.sourceLoc, valMap)])
-  } else if (exp instanceof ArkLet) {
-    const insts: ArkInst[] = []
-    const bvIds: symbol[] = []
-    for (const bv of exp.boundVars) {
-      const bvInsts = expToInsts(bv.init, innerLoop, innerFn, bv.location.name)
-      insts.push(
-        ...bvInsts.insts,
-        new ArkSetLocalInst(exp.sourceLoc, Symbol.for(bv.location.name), bv.index, bvInsts.id),
-      )
-      bvIds.push(bvInsts.id)
-    }
-    const bodyInsts = expToInsts(exp.body, innerLoop, innerFn)
-    insts.push(...bodyInsts.insts)
-    const blockInsts = new ArkInsts(insts)
-    return block(
-      exp.sourceLoc,
-      blockInsts,
-      new ArkLetBlockOpenInst(
-        exp.sourceLoc,
-        exp.boundVars.map((bv) => bv.location),
-        bvIds,
-      ),
-      new ArkLetBlockCloseInst(exp.sourceLoc, blockInsts.id),
-    )
-  } else if (exp instanceof ArkSequence) {
-    if (exp.exps.length === 0) {
-      return new ArkInsts([new ArkLiteralInst(exp.sourceLoc, ArkNull())])
-    }
-    const seqInsts = exp.exps.map((exp) => expToInsts(exp, innerLoop, innerFn))
-    return new ArkInsts(seqInsts.map((insts) => insts.insts).flat())
-  } else if (exp instanceof ArkIf) {
-    return ifElseBlock(exp.sourceLoc, exp.cond, exp.thenExp, exp.elseExp, innerLoop, innerFn)
-  } else if (exp instanceof ArkAnd) {
-    return ifElseBlock(
-      exp.sourceLoc,
-      exp.left,
-      exp.right,
-      new ArkLiteral(ArkBoolean(false)),
-      innerLoop,
-      innerFn,
-    )
-  } else if (exp instanceof ArkOr) {
-    return ifElseBlock(
-      exp.sourceLoc,
-      exp.left,
-      new ArkLiteral(ArkBoolean(true)),
-      exp.right,
-      innerLoop,
-      innerFn,
-    )
-  } else if (exp instanceof ArkLoop) {
-    return loopBlock(exp.sourceLoc, exp.localsDepth, exp.body, innerFn)
-  } else if (exp instanceof ArkProperty) {
-    const objInsts = expToInsts(exp.obj, innerLoop, innerFn)
-    return new ArkInsts([
-      ...objInsts.insts,
-      new ArkPropertyInst(exp.sourceLoc, objInsts.id, exp.prop),
-    ])
-  } else if (exp instanceof ArkLocal) {
-    return new ArkInsts([new ArkLocalInst(exp.sourceLoc, exp.index, exp.location.name)])
-  } else if (exp instanceof ArkCapture) {
-    return new ArkInsts([new ArkCaptureInst(exp.sourceLoc, exp.index, exp.location.name)])
-  } else {
-    throw new Error('invalid ArkExp')
   }
+
+  return doExpToInsts(exp)
 }
 
 export function expToInst(exp: ArkExp): ArkInst {

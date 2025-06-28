@@ -4,8 +4,8 @@
 
 import assert from 'assert'
 
-import {ArkType} from './code.js'
-import {ArkObject, globals} from './data.js'
+import {globals} from './data.js'
+import {ArkType} from './type.js'
 
 export class Location {
   constructor(public name: string, public type: ArkType, public isVar: boolean) {
@@ -25,7 +25,7 @@ export class Frame {
 export class Environment {
   constructor(
     public stack: [Frame, ...Frame[]] = [new Frame([], [])],
-    public externalSyms: ArkObject = globals,
+    public externalSyms = globals,
   ) {}
 
   top() {

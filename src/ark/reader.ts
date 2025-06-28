@@ -2,32 +2,36 @@
 // © Reuben Thomas 2023-2025
 // Released under the MIT license.
 
+import {Interval} from 'ohm-js'
+
 import preludeJson from './prelude.json' with {type: 'json'}
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
 } from './util.js'
 import {
-  globals, ArkNull, ArkBoolean, ArkNumber, ArkString, ArkObject, ArkUndefinedVal,
+  globals, ArkNull, ArkBoolean, ArkNumber, ArkString, ArkObject, ArkUndefined,
+  globalTypes,
 } from './data.js'
+import {ArkCompilerError} from './error.js'
+import {ArkType} from './type.js'
 import {
   ArkExp, ArkLvalue, ArkIf, ArkAnd, ArkOr, ArkSequence, ArkLoop, ArkBreak, ArkContinue,
   ArkSet, ArkLocal, ArkCapture, ArkListLiteral, ArkObjectLiteral, ArkMapLiteral,
   ArkFn, ArkGenerator, ArkReturn, ArkYield,
   ArkProperty, ArkLet, ArkCall, ArkInvoke, ArkLiteral, ArkBoundVar, ArkNamedLoc,
-  ArkType, globalTypes,
+  ArkGlobal,
 } from './code.js'
 import {
   Environment, Frame, Location,
 } from './compiler-utils.js'
 import {expToInst} from './flatten.js'
 import {ArkState} from './interpreter.js'
+import {typecheck} from './type-check.js'
 
-export class ArkCompilerError extends Error {}
-
-export function checkParamList(params: string[]): string[] {
+export function checkParamList(params: string[], source?: Interval): string[] {
   if (new Set(params).size !== params.length) {
-    throw new ArkCompilerError('Duplicate parameters in list')
+    throw new ArkCompilerError('Duplicate parameters in list', source)
   }
   return params
 }
@@ -65,20 +69,20 @@ function getType(name: string): ArkType {
   return ty
 }
 
-export function symRef(env: Environment, name: string): ArkLvalue {
-  let lexp
+export function symRef(env: Environment, name: string): ArkExp {
+  let exp
   // Check whether the symbol is a local.
   const locals = env.top().locals
   const j = locals.map((l) => l?.name).lastIndexOf(name)
   if (j !== -1) {
-    lexp = new ArkLocal(j, locals[j]!)
+    exp = new ArkLocal(j, locals[j]!)
   } else {
     // Otherwise, check if it's a capture.
     // Check whether we already have this capture.
     const captures = env.top().captures
     const k = captures.map((c) => c.name).lastIndexOf(name)
     if (k !== -1) {
-      lexp = new ArkCapture(k, captures[k])
+      exp = new ArkCapture(k, captures[k])
     } else {
       // If not, see if it's on the stack to be captured.
       for (let i = 0; i < env.stack.length; i += 1) {
@@ -86,7 +90,7 @@ export function symRef(env: Environment, name: string): ArkLvalue {
         const j = locals.map((l) => l?.name).lastIndexOf(name)
         if (j !== -1) {
           const k = env.top().captures.length
-          lexp = new ArkCapture(k, locals[j]!)
+          exp = new ArkCapture(k, locals[j]!)
           env.top().captures.push(locals[j]!)
           break
         }
@@ -94,15 +98,16 @@ export function symRef(env: Environment, name: string): ArkLvalue {
     }
   }
   // Finally, see if it's a global, and if not, error.
-  if (lexp === undefined) {
-    if (env.externalSyms.get(name) === ArkUndefinedVal) {
+  if (exp === undefined) {
+    const extern = env.externalSyms.get(name)
+    if (extern === undefined || extern === ArkUndefined()) {
       throw new ArkCompilerError(`Undefined symbol ${name}`)
     }
-    lexp = new ArkProperty(new ArkLiteral(env.externalSyms), name)
+    exp = new ArkGlobal(name, extern, extern.type)
   }
-  lexp.debug.name = name
-  lexp.debug.env = JSON.stringify(env)
-  return lexp
+  exp.debug.name = name
+  exp.debug.env = JSON.stringify(env)
+  return exp
 }
 
 function doCompile(env: Environment, value: unknown): ArkExp {
@@ -297,7 +302,9 @@ function doCompile(env: Environment, value: unknown): ArkExp {
 }
 
 export function compile(expr: unknown, env = new Environment()): ArkExp {
-  return doCompile(env, expr)
+  const exp = doCompile(env, expr)
+  typecheck(exp)
+  return exp
 }
 
 // Compile the prelude and add its values to the globals

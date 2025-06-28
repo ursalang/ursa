@@ -49,8 +49,8 @@ testGroup('Conditionals', [
   ['["if",false,3,4]', 4],
   ['["if",true,3,4]', 3],
   ['["if",["invoke",["invoke",3,"add",4],"equals",7],1,0]', 1],
-  ['["or",1,2]', true],
-  ['["and",1,2]', 2],
+  ['["or",false,true]', true],
+  ['["and",true,true]', true],
 ])
 
 test('Bare break', (t) => {

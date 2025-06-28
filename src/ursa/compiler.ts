@@ -15,21 +15,22 @@ import {
 import {
   ArkVal, ArkNull, ArkBoolean, ArkNumber, ArkString,
   ArkClosure, ArkGeneratorClosure, ArkUndefinedVal,
+  globalTypes,
 } from '../ark/data.js'
+import {ArkType, ArkFnType} from '../ark/type.js'
 import {
   ArkBoundVar, ArkExp, ArkLvalue, ArkLiteral, ArkSequence, ArkIf, ArkLoop, ArkAnd, ArkOr,
   ArkObjectLiteral, ArkListLiteral, ArkMapLiteral,
   ArkCall, ArkInvoke, ArkLet, ArkFn, ArkGenerator, ArkProperty, ArkSet, ArkReturn, ArkYield,
-  ArkBreak, ArkContinue, ArkAwait, ArkLaunch, ArkType, ArkFnType, ArkNamedLoc,
-  globalTypes,
+  ArkBreak, ArkContinue, ArkAwait, ArkLaunch, ArkNamedLoc,
 } from '../ark/code.js'
 import {
   Frame, Environment, Location,
 } from '../ark/compiler-utils.js'
 import {ArkState, ArkRuntimeError} from '../ark/interpreter.js'
-import {
-  ArkCompilerError, symRef, checkParamList,
-} from '../ark/reader.js'
+import {ArkCompilerError} from '../ark/error.js'
+import {symRef, checkParamList} from '../ark/reader.js'
+import {typecheck} from '../ark/type-check.js'
 
 type ParserOperations = {
   toExp(a: ParserArgs): ArkExp
@@ -56,17 +57,14 @@ type ParserThisNode = ThisNode<{a: ParserArgs}, ParserOperations>
 // eslint-disable-next-line max-len
 const semantics = grammar.createSemantics<ParserNode, ParserNonterminalNode, ParserIterationNode, ParserThisNode, ParserOperations>()
 
-class UrsaError extends Error {
-  constructor(source: Interval | undefined, message: string, options: ErrorOptions = {}) {
-    super(`${source ? source.getLineAndColumnMessage() : '(unknown location)'}\n${message}`, options)
-  }
-}
-
-export class UrsaCompilerError extends UrsaError {}
-
-export class UrsaRuntimeError extends UrsaError {
-  constructor(public ark: ArkState, source: Interval, message: string, options: ErrorOptions = {}) {
-    super(source, message, options)
+class UrsaRuntimeError extends Error {
+  constructor(
+    public ark: ArkState,
+    public source: Interval,
+    message: string,
+    options: ErrorOptions = {},
+  ) {
+    super(message, options)
     const trace = []
     // Exclude top level stack frame from trace-back.
     for (let state: ArkState = ark; state.outerState !== undefined; state = state.outerState) {
@@ -182,7 +180,7 @@ semantics.addOperation<LetBinding>('toLet(a)', {
       const isVar = l.children[0].ctorName === 'var'
       letVars.push(isVar)
       if (letIds.includes(ident)) {
-        throw new UrsaCompilerError(this.source, `Duplicate identifier in let: ${ident}`)
+        throw new ArkCompilerError(`Duplicate identifier in let: ${ident}`, this.source)
       }
       letIds.push(ident)
     }
@@ -191,18 +189,15 @@ semantics.addOperation<LetBinding>('toLet(a)', {
     )
     const innerEnv = this.args.a.env.push(locations)
     const parsedLets = []
-    for (const l of lets.asIteration().children) {
+    for (const [i, l] of lets.asIteration().children.entries()) {
       const definition = l.children[1].toDefinition({...this.args.a, env: innerEnv})
       parsedLets.push(definition)
+      locations[i].type = definition.exp.type
     }
     const indexBase = this.args.a.env.top().locals.length
     return new LetBinding(
       parsedLets.map(
-        (def, index) => new ArkBoundVar(
-          new Location(def.ident.sourceString, def.exp.type, letVars[index]),
-          indexBase + index,
-          def.exp,
-        ),
+        (def, index) => new ArkBoundVar(locations[index], indexBase + index, def.exp),
       ),
     )
   },
@@ -324,7 +319,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
   Fn(ty, body) {
     const fnType = ty.toType(this.args.a) as ArkFnType
     const innerEnv = this.args.a.env.pushFrame(
-      new Frame(fnType.params.map((p) => new Location(p.name, p.type, false)), []),
+      new Frame(fnType.params!.map((p) => new Location(p.name, p.type, false)), []),
     )
     const compiledBody = body.toExp({
       env: innerEnv,
@@ -335,7 +330,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     // TODO: ArkFn should be an ArkObject which contains one method.
     const CodeConstructor = fnType.Constructor === ArkGeneratorClosure ? ArkGenerator : ArkFn
     return new CodeConstructor(
-      fnType.params,
+      fnType.params!,
       fnType.returnType,
       innerEnv.top().captures.map(
         (c) => symRef(this.args.a.env, c.name) as ArkNamedLoc,
@@ -474,7 +469,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     const compiledLvalue = lvalue.toLval(this.args.a)
     const compiledValue = exp.toExp(this.args.a)
     if (compiledLvalue instanceof ArkNamedLoc && !compiledLvalue.location.isVar) {
-      throw new UrsaCompilerError(lvalue.source, "Cannot assign to non-'var'")
+      throw new ArkCompilerError("Cannot assign to non-'var'", lvalue.source)
     }
     return new ArkSet(compiledLvalue, compiledValue, this.source)
   },
@@ -485,7 +480,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
 
   Exp_yield(yield_, exp) {
     if (!this.args.a.inGenerator) {
-      throw new UrsaCompilerError(yield_.source, 'yield may only be used in a generator')
+      throw new ArkCompilerError('yield may only be used in a generator', yield_.source)
     }
     return new ArkYield(maybeVal(this.args.a, exp), this.source)
   },
@@ -496,19 +491,19 @@ semantics.addOperation<ArkExp>('toExp(a)', {
 
   Statement_break(_break, exp) {
     if (!this.args.a.inLoop) {
-      throw new UrsaCompilerError(_break.source, 'break used outside a loop')
+      throw new ArkCompilerError('break used outside a loop', _break.source)
     }
     return new ArkBreak(maybeVal(this.args.a, exp), this.source)
   },
   Statement_continue(_continue) {
     if (!this.args.a.inLoop) {
-      throw new UrsaCompilerError(_continue.source, 'continue used outside a loop')
+      throw new ArkCompilerError('continue used outside a loop', _continue.source)
     }
     return new ArkContinue(this.source)
   },
   Statement_return(return_, exp) {
     if (!this.args.a.inFn) {
-      throw new UrsaCompilerError(return_.source, 'return used outside a function')
+      throw new ArkCompilerError('return used outside a function', return_.source)
     }
     return new ArkReturn(maybeVal(this.args.a, exp), this.source)
   },
@@ -548,7 +543,7 @@ semantics.addOperation<ArkType>('toType(a)', {
   NamedType(ident, _typeArgs) {
     const basicTy = globalTypes.get(ident.sourceString)
     if (basicTy === undefined) {
-      throw new UrsaCompilerError(ident.source, 'Bad type')
+      throw new ArkCompilerError('Bad type', ident.source)
     }
     // TODO
     // let paramTypes: ArkType[] = []
@@ -562,21 +557,14 @@ semantics.addOperation<ArkType>('toType(a)', {
 
   FnType(fn, _open, params, _maybeComma, _close, typeAnnotation) {
     const parsedParams = params.asIteration().children.map((p) => p.toParam(this.args.a))
-    try {
-      checkParamList(parsedParams.map((p) => p.name))
-    } catch (e) {
-      if (!(e instanceof ArkCompilerError)) {
-        throw e
-      }
-      throw new UrsaCompilerError(params.source, e.message)
-    }
+    checkParamList(parsedParams.map((p) => p.name), params.source)
     const returnType = typeAnnotation.children[1].toType(this.args.a)
     return new ArkFnType(fn.ctorName === 'fn' ? ArkClosure : ArkGeneratorClosure, parsedParams, returnType)
   },
 })
 
 function badLvalue(node: ParserNode): never {
-  throw new UrsaCompilerError(node.source, 'Bad lvalue')
+  throw new ArkCompilerError('Bad lvalue', node.source)
 }
 
 // The node passed to toLval is always a PostfixExp or PrimaryExp.
@@ -619,7 +607,9 @@ export function compile(
   const args = {
     env, inLoop: false, inFn: false, atSeqTop: true,
   }
-  return ast.toExp(args)
+  const exp = ast.toExp(args)
+  typecheck(exp)
+  return exp
 }
 
 export async function runWithTraceback(ark: ArkState): Promise<ArkVal> {
@@ -627,7 +617,7 @@ export async function runWithTraceback(ark: ArkState): Promise<ArkVal> {
     return await ark.run()
   } catch (e) {
     if (e instanceof ArkRuntimeError) {
-      throw new UrsaRuntimeError(e.ark, e.sourceLoc as Interval, e.message, {cause: e})
+      throw new UrsaRuntimeError(e.ark, e.source!, e.message, {cause: e})
     }
     throw e
   }
