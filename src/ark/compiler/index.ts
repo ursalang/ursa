@@ -34,17 +34,52 @@ import {
   jsGlobals, ArkBoolean, ArkBooleanVal, ArkList, ArkMap, ArkNull,
   ArkNumber, ArkNullVal, ArkNumberVal, ArkObject, ArkString,
   ArkStringVal, ArkUndefinedVal, ArkVal, NativeFn, ArkOperation,
+  ArkTypedId, ArkCallable,
 } from '../data.js'
-import {ArkExp} from '../code.js'
+import {
+  ArkExp, ArkFnType, ArkType, ArkUnionType,
+} from '../code.js'
 import {debug} from '../util.js'
 import {
-  Environment, Frame, TypedLocation,
+  Environment, Frame, Location,
 } from '../compiler-utils.js'
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
 
 class JsRuntimeError extends Error {}
+
+function typeToJs(ty: ArkType) {
+  switch (ty) {
+    case ArkUndefinedVal:
+      return 'ArkDefinedVal'
+    case ArkVal:
+      return 'ArkVal'
+    case ArkNullVal:
+      return 'ArkNullVal'
+    case ArkBooleanVal:
+      return 'ArkBooleanVal'
+    case ArkNumberVal:
+      return 'ArkNumberVal'
+    case ArkStringVal:
+      return 'ArkStringVal'
+    case ArkList:
+      return 'ArkList'
+    case ArkMap:
+      return 'ArkMap'
+    case ArkCallable:
+      return 'ArkCallable'
+    case ArkObject:
+      return 'ArkObject'
+    default:
+  }
+  if (ty instanceof ArkFnType) {
+    return 'ArkCallable'
+  } else if (ty instanceof ArkUnionType) {
+    return 'ArkUnionType'
+  }
+  throw new Error('unknown type (typeToJs)')
+}
 
 class UrsaStackTracey extends StackTracey {
   isThirdParty(path: string) {
@@ -72,12 +107,19 @@ export const runtimeContext: Record<string, unknown> = {
   ArkNull,
   ArkNullVal,
   ArkBoolean,
+  ArkBooleanVal,
+  ArkCallable,
   ArkNumber,
+  ArkNumberVal,
   ArkString,
+  ArkStringVal,
   ArkObject,
   ArkList,
   ArkMap,
   ArkOperation,
+  ArkTypedId,
+  ArkUnionType,
+  ArkVal,
   NativeFn,
   jsGlobals,
 }
@@ -143,7 +185,7 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
       } else if (inst instanceof ArkFnBlockCloseInst) {
         env = env.popFrame()
         if (inst.matchingOpen instanceof ArkGeneratorBlockOpenInst) {
-          return sourceNode(['}()\nreturn new NativeFn([\'x\'], (x) => {\nconst {value, done} = gen.next(x)\nreturn done ? ArkNull() : value\n})\n})\n'])
+          return sourceNode(['}()\nreturn new NativeFn([new ArkTypedId(\'x\', ArkVal)], ArkVal, (x) => {\nconst {value, done} = gen.next(x)\nreturn done ? ArkNull() : value\n})\n})\n'])
         }
         return sourceNode(['})\n'])
       } else if (inst instanceof ArkIfBlockOpenInst) {
@@ -162,24 +204,24 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
       } else if (inst instanceof ArkGeneratorBlockOpenInst) {
         env = env.pushFrame(
           new Frame(
-            inst.params.map((p) => new TypedLocation(p, ArkVal, false)),
+            inst.params.map((p) => new Location(p.name, p.type, false)),
             [],
             inst.name,
           ),
         )
         return sourceNode([
-          letAssign(inst.matchingClose.id, `new NativeFn([${inst.params.map((p) => `'${p}'`).join(', ')}], function (${inst.params.map(jsMangle).join(', ')}) {\nconst gen = function* () {`),
+          letAssign(inst.matchingClose.id, `new NativeFn([${inst.params.map((p) => `new ArkTypedId('${p.name}', ${typeToJs(p.type)})`).join(', ')}], ${typeToJs(inst.returnType)}, function (${inst.params.map((p) => jsMangle(p.name)).join(', ')}) {\nconst gen = function* () {`),
         ])
       } else if (inst instanceof ArkFnBlockOpenInst) {
         env = env.pushFrame(
           new Frame(
-            inst.params.map((p) => new TypedLocation(p, ArkVal, false)),
+            inst.params.map((p) => new Location(p.name, p.type, false)),
             [],
             inst.name,
           ),
         )
         return sourceNode([
-          letAssign(inst.matchingClose.id, `new NativeFn([${inst.params.map((p) => `'${p}'`).join(', ')}], function* (${inst.params.map(jsMangle).join(', ')}) {`),
+          letAssign(inst.matchingClose.id, `new NativeFn([${inst.params.map((p) => `new ArkTypedId('${p.name}', ${typeToJs(p.type)})`).join(', ')}], ${typeToJs(inst.returnType)}, function* (${inst.params.map((p) => jsMangle(p.name)).join(', ')}) {`),
         ])
       } else if (inst instanceof ArkLetBlockOpenInst) {
         return sourceNode([

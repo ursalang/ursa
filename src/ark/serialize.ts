@@ -13,9 +13,10 @@ import {
   ArkAnd, ArkOr, ArkIf, ArkLoop, ArkBreak, ArkContinue, ArkInvoke,
   ArkSet, ArkLet, ArkCall, ArkFn, ArkGenerator, ArkReturn, ArkProperty,
   ArkLiteral, ArkListLiteral, ArkMapLiteral, ArkObjectLiteral, ArkYield,
+  ArkUnionType,
 } from './code.js'
 
-function typeToJs(ty: ArkType) {
+function typeToStr(ty: ArkType) {
   switch (ty) {
     case ArkUndefinedVal:
       return 'Unknown'
@@ -37,6 +38,8 @@ function typeToJs(ty: ArkType) {
       return 'Fn'
     case ArkObject: // TODO Or subclass
       return 'Object'
+    case ArkUnionType:
+      return 'Union'
     default:
       throw new Error('unknown type')
   }
@@ -64,8 +67,8 @@ export function valToJs(val: ArkVal | ArkExp, externalSyms = globals) {
     } else if (val instanceof ArkFn) {
       return [
         val instanceof ArkGenerator ? 'gen' : 'fn',
-        val.params.map((l) => [l.name, typeToJs(l.type)]),
-        typeToJs(val.returnType),
+        val.params.map((l) => [l.name, typeToStr(l.type)]),
+        typeToStr(val.returnType),
         doValToJs(val.body),
       ]
     } else if (val instanceof ArkObjectLiteral) {
@@ -89,7 +92,7 @@ export function valToJs(val: ArkVal | ArkExp, externalSyms = globals) {
       }
       return obj
     } else if (val instanceof ArkLet) {
-      return ['let', [...val.boundVars.map((bv) => [bv.isVar ? 'var' : 'const', bv.name, typeToJs(bv.type), doValToJs(bv.init)])], doValToJs(val.body)]
+      return ['let', [...val.boundVars.map((bv) => [bv.isVar ? 'var' : 'const', bv.name, typeToStr(bv.type), doValToJs(bv.init)])], doValToJs(val.body)]
     } else if (val instanceof ArkCall) {
       return [doValToJs(val.fn), ...val.args.map(doValToJs)]
     } else if (val instanceof ArkInvoke) {

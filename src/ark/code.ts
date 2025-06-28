@@ -5,14 +5,12 @@
 import {Interval} from 'ohm-js'
 
 import {
-  ArkCallable, ArkNull, ArkVal,
+  ArkCallable, ArkNull, ArkVal, ArkUndefinedVal,
   ArkNullVal, ArkBooleanVal, ArkNumberVal, ArkStringVal,
   ArkObject, ArkList, ArkMap,
-  ArkUndefinedVal,
 } from './data.js'
-import {type ArkState} from './interpreter.js'
 import {Class} from './util.js'
-import {TypedLocation} from './compiler-utils.js'
+import {Location} from './compiler-utils.js'
 
 export class ArkDebugInfo {
   uid: number | undefined
@@ -74,17 +72,9 @@ export class ArkReturn extends ArkExp {
 
 export class ArkYield extends ArkReturn {}
 
-export class ArkContinuation extends ArkCallable {
-  public done = false
-
-  constructor(public state: ArkState) {
-    super(['x'])
-  }
-}
-
 export class ArkFn extends ArkExp {
   constructor(
-    public params: TypedLocation[],
+    public params: Location[],
     public returnType: ArkType,
     public capturedVars: ArkNamedLoc[],
     public body: ArkExp,
@@ -95,7 +85,13 @@ export class ArkFn extends ArkExp {
 }
 export class ArkGenerator extends ArkFn {}
 
+// FIXME: Make this a class so it can have an isSubtypeOf method
 export type ArkType = Class<ArkVal> | ArkGenericType
+
+// export function isSubtypeOf(t: ArkType, u: ArkType) {
+//   for (let ty = t; t !== u; t = )
+//   while ()
+// }
 
 class ArkGenericType {
   constructor(
@@ -114,16 +110,14 @@ class ArkGenericType {
 export class ArkFnType extends ArkGenericType {
   constructor(
     public Constructor: Class<ArkCallable>,
-    public typeParameters: ArkType[],
-    public params: TypedLocation[],
+    public params: Location[],
     public returnType: ArkType,
   ) {
-    super(Constructor, typeParameters)
+    super(Constructor, params.map((p) => p.type))
   }
-  // public params: [string, ArkType][], public returnType: ArkType
 }
 
-class ArkUnionType extends ArkGenericType {}
+export class ArkUnionType extends ArkGenericType {}
 
 export const globalTypes = new Map<string, ArkType>([
   ['Unknown', ArkUndefinedVal],
