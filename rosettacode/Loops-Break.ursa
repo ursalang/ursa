@@ -1,0 +1,13 @@
+use js.Math
+
+let f = fn(): Num {
+  // FIXME: use a seedable PRNG for deterministic output.
+  Math.floor(Math.random() * 20)
+}
+
+loop {
+  let n = f()
+  print(n)
+  if n == 10 { break } 
+  print(f())
+}

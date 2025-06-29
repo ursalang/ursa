@@ -67,6 +67,8 @@ import {
   ['Hello world/Text', 'rosettacode/Hello world-Text'],
   // This program does not terminate
   // ['Integer sequence', 'rosettacode/Integer sequence'],
+  // This program produces non-deterministic output
+  // ['Loops/Break', 'rosettacode/Loops-Break'],
   ['Loops/Continue', 'rosettacode/Loops-Continue'],
   ['Man or boy test', 'rosettacode/Man or boy test'],
 ].map(([title, file]) => ursaTest(title, file))
