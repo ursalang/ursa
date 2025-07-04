@@ -216,7 +216,8 @@ semantics.addOperation<LetBinding>('toLet(a)', {
     const ident = path[path.length - 1]
     // For path x.y.z, compile `let z = x.use("y", "z")`
     const innerEnv = this.args.a.env.push([
-      new Location(ident.sourceString, ArkVal, false)])
+      new Location(ident.sourceString, ArkVal, false),
+    ])
     const libValue = path[0].toExp({...this.args.a, env: innerEnv})
     const useProperty = addLoc(new ArkProperty(libValue, 'use'), this)
     const useCallArgs = path.slice(1).map((id) => new ArkLiteral(ArkString(id.sourceString)))
