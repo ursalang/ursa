@@ -144,7 +144,7 @@ function doCompile(env: Environment, value: unknown): ArkExp {
           const compiled = doCompile(innerEnv, value[2])
           return new (value[0] === 'fn' ? ArkFn : ArkGenerator)(
             params.map((p) => p.name),
-            innerEnv.top().captures.map((c) => symRef(env, c.name) as ArkCapture),
+            innerEnv.top().captures.map((c) => symRef(env, c.name) as ArkNamedLoc),
             compiled,
           )
         }

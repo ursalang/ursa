@@ -77,7 +77,7 @@ export class ArkContinuation extends ArkCallable {
 }
 
 export class ArkFn extends ArkExp {
-  constructor(public params: string[], public capturedVars: ArkCapture[], public body: ArkExp) {
+  constructor(public params: string[], public capturedVars: ArkNamedLoc[], public body: ArkExp) {
     super()
   }
 }

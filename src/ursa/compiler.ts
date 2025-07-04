@@ -20,7 +20,7 @@ import {
   ArkBoundVar, ArkExp, ArkLvalue, ArkLiteral, ArkSequence, ArkIf, ArkLoop, ArkAnd, ArkOr,
   ArkObjectLiteral, ArkListLiteral, ArkMapLiteral,
   ArkCall, ArkInvoke, ArkLet, ArkFn, ArkGenerator, ArkProperty, ArkSet, ArkReturn, ArkYield,
-  ArkBreak, ArkContinue, ArkAwait, ArkLaunch, ArkCapture, ArkFnType, ArkNamedLoc,
+  ArkBreak, ArkContinue, ArkAwait, ArkLaunch, ArkFnType, ArkNamedLoc,
 } from '../ark/code.js'
 import {Frame, Environment, Location} from '../ark/compiler-utils.js'
 import {ArkState, ArkRuntimeError} from '../ark/interpreter.js'
@@ -339,7 +339,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     return addLoc(new fnType.Constructor(
       fnType.params,
       innerEnv.top().captures.map(
-        (c) => symRef(this.args.a.env, c.name) as ArkCapture,
+        (c) => symRef(this.args.a.env, c.name) as ArkNamedLoc,
       ),
       compiledBody,
     ), this)
