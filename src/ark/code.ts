@@ -8,9 +8,9 @@ import {
   ArkCallable, ArkNull, ArkVal, ArkUndefinedVal,
   ArkNullVal, ArkBooleanVal, ArkNumberVal, ArkStringVal,
   ArkObject, ArkList, ArkMap,
+  ArkTypedId,
 } from './data.js'
 import {Class} from './util.js'
-import {Location} from './compiler-utils.js'
 
 export class ArkDebugInfo {
   uid: number | undefined
@@ -74,7 +74,7 @@ export class ArkYield extends ArkReturn {}
 
 export class ArkFn extends ArkExp {
   constructor(
-    public params: Location[],
+    public params: ArkTypedId[],
     public returnType: ArkType,
     public capturedVars: ArkNamedLoc[],
     public body: ArkExp,
@@ -110,7 +110,7 @@ class ArkGenericType {
 export class ArkFnType extends ArkGenericType {
   constructor(
     public Constructor: Class<ArkCallable>,
-    public params: Location[],
+    public params: ArkTypedId[],
     public returnType: ArkType,
   ) {
     super(Constructor, params.map((p) => p.type))

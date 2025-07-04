@@ -328,7 +328,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
   Fn(ty, body) {
     const fnType = ty.toType(this.args.a) as ArkFnType
     const innerEnv = this.args.a.env.pushFrame(
-      new Frame(fnType.params, []),
+      new Frame(fnType.params.map((p) => new Location(p.name, p.type, false)), []),
     )
     const compiledBody = body.toExp({
       env: innerEnv,
