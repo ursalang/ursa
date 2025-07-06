@@ -1,10 +1,9 @@
 // Ursa compiler.
-// © Reuben Thomas 2023-2024
+// © Reuben Thomas 2023-2025
 // Released under the GPL version 3, or (at your option) any later version.
 
 import {Interval} from 'ohm-js'
 
-import assert from 'assert'
 import grammar, {
   Node, NonterminalNode, IterationNode, ThisNode,
   // eslint-disable-next-line import/extensions
@@ -121,17 +120,16 @@ class LetBinding extends AST {
   }
 }
 
+function symRefWithSource(env: Environment, name: string, source: Interval): ArkLvalue {
+  const lval = symRef(env, name)
+  lval.sourceLoc = source
+  return lval
+}
+
 function maybeVal(a: ParserArgs, exp: ParserIterationNode): ArkExp {
   return exp.children.length > 0
     ? exp.children[0].toExp(a)
     : new ArkLiteral(ArkNull())
-}
-
-function addLoc<T extends ArkExp>(val: T, node: ParserNode): T {
-  // Ensure we don't overwrite more precise location info with less precise.
-  assert(val.sourceLoc === undefined, valToString(node))
-  val.sourceLoc = node.source
-  return val
 }
 
 function makeProperty(
@@ -140,7 +138,7 @@ function makeProperty(
   object: ParserNonterminalNode,
   property: ParserNode,
 ) {
-  return addLoc(new ArkProperty(object.toExp(a), property.sourceString), exp)
+  return new ArkProperty(object.toExp(a), property.sourceString, exp.source)
 }
 
 function makeIfChain(ifs: ArkIf[]): ArkIf {
@@ -213,9 +211,9 @@ semantics.addOperation<LetBinding>('toLet(a)', {
     // For path x.y.z, compile `let z = x.use("y", "z")`
     const innerEnv = this.args.a.env.push([new Location(ident.sourceString, false)])
     const libValue = path[0].toExp({...this.args.a, env: innerEnv})
-    const useProperty = addLoc(new ArkProperty(libValue, 'use'), this)
+    const useProperty = new ArkProperty(libValue, 'use', this.source)
     const useCallArgs = path.slice(1).map((id) => new ArkLiteral(ArkString(id.sourceString)))
-    const useCall = addLoc(new ArkCall(useProperty, useCallArgs), this)
+    const useCall = new ArkCall(useProperty, useCallArgs, this.source)
     const index = this.args.a.env.top().locals.length
     return new LetBinding([new ArkBoundVar(ident.sourceString, false, index, useCall)])
   },
@@ -235,7 +233,7 @@ function makeSequence(a: ParserArgs, seq: ParserNode, exps: ParserNode[]): ArkEx
       } else {
         letBody = new ArkLiteral(ArkNull())
       }
-      res.push(addLoc(new ArkLet(compiledLet.boundVars, letBody), exp))
+      res.push(new ArkLet(compiledLet.boundVars, letBody, exp.source))
       break
     } else {
       res.push(exp.toExp(a))
@@ -244,7 +242,7 @@ function makeSequence(a: ParserArgs, seq: ParserNode, exps: ParserNode[]): ArkEx
   if (res.length === 1) {
     return res[0]
   }
-  return addLoc(new ArkSequence(res), seq)
+  return new ArkSequence(res, seq.source)
 }
 
 function makeArguments(a: ParserArgs, args: ParserNode): Arguments {
@@ -263,12 +261,9 @@ semantics.addOperation<ArkExp>('toExp(a)', {
   },
 
   List(_open, elems, _maybeComma, _close) {
-    return addLoc(
-      new ArkListLiteral((elems.asIteration().children).map(
-        (x) => x.toExp(this.args.a),
-      )),
-      this,
-    )
+    return new ArkListLiteral((elems.asIteration().children).map(
+      (x) => x.toExp(this.args.a),
+    ), this.source)
   },
 
   Map(_open, elems, _maybeComma, _close) {
@@ -277,7 +272,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
       const elem = value.toKeyValue(this.args.a)
       inits.set(elem.key, elem.exp)
     })
-    return addLoc(new ArkMapLiteral(inits), this)
+    return new ArkMapLiteral(inits, this.source)
   },
 
   Object(maybeType, _open, elems, _maybeComma, _close) {
@@ -290,24 +285,22 @@ semantics.addOperation<ArkExp>('toExp(a)', {
       const elem = value.toDefinition(this.args.a)
       inits.set(elem.ident.sourceString, elem.exp)
     })
-    return addLoc(new ArkObjectLiteral(inits), this)
+    return new ArkObjectLiteral(inits, this.source)
   },
 
   PostfixExp_property(exp, _dot, property) {
     return makeProperty(this.args.a, this, exp, property)
   },
   PostfixExp_invoke(exp, _dot, property, _spaces, _open, args, _maybeComma, _close) {
-    return addLoc(
-      new ArkInvoke(
-        exp.toExp(this.args.a),
-        property.sourceString,
-        makeArguments(this.args.a, args).args,
-      ),
-      this,
+    return new ArkInvoke(
+      exp.toExp(this.args.a),
+      property.sourceString,
+      makeArguments(this.args.a, args).args,
+      this.source,
     )
   },
   PostfixExp_call(exp, _spaces, _open, args, _maybeComma, _close) {
-    return addLoc(new ArkCall(exp.toExp(this.args.a), makeArguments(this.args.a, args).args), this)
+    return new ArkCall(exp.toExp(this.args.a), makeArguments(this.args.a, args).args, this.source)
   },
 
   Ifs(ifs, _else, elseBlock) {
@@ -320,7 +313,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     return makeIfChain(compiledIfs)
   },
   If(_if, cond, thenBlock) {
-    return addLoc(new ArkIf(cond.toExp(this.args.a), thenBlock.toExp(this.args.a)), this)
+    return new ArkIf(cond.toExp(this.args.a), thenBlock.toExp(this.args.a), undefined, this.source)
   },
 
   Fn(type, body) {
@@ -336,22 +329,21 @@ semantics.addOperation<ArkExp>('toExp(a)', {
       inGenerator: fnType.Constructor === ArkGenerator,
     })
     // TODO: ArkFn should be an ArkObject which contains one method.
-    return addLoc(new fnType.Constructor(
+    return new fnType.Constructor(
       fnType.params,
       innerEnv.top().captures.map(
         (c) => symRef(this.args.a.env, c.name) as ArkNamedLoc,
       ),
       compiledBody,
-    ), this)
+      this.source,
+    )
   },
 
   Loop(_loop, body) {
-    return addLoc(
-      new ArkLoop(
-        body.toExp({...this.args.a, inLoop: true}),
-        this.args.a.env.top().locals.length,
-      ),
-      this,
+    return new ArkLoop(
+      body.toExp({...this.args.a, inLoop: true}),
+      this.args.a.env.top().locals.length,
+      this.source,
     )
   },
 
@@ -363,179 +355,102 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     const compiledIterVar = symRef(loopEnv, iterVar)
     const compiledForBody = body.toExp({...this.args.a, env: loopEnv, inLoop: true})
     const innerIndex = innerEnv.top().locals.length
-    const loopBody = addLoc(
-      new ArkLet(
-        [new ArkBoundVar(iterVar, false, innerIndex, addLoc(new ArkCall(addLoc(symRef(loopEnv, '$iter'), iterator), []), this))],
-        new ArkSequence([
-          new ArkIf(
-            addLoc(new ArkInvoke(compiledIterVar, 'equals', [new ArkLiteral(ArkNull())]), this),
-            new ArkBreak(),
-          ),
-          compiledForBody,
-        ]),
-      ),
-      this,
+    const loopBody = new ArkLet(
+      [new ArkBoundVar(iterVar, false, innerIndex, new ArkCall(symRefWithSource(loopEnv, '$iter', iterator.source), [], this.source))],
+      new ArkSequence([
+        new ArkIf(
+          new ArkInvoke(compiledIterVar, 'equals', [new ArkLiteral(ArkNull())], this.source),
+          new ArkBreak(),
+        ),
+        compiledForBody,
+      ]),
+      this.source,
     )
     const localsDepth = this.args.a.env.top().locals.length
-    return addLoc(
-      new ArkLet([new ArkBoundVar('$iter', false, localsDepth, compiledIterator)], new ArkLoop(loopBody, localsDepth + 1)),
-      this,
-    )
+    return new ArkLet([new ArkBoundVar('$iter', false, localsDepth, compiledIterator)], new ArkLoop(loopBody, localsDepth + 1), this.source)
   },
 
   UnaryExp_bitwise_not(_not, exp) {
-    return addLoc(
-      new ArkInvoke(exp.toExp(this.args.a), 'bitwiseNot', []),
-      this,
-    )
+    return new ArkInvoke(exp.toExp(this.args.a), 'bitwiseNot', [], this.source)
   },
   UnaryExp_pos(_plus, exp) {
-    return addLoc(
-      new ArkInvoke(exp.toExp(this.args.a), 'pos', []),
-      this,
-    )
+    return new ArkInvoke(exp.toExp(this.args.a), 'pos', [], this.source)
   },
   UnaryExp_neg(_minus, exp) {
-    return addLoc(
-      new ArkInvoke(exp.toExp(this.args.a), 'neg', []),
-      this,
-    )
+    return new ArkInvoke(exp.toExp(this.args.a), 'neg', [], this.source)
   },
 
   ExponentExp_power(left, _power, right) {
-    return addLoc(
-      new ArkInvoke(left.toExp(this.args.a), 'exp', [right.toExp(this.args.a)]),
-      this,
-    )
+    return new ArkInvoke(left.toExp(this.args.a), 'exp', [right.toExp(this.args.a)], this.source)
   },
 
   ProductExp_times(left, _times, right) {
-    return addLoc(
-      new ArkInvoke(left.toExp(this.args.a), 'mul', [right.toExp(this.args.a)]),
-      this,
-    )
+    return new ArkInvoke(left.toExp(this.args.a), 'mul', [right.toExp(this.args.a)], this.source)
   },
   ProductExp_divide(left, _divide, right) {
-    return addLoc(
-      new ArkInvoke(left.toExp(this.args.a), 'div', [right.toExp(this.args.a)]),
-      this,
-    )
+    return new ArkInvoke(left.toExp(this.args.a), 'div', [right.toExp(this.args.a)], this.source)
   },
   ProductExp_mod(left, _mod, right) {
-    return addLoc(
-      new ArkInvoke(left.toExp(this.args.a), 'mod', [right.toExp(this.args.a)]),
-      this,
-    )
+    return new ArkInvoke(left.toExp(this.args.a), 'mod', [right.toExp(this.args.a)], this.source)
   },
 
   SumExp_plus(left, _plus, right) {
-    return addLoc(
-      new ArkInvoke(left.toExp(this.args.a), 'add', [right.toExp(this.args.a)]),
-      this,
-    )
+    return new ArkInvoke(left.toExp(this.args.a), 'add', [right.toExp(this.args.a)], this.source)
   },
   SumExp_minus(left, _minus, right) {
-    return addLoc(
-      new ArkInvoke(left.toExp(this.args.a), 'sub', [right.toExp(this.args.a)]),
-      this,
-    )
+    return new ArkInvoke(left.toExp(this.args.a), 'sub', [right.toExp(this.args.a)], this.source)
   },
 
   CompareExp_eq(left, _eq, right) {
-    return addLoc(
-      new ArkInvoke(left.toExp(this.args.a), 'equals', [right.toExp(this.args.a)]),
-      this,
-    )
+    return new ArkInvoke(left.toExp(this.args.a), 'equals', [right.toExp(this.args.a)], this.source)
   },
   CompareExp_neq(left, _neq, right) {
-    return addLoc(
-      new ArkInvoke(left.toExp(this.args.a), 'notEquals', [right.toExp(this.args.a)]),
-      this,
-    )
+    return new ArkInvoke(left.toExp(this.args.a), 'notEquals', [right.toExp(this.args.a)], this.source)
   },
   CompareExp_lt(left, _lt, right) {
-    return addLoc(
-      new ArkInvoke(left.toExp(this.args.a), 'lt', [right.toExp(this.args.a)]),
-      this,
-    )
+    return new ArkInvoke(left.toExp(this.args.a), 'lt', [right.toExp(this.args.a)], this.source)
   },
   CompareExp_leq(left, _leq, right) {
-    return addLoc(
-      new ArkInvoke(left.toExp(this.args.a), 'leq', [right.toExp(this.args.a)]),
-      this,
-    )
+    return new ArkInvoke(left.toExp(this.args.a), 'leq', [right.toExp(this.args.a)], this.source)
   },
   CompareExp_gt(left, _gt, right) {
-    return addLoc(
-      new ArkInvoke(left.toExp(this.args.a), 'gt', [right.toExp(this.args.a)]),
-      this,
-    )
+    return new ArkInvoke(left.toExp(this.args.a), 'gt', [right.toExp(this.args.a)], this.source)
   },
   CompareExp_geq(left, _geq, right) {
-    return addLoc(
-      new ArkInvoke(left.toExp(this.args.a), 'geq', [right.toExp(this.args.a)]),
-      this,
-    )
+    return new ArkInvoke(left.toExp(this.args.a), 'geq', [right.toExp(this.args.a)], this.source)
   },
 
   BitwiseExp_and(left, _and, right) {
-    return addLoc(
-      new ArkInvoke(left.toExp(this.args.a), 'bitwiseAnd', [right.toExp(this.args.a)]),
-      this,
-    )
+    return new ArkInvoke(left.toExp(this.args.a), 'bitwiseAnd', [right.toExp(this.args.a)], this.source)
   },
   BitwiseExp_or(left, _or, right) {
-    return addLoc(
-      new ArkInvoke(left.toExp(this.args.a), 'bitwiseOr', [right.toExp(this.args.a)]),
-      this,
-    )
+    return new ArkInvoke(left.toExp(this.args.a), 'bitwiseOr', [right.toExp(this.args.a)], this.source)
   },
   BitwiseExp_xor(left, _xor, right) {
-    return addLoc(
-      new ArkInvoke(left.toExp(this.args.a), 'bitwiseXor', [right.toExp(this.args.a)]),
-      this,
-    )
+    return new ArkInvoke(left.toExp(this.args.a), 'bitwiseXor', [right.toExp(this.args.a)], this.source)
   },
   BitwiseExp_lshift(left, _lshift, right) {
-    return addLoc(
-      new ArkInvoke(left.toExp(this.args.a), 'shiftLeft', [right.toExp(this.args.a)]),
-      this,
-    )
+    return new ArkInvoke(left.toExp(this.args.a), 'shiftLeft', [right.toExp(this.args.a)], this.source)
   },
   BitwiseExp_arshift(left, _arshift, right) {
-    return addLoc(
-      new ArkInvoke(left.toExp(this.args.a), 'shiftRight', [right.toExp(this.args.a)]),
-      this,
-    )
+    return new ArkInvoke(left.toExp(this.args.a), 'shiftRight', [right.toExp(this.args.a)], this.source)
   },
   BitwiseExp_lrshift(left, _lrshift, right) {
-    return addLoc(
-      new ArkInvoke(left.toExp(this.args.a), 'shiftRightArith', [right.toExp(this.args.a)]),
-      this,
-    )
+    return new ArkInvoke(left.toExp(this.args.a), 'shiftRightArith', [right.toExp(this.args.a)], this.source)
   },
 
   LogicNotExp_not(_not, exp) {
-    return addLoc(
-      new ArkInvoke(exp.toExp(this.args.a), 'not', []),
-      this,
-    )
+    return new ArkInvoke(exp.toExp(this.args.a), 'not', [], this.source)
   },
 
   LogicExp(node) {
     return node.toExp({...this.args.a})
   },
   LogicExp_and(left, _and, right) {
-    return addLoc(
-      new ArkAnd(left.toExp(this.args.a), right.toExp(this.args.a)),
-      this,
-    )
+    return new ArkAnd(left.toExp(this.args.a), right.toExp(this.args.a), this.source)
   },
   LogicExp_or(left, _or, right) {
-    return addLoc(
-      new ArkOr(left.toExp(this.args.a), right.toExp(this.args.a)),
-      this,
-    )
+    return new ArkOr(left.toExp(this.args.a), right.toExp(this.args.a), this.source)
   },
 
   Assignment_ass(lvalue, _ass, exp) {
@@ -544,41 +459,41 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     if (compiledLvalue instanceof ArkNamedLoc && !compiledLvalue.isVar) {
       throw new UrsaCompilerError(lvalue.source, "Cannot assign to non-'var'")
     }
-    return addLoc(new ArkSet(compiledLvalue, compiledValue), this)
+    return new ArkSet(compiledLvalue, compiledValue, this.source)
   },
 
   Exp_await(_await, exp) {
-    return addLoc(new ArkAwait(exp.toExp(this.args.a)), this)
+    return new ArkAwait(exp.toExp(this.args.a), this.source)
   },
 
   Exp_yield(yield_, exp) {
     if (!this.args.a.inGenerator) {
       throw new UrsaCompilerError(yield_.source, 'yield may only be used in a generator')
     }
-    return addLoc(new ArkYield(maybeVal(this.args.a, exp)), this)
+    return new ArkYield(maybeVal(this.args.a, exp), this.source)
   },
 
   Exp_launch(_launch, exp) {
-    return addLoc(new ArkLaunch(exp.toExp(this.args.a)), this)
+    return new ArkLaunch(exp.toExp(this.args.a), this.source)
   },
 
   Statement_break(_break, exp) {
     if (!this.args.a.inLoop) {
       throw new UrsaCompilerError(_break.source, 'break used outside a loop')
     }
-    return addLoc(new ArkBreak(maybeVal(this.args.a, exp)), this)
+    return new ArkBreak(maybeVal(this.args.a, exp), this.source)
   },
   Statement_continue(_continue) {
     if (!this.args.a.inLoop) {
       throw new UrsaCompilerError(_continue.source, 'continue used outside a loop')
     }
-    return addLoc(new ArkContinue(), this)
+    return new ArkContinue(this.source)
   },
   Statement_return(return_, exp) {
     if (!this.args.a.inFn) {
       throw new UrsaCompilerError(return_.source, 'return used outside a function')
     }
-    return addLoc(new ArkReturn(maybeVal(this.args.a, exp)), this)
+    return new ArkReturn(maybeVal(this.args.a, exp), this.source)
   },
 
   Block(_open, seq, _close) {
@@ -586,29 +501,29 @@ semantics.addOperation<ArkExp>('toExp(a)', {
   },
 
   ident(ident) {
-    return addLoc(symRef(this.args.a.env, ident.sourceString), this)
+    return symRefWithSource(this.args.a.env, ident.sourceString, this.source)
   },
 
   null(_null) {
-    return addLoc(new ArkLiteral(ArkNull()), this)
+    return new ArkLiteral(ArkNull(), this.source)
   },
 
   bool(flag) {
-    return addLoc(new ArkLiteral(ArkBoolean(flag.sourceString === 'true')), this)
+    return new ArkLiteral(ArkBoolean(flag.sourceString === 'true'), this.source)
   },
 
   number(_) {
-    return addLoc(new ArkLiteral(ArkNumber(parseFloat(this.sourceString))), this)
+    return new ArkLiteral(ArkNumber(parseFloat(this.sourceString)), this.source)
   },
 
   string(_open, _str, _close) {
     // FIXME: Parse string properly
     // eslint-disable-next-line no-eval
-    return addLoc(new ArkLiteral(ArkString(eval(this.sourceString) as string)), this)
+    return new ArkLiteral(ArkString(eval(this.sourceString) as string), this.source)
   },
 
   literalString(_open, str, _close) {
-    return addLoc(new ArkLiteral(ArkString(str.sourceString)), this)
+    return new ArkLiteral(ArkString(str.sourceString), this.source)
   },
 })
 
@@ -665,7 +580,7 @@ semantics.addOperation<ArkLvalue>('toLval(a)', {
     return exp.toLval(this.args.a)
   },
   PrimaryExp_ident(sym) {
-    return addLoc(symRef(this.args.a.env, sym.sourceString), this)
+    return symRefWithSource(this.args.a.env, sym.sourceString, this.source)
   },
 
   PostfixExp(exp) {

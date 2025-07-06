@@ -1,5 +1,5 @@
 // Compiled Ark code.
-// © Reuben Thomas 2023-2024
+// © Reuben Thomas 2023-2025
 // Released under the MIT license.
 
 import {Interval} from 'ohm-js'
@@ -22,7 +22,7 @@ export abstract class ArkExp {
 
   static debugEnumerable = process.env.DEBUG_ARK !== undefined
 
-  constructor() {
+  constructor(public sourceLoc?: Interval) {
     Object.defineProperty(this, 'debug', {enumerable: ArkExp.debugEnumerable})
     Object.defineProperty(this, 'sourceLoc', {enumerable: ArkExp.debugEnumerable})
     this.debug.uid = ArkExp.nextId
@@ -30,39 +30,37 @@ export abstract class ArkExp {
   }
 
   debug = new ArkDebugInfo()
-
-  sourceLoc?: Interval
 }
 
 export class ArkLiteral extends ArkExp {
-  constructor(public val: ArkVal = ArkNull()) {
-    super()
+  constructor(public val: ArkVal = ArkNull(), sourceLoc?: Interval) {
+    super(sourceLoc)
   }
 }
 
 export class ArkLaunch extends ArkExp {
-  constructor(public exp: ArkExp) {
-    super()
+  constructor(public exp: ArkExp, sourceLoc?: Interval) {
+    super(sourceLoc)
   }
 }
 
 export class ArkAwait extends ArkExp {
-  constructor(public exp: ArkExp) {
-    super()
+  constructor(public exp: ArkExp, sourceLoc?: Interval) {
+    super(sourceLoc)
   }
 }
 
 export class ArkBreak extends ArkExp {
-  constructor(public exp: ArkExp = new ArkLiteral(ArkNull())) {
-    super()
+  constructor(public exp: ArkExp = new ArkLiteral(ArkNull()), sourceLoc?: Interval) {
+    super(sourceLoc)
   }
 }
 
 export class ArkContinue extends ArkExp {}
 
 export class ArkReturn extends ArkExp {
-  constructor(public exp: ArkExp = new ArkLiteral(ArkNull())) {
-    super()
+  constructor(public exp: ArkExp = new ArkLiteral(ArkNull()), sourceLoc?: Interval) {
+    super(sourceLoc)
   }
 }
 
@@ -77,8 +75,13 @@ export class ArkContinuation extends ArkCallable {
 }
 
 export class ArkFn extends ArkExp {
-  constructor(public params: string[], public capturedVars: ArkNamedLoc[], public body: ArkExp) {
-    super()
+  constructor(
+    public params: string[],
+    public capturedVars: ArkNamedLoc[],
+    public body: ArkExp,
+    sourceLoc?: Interval,
+  ) {
+    super(sourceLoc)
   }
 }
 export class ArkGenerator extends ArkFn {}
@@ -88,54 +91,64 @@ export class ArkFnType {
 }
 
 export class ArkCall extends ArkExp {
-  constructor(public fn: ArkExp, public args: ArkExp[]) {
-    super()
+  constructor(public fn: ArkExp, public args: ArkExp[], sourceLoc?: Interval) {
+    super(sourceLoc)
   }
 }
 
 export class ArkInvoke extends ArkExp {
-  constructor(public obj: ArkExp, public prop: string, public args: ArkExp[]) {
-    super()
+  constructor(
+    public obj: ArkExp,
+    public prop: string,
+    public args: ArkExp[],
+    sourceLoc?: Interval,
+  ) {
+    super(sourceLoc)
   }
 }
 
 export abstract class ArkLvalue extends ArkExp {}
 
 export abstract class ArkNamedLoc extends ArkLvalue {
-  constructor(public index: number, public name: string, public isVar: boolean) {
-    super()
+  constructor(
+    public index: number,
+    public name: string,
+    public isVar: boolean,
+    sourceLoc?: Interval,
+  ) {
+    super(sourceLoc)
   }
 }
 export class ArkLocal extends ArkNamedLoc {}
 export class ArkCapture extends ArkNamedLoc {}
 
 export class ArkSet extends ArkExp {
-  constructor(public lexp: ArkLvalue, public exp: ArkExp) {
-    super()
+  constructor(public lexp: ArkLvalue, public exp: ArkExp, sourceLoc?: Interval) {
+    super(sourceLoc)
   }
 }
 
 export class ArkObjectLiteral extends ArkExp {
-  constructor(public properties: Map<string, ArkExp>) {
-    super()
+  constructor(public properties: Map<string, ArkExp>, sourceLoc?: Interval) {
+    super(sourceLoc)
   }
 }
 
 export class ArkProperty extends ArkLvalue {
-  constructor(public obj: ArkExp, public prop: string) {
-    super()
+  constructor(public obj: ArkExp, public prop: string, sourceLoc?: Interval) {
+    super(sourceLoc)
   }
 }
 
 export class ArkListLiteral extends ArkExp {
-  constructor(public list: ArkExp[]) {
-    super()
+  constructor(public list: ArkExp[], sourceLoc?: Interval) {
+    super(sourceLoc)
   }
 }
 
 export class ArkMapLiteral extends ArkExp {
-  constructor(public map: Map<ArkExp, ArkExp>) {
-    super()
+  constructor(public map: Map<ArkExp, ArkExp>, sourceLoc?: Interval) {
+    super(sourceLoc)
   }
 }
 
@@ -149,37 +162,42 @@ export class ArkBoundVar {
 }
 
 export class ArkLet extends ArkExp {
-  constructor(public boundVars: ArkBoundVar[], public body: ArkExp) {
-    super()
+  constructor(public boundVars: ArkBoundVar[], public body: ArkExp, sourceLoc?: Interval) {
+    super(sourceLoc)
   }
 }
 
 export class ArkSequence extends ArkExp {
-  constructor(public exps: ArkExp[]) {
-    super()
+  constructor(public exps: ArkExp[], sourceLoc?: Interval) {
+    super(sourceLoc)
   }
 }
 
 export class ArkIf extends ArkExp {
-  constructor(public cond: ArkExp, public thenExp: ArkExp, public elseExp?: ArkExp) {
-    super()
+  constructor(
+    public cond: ArkExp,
+    public thenExp: ArkExp,
+    public elseExp?: ArkExp,
+    sourceLoc?: Interval,
+  ) {
+    super(sourceLoc)
   }
 }
 
 export class ArkAnd extends ArkExp {
-  constructor(public left: ArkExp, public right: ArkExp) {
-    super()
+  constructor(public left: ArkExp, public right: ArkExp, sourceLoc?: Interval) {
+    super(sourceLoc)
   }
 }
 
 export class ArkOr extends ArkExp {
-  constructor(public left: ArkExp, public right: ArkExp) {
-    super()
+  constructor(public left: ArkExp, public right: ArkExp, sourceLoc?: Interval) {
+    super(sourceLoc)
   }
 }
 
 export class ArkLoop extends ArkExp {
-  constructor(public body: ArkExp, public localsDepth: number) {
-    super()
+  constructor(public body: ArkExp, public localsDepth: number, sourceLoc?: Interval) {
+    super(sourceLoc)
   }
 }
