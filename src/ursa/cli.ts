@@ -184,7 +184,7 @@ function compile(
 function addReturnValues(exp: ArkExp, topLevelVars: Map<string, ArkExp> = new Map()) {
   if (exp instanceof ArkLet) {
     // FIXME: respect var-ness
-    exp.boundVars.forEach((bv) => topLevelVars.set(bv.name, bv.init))
+    exp.boundVars.forEach((bv) => topLevelVars.set(bv.location.name, bv.init))
     exp.body = addReturnValues(exp.body, topLevelVars)
     return exp
   } else if (exp instanceof ArkSequence) {

@@ -445,10 +445,10 @@ export function expToInsts(
     const insts: ArkInst[] = []
     const bvIds: symbol[] = []
     for (const bv of exp.boundVars) {
-      const bvInsts = expToInsts(bv.init, innerLoop, innerFn, bv.name)
+      const bvInsts = expToInsts(bv.init, innerLoop, innerFn, bv.location.name)
       insts.push(
         ...bvInsts.insts,
-        new ArkSetLocalInst(exp.sourceLoc, Symbol.for(bv.name), bv.index, bvInsts.id),
+        new ArkSetLocalInst(exp.sourceLoc, Symbol.for(bv.location.name), bv.index, bvInsts.id),
       )
       bvIds.push(bvInsts.id)
     }
@@ -460,7 +460,7 @@ export function expToInsts(
       blockInsts,
       new ArkLetBlockOpenInst(
         exp.sourceLoc,
-        exp.boundVars.map((bv) => new Location(bv.name, bv.type, bv.isVar)),
+        exp.boundVars.map((bv) => bv.location),
         bvIds,
       ),
       new ArkLetBlockCloseInst(exp.sourceLoc, blockInsts.id),
@@ -500,9 +500,9 @@ export function expToInsts(
       new ArkPropertyInst(exp.sourceLoc, objInsts.id, exp.prop),
     ])
   } else if (exp instanceof ArkLocal) {
-    return new ArkInsts([new ArkLocalInst(exp.sourceLoc, exp.index, exp.name)])
+    return new ArkInsts([new ArkLocalInst(exp.sourceLoc, exp.index, exp.location.name)])
   } else if (exp instanceof ArkCapture) {
-    return new ArkInsts([new ArkCaptureInst(exp.sourceLoc, exp.index, exp.name)])
+    return new ArkInsts([new ArkCaptureInst(exp.sourceLoc, exp.index, exp.location.name)])
   } else {
     throw new Error('invalid ArkExp')
   }

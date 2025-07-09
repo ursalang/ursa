@@ -199,9 +199,7 @@ semantics.addOperation<LetBinding>('toLet(a)', {
     return new LetBinding(
       parsedLets.map(
         (def, index) => new ArkBoundVar(
-          def.ident.sourceString,
-          def.exp.type,
-          letVars[index],
+          new Location(def.ident.sourceString, def.exp.type, letVars[index]),
           indexBase + index,
           def.exp,
         ),
@@ -223,7 +221,7 @@ semantics.addOperation<LetBinding>('toLet(a)', {
     const index = this.args.a.env.top().locals.length
     // FIXME: Type
     return new LetBinding([
-      new ArkBoundVar(ident.sourceString, ArkVal, false, index, useCall),
+      new ArkBoundVar(new Location(ident.sourceString, ArkVal, false), index, useCall),
     ])
   },
 })
@@ -233,9 +231,7 @@ function makeSequence(a: ParserArgs, seq: ParserNode, exps: ParserNode[]): ArkEx
   for (const [i, exp] of exps.entries()) {
     if (exp.children[0].ctorName === 'Lets' || exp.children[0].ctorName === 'Use') {
       const compiledLet = exp.toLet(a)
-      const innerEnv = a.env.push(
-        compiledLet.boundVars.map((bv) => new Location(bv.name, bv.type, bv.isVar)),
-      )
+      const innerEnv = a.env.push(compiledLet.boundVars.map((bv) => bv.location))
       let letBody: ArkExp
       if (i < exps.length - 1) {
         letBody = makeSequence({...a, env: innerEnv}, seq, exps.slice(i + 1))
@@ -369,7 +365,11 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     const innerIndex = innerEnv.top().locals.length
     const loopBody = new ArkLet(
       // FIXME: fix type of iterVar
-      [new ArkBoundVar(iterVar, ArkVal, false, innerIndex, new ArkCall(symRefWithSource(loopEnv, '$iter', iterator.source), [], this.source))],
+      [new ArkBoundVar(
+        new Location(iterVar, ArkVal, false),
+        innerIndex,
+        new ArkCall(symRefWithSource(loopEnv, '$iter', iterator.source), [], this.source),
+      )],
       new ArkSequence([
         new ArkIf(
           new ArkInvoke(compiledIterVar, 'equals', [new ArkLiteral(ArkNull())], this.source),
@@ -380,7 +380,11 @@ semantics.addOperation<ArkExp>('toExp(a)', {
       this.source,
     )
     const localsDepth = this.args.a.env.top().locals.length
-    return new ArkLet([new ArkBoundVar('$iter', ArkVal, false, localsDepth, compiledIterator)], new ArkLoop(loopBody, localsDepth + 1), this.source)
+    return new ArkLet([new ArkBoundVar(
+      new Location('$iter', ArkVal, false),
+      localsDepth,
+      compiledIterator,
+    )], new ArkLoop(loopBody, localsDepth + 1), this.source)
   },
 
   UnaryExp_bitwise_not(_not, exp) {
@@ -469,7 +473,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
   Assignment_ass(lvalue, _ass, exp) {
     const compiledLvalue = lvalue.toLval(this.args.a)
     const compiledValue = exp.toExp(this.args.a)
-    if (compiledLvalue instanceof ArkNamedLoc && !compiledLvalue.isVar) {
+    if (compiledLvalue instanceof ArkNamedLoc && !compiledLvalue.location.isVar) {
       throw new UrsaCompilerError(lvalue.source, "Cannot assign to non-'var'")
     }
     return new ArkSet(compiledLvalue, compiledValue, this.source)

@@ -45,9 +45,7 @@ function bindingList(env: Environment, params: [string, string, string, unknown]
   const indexBase = env.top().locals.length
   for (const [i, l] of boundLocations.entries()) {
     bindings.push(new ArkBoundVar(
-      l.name,
-      l.type,
-      l.isVar,
+      l,
       indexBase + i,
       doCompile(env.push(boundLocations), params[i][3]),
     ))
@@ -73,14 +71,14 @@ export function symRef(env: Environment, name: string): ArkLvalue {
   const locals = env.top().locals
   const j = locals.map((l) => l?.name).lastIndexOf(name)
   if (j !== -1) {
-    lexp = new ArkLocal(j, name, locals[j]!.isVar)
+    lexp = new ArkLocal(j, locals[j]!)
   } else {
     // Otherwise, check if it's a capture.
     // Check whether we already have this capture.
     const captures = env.top().captures
     const k = captures.map((c) => c.name).lastIndexOf(name)
     if (k !== -1) {
-      lexp = new ArkCapture(k, name, captures[k].isVar)
+      lexp = new ArkCapture(k, captures[k])
     } else {
       // If not, see if it's on the stack to be captured.
       for (let i = 0; i < env.stack.length; i += 1) {
@@ -88,9 +86,8 @@ export function symRef(env: Environment, name: string): ArkLvalue {
         const j = locals.map((l) => l?.name).lastIndexOf(name)
         if (j !== -1) {
           const k = env.top().captures.length
-          const isVar = locals[j]!.isVar
-          lexp = new ArkCapture(k, name, isVar)
-          env.top().captures.push(new Location(name, locals[j]!.type, isVar))
+          lexp = new ArkCapture(k, locals[j]!)
+          env.top().captures.push(locals[j]!)
           break
         }
       }
@@ -135,7 +132,7 @@ function doCompile(env: Environment, value: unknown): ArkExp {
           }
           const params = bindingList(env, value[1] as [string, string, string, unknown][])
           const compiled = doCompile(
-            env.push(params.map((p) => new Location(p.name, p.type, p.isVar))),
+            env.push(params.map((p) => p.location)),
             value[2],
           )
           return new ArkLet(params, compiled)
@@ -178,7 +175,7 @@ function doCompile(env: Environment, value: unknown): ArkExp {
           if (!(compiledRef instanceof ArkLvalue)) {
             throw new ArkCompilerError('Invalid lvalue')
           }
-          if (compiledRef instanceof ArkNamedLoc && !compiledRef.isVar) {
+          if (compiledRef instanceof ArkNamedLoc && !compiledRef.location.isVar) {
             throw new ArkCompilerError("Cannot assign to non-'var'")
           }
           const compiledVal = doCompile(env, value[2])

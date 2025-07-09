@@ -4,6 +4,7 @@
 
 import {Interval} from 'ohm-js'
 
+import {Location} from './compiler-utils.js'
 import {
   ArkCallable, ArkNull, ArkVal, ArkUndefinedVal,
   ArkNullVal, ArkBooleanVal, ArkNumberVal, ArkStringVal,
@@ -158,11 +159,11 @@ export abstract class ArkLvalue extends ArkExp {}
 export abstract class ArkNamedLoc extends ArkLvalue {
   constructor(
     public index: number,
-    public name: string,
-    public isVar: boolean,
+    public location: Location,
     sourceLoc?: Interval,
   ) {
     super(sourceLoc)
+    this.type = location.type
   }
 }
 export class ArkLocal extends ArkNamedLoc {}
@@ -200,9 +201,7 @@ export class ArkMapLiteral extends ArkExp {
 
 export class ArkBoundVar {
   constructor(
-    public name: string,
-    public type: ArkType,
-    public isVar: boolean,
+    public location: Location,
     public index: number,
     public init: ArkExp,
   ) {}

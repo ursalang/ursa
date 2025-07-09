@@ -92,7 +92,11 @@ export function valToJs(val: ArkVal | ArkExp, externalSyms = globals) {
       }
       return obj
     } else if (val instanceof ArkLet) {
-      return ['let', [...val.boundVars.map((bv) => [bv.isVar ? 'var' : 'const', bv.name, typeToStr(bv.type), doValToJs(bv.init)])], doValToJs(val.body)]
+      return ['let', [...val.boundVars.map(
+        (bv) => [
+          bv.location.isVar ? 'var' : 'const',
+          bv.location.name, typeToStr(bv.location.type), doValToJs(bv.init)],
+      )], doValToJs(val.body)]
     } else if (val instanceof ArkCall) {
       return [doValToJs(val.fn), ...val.args.map(doValToJs)]
     } else if (val instanceof ArkInvoke) {
