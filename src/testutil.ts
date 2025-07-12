@@ -19,6 +19,8 @@ import {ArkExp} from './ark/code.js'
 import {ArkState} from './ark/interpreter.js'
 import {compile as doArkCompile} from './ark/reader.js'
 import {valToJs} from './ark/serialize.js'
+import {type ArkType} from './ark/type.js'
+import {typeEquals} from './ark/type-check.js'
 import {compile as ursaCompile} from './ursa/compiler.js'
 import {format} from './ursa/fmt.js'
 import version from './version.js'
@@ -41,11 +43,12 @@ function arkCompile(source: string) {
 function doTestGroup(
   title: string,
   compile: (expr: string) => ArkExp,
-  tests: [string, unknown][],
+  tests: [string, unknown, ArkType][],
 ) {
   test(title, async (t) => {
-    for (const [source, expected] of tests) {
+    for (const [source, expected, expectedType] of tests) {
       const compiled = compile(source)
+      assert(typeEquals(compiled.type, expectedType))
       if (process.env.DEBUG) {
         debug(compiled, null)
       }
@@ -71,11 +74,11 @@ function doTestGroup(
   })
 }
 
-export function testArkGroup(title: string, tests: [string, unknown][]) {
+export function testArkGroup(title: string, tests: [string, unknown, ArkType][]) {
   return doTestGroup(title, arkCompile, tests)
 }
 
-export function testUrsaGroup(title: string, tests: [string, unknown][]) {
+export function testUrsaGroup(title: string, tests: [string, unknown, ArkType][]) {
   return doTestGroup(title, ursaCompile, tests)
 }
 

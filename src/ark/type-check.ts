@@ -47,7 +47,7 @@ function isSubtypeOf(t: ArkType, u: ArkType) {
   return false
 }
 
-function typeEquals(t1: ArkType, t2: ArkType) {
+export function typeEquals(t1: ArkType, t2: ArkType) {
   if (t1 === t2) {
     return true
   }
