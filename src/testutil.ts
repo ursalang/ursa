@@ -1,5 +1,5 @@
 // Ursa test utilities.
-// © Reuben Thomas 2023-2024
+// © Reuben Thomas 2023-2025
 // Released under the GPL version 3, or (at your option) any later version.
 
 import assert from 'assert'
