@@ -70,6 +70,7 @@ import {
   // This program produces non-deterministic output
   // ['Loops/Break', 'rosettacode/Loops-Break'],
   ['Loops/Continue', 'rosettacode/Loops-Continue'],
+  ['Loops/While', 'rosettacode/Loops-While'],
   ['Man or boy test', 'rosettacode/Man or boy test'],
 ].map(([title, file]) => ursaTest(title, file))
 
