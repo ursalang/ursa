@@ -16,7 +16,7 @@
     "@rollup/plugin-node-resolve": "^15.2.3",
     "@sc3d/stacktracey": "^2.1.9",
     "argparse": "^2.0.1",
-    "effection": "^3.0.3",
+    "effection": "https://pkg.pr.new/thefrontside/effection@1007",
     "env-paths": "^3.0.0",
     "execa": "^9.3.0",
     "fs-extra": "^11.2.0",
