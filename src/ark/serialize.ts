@@ -4,10 +4,13 @@
 
 import {
   ArkVal, ArkConcreteVal, ArkNull, ArkOperation, ArkList, ArkMap, ArkObject,
-  ArkUndefined, NativeObject, ArkUndefinedVal, ArkNullVal, ArkBooleanVal,
-  ArkNumberVal, ArkStringVal, ArkCallable,
+  ArkUndefined, NativeObject,
+  ArkNullTraitType, ArkBooleanTraitType, ArkNumberTraitType, ArkStringTraitType,
+  ArkListTraitType, ArkMapTraitType,
 } from './data.js'
-import {ArkType, ArkFnType, ArkUnionType} from './type.js'
+import {
+  ArkType, ArkFnType, ArkUnionType, ArkUnknownType, ArkAnyType, ArkStructType,
+} from './type.js'
 import {
   ArkExp, ArkSequence,
   ArkAnd, ArkOr, ArkIf, ArkLoop, ArkBreak, ArkContinue, ArkInvoke,
@@ -19,32 +22,30 @@ import {debug} from './util.js'
 
 function typeToStr(ty: ArkType) {
   switch (ty) {
-    case ArkUndefinedVal:
+    case ArkUnknownType:
       return 'Unknown'
-    case ArkVal:
+    case ArkAnyType:
       return 'Any'
-    case ArkNullVal:
+    case ArkNullTraitType:
       return 'Null'
-    case ArkBooleanVal:
+    case ArkBooleanTraitType:
       return 'Bool'
-    case ArkNumberVal:
+    case ArkNumberTraitType:
       return 'Num'
-    case ArkStringVal:
+    case ArkStringTraitType:
       return 'Str'
-    case ArkList: // TODO Generics
+    case ArkListTraitType: // TODO Generics
       return 'List'
-    case ArkMap: // TODO Generics
+    case ArkMapTraitType: // TODO Generics
       return 'Map'
-    case ArkCallable: // TODO or subclass
-      return 'Fn'
-    case ArkObject: // TODO Or subclass
-      return 'Object'
     default:
   }
   if (ty instanceof ArkFnType) {
     return 'Fn'
   } else if (ty instanceof ArkUnionType) {
     return 'Union'
+  } else if (ty instanceof ArkStructType) {
+    return 'Struct'
   }
   debug(ty)
   throw new Error('unknown type')
@@ -80,13 +81,13 @@ export function valToJs(val: ArkVal | ArkExp) {
       ]
     } else if (val instanceof ArkObjectLiteral) {
       const obj = {}
-      for (const [k, v] of val.properties) {
+      for (const [k, v] of val.members) {
         (obj as {[key: string]: unknown})[k] = doValToJs(v)
       }
       return obj
     } else if (val instanceof ArkObject) {
       const obj = {}
-      for (const [k, v] of (val.constructor as typeof ArkObject).properties) {
+      for (const [k, v] of (val.constructor as typeof ArkObject).members) {
         (obj as {[key: string]: unknown})[k] = doValToJs(v)
       }
       return obj

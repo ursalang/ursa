@@ -33,6 +33,7 @@ import {
   arkToJs, evalArkJs, preludeJs, runtimeContext,
 } from '../ark/compiler/index.js'
 import {expToInst} from '../ark/flatten.js'
+import {ArkAnyType} from '../ark/type.js'
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
@@ -200,8 +201,8 @@ function extractReturnValues(ark: ArkState, env: Environment, result: ArkVal | u
   assert(result.list.length === 2)
   const newVars = result.list[1] as ArkObject
   assert(newVars instanceof ArkObject)
-  for (const [k, v] of newVars.properties.entries()) {
-    env = env.push([new Location(k, ArkVal, false)])
+  for (const [k, v] of newVars.members.entries()) {
+    env = env.push([new Location(k, ArkAnyType, false)])
     ark.push([new ArkValRef(v)])
   }
   result = result.list[0]
@@ -366,7 +367,7 @@ async function compileCommand(args: Args) {
     }
     output += `import {${names.join(', ')}} from '${path.join(__dirname, '../../lib/ark/data.js')}'\n`
     output += `import {run, spawn} from '${path.join(__dirname, '../../node_modules/effection/esm/mod.js')}'\nlet prelude = ${prelude};
-(await (run(prelude))).properties.forEach((val, sym) => jsGlobals.set(sym, val))\n`
+(await (run(prelude))).members.forEach((val, sym) => jsGlobals.set(sym, val))\n`
     output += `jsGlobals.set('argv', new ArkList(
   [ArkString(process.argv[1]), ...process.argv.slice(2).map((s) => ArkString(s))],
 ));\n`

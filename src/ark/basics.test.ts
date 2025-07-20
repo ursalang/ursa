@@ -9,13 +9,15 @@ import {
   debug,
 } from './util.js'
 import {
-  ArkBooleanVal, ArkNumberVal, ArkStringVal, ArkList, ArkMap, ArkVal,
+  ArkBooleanTraitType, ArkNumberTraitType, ArkStringTraitType,
+  ArkListTraitType, ArkMapTraitType,
 } from './data.js'
 import {ArkState} from './interpreter.js'
 import {compile} from './reader.js'
 
 import {testArkGroup as testGroup} from '../testutil.js'
 import {expToInst} from './flatten.js'
+import {ArkAnyType} from './type.js'
 
 test('Undefined symbol', (t) => {
   const error = t.throws(() => new ArkState(expToInst(compile(['f']))))
@@ -24,36 +26,36 @@ test('Undefined symbol', (t) => {
 })
 
 testGroup('Concrete values', [
-  ['4', 4, ArkNumberVal],
-  ['["str","hello é"]', 'hello é', ArkStringVal],
+  ['4', 4, ArkNumberTraitType],
+  ['["str","hello é"]', 'hello é', ArkStringTraitType],
 ])
 
 testGroup('Intrinsics', [
-  ['["invoke",3,"add",4]', 7, ArkNumberVal],
-  ['["invoke",["invoke",3,"add",4],"mul",5]', 35, ArkNumberVal],
-  ['"pi"', Math.PI, ArkNumberVal],
-  ['["seq","pi",["invoke",3,"add",5]]', 8, ArkNumberVal],
-  ['["invoke",["invoke",3,"add",4],"equals",7]', true, ArkBooleanVal],
-  ['["invoke",true,"not"]', false, ArkBooleanVal],
-  ['["invoke",2,"bitwiseNot"]', -3, ArkNumberVal],
-  ['["invoke",34,"bitwiseAnd",48]', 32, ArkNumberVal],
-  ['["invoke",34,"bitwiseOr",48]', 50, ArkNumberVal],
-  ['["invoke",34,"bitwiseXor",48]', 18, ArkNumberVal],
-  ['["invoke",34,"shiftLeft",4]', 544, ArkNumberVal],
-  ['["invoke",-34,"shiftRight",4]', -3, ArkNumberVal],
-  ['["invoke",34,"shiftRightArith",4]', 2, ArkNumberVal],
+  ['["invoke",3,"add",4]', 7, ArkNumberTraitType],
+  ['["invoke",["invoke",3,"add",4],"mul",5]', 35, ArkNumberTraitType],
+  ['"pi"', Math.PI, ArkNumberTraitType],
+  ['["seq","pi",["invoke",3,"add",5]]', 8, ArkNumberTraitType],
+  ['["invoke",["invoke",3,"add",4],"equals",7]', true, ArkBooleanTraitType],
+  ['["invoke",true,"not"]', false, ArkBooleanTraitType],
+  ['["invoke",2,"bitwiseNot"]', -3, ArkNumberTraitType],
+  ['["invoke",34,"bitwiseAnd",48]', 32, ArkNumberTraitType],
+  ['["invoke",34,"bitwiseOr",48]', 50, ArkNumberTraitType],
+  ['["invoke",34,"bitwiseXor",48]', 18, ArkNumberTraitType],
+  ['["invoke",34,"shiftLeft",4]', 544, ArkNumberTraitType],
+  ['["invoke",-34,"shiftRight",4]', -3, ArkNumberTraitType],
+  ['["invoke",34,"shiftRightArith",4]', 2, ArkNumberTraitType],
 ])
 
 testGroup('Sequences', [
-  ['["seq","pi",["invoke",3,"add",4]]', 7, ArkNumberVal],
+  ['["seq","pi",["invoke",3,"add",4]]', 7, ArkNumberTraitType],
 ])
 
 testGroup('Conditionals', [
-  ['["if",false,3,4]', 4, ArkNumberVal],
-  ['["if",true,3,4]', 3, ArkNumberVal],
-  ['["if",["invoke",["invoke",3,"add",4],"equals",7],1,0]', 1, ArkNumberVal],
-  ['["or",false,true]', true, ArkBooleanVal],
-  ['["and",true,true]', true, ArkBooleanVal],
+  ['["if",false,3,4]', 4, ArkNumberTraitType],
+  ['["if",true,3,4]', 3, ArkNumberTraitType],
+  ['["if",["invoke",["invoke",3,"add",4],"equals",7],1,0]', 1, ArkNumberTraitType],
+  ['["or",false,true]', true, ArkBooleanTraitType],
+  ['["and",true,true]', true, ArkBooleanTraitType],
 ])
 
 test('Bare break', (t) => {
@@ -63,24 +65,24 @@ test('Bare break', (t) => {
 })
 
 testGroup('loop and break', [
-  ['["loop",["break",3]]', 3, ArkNumberVal],
+  ['["loop",["break",3]]', 3, ArkNumberTraitType],
 ])
 
 testGroup('let', [
-  ['["let",[["const","a","Num",3]],"a"]', 3, ArkNumberVal],
+  ['["let",[["const","a","Num",3]],"a"]', 3, ArkNumberTraitType],
 ])
 
 testGroup('Objects', [
-  ['{"a":1,"=":2,"!=":3}', {a: 1, '=': 2, '!=': 3}, ArkVal],
+  ['{"a":1,"=":2,"!=":3}', {a: 1, '=': 2, '!=': 3}, ArkAnyType],
 ])
 
 testGroup('Lists', [
-  ['["list",1,2,3]', [1, 2, 3], ArkList],
-  ['["invoke",["list",1,2,3],"len"]', 3, ArkNumberVal],
-  ['["invoke",["list",4,5,6],"get",1]', 5, ArkNumberVal],
-  ['["invoke",["list",4,5,6],"set",1,2]', [4, 2, 6], ArkList],
+  ['["list",1,2,3]', [1, 2, 3], ArkListTraitType],
+  ['["invoke",["list",1,2,3],"len"]', 3, ArkNumberTraitType],
+  ['["invoke",["list",4,5,6],"get",1]', 5, ArkNumberTraitType],
+  ['["invoke",["list",4,5,6],"set",1,2]', [4, 2, 6], ArkListTraitType],
 ])
 
 testGroup('Maps', [
-  ['["seq",["map",[["str","a"],1],[["str","b"],["invoke",2,"add",0]],[3,4]]]', new Map<unknown, unknown>([['a', 1], ['b', 2], [3, 4]]), ArkMap],
+  ['["seq",["map",[["str","a"],1],[["str","b"],["invoke",2,"add",0]],[3,4]]]', new Map<unknown, unknown>([['a', 1], ['b', 2], [3, 4]]), ArkMapTraitType],
 ])

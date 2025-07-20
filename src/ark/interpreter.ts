@@ -18,7 +18,7 @@ import {
 } from './flatten.js'
 import {ArkError} from './error.js'
 import {
-  ArkAbstractObjectBase, ArkBoolean, ArkList, ArkMap, ArkNull, ArkNullVal,
+  ArkAbstractObjectBase, ArkBoolean, ArkList, ArkMap, ArkNull,
   ArkObject, ArkOperation, ArkVal, NativeAsyncFn, NativeFn,
   NativeOperation, ArkRef, ArkValRef, ArkClosure, ArkCallable,
   ArkContinuation, ArkTypedId, ArkUndefined,
@@ -92,7 +92,7 @@ export class ArkRuntimeError extends ArkError {
 
 class ArkFlatClosure extends ArkClosure {
   constructor(params: ArkTypedId[], returnType: ArkType, captures: ArkRef[], public body: ArkInst) {
-    super(params, returnType, captures)
+    super(false, params, returnType, captures)
   }
 
   async call(locals: ArkValRef[]) {
@@ -347,13 +347,6 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
       } else {
         throw new Error('invalid ArkSetNamedLocInst')
       }
-      const oldVal = ref.get()
-      if (
-        oldVal !== ArkUndefined()
-        && oldVal.constructor !== ArkNullVal
-        && oldVal.constructor !== result.constructor) {
-        throw new ArkRuntimeError(ark, 'Type error in assignment', inst.sourceLoc)
-      }
       mem.set(inst.id, result)
       ref.set(result)
       inst = inst.next
@@ -367,11 +360,11 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
       mem.set(inst.id, result)
       inst = inst.next
     } else if (inst instanceof ArkObjectLiteralInst) {
-      const properties = new Map<string, ArkVal>()
-      for (const [k, v] of inst.properties) {
-        properties.set(k, mem.get(v)!)
+      const members = new Map<string, ArkVal>()
+      for (const [k, v] of inst.members) {
+        members.set(k, mem.get(v)!)
       }
-      mem.set(inst.id, new ArkObject(properties))
+      mem.set(inst.id, new ArkObject(members))
       inst = inst.next
     } else if (inst instanceof ArkListLiteralInst) {
       mem.set(inst.id, new ArkList(inst.valIds.map((id) => mem.get(id)!)))

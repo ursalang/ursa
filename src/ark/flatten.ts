@@ -237,7 +237,7 @@ export class ArkSetPropertyInst extends ArkInst {
 }
 
 export class ArkObjectLiteralInst extends ArkInst {
-  constructor(sourceLoc: Interval | undefined, public properties: Map<string, symbol>) {
+  constructor(sourceLoc: Interval | undefined, public members: Map<string, symbol>) {
     super(sourceLoc)
   }
 }
@@ -428,7 +428,7 @@ export function expToInsts(exp: ArkExp, externalSyms = globals): ArkInsts {
       ])
     } else if (exp instanceof ArkObjectLiteral) {
       const insts: ArkInst[] = []
-      const valMap = new Map([...exp.properties.entries()].map(
+      const valMap = new Map([...exp.members.entries()].map(
         ([prop, exp]) => {
           const valInsts = doExpToInsts(exp, innerLoop, innerFn)
           insts.push(...valInsts.insts)

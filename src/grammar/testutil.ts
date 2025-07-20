@@ -31,7 +31,7 @@ function parse(
     PostfixExp_invoke: {0: 0, 2: 2, 5: 5},
     PostfixExp_call: {0: 0, 3: 3},
     If: {1: 1, 2: 2},
-    FnType: {2: 2, 5: 5},
+    FnType: {1: 1, 3: 3, 6: 6},
     Loop: {1: 1},
     Statement_break: {1: 1},
     Statement_return: {1: 1},

@@ -46,7 +46,7 @@ Ursa {
   If = if Exp Block
 
   Fn (a function) = FnType Block
-  FnType (a function type) = (fn | gen) "(" ListOf<Param, ","> ","? ")" TypeAnnotation
+  FnType (a function type) = (fn | gen) TypeParams? "(" ListOf<Param, ","> ","? ")" TypeAnnotation
   Param = ident TypeAnnotation
 
   Loop = loop Block
@@ -130,40 +130,42 @@ Ursa {
   Block (a block) = "{" Sequence "}"
 
   // Types
+  // TODO: Type declarations (aliases)
   // TODO: Add namespace support: NamedType = Path TypeArgs?
+  // TODO: 'where' clauses giving trait bounds
   NamedType = ident TypeArgs?
   Type = NamedType | FnType
   TypeParams = "<" ListOf<TypeParam, ","> ","? ">"
   TypeParam = ident TypeAnnotation
-  TypeArgs
-    = "<" ListOf<Type, ","> ","? ">"
-  NamedTypeAnnotation = ":" NamedType
+  TypeArgs = "<" ListOf<Type, ","> ","? ">"
   TypeAnnotation = ":" Type
-  FnTypeAnnotation = ":" FnType
 
-  // Classes
-  Class = class ident TypeParams NamedTypeAnnotation "{" ListOf<ClassMember, #sc> #sc "}"
-  ClassMember = ClassField | ClassMethod
-  ClassField = pub? static? var? ident TypeAnnotation? Initializer?
-  ClassMethod = pub? static? ident TypeParams? "=" Fn
+  // Structs
+  // TODO: super-struct?
+  Struct = struct ident TypeParams? "{" ListOf<Member, #sc> #sc "}"
+  Member = var? ident TypeAnnotation? Initializer?
 
   // Traits
-  Trait = trait ident TypeParams NamedTypeAnnotation "{" ListOf<TraitMember, #sc> #sc "}"
-  TraitMember = TraitField | TraitMethod
-  TraitField = var? ident TypeAnnotation?
-  TraitMethod = ident TypeParams? FnTypeAnnotation
+  // TODO: super-traits
+  // TODO: (associated) type declarations
+  Trait = trait ident TypeParams? "{" ListOf<MethodDecl, #sc> #sc "}"
+  TraitBound = ListOf<ident, "+">
+  MethodDecl = pub? ident ":" FnType Block?
+  Method = pub? ident ":" FnType Block
+  ForClause = for ident TypeParams?
+  Implementation = impl TypeParams? ident ForClause? "{" ListOf<Method, #sc> #sc "}"
 
   // Convenience rules for parsing keyword tokens.
   and = "and" ~identifierPart
   await = "await" ~identifierPart
   break = "break" ~identifierPart
-  class = "class" ~identifierPart
   continue = "continue" ~identifierPart
   else = "else" ~identifierPart
   fn = "fn" ~identifierPart
   for = "for" ~identifierPart
   gen = "gen" ~identifierPart
   if = "if" ~identifierPart
+  impl = "impl" ~identifierPart
   in = "in" ~identifierPart
   launch = "launch" ~identifierPart
   let = "let" ~identifierPart
@@ -172,15 +174,15 @@ Ursa {
   or = "or" ~identifierPart
   pub = "pub" ~identifierPart
   return = "return" ~identifierPart
-  static = "static" ~identifierPart
+  struct = "struct" ~identifierPart
   trait = "trait" ~identifierPart
   use = "use" ~identifierPart
   var = "var" ~identifierPart
   yield = "yield" ~identifierPart
 
-  keyword = and | await | break | class | continue | else | fn | for | gen | if
-    | in | launch | let | loop | not | or | pub | return | static | trait
-    | use | var | yield
+  keyword = and | await | break | continue | else | fn | for | gen | if | in
+    | launch | let | loop | not | or | pub | return | struct | trait | use
+    | var | yield
 
   reservedWord = bool | null | keyword
 

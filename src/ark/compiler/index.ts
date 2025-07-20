@@ -19,8 +19,7 @@ import {Interval} from 'ohm-js'
 import prettier from '@prettier/sync'
 
 import {
-  expToInsts, ArkInsts,
-  ArkInst, ArkAwaitInst,
+  expToInsts, ArkInsts, ArkInst, ArkAwaitInst,
   ArkBlockCloseInst, ArkBlockOpenInst, ArkIfBlockOpenInst, ArkLoopBlockOpenInst,
   ArkBreakInst, ArkCallInst, ArkInvokeInst, ArkContinueInst,
   ArkElseBlockInst, ArkElseBlockCloseInst, ArkFnBlockOpenInst, ArkFnBlockCloseInst,
@@ -28,16 +27,19 @@ import {
   ArkLaunchBlockOpenInst, ArkLaunchBlockCloseInst, ArkLetBlockOpenInst,
   ArkLocalInst, ArkCaptureInst, ArkListLiteralInst, ArkLiteralInst, ArkMapLiteralInst,
   ArkObjectLiteralInst, ArkPropertyInst, ArkReturnInst, ArkYieldInst,
-  ArkSetNamedLocInst, ArkSetPropertyInst,
-  ArkGlobalInst,
+  ArkSetNamedLocInst, ArkSetPropertyInst, ArkGlobalInst,
 } from '../flatten.js'
 import {
   jsGlobals, ArkBoolean, ArkBooleanVal, ArkList, ArkMap, ArkNull,
   ArkNumber, ArkNullVal, ArkNumberVal, ArkObject, ArkString,
-  ArkStringVal, ArkUndefinedVal, ArkVal, NativeFn, ArkOperation,
-  ArkTypedId, ArkCallable, ArkUndefined,
+  ArkStringVal, ArkVal, NativeFn, ArkOperation, ArkTypedId,
+  ArkNullTraitType, ArkBooleanTraitType, ArkNumberTraitType, ArkStringTraitType,
+  ArkListTraitType, ArkMapTraitType, ArkObjectTraitType,
+  ArkUndefined, ArkCallable,
 } from '../data.js'
-import {ArkFnType, ArkType, ArkUnionType} from '../type.js'
+import {
+  ArkAnyType, ArkFnType, ArkUnknownType, ArkType, ArkUnionType,
+} from '../type.js'
 import {ArkExp} from '../code.js'
 import {debug} from '../util.js'
 import {
@@ -51,26 +53,24 @@ class JsRuntimeError extends Error {}
 
 function typeToJs(ty: ArkType) {
   switch (ty) {
-    case ArkUndefinedVal:
-      return 'ArkUndefinedVal'
-    case ArkVal:
-      return 'ArkVal'
-    case ArkNullVal:
-      return 'ArkNullVal'
-    case ArkBooleanVal:
-      return 'ArkBooleanVal'
-    case ArkNumberVal:
-      return 'ArkNumberVal'
-    case ArkStringVal:
-      return 'ArkStringVal'
-    case ArkList:
-      return 'ArkList'
-    case ArkMap:
-      return 'ArkMap'
-    case ArkCallable:
-      return 'ArkCallable'
-    case ArkObject:
-      return 'ArkObject'
+    case ArkUnknownType:
+      return 'ArkNoneType'
+    case ArkAnyType:
+      return 'ArkAnyType'
+    case ArkNullTraitType:
+      return 'ArkNullTraitType'
+    case ArkBooleanTraitType:
+      return 'ArkBooleanTraitType'
+    case ArkNumberTraitType:
+      return 'ArkNumberTraitType'
+    case ArkStringTraitType:
+      return 'ArkStringTraitType'
+    case ArkListTraitType:
+      return 'ArkListTraitType'
+    case ArkMapTraitType:
+      return 'ArkMapTraitType'
+    case ArkObjectTraitType:
+      return 'ArkObjectTraitType'
     default:
   }
   if (ty instanceof ArkFnType) {
@@ -98,25 +98,28 @@ class UrsaStackTracey extends StackTracey {
 // Compile prelude and add it to globals
 export const preludeJs = fs.readFileSync(path.join(__dirname, 'prelude.js'), {encoding: 'utf-8'})
 const prelude = await evalArkJs(preludeJs) as ArkObject
-prelude.properties.forEach((val, sym) => jsGlobals.set(sym, val))
+prelude.members.forEach((val, sym) => jsGlobals.set(sym, val))
 
 // Record internal values that are needed by JavaScript at runtime, and
 // prevent the TypeScript compiler throwing away their imports.
 export const runtimeContext: Record<string, unknown> = {
+  ArkNoneType: ArkUnknownType,
   ArkUndefined,
-  ArkUndefinedVal,
   ArkNull,
-  ArkNullVal,
+  ArkNullTraitType,
   ArkBoolean,
-  ArkBooleanVal,
-  ArkCallable,
+  ArkBooleanTraitType,
   ArkNumber,
-  ArkNumberVal,
+  ArkNumberTraitType,
   ArkString,
-  ArkStringVal,
+  ArkStringTraitType,
   ArkObject,
+  ArkObjectTraitType,
+  ArkCallable,
   ArkList,
+  ArkListTraitType,
   ArkMap,
+  ArkMapTraitType,
   ArkOperation,
   ArkTypedId,
   ArkUnionType,
@@ -249,17 +252,12 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
       } else if (inst instanceof ArkInvokeInst) {
         return sourceNode(letAssign(inst.id, `yield* ${inst.objId.description}.getMethod('${inst.prop}').body(${inst.objId.description}, ${inst.argIds.map((id) => id.description).join(', ')})`))
       } else if (inst instanceof ArkSetNamedLocInst) {
-        return sourceNode([
-          `if (${jsMangle(inst.lexpId.description!)} !== ArkUndefined() && ${jsMangle(inst.lexpId.description!)}.constructor !== ArkNullVal && ${inst.valId.description}.constructor !== ${jsMangle(inst.lexpId.description!)}.constructor) {\n`,
-          'throw new JsRuntimeError(\'Type error in assignment\')\n',
-          '}\n',
-          letAssign(inst.id, `${jsMangle(inst.lexpId.description!)} = ${inst.valId.description}`),
-        ])
+        return sourceNode(letAssign(inst.id, `${jsMangle(inst.lexpId.description!)} = ${inst.valId.description}`))
       } else if (inst instanceof ArkSetPropertyInst) {
         return sourceNode(letAssign(inst.id, `${inst.lexpId.description}.set('${inst.prop}', ${inst.valId.description})`))
       } else if (inst instanceof ArkObjectLiteralInst) {
         const objInits: string[] = []
-        for (const [k, v] of inst.properties.entries()) {
+        for (const [k, v] of inst.members.entries()) {
           objInits.push(`[${util.inspect(k)}, ${v.description}]`)
         }
         return sourceNode(letAssign(inst.id, `new ArkObject(new Map([${objInits.join(', ')}]))`))

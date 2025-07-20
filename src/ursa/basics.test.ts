@@ -15,42 +15,42 @@ import {compile, runWithTraceback} from './compiler.js'
 import {testUrsaGroup as testGroup} from '../testutil.js'
 import {expToInst} from '../ark/flatten.js'
 import {
-  ArkNullVal, ArkBooleanVal, ArkNumberVal, ArkStringVal,
-  ArkMap, ArkList,
+  ArkNullTraitType, ArkBooleanTraitType, ArkNumberTraitType, ArkStringTraitType,
+  ArkMapTraitType, ArkListTraitType,
 } from '../ark/data.js'
 
 testGroup('Comments', [
-  ['// Comment', null, ArkNullVal],
-  ['// Comment\n3', 3, ArkNumberVal],
+  ['// Comment', null, ArkNullTraitType],
+  ['// Comment\n3', 3, ArkNumberTraitType],
 ])
 
 testGroup('Concrete values', [
-  ['4', 4, ArkNumberVal],
-  [String.raw`"hello \u00e9"`, 'hello é', ArkStringVal],
+  ['4', 4, ArkNumberTraitType],
+  [String.raw`"hello \u00e9"`, 'hello é', ArkStringTraitType],
 ])
 
 testGroup('Intrinsics', [
-  ['3 + 4', 7, ArkNumberVal],
-  ['(3 + 4) * 5', 35, ArkNumberVal],
-  ['3 + 4 == 7', true, ArkBooleanVal],
-  ['not true', false, ArkBooleanVal],
-  ['~2', -3, ArkNumberVal],
-  ['34 & 48', 32, ArkNumberVal],
-  ['34 | 48', 50, ArkNumberVal],
-  ['34 ^ 48', 18, ArkNumberVal],
-  ['34 << 4', 544, ArkNumberVal],
-  ['-34 >> 4', -3, ArkNumberVal],
-  ['34 >>> 4', 2, ArkNumberVal],
+  ['3 + 4', 7, ArkNumberTraitType],
+  ['(3 + 4) * 5', 35, ArkNumberTraitType],
+  ['3 + 4 == 7', true, ArkBooleanTraitType],
+  ['not true', false, ArkBooleanTraitType],
+  ['~2', -3, ArkNumberTraitType],
+  ['34 & 48', 32, ArkNumberTraitType],
+  ['34 | 48', 50, ArkNumberTraitType],
+  ['34 ^ 48', 18, ArkNumberTraitType],
+  ['34 << 4', 544, ArkNumberTraitType],
+  ['-34 >> 4', -3, ArkNumberTraitType],
+  ['34 >>> 4', 2, ArkNumberTraitType],
 ])
 
 testGroup('Globals', [
-  ['pi', Math.PI, ArkNumberVal],
+  ['pi', Math.PI, ArkNumberTraitType],
 ])
 
 testGroup('Sequences', [
-  ['{ pi }', Math.PI, ArkNumberVal],
-  ['{ pi; 3+4 }', 7, ArkNumberVal],
-  ['{ pi; 3+4; }', 7, ArkNumberVal],
+  ['{ pi }', Math.PI, ArkNumberTraitType],
+  ['{ pi; 3+4 }', 7, ArkNumberTraitType],
+  ['{ pi; 3+4; }', 7, ArkNumberTraitType],
 ])
 
 test('Assignment errors', (t) => {
@@ -73,19 +73,19 @@ Bad lvalue`)
 })
 
 testGroup('Assignment', [
-  ['var a = 0; a := 3', 3, ArkNumberVal],
+  ['var a = 0; a := 3', 3, ArkNumberTraitType],
 ])
 
 testGroup('Conditionals', [
-  ['if true {3} else {4}', 3, ArkNumberVal],
-  ['if false {3} else {4}', 4, ArkNumberVal],
-  ['if 3 + 4 == 7 {1} else {0}', 1, ArkNumberVal],
+  ['if true {3} else {4}', 3, ArkNumberTraitType],
+  ['if false {3} else {4}', 4, ArkNumberTraitType],
+  ['if 3 + 4 == 7 {1} else {0}', 1, ArkNumberTraitType],
   // FIXME: make these failing tests
   // ['1 or 2', 1],
   // ['1 and 2', 2],
-  ['false or true', true, ArkBooleanVal],
-  ['true and true', true, ArkBooleanVal],
-  ['if 3 + 4 == 8 {1} else if 3 + 4 == 7 {2} else {3}', 2, ArkNumberVal],
+  ['false or true', true, ArkBooleanTraitType],
+  ['true and true', true, ArkBooleanTraitType],
+  ['if 3 + 4 == 8 {1} else if 3 + 4 == 7 {2} else {3}', 2, ArkNumberTraitType],
 ])
 
 test('Loop errors', (t) => {
@@ -108,7 +108,7 @@ continue used outside a loop`)
 })
 
 testGroup('loop', [
-  ['loop { break 3 }', 3, ArkNumberVal],
+  ['loop { break 3 }', 3, ArkNumberTraitType],
 ])
 
 test('return outside function', (t) => {
@@ -123,12 +123,12 @@ return used outside a function`)
 })
 
 testGroup('return', [
-  ['fn (): Num { return 3 }()', 3, ArkNumberVal],
+  ['fn (): Num { return 3 }()', 3, ArkNumberTraitType],
 ])
 
 testGroup('let', [
-  ['let a = 3; a', 3, ArkNumberVal],
-  ['var b = 5; b := 7; b', 7, ArkNumberVal],
+  ['let a = 3; a', 3, ArkNumberTraitType],
+  ['var b = 5; b := 7; b', 7, ArkNumberTraitType],
 ])
 
 test("Assignment to non-'var'", (t) => {
@@ -143,7 +143,7 @@ Cannot assign to non-'var'`)
 })
 
 testGroup('fn', [
-  ['let f = fn(x: Num): Num {x + 1}; f(1)', 2, ArkNumberVal],
+  ['let f = fn(x: Num): Num {x + 1}; f(1)', 2, ArkNumberTraitType],
 ])
 
 test('Duplicate parameters', (t) => {
@@ -158,17 +158,17 @@ Duplicate parameters in list`)
 })
 
 testGroup('Lists', [
-  ['[1, 2, 3]', [1, 2, 3], ArkList],
-  ['[1, 2, 3].len()', 3, ArkNumberVal],
-  ['[1, 2].push(3).len()', 3, ArkNumberVal],
-  ['[1, 2, 3].get(1)', 2, ArkNumberVal],
-  ['let l = [1, 2, 3]; l.set(1, 4); l', [1, 4, 3], ArkList],
-  ['let x = []; x == x', true, ArkBooleanVal],
+  ['[1, 2, 3]', [1, 2, 3], ArkListTraitType],
+  ['[1, 2, 3].len()', 3, ArkNumberTraitType],
+  ['[1, 2].push(3).len()', 3, ArkNumberTraitType],
+  ['[1, 2, 3].get(1)', 2, ArkNumberTraitType],
+  ['let l = [1, 2, 3]; l.set(1, 4); l', [1, 4, 3], ArkListTraitType],
+  ['let x = []; x == x', true, ArkBooleanTraitType],
 ])
 
 testGroup('Objects', [
   // ['Object {;}', {}],
-  ['let x = {;}; x == x', true, ArkBooleanVal],
+  ['let x = {;}; x == x', true, ArkBooleanTraitType],
   // ['Object {a = 1; b = 2; c=3}', {a: 1, b: 2, c: 3}],
   // FIXME: use this test again once we have classes
   // ['let o = Object {a = 1; b = 2}; o.b := 3; o', {a: 1, b: 3}],
@@ -188,8 +188,8 @@ Invalid property \`c'`)
 })
 
 testGroup('Maps', [
-  ['{}', new Map<unknown, unknown>(), ArkMap],
-  ['let x = {}; x == x', true, ArkBooleanVal],
-  ['{"a": 1, "b": 2 + 0, 3: 4}', new Map<unknown, unknown>([['a', 1], ['b', 2], [3, 4]]), ArkMap],
-  ['let t = {"a": 1, "b": 2 + 0, 3: 4}; t.set("b", 1); t', new Map<unknown, unknown>([['a', 1], ['b', 1], [3, 4]]), ArkMap],
+  ['{}', new Map<unknown, unknown>(), ArkMapTraitType],
+  ['let x = {}; x == x', true, ArkBooleanTraitType],
+  ['{"a": 1, "b": 2 + 0, 3: 4}', new Map<unknown, unknown>([['a', 1], ['b', 2], [3, 4]]), ArkMapTraitType],
+  ['let t = {"a": 1, "b": 2 + 0, 3: 4}; t.set("b", 1); t', new Map<unknown, unknown>([['a', 1], ['b', 1], [3, 4]]), ArkMapTraitType],
 ])

@@ -10,14 +10,15 @@ import grammar, {
 } from '../grammar/ursa.ohm-bundle.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  debug, valToString,
+  debug,
 } from '../ark/util.js'
 import {
   ArkVal, ArkNull, ArkBoolean, ArkNumber, ArkString,
-  ArkClosure, ArkGeneratorClosure, ArkUndefinedVal,
   globalTypes,
 } from '../ark/data.js'
-import {ArkType, ArkFnType} from '../ark/type.js'
+import {
+  ArkType, ArkFnType, ArkUnknownType, ArkAnyType,
+} from '../ark/type.js'
 import {
   ArkBoundVar, ArkExp, ArkLvalue, ArkLiteral, ArkSequence, ArkIf, ArkLoop, ArkAnd, ArkOr,
   ArkObjectLiteral, ArkListLiteral, ArkMapLiteral,
@@ -185,7 +186,7 @@ semantics.addOperation<LetBinding>('toLet(a)', {
       letIds.push(ident)
     }
     const locations = letIds.map(
-      (id, n) => new Location(id, ArkUndefinedVal, letVars[n]),
+      (id, n) => new Location(id, ArkUnknownType, letVars[n]),
     )
     const innerEnv = this.args.a.env.push(locations)
     const parsedLets = []
@@ -207,7 +208,7 @@ semantics.addOperation<LetBinding>('toLet(a)', {
     const ident = path[path.length - 1]
     // For path x.y.z, compile `let z = x.use("y", "z")`
     const innerEnv = this.args.a.env.push([
-      new Location(ident.sourceString, ArkVal, false),
+      new Location(ident.sourceString, ArkAnyType, false),
     ])
     const libValue = path[0].toExp({...this.args.a, env: innerEnv})
     const useProperty = new ArkProperty(libValue, 'use', this.source)
@@ -216,7 +217,7 @@ semantics.addOperation<LetBinding>('toLet(a)', {
     const index = this.args.a.env.top().locals.length
     // FIXME: Type
     return new LetBinding([
-      new ArkBoundVar(new Location(ident.sourceString, ArkVal, false), index, useCall),
+      new ArkBoundVar(new Location(ident.sourceString, ArkAnyType, false), index, useCall),
     ])
   },
 })
@@ -325,10 +326,10 @@ semantics.addOperation<ArkExp>('toExp(a)', {
       env: innerEnv,
       inLoop: false,
       inFn: true,
-      inGenerator: fnType.Constructor === ArkGeneratorClosure,
+      inGenerator: fnType.isGenerator,
     })
     // TODO: ArkFn should be an ArkObject which contains one method.
-    const CodeConstructor = fnType.Constructor === ArkGeneratorClosure ? ArkGenerator : ArkFn
+    const CodeConstructor = fnType.isGenerator ? ArkGenerator : ArkFn
     return new CodeConstructor(
       fnType.params!,
       fnType.returnType,
@@ -351,17 +352,17 @@ semantics.addOperation<ArkExp>('toExp(a)', {
   For(_for, ident, _in, iterator, body) {
     const iterVar = ident.sourceString
     // FIXME: type of $iter: ArkFnType
-    const innerEnv = this.args.a.env.push([new Location('$iter', ArkVal, false)])
+    const innerEnv = this.args.a.env.push([new Location('$iter', ArkAnyType, false)])
     const compiledIterator = iterator.toExp({...this.args.a, env: innerEnv})
     // FIXME: type of iterVar: return type of $iter
-    const loopEnv = innerEnv.push([new Location(iterVar, ArkVal, false)])
+    const loopEnv = innerEnv.push([new Location(iterVar, ArkAnyType, false)])
     const compiledIterVar = symRef(loopEnv, iterVar)
     const compiledForBody = body.toExp({...this.args.a, env: loopEnv, inLoop: true})
     const innerIndex = innerEnv.top().locals.length
     const loopBody = new ArkLet(
       // FIXME: fix type of iterVar
       [new ArkBoundVar(
-        new Location(iterVar, ArkVal, false),
+        new Location(iterVar, ArkAnyType, false),
         innerIndex,
         new ArkCall(symRefWithSource(loopEnv, '$iter', iterator.source), [], this.source),
       )],
@@ -376,7 +377,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     )
     const localsDepth = this.args.a.env.top().locals.length
     return new ArkLet([new ArkBoundVar(
-      new Location('$iter', ArkVal, false),
+      new Location('$iter', ArkAnyType, false),
       localsDepth,
       compiledIterator,
     )], new ArkLoop(loopBody, localsDepth + 1), this.source)
@@ -555,11 +556,12 @@ semantics.addOperation<ArkType>('toType(a)', {
     return basicTy // TODO: use parameter types
   },
 
-  FnType(fn, _open, params, _maybeComma, _close, typeAnnotation) {
+  // FIXME: Use typeParams
+  FnType(fn, _typeParams, _open, params, _maybeComma, _close, typeAnnotation) {
     const parsedParams = params.asIteration().children.map((p) => p.toParam(this.args.a))
     checkParamList(parsedParams.map((p) => p.name), params.source)
     const returnType = typeAnnotation.children[1].toType(this.args.a)
-    return new ArkFnType(fn.ctorName === 'fn' ? ArkClosure : ArkGeneratorClosure, parsedParams, returnType)
+    return new ArkFnType(fn.ctorName === 'gen', parsedParams, returnType)
   },
 })
 

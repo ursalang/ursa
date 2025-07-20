@@ -6,12 +6,15 @@ import {Interval} from 'ohm-js'
 
 import {Location} from './compiler-utils.js'
 import {
-  ArkCallable, ArkNull, ArkVal, ArkUndefinedVal,
-  ArkObject, ArkList, ArkMap, ArkObjectBase, ArkTypedId, NativeObject,
-  ArkBooleanVal, ArkNullVal,
+  ArkNull, ArkVal, ArkObjectBase, ArkTypedId, NativeObject,
+  ArkNullTraitType, ArkBooleanTraitType, ArkListTraitType, ArkMapTraitType,
+  ArkObjectTraitType,
 } from './data.js'
 import {ArkCompilerError} from './error.js'
-import {ArkType, ArkFnType} from './type.js'
+import {
+  ArkType, ArkFnType, ArkAnyType, ArkUnknownType,
+  ArkStructType, ArkMemberType, ArkInstantiatedType, ArkUnionType,
+} from './type.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
@@ -32,7 +35,7 @@ export abstract class ArkExp {
 
   // eslint-disable-next-line class-methods-use-this
   get type(): ArkType {
-    return ArkUndefinedVal
+    return ArkUnknownType
   }
 
   constructor(public sourceLoc?: Interval) {
@@ -98,7 +101,7 @@ export class ArkBreak extends ArkExp {
 export class ArkContinue extends ArkExp {
   // eslint-disable-next-line class-methods-use-this
   get type() {
-    return ArkNullVal
+    return ArkNullTraitType
   }
 }
 
@@ -129,7 +132,7 @@ export class ArkFn extends ArkExp {
     sourceLoc?: Interval,
   ) {
     super(sourceLoc)
-    this._type = new ArkFnType(ArkCallable, params, returnType)
+    this._type = new ArkFnType(false, params, returnType)
   }
 }
 export class ArkGenerator extends ArkFn {
@@ -142,28 +145,26 @@ export class ArkGenerator extends ArkFn {
   ) {
     super(params, returnType, capturedVars, body, sourceLoc)
     this._type = new ArkFnType(
-      ArkCallable,
+      false,
       this.type.params,
       // FIXME: function is variadic because on the first call it takes zero
       // arguments, and on subsequent calls one. We need different types!
-      new ArkFnType(ArkCallable, undefined, this.type.returnType),
+      new ArkFnType(false, undefined, this.type.returnType),
     ) // FIXME return type
   }
 }
 
 export class ArkCall extends ArkExp {
   get type() {
-    if (this.fn.type === ArkVal) {
-      return ArkVal
+    if (this.fn.type === ArkAnyType) {
+      return ArkAnyType
     }
     if (this.fn.type instanceof ArkFnType) {
-      if (this.fn.type.returnType === ArkVal) {
-        return ArkVal
+      if (this.fn.type.returnType === ArkAnyType) {
+        return ArkAnyType
       } else {
         return this.fn.type.returnType
       }
-    } else if (this.fn.type === ArkCallable) {
-      return ArkVal
     } else {
       return this.fn.type
     }
@@ -176,20 +177,26 @@ export class ArkCall extends ArkExp {
 
 export class ArkInvoke extends ArkExp {
   get type() {
-    if (this.obj.type === ArkVal || this.obj.type === ArkCallable) {
-      return ArkVal
-    } else if (this.obj.type instanceof ArkObject) {
-      return (this.obj.type.constructor as typeof ArkObjectBase).methods.get(this.prop)!.returnType
-    } else if (this.obj.type === NativeObject) {
-      return ArkVal // FIXME: get NativeObject methods
+    const ty = this.obj.type
+    if (typeof ty === 'string' || ty instanceof ArkFnType) {
+      return ArkAnyType
+    } else if (ty instanceof ArkInstantiatedType) {
+      throw new ArkCompilerError('Implement generics: attempt to invoke on instantiated type!')
+    } else if (ty instanceof ArkUnionType) {
+      throw new ArkCompilerError('FIXME: implement ArkInvoke on unions')
+    } else if (ty instanceof ArkStructType) {
+      const method = ty.getMethod(this.prop)
+      if (method === undefined) {
+        throw new ArkCompilerError(`Invalid method \`${this.prop}'`, this.sourceLoc)
+      }
+      return method.type.returnType
+    } else {
+      const method = ty.getMethod(this.prop)
+      if (method === undefined) {
+        throw new ArkCompilerError(`Invalid method \`${this.prop}'`, this.sourceLoc)
+      }
+      return method.type.returnType
     }
-    // eslint-disable-next-line max-len
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-    const method = (this.obj.type as any).methods.get(this.prop) as ArkFnType
-    if (method === undefined) {
-      throw new ArkCompilerError(`Invalid method ${this.prop}`, this.sourceLoc)
-    }
-    return method.returnType
   }
 
   constructor(
@@ -237,16 +244,20 @@ export class ArkObjectLiteral extends ArkExp {
     return this._type
   }
 
-  constructor(public properties: Map<string, ArkExp>, sourceLoc?: Interval) {
+  constructor(public members: Map<string, ArkExp>, sourceLoc?: Interval) {
     super(sourceLoc)
-    this._type = new ArkObject(properties)
+    const memberTypes = new Map<string, ArkMemberType>()
+    for (const [k, v] of members.entries()) {
+      memberTypes.set(k, new ArkMemberType(v.type, true))
+    }
+    this._type = new ArkStructType(memberTypes, new Set([ArkObjectTraitType]))
   }
 }
 
 export class ArkProperty extends ArkLvalue {
   get type() {
-    if (this.obj.type === ArkVal) {
-      return ArkVal
+    if (this.obj.type === ArkAnyType) {
+      return ArkAnyType
     } else {
       let propVal: ArkVal | undefined
       if (this.obj instanceof NativeObject) {
@@ -254,13 +265,13 @@ export class ArkProperty extends ArkLvalue {
       }
       if (propVal === undefined) {
         if (this.obj instanceof ArkGlobal && this.obj.val instanceof ArkObjectBase) {
-          propVal = this.obj.val.properties.get(this.prop)
+          propVal = this.obj.val.members.get(this.prop)
           if (propVal === undefined) {
             throw new ArkCompilerError(`Invalid property \`${this.prop}'`, this.sourceLoc)
           }
           return propVal.type
-        } else if (this.obj.type instanceof ArkObjectBase) {
-          propVal = this.obj.type.properties.get(this.prop)
+        } else if (this.obj.type instanceof ArkStructType) {
+          propVal = this.obj.type.members.get(this.prop)
           if (propVal === undefined) {
             throw new ArkCompilerError(`Invalid property \`${this.prop}'`, this.sourceLoc)
           }
@@ -268,10 +279,10 @@ export class ArkProperty extends ArkLvalue {
         }
       }
       if (propVal === undefined) {
-        return ArkVal
+        return ArkAnyType
       }
     }
-    return ArkUndefinedVal
+    return ArkUnknownType
   }
 
   constructor(public obj: ArkExp, public prop: string, sourceLoc?: Interval) {
@@ -282,7 +293,7 @@ export class ArkProperty extends ArkLvalue {
 export class ArkListLiteral extends ArkExp {
   // eslint-disable-next-line class-methods-use-this
   get type() {
-    return ArkList // FIXME Generics
+    return ArkListTraitType // FIXME Generics
   }
 
   constructor(public list: ArkExp[], sourceLoc?: Interval) {
@@ -293,7 +304,7 @@ export class ArkListLiteral extends ArkExp {
 export class ArkMapLiteral extends ArkExp {
   // eslint-disable-next-line class-methods-use-this
   get type() {
-    return ArkMap // FIXME Generics
+    return ArkMapTraitType // FIXME Generics
   }
 
   constructor(public map: Map<ArkExp, ArkExp>, sourceLoc?: Interval) {
@@ -322,7 +333,7 @@ export class ArkLet extends ArkExp {
 export class ArkSequence extends ArkExp {
   get type() {
     const len = this.exps.length
-    return len === 0 ? ArkNullVal : this.exps[this.exps.length - 1].type
+    return len === 0 ? ArkNullTraitType : this.exps[this.exps.length - 1].type
   }
 
   constructor(public exps: ArkExp[], sourceLoc?: Interval) {
@@ -348,7 +359,7 @@ export class ArkIf extends ArkExp {
 export class ArkAnd extends ArkExp {
   // eslint-disable-next-line class-methods-use-this
   get type() {
-    return ArkBooleanVal
+    return ArkBooleanTraitType
   }
 
   constructor(public left: ArkExp, public right: ArkExp, sourceLoc?: Interval) {
@@ -359,7 +370,7 @@ export class ArkAnd extends ArkExp {
 export class ArkOr extends ArkExp {
   // eslint-disable-next-line class-methods-use-this
   get type() {
-    return ArkBooleanVal
+    return ArkBooleanTraitType
   }
 
   constructor(public left: ArkExp, public right: ArkExp, sourceLoc?: Interval) {

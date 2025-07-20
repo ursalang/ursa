@@ -59,7 +59,7 @@ function doTestGroup(
       if (resArk instanceof ArkObject) {
         assert(typeof expected === 'object')
         // Remove methods of ArkObject
-        // FIXME: remove this once we have separated methods from properties.
+        // FIXME: remove this once we have separated methods from members.
         if (Object.keys(expected as object).length === 0) {
           t.deepEqual({}, expected)
         } else {
