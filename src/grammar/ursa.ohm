@@ -135,29 +135,23 @@ Ursa {
   Type = NamedType | FnType
   TypeParams = "<" ListOf<TypeParam, ","> ","? ">"
   TypeParam = ident TypeAnnotation
-  TypeArgs
-    = "<" ListOf<Type, ","> ","? ">"
+  TypeArgs = "<" ListOf<Type, ","> ","? ">"
   NamedTypeAnnotation = ":" NamedType
   TypeAnnotation = ":" Type
   FnTypeAnnotation = ":" FnType
 
-  // Classes
-  Class = class ident TypeParams NamedTypeAnnotation "{" ListOf<ClassMember, #sc> #sc "}"
-  ClassMember = ClassField | ClassMethod
-  ClassField = pub? static? var? ident TypeAnnotation? Initializer?
-  ClassMethod = pub? static? ident TypeParams? "=" Fn
+  // Structs
+  Struct = struct ident TypeParams NamedTypeAnnotation "{" ListOf<StructMember, #sc> #sc "}"
+  StructMember = var? ident TypeAnnotation? Initializer?
 
   // Traits
-  Trait = trait ident TypeParams NamedTypeAnnotation "{" ListOf<TraitMember, #sc> #sc "}"
-  TraitMember = TraitField | TraitMethod
-  TraitField = var? ident TypeAnnotation?
+  Trait = trait ident TypeParams NamedTypeAnnotation "{" ListOf<TraitMethod, #sc> #sc "}"
   TraitMethod = ident TypeParams? FnTypeAnnotation
 
   // Convenience rules for parsing keyword tokens.
   and = "and" ~identifierPart
   await = "await" ~identifierPart
   break = "break" ~identifierPart
-  class = "class" ~identifierPart
   continue = "continue" ~identifierPart
   else = "else" ~identifierPart
   fn = "fn" ~identifierPart
@@ -172,15 +166,15 @@ Ursa {
   or = "or" ~identifierPart
   pub = "pub" ~identifierPart
   return = "return" ~identifierPart
-  static = "static" ~identifierPart
+  struct = "struct" ~identifierPart
   trait = "trait" ~identifierPart
   use = "use" ~identifierPart
   var = "var" ~identifierPart
   yield = "yield" ~identifierPart
 
-  keyword = and | await | break | class | continue | else | fn | for | gen | if
-    | in | launch | let | loop | not | or | pub | return | static | trait
-    | use | var | yield
+  keyword = and | await | break | continue | else | fn | for | gen | if | in
+    | launch | let | loop | not | or | pub | return | struct | trait | use
+    | var | yield
 
   reservedWord = bool | null | keyword
 
