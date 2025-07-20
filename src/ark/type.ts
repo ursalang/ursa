@@ -2,36 +2,56 @@
 // © Reuben Thomas 2025
 // Released under the MIT license.
 
-import {
-  type ArkObject, type ArkCallable, type ArkTypedId, type ArkVal,
-} from './data.js'
+import assert from 'assert'
+
+import {type ArkCallable} from './data.js'
 import {Class} from './util.js'
 
-// FIXME: Make this a class so it can have an isSubtypeOf method
-export type ArkType = Class<ArkVal> | ArkObject | ArkGenericType
+export type ArkType = ArkStructType | ArkTrait | ArkInstantiatedType | ArkTypeVariable
 
-export class ArkGenericType {
+export type ArkTypeVariable = Symbol
+
+export class ArkMemberType {
   constructor(
-    public Constructor: Class<ArkVal>,
-    public typeParameters: ArkType[] = [],
-    // TODO: public traits
+    public isVar: boolean,
+    public isPub: boolean,
+    public type: ArkType,
   ) {}
 }
 
-// export class ArkFieldType extends ArkType {
-//   constructor(public isVar: boolean, public type: ArkType) {
-//   super()
-//   }
-// }
-
-export class ArkFnType extends ArkGenericType {
+export class ArkStructType {
   constructor(
-    public Constructor: Class<ArkCallable>,
-    public params: ArkTypedId[] | undefined,
-    public returnType: ArkType,
+    // public superType: ArkStructType,
+    public typeParameters: Set<ArkTypeVariable>,
+    public members: Map<Symbol, ArkMemberType> = new Map(),
+  ) {}
+}
+
+export class ArkTrait {
+  constructor(
+    public typeParameters: Set<ArkTypeVariable>,
+    public methods: Map<Symbol, ArkFnType> = new Map(),
+  ) {}
+}
+
+export class ArkInstantiatedType {
+  constructor(
+    public baseType: ArkStructType | ArkTrait | ArkFnType,
+    public typeArguments: Map<Symbol, ArkType> = new Map(),
   ) {
-    super(Constructor, (params ?? []).map((p) => p.type))
+    for (const ty in baseType.typeParameters) {
+      assert(typeArguments.get(ty))
+    }
   }
 }
 
-export class ArkUnionType extends ArkGenericType {}
+// FIXME: just a trait with one method, 'call'
+export class ArkFnType {
+  constructor(
+    public Constructor: Class<ArkCallable>,
+    public typeParameters: Map<Symbol, ArkType>,
+    public returnType: ArkType,
+  ) {}
+}
+
+export class ArkUnionType extends ArkInstantiatedType {}
