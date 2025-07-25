@@ -2,7 +2,7 @@
 // © Reuben Thomas 2025
 // Released under the GPL version 3, or (at your option) any later version.
 
-import assert, {AssertionError} from 'assert'
+import assert from 'assert'
 
 import {
   ArkAnd, ArkAwait, ArkBreak, ArkCall, ArkExp, ArkFn, ArkIf,
@@ -10,42 +10,14 @@ import {
   ArkObjectLiteral, ArkOr, ArkReturn, ArkSequence, ArkSet, ArkYield, ArkProperty,
 } from './code.js'
 import {
-  ArkVal, ArkObjectBase, ArkBooleanVal, ArkUndefinedVal, ArkCallable,
+  ArkVal, ArkBooleanVal, ArkUndefinedVal, ArkCallable,
 } from './data.js'
-import {ArkType, ArkFnType, ArkGenericType} from './type.js'
+import {ArkType, ArkFnType} from './type.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
-  Class,
 } from './util.js'
 import {ArkCompilerError} from './error.js'
-
-function isSubtypeOf(t: ArkType, u: ArkType) {
-  if (t instanceof ArkGenericType) {
-    if (!(u instanceof ArkGenericType)) {
-      return false
-    }
-    throw new Error('FIXME: subtype relation for generics!')
-  }
-
-  // A non-generic type is not a subtype of any generic
-  if (u instanceof ArkGenericType) {
-    return false
-  }
-
-  // Subtype relation for unparametrized types.
-  let ty = t
-  for (; ;) {
-    if (ty === u) {
-      return true
-    }
-    if (ty === ArkVal) {
-      break
-    }
-    ty = Object.getPrototypeOf(ty) as Class<ArkVal>
-  }
-  return false
-}
 
 export function typeEquals(t1: ArkType, t2: ArkType) {
   if (t1 === t2) {
@@ -88,12 +60,12 @@ export function typecheck(exp: ArkExp) {
         throw new ArkCompilerError('Invalid call', exp.sourceLoc)
       }
       if (exp.fn.type.params !== undefined) {
-        const paramTypes = exp.fn.type.typeParameters
+        const paramTypes = exp.fn.type.params
         if (paramTypes.length !== exp.args.length) {
           throw new ArkCompilerError(`Function has ${paramTypes.length} parameters but ${exp.args.length} arguments supplied`, exp.sourceLoc)
         }
         for (let i = 0; i < exp.args.length; i += 1) {
-          if (!typeEquals(exp.args[i].type, paramTypes[i])) {
+          if (!typeEquals(exp.args[i].type, paramTypes[i].type)) {
             throw new ArkCompilerError(`Type of parameter ${i + 1} does not match type of argument`, exp.sourceLoc) // FIXME: implement type → name
           }
         }
@@ -155,9 +127,6 @@ export function typecheck(exp: ArkExp) {
   } else if (exp instanceof ArkLoop) {
     typecheck(exp.body)
   } else if (exp instanceof ArkProperty) {
-    if (exp.obj.type !== ArkVal && !isSubtypeOf(exp.obj.type, ArkObjectBase)) {
-      // Using 'assert' here hangs the program!
-      throw new AssertionError({message: 'bad ArkVal'})
-    }
+    //
   }
 }

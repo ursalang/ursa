@@ -6,7 +6,7 @@ import {
   action, call, Operation, Reject, Resolve, run, sleep,
 } from 'effection'
 
-import {ArkFnType, ArkType, ArkUnionType} from './type.js'
+import {ArkFnType, ArkType, ArkTrait, ArkUnionType} from './type.js'
 import {FsMap} from './fsmap.js'
 import programVersion from '../version.js'
 import {Class, debug} from './util.js'
@@ -125,6 +125,12 @@ ArkConcreteVal.methods = new Map<string, ArkCallable>(
 // Now we have set up super-class methods, wire up ArkBoolean
 ArkBooleanVal.methods = new Map([...ArkConcreteVal.methods, ['not', new NativeFn([], ArkBooleanVal, (thisVal: ArkBooleanVal) => ArkBoolean(!thisVal.val))]])
 
+export const ArkBooleanTrait = new ArkTrait(new Map())
+ArkBooleanTrait.methods = new Map([
+  // FIXME: eq/neq
+  ['not', new ArkFnType(ArkCallable, [new ArkTypedId('self', 'self')], 'self')],
+])
+
 export class ArkUndefinedVal extends ArkConcreteVal<undefined> {
   static methods: Map<string, ArkCallable> = new Map([...ArkConcreteVal.methods])
 
@@ -132,6 +138,33 @@ export class ArkUndefinedVal extends ArkConcreteVal<undefined> {
     super(undefined)
   }
 }
+
+export const ArkStringTrait = new ArkTrait(new Map())
+
+export const ArkNumberTrait = new ArkTrait()
+ArkNumberTrait.methods = new Map([
+  ['toString', new ArkFnType(ArkCallable, [new ArkTypedId('self', 'self')], ArkStringTrait)],
+  ['pos', new ArkFnType(ArkCallable, [new ArkTypedId('self', 'self')], ArkNumberTrait)],
+  ['neg', new ArkFnType(ArkCallable, [new ArkTypedId('self', 'self')], ArkNumberTrait)],
+  ['bitwiseNot', new ArkFnType(ArkCallable, [new ArkTypedId('self', 'self')], ArkNumberTrait)],
+  ['lt', new ArkFnType(ArkCallable, [new ArkTypedId('self', 'self'), new ArkTypedId('right', 'self')], ArkBooleanTrait)],
+  ['leq', new ArkFnType(ArkCallable, [new ArkTypedId('self', 'self'), new ArkTypedId('right', 'self')], ArkBooleanTrait)],
+  ['gt', new ArkFnType(ArkCallable, [new ArkTypedId('self', 'self'), new ArkTypedId('right', 'self')], ArkBooleanTrait)],
+  ['geq', new ArkFnType(ArkCallable, [new ArkTypedId('self', 'self'), new ArkTypedId('right', 'self')], ArkBooleanTrait)],
+  ['add', new ArkFnType(ArkCallable, [new ArkTypedId('self', 'self'), new ArkTypedId('right', 'self')], ArkNumberTrait)],
+  ['add', new NativeFn([new ArkTypedId('right', ArkNumberVal)], ArkNumberVal, (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val + right.val))],
+  ['sub', new NativeFn([new ArkTypedId('right', ArkNumberVal)], ArkNumberVal, (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val - right.val))],
+  ['mul', new NativeFn([new ArkTypedId('right', ArkNumberVal)], ArkNumberVal, (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val * right.val))],
+  ['div', new NativeFn([new ArkTypedId('right', ArkNumberVal)], ArkNumberVal, (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val / right.val))],
+  ['mod', new NativeFn([new ArkTypedId('right', ArkNumberVal)], ArkNumberVal, (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val % right.val))],
+  ['exp', new NativeFn([new ArkTypedId('right', ArkNumberVal)], ArkNumberVal, (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val ** right.val))],
+  ['bitwiseAnd', new NativeFn([new ArkTypedId('right', ArkNumberVal)], ArkNumberVal, (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val & right.val))],
+  ['bitwiseOr', new NativeFn([new ArkTypedId('right', ArkNumberVal)], ArkNumberVal, (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val | right.val))],
+  ['bitwiseXor', new NativeFn([new ArkTypedId('right', ArkNumberVal)], ArkNumberVal, (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val ^ right.val))],
+  ['shiftLeft', new NativeFn([new ArkTypedId('right', ArkNumberVal)], ArkNumberVal, (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val << right.val))],
+  ['shiftRight', new NativeFn([new ArkTypedId('right', ArkNumberVal)], ArkNumberVal, (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val >> right.val))],
+  ['shiftRightArith', new NativeFn([new ArkTypedId('right', ArkNumberVal)], ArkNumberVal, (thisVal: ArkNumberVal, right: ArkNumberVal) => ArkNumber(thisVal.val >>> right.val))],
+])
 
 export class ArkNumberVal extends ArkConcreteVal<number> {
   static methods: Map<string, ArkCallable> = new Map([...ArkConcreteVal.methods])
