@@ -3,7 +3,6 @@
 ## Version 0.3
 
 * `Map` interface to internet.
-* Classes: properties, names for List and Map
 * Structured concurrency: allow the declaration of new scopes, and to run a task in a new scope.
 * A generator in a comprehension gives a lazy list/map.
 
@@ -26,7 +25,8 @@
   after the last `use` in a series of `use`s.
 * Structs: single-inheritance, data only.
 * Unions = enums. (Only way to do union types.)
-* Interfaces: methods only, can be intersected.
+* Interfaces: methods only.
+* Exceptions: `try EXP` is like Lua's `pcall`, and the value is discriminated using a Rust-like `Result` union type. `raise EXP` is like Lua's `error()`.
 
 ## Ursa v1
 
