@@ -4,6 +4,8 @@
 
 import assert from 'assert'
 
+import {Interval} from 'ohm-js'
+
 import {
   ArkAnd, ArkAwait, ArkBreak, ArkCall, ArkExp, ArkFn, ArkIf,
   ArkInvoke, ArkLaunch, ArkLet, ArkListLiteral, ArkLoop, ArkMapLiteral,
@@ -13,7 +15,8 @@ import {
   ArkBooleanTraitType,
 } from './data.js'
 import {
-  ArkType, ArkFnType, ArkUnknownType, ArkAnyType,
+  ArkType, ArkFnType, ArkUnknownType, ArkAnyType, ArkSelfType,
+  ArkStructType, ArkTraitType,
 } from './type.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -21,19 +24,64 @@ import {
 } from './util.js'
 import {ArkCompilerError} from './error.js'
 
-export function typeEquals(t1: ArkType, t2: ArkType) {
+export function typeEquals(t1_: ArkType, t2_: ArkType, selfType?: ArkType) {
+  const t1 = t1_ === ArkSelfType ? selfType : t1_
+  const t2 = t2_ === ArkSelfType ? selfType : t2_
+  if (t1 === undefined || t2 === undefined) {
+    // FIXME: add sourceLoc
+    throw new ArkCompilerError('Self does not exist in this context')
+  }
+  if (t1 === ArkUnknownType || t2 === ArkUnknownType) {
+    return false // Unknown doesn't match anything
+  }
   if (t1 === t2) {
     return true
   }
   if (t1 === ArkAnyType || t2 === ArkAnyType) {
-    // Any matches anything
-    return true
+    return true // Any matches anything
   }
   if (t1 instanceof ArkFnType && t2 instanceof ArkFnType) {
-    // FIXME: compare ArkFnType
+    if (!typeEquals(t1.returnType, t2.returnType, selfType)) {
+      return false
+    }
+    if (t1.params !== undefined && t2.params !== undefined) {
+      if (t1.params.length !== t2.params.length) {
+        return false
+      }
+      for (let i = 0; i < t1.params.length; i += 1) {
+        if (!typeEquals(t1.params[i].type, t2.params[i].type, selfType)) {
+          return false
+        }
+      }
+    }
     return true
   }
   return false
+}
+
+function checkArgsMatchParams(
+  fnType: ArkType,
+  args: ArkExp[],
+  sourceLoc: Interval | undefined,
+  selfType?: ArkType,
+) {
+  if (fnType === ArkAnyType) {
+    return
+  }
+  if (!(fnType instanceof ArkFnType)) {
+    throw new ArkCompilerError('Invalid call', sourceLoc)
+  }
+  if (fnType.params !== undefined) {
+    const paramTypes = fnType.params
+    if (paramTypes.length !== args.length) {
+      throw new ArkCompilerError(`Function has ${paramTypes.length} parameters but ${args.length} arguments supplied`, sourceLoc)
+    }
+    for (let i = 0; i < args.length; i += 1) {
+      if (!typeEquals(args[i].type, paramTypes[i].type, selfType)) {
+        throw new ArkCompilerError(`Type of parameter ${i + 1} does not match type of argument`, sourceLoc) // FIXME: implement type → name
+      }
+    }
+  }
 }
 
 export function typecheck(exp: ArkExp) {
@@ -55,25 +103,21 @@ export function typecheck(exp: ArkExp) {
   } else if (exp instanceof ArkCall) {
     typecheck(exp.fn)
     exp.args.map((a) => typecheck(a))
-    if (exp.fn.type !== ArkAnyType && !(exp.fn.type instanceof ArkFnType)) {
-      if (!(exp.fn.type instanceof ArkFnType)) {
-        throw new ArkCompilerError('Invalid call', exp.sourceLoc)
-      }
-      if (exp.fn.type.params !== undefined) {
-        const paramTypes = exp.fn.type.params
-        if (paramTypes.length !== exp.args.length) {
-          throw new ArkCompilerError(`Function has ${paramTypes.length} parameters but ${exp.args.length} arguments supplied`, exp.sourceLoc)
-        }
-        for (let i = 0; i < exp.args.length; i += 1) {
-          if (!typeEquals(exp.args[i].type, paramTypes[i].type)) {
-            throw new ArkCompilerError(`Type of parameter ${i + 1} does not match type of argument`, exp.sourceLoc) // FIXME: implement type → name
-          }
-        }
-      }
-    }
+    checkArgsMatchParams(exp.fn.type, exp.args, exp.sourceLoc)
   } else if (exp instanceof ArkInvoke) {
+    typecheck(exp.obj)
     exp.args.map((a) => typecheck(a))
-    // FIXME: similar to ArkCall
+    const objTy = exp.obj.type
+    if (objTy !== ArkAnyType) { // Can't assume anything about Any values
+      if (!(objTy instanceof ArkStructType || objTy instanceof ArkTraitType)) {
+        throw new ArkCompilerError('Invalid method invocation', exp.sourceLoc)
+      }
+      const method = objTy.getMethod(exp.prop)
+      if (method === undefined) {
+        throw new ArkCompilerError(`Invalid method \`${exp.prop}'`, exp.sourceLoc)
+      }
+      checkArgsMatchParams(method.type, [exp.obj, ...exp.args], exp.sourceLoc, objTy)
+    }
   } else if (exp instanceof ArkSet) {
     if (!typeEquals(exp.lexp.type, exp.type)) {
       throw new ArkCompilerError('Type error in assignment', exp.sourceLoc)

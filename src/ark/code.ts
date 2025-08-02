@@ -179,7 +179,7 @@ export class ArkInvoke extends ArkExp {
   get type() {
     const ty = this.obj.type
     if (typeof ty === 'string' || ty instanceof ArkFnType) {
-      return ArkAnyType
+      return ArkAnyType // FIXME
     } else if (ty instanceof ArkInstantiatedType) {
       throw new ArkCompilerError('Implement generics: attempt to invoke on instantiated type!')
     } else if (ty instanceof ArkUnionType) {

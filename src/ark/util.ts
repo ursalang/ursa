@@ -4,9 +4,7 @@
 
 import util from 'util'
 
-export type Class<T> = abstract new (...args: never[]) => T
-
-export function valToString(x: unknown, depth: number | null = 1) {
+function valToString(x: unknown, depth: number | null = 1) {
   return util.inspect(
     x,
     {

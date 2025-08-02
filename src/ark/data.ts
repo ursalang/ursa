@@ -133,15 +133,15 @@ export class ArkBooleanVal extends ArkConcreteVal<boolean> {
 }
 
 ArkObjectTraitType.methods = new Map([
-  ['equals', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType)], ArkBooleanTraitType))],
-  ['notEquals', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType)], ArkBooleanTraitType))],
+  ['equals', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('right', ArkSelfType)], ArkBooleanTraitType))],
+  ['notEquals', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('right', ArkSelfType)], ArkBooleanTraitType))],
 ])
 
 // Avoid forward reference to ArkBooleanTrait
 ArkObjectBase.methods = new Map(
   [
     // FIXME: ArkAnyType below should be some ur-trait ArkObjectTrait
-    ['equals', new NativeFn([new ArkTypedId('right', ArkAnyType)], ArkBooleanTraitType, (thisVal, right) => ArkBoolean(thisVal === right))],
+    ['equals', new NativeFn([new ArkTypedId('right', ArkSelfType), new ArkTypedId('right', ArkAnyType)], ArkBooleanTraitType, (thisVal, right) => ArkBoolean(thisVal === right))],
     ['notEquals', new NativeFn([new ArkTypedId('right', ArkAnyType)], ArkBooleanTraitType, (thisVal, right) => ArkBoolean(thisVal !== right))],
   ],
 )
@@ -158,6 +158,7 @@ ArkBooleanVal.methods = new Map([
   ['not', new NativeFn([], ArkBooleanTraitType, (thisVal: ArkBooleanVal) => ArkBoolean(!thisVal.val))],
 ])
 
+// ts-unused-exports:disable-next-line
 export class ArkUndefinedVal extends ArkConcreteVal<undefined> {
   type = ArkUnknownType
 
@@ -174,7 +175,7 @@ export const ArkNumberTraitType = new ArkTraitType('Number')
 
 ArkStringTraitType.methods = new Map([
   ['get', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('index', ArkNumberTraitType)], ArkStringTraitType))],
-  ['iter', new ArkMethodType(new ArkFnType(true, [], ArkStringTraitType))],
+  ['iter', new ArkMethodType(new ArkFnType(true, [new ArkTypedId('self', ArkSelfType)], ArkStringTraitType))],
 ])
 
 ArkNumberTraitType.methods = new Map([
@@ -386,7 +387,7 @@ export class NativeObject extends ArkAbstractObjectBase {
 
 export const ArkListTraitType = new ArkTraitType('List')
 ArkListTraitType.methods = new Map([
-  ['len', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('len', ArkNumberTraitType)], ArkNumberTraitType))],
+  ['len', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType)], ArkNumberTraitType))],
   ['get', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('index', ArkNumberTraitType)], ArkAnyType))],
   ['set', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('index', ArkNumberTraitType), new ArkTypedId('val', ArkAnyType)], ArkListTraitType))],
   ['push', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('item', ArkAnyType)], ArkListTraitType))],
@@ -404,7 +405,7 @@ export class ArkList extends ArkObjectBase {
 
   static {
     ArkList.addMethods([
-      ['len', new NativeFn([new ArkTypedId('len', ArkNumberTraitType)], ArkNumberTraitType, (thisVal: ArkList) => ArkNumber(thisVal.list.length))],
+      ['len', new NativeFn([], ArkNumberTraitType, (thisVal: ArkList) => ArkNumber(thisVal.list.length))],
       ['get', new NativeFn([new ArkTypedId('index', ArkNumberTraitType)], ArkAnyType, (thisVal: ArkList, index: ArkNumberVal) => (thisVal.list[index.val]))],
       ['set', new NativeFn(
         [new ArkTypedId('index', ArkNumberTraitType), new ArkTypedId('val', ArkAnyType)],
@@ -458,7 +459,7 @@ ArkStringVal.addMethods([
 
 export const ArkMapTraitType = new ArkTraitType('Map')
 ArkMapTraitType.methods = new Map([
-  ['get', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('index', ArkNumberTraitType)], ArkAnyType))],
+  ['get', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('index', ArkAnyType)], ArkAnyType))],
   ['set', new ArkMethodType(new ArkFnType(
     false,
     [new ArkTypedId('self', ArkSelfType), new ArkTypedId('index', ArkAnyType), new ArkTypedId('val', ArkAnyType)],
@@ -491,7 +492,7 @@ export class ArkMap extends ArkObjectBase {
         return thisVal
       })],
       ['has', new NativeFn([new ArkTypedId('index', ArkAnyType)], ArkBooleanTraitType, (thisVal: ArkMap, index: ArkVal) => ArkBoolean(thisVal.map.has(index)))],
-      ['iter', new NativeFn([], new ArkFnType(false, undefined, ArkAnyType), (thisVal: ArkMap) => {
+      ['iter', new NativeFn([new ArkTypedId('self', ArkSelfType)], new ArkFnType(false, undefined, ArkAnyType), (thisVal: ArkMap) => {
         const map = thisVal.map
         const generator = (function* mapEntriesGenerator() {
           for (const [key, value] of map.entries()) {

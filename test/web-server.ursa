@@ -1,6 +1,6 @@
 use jslib.http
 
-let requestListener = fn (req: Fn, res: Fn): Null {
+let requestListener = fn (req: Any, res: Any): Null {
   res.writeHead(200)
   res.end("My first server!")
 }
