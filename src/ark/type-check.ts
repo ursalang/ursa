@@ -142,35 +142,31 @@ export function typecheck(exp: ArkExp) {
     exp.exps.map(typecheck)
   } else if (exp instanceof ArkIf) {
     typecheck(exp.cond)
-    // FIXME: Use typeEquals
-    if (exp.cond.type !== ArkAnyType && exp.cond.type !== ArkBooleanTraitType) {
+    if (!typeEquals(exp.cond.type, ArkBooleanTraitType)) {
       throw new ArkCompilerError('Condition of `if\' must be Bool', exp.sourceLoc)
     }
     typecheck(exp.thenExp)
     if (exp.elseExp !== undefined) {
       typecheck(exp.elseExp)
     }
-    // FIXME: iff the 'if''s value is used, check type of thenExp matches
-    // that of elseExp.
+    // FIXME: type of if should be a union of the type of thenExp and elseExp
   } else if (exp instanceof ArkAnd) {
     typecheck(exp.left)
     typecheck(exp.right)
-    // FIXME: Use typeEquals
-    if ((exp.left.type !== ArkAnyType && exp.left.type !== ArkBooleanTraitType)
-      || (exp.right.type !== ArkAnyType && exp.right.type !== ArkBooleanTraitType)) {
+    if (!typeEquals(exp.left.type, ArkBooleanTraitType)
+      || !typeEquals(exp.right.type, ArkBooleanTraitType)) {
       throw new ArkCompilerError('Arguments to `and\' must be Bool', exp.sourceLoc)
     }
   } else if (exp instanceof ArkOr) {
     typecheck(exp.left)
     typecheck(exp.right)
-    // FIXME: Use typeEquals
-    if ((exp.left.type !== ArkAnyType && exp.left.type !== ArkBooleanTraitType)
-      || (exp.right.type !== ArkAnyType && exp.right.type !== ArkBooleanTraitType)) {
+    if (!typeEquals(exp.left.type, ArkBooleanTraitType)
+      || !typeEquals(exp.right.type, ArkBooleanTraitType)) {
       throw new ArkCompilerError('Arguments to `or\' must be Bool', exp.sourceLoc)
     }
   } else if (exp instanceof ArkLoop) {
     typecheck(exp.body)
   } else if (exp instanceof ArkProperty) {
-    //
+    // FIXME
   }
 }
