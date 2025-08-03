@@ -28,7 +28,7 @@ export class ArkDebugInfo {
   env: string | undefined
 }
 
-export abstract class ArkExp {
+export class ArkExp {
   static nextId = 0
 
   static debugEnumerable = process.env.DEBUG_ARK !== undefined
@@ -93,7 +93,11 @@ export class ArkBreak extends ArkExp {
     return this.exp.type
   }
 
-  constructor(public exp: ArkExp = new ArkLiteral(ArkNull()), sourceLoc?: Interval) {
+  constructor(
+    public loop: ArkLoop,
+    public exp: ArkExp = new ArkLiteral(ArkNull()),
+    sourceLoc?: Interval,
+  ) {
     super(sourceLoc)
   }
 }
@@ -110,7 +114,11 @@ export class ArkReturn extends ArkExp {
     return this.exp.type
   }
 
-  constructor(public exp: ArkExp = new ArkLiteral(ArkNull()), sourceLoc?: Interval) {
+  constructor(
+    public fn: ArkFn,
+    public exp: ArkExp = new ArkLiteral(ArkNull()),
+    sourceLoc?: Interval,
+  ) {
     super(sourceLoc)
   }
 }
@@ -135,6 +143,7 @@ export class ArkFn extends ArkExp {
     this._type = new ArkFnType(false, params, returnType)
   }
 }
+
 export class ArkGenerator extends ArkFn {
   constructor(
     params: ArkTypedId[],

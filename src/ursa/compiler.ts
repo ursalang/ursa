@@ -45,8 +45,8 @@ type ParserOperations = {
 
 type ParserArgs = {
   env: Environment
-  inLoop?: boolean
-  inFn?: boolean
+  outerLoop?: ArkLoop
+  outerFn?: ArkFn
   inGenerator?: boolean
 }
 
@@ -322,31 +322,31 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     const innerEnv = this.args.a.env.pushFrame(
       new Frame(fnType.params!.map((p) => new Location(p.name, p.type, false)), []),
     )
-    const compiledBody = body.toExp({
-      env: innerEnv,
-      inLoop: false,
-      inFn: true,
-      inGenerator: fnType.isGenerator,
-    })
     // TODO: ArkFn should be an ArkObject which contains one method.
     const CodeConstructor = fnType.isGenerator ? ArkGenerator : ArkFn
-    return new CodeConstructor(
+    const fn = new CodeConstructor(
       fnType.params!,
       fnType.returnType,
-      innerEnv.top().captures.map(
-        (c) => symRef(this.args.a.env, c.name) as ArkNamedLoc,
-      ),
-      compiledBody,
+      [],
+      new ArkExp(),
       this.source,
     )
+    fn.body = body.toExp({
+      env: innerEnv,
+      outerLoop: undefined,
+      outerFn: fn,
+      inGenerator: fnType.isGenerator,
+    })
+    fn.capturedVars = innerEnv.top().captures.map(
+      (c) => symRef(this.args.a.env, c.name) as ArkNamedLoc,
+    )
+    return fn
   },
 
   Loop(_loop, body) {
-    return new ArkLoop(
-      body.toExp({...this.args.a, inLoop: true}),
-      this.args.a.env.top().locals.length,
-      this.source,
-    )
+    const loop = new ArkLoop(new ArkExp(), this.args.a.env.top().locals.length, this.source)
+    loop.body = body.toExp({...this.args.a, outerLoop: loop})
+    return loop
   },
 
   For(_for, ident, _in, iterator, body) {
@@ -357,7 +357,9 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     // FIXME: type of iterVar: return type of $iter
     const loopEnv = innerEnv.push([new Location(iterVar, ArkAnyType, false)])
     const compiledIterVar = symRef(loopEnv, iterVar)
-    const compiledForBody = body.toExp({...this.args.a, env: loopEnv, inLoop: true})
+    const localsDepth = this.args.a.env.top().locals.length
+    const loop = new ArkLoop(new ArkExp(), localsDepth + 1)
+    const compiledForBody = body.toExp({...this.args.a, env: loopEnv, outerLoop: loop})
     const innerIndex = innerEnv.top().locals.length
     const loopBody = new ArkLet(
       // FIXME: fix type of iterVar
@@ -369,18 +371,18 @@ semantics.addOperation<ArkExp>('toExp(a)', {
       new ArkSequence([
         new ArkIf(
           new ArkInvoke(compiledIterVar, 'equals', [new ArkLiteral(ArkNull())], this.source),
-          new ArkBreak(),
+          new ArkBreak(loop),
         ),
         compiledForBody,
       ]),
       this.source,
     )
-    const localsDepth = this.args.a.env.top().locals.length
+    loop.body = loopBody
     return new ArkLet([new ArkBoundVar(
       new Location('$iter', ArkAnyType, false),
       localsDepth,
       compiledIterator,
-    )], new ArkLoop(loopBody, localsDepth + 1), this.source)
+    )], loop, this.source)
   },
 
   UnaryExp_bitwise_not(_not, exp) {
@@ -483,7 +485,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     if (!this.args.a.inGenerator) {
       throw new ArkCompilerError('yield may only be used in a generator', yield_.source)
     }
-    return new ArkYield(maybeVal(this.args.a, exp), this.source)
+    return new ArkYield(this.args.a.outerFn!, maybeVal(this.args.a, exp), this.source)
   },
 
   Exp_launch(_launch, exp) {
@@ -491,22 +493,22 @@ semantics.addOperation<ArkExp>('toExp(a)', {
   },
 
   Statement_break(_break, exp) {
-    if (!this.args.a.inLoop) {
+    if (this.args.a.outerLoop === undefined) {
       throw new ArkCompilerError('break used outside a loop', _break.source)
     }
-    return new ArkBreak(maybeVal(this.args.a, exp), this.source)
+    return new ArkBreak(this.args.a.outerLoop, maybeVal(this.args.a, exp), this.source)
   },
   Statement_continue(_continue) {
-    if (!this.args.a.inLoop) {
+    if (this.args.a.outerLoop === undefined) {
       throw new ArkCompilerError('continue used outside a loop', _continue.source)
     }
     return new ArkContinue(this.source)
   },
   Statement_return(return_, exp) {
-    if (!this.args.a.inFn) {
+    if (this.args.a.outerFn === undefined) {
       throw new ArkCompilerError('return used outside a function', return_.source)
     }
-    return new ArkReturn(maybeVal(this.args.a, exp), this.source)
+    return new ArkReturn(this.args.a.outerFn, maybeVal(this.args.a, exp), this.source)
   },
 
   Block(_open, seq, _close) {
@@ -607,7 +609,7 @@ export function compile(
   }
   const ast = semantics(matchResult)
   const args = {
-    env, inLoop: false, inFn: false, atSeqTop: true,
+    env, outerLoop: undefined, outerFn: undefined, atSeqTop: true,
   }
   const exp = ast.toExp(args)
   typecheck(exp)

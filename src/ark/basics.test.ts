@@ -61,7 +61,7 @@ testGroup('Conditionals', [
 test('Bare break', (t) => {
   const error = t.throws(() => new ArkState(expToInst(compile(['break']))).run())
   t.not(error, undefined)
-  t.is(error.message, 'break outside loop')
+  t.is(error.message, 'break used outside a loop')
 })
 
 testGroup('loop and break', [
