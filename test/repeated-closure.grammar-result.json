@@ -28,7 +28,7 @@
               }
             ],
             "6": {
-              "0": "Null",
+              "0": "Num",
               "1": null,
               "type": "NamedType"
             },

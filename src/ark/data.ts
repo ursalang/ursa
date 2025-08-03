@@ -720,5 +720,10 @@ export const globalTypes = new Map<string, ArkType>([
   ['Fn', new ArkFnType(false, undefined, ArkAnyType)],
 
   // TODO: implement union types.
-  ['Union', new ArkUnionType([ArkUnknownType])],
+  ['Union', new ArkUnionType(new Set())],
 ])
+
+// Re-export types from type.js for standalone scripts, which import only
+// from this module.
+// ts-unused-exports:disable-next-line
+export {ArkUnknownType, ArkAnyType} from './type.js'

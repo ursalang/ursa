@@ -54,7 +54,7 @@ class JsRuntimeError extends Error {}
 function typeToJs(ty: ArkType) {
   switch (ty) {
     case ArkUnknownType:
-      return 'ArkNoneType'
+      return 'ArkUnknownType'
     case ArkAnyType:
       return 'ArkAnyType'
     case ArkNullTraitType:
@@ -103,8 +103,9 @@ prelude.members.forEach((val, sym) => jsGlobals.set(sym, val))
 // Record internal values that are needed by JavaScript at runtime, and
 // prevent the TypeScript compiler throwing away their imports.
 export const runtimeContext: Record<string, unknown> = {
-  ArkNoneType: ArkUnknownType,
+  ArkUnknownType,
   ArkUndefined,
+  ArkAnyType,
   ArkNull,
   ArkNullTraitType,
   ArkBoolean,

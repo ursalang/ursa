@@ -5,6 +5,10 @@
 import assert from 'assert'
 
 import {type ArkTypedId} from './data.js'
+import {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  debug,
+} from './util.js'
 
 export type ArkType =
   ArkStructType | ArkTraitType | ArkFnType |
@@ -14,6 +18,7 @@ export type ArkType =
 type ArkTypeVariable = string
 
 export const ArkUnknownType = 'Unknown'
+export const ArkNonterminatingType = 'Nonterminating'
 export const ArkAnyType = 'Any'
 export const ArkSelfType = 'Self'
 
@@ -96,6 +101,6 @@ export class ArkFnType {
 
 export class ArkUnionType {
   constructor(
-    public types: ArkType[],
+    public types: Set<ArkType>,
   ) {}
 }

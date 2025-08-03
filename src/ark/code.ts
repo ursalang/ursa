@@ -12,7 +12,7 @@ import {
 } from './data.js'
 import {ArkCompilerError} from './error.js'
 import {
-  ArkType, ArkFnType, ArkAnyType, ArkUnknownType,
+  ArkType, ArkFnType, ArkAnyType, ArkUnknownType, ArkNonterminatingType,
   ArkStructType, ArkMemberType, ArkInstantiatedType, ArkUnionType,
 } from './type.js'
 import {
@@ -154,7 +154,7 @@ export class ArkGenerator extends ArkFn {
   ) {
     super(params, returnType, capturedVars, body, sourceLoc)
     this._type = new ArkFnType(
-      false,
+      true,
       this.type.params,
       // FIXME: function is variadic because on the first call it takes zero
       // arguments, and on subsequent calls one. We need different types!
@@ -351,8 +351,14 @@ export class ArkSequence extends ArkExp {
 }
 
 export class ArkIf extends ArkExp {
+  _type?: ArkType = undefined
+
   get type() {
-    return this.thenExp.type
+    return this._type ?? this.thenExp.type
+  }
+
+  set type(ty: ArkType) {
+    this._type = ty
   }
 
   constructor(
@@ -388,8 +394,14 @@ export class ArkOr extends ArkExp {
 }
 
 export class ArkLoop extends ArkExp {
+  _type: ArkType = ArkNonterminatingType
+
   get type() {
-    return this.body.type
+    return this._type
+  }
+
+  set type(ty: ArkType) {
+    this._type = ty
   }
 
   constructor(public body: ArkExp, public localsDepth: number, sourceLoc?: Interval) {

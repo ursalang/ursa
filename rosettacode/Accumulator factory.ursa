@@ -1,6 +1,6 @@
-let fac = fn(n: Num): fn(f: Num): Null {
+let fac = fn(n: Num): fn(f: Num): Num {
   var tot = n
-  fn(f: Num): Null {
+  fn(f: Num): Num {
     tot := tot + f
   }
 }

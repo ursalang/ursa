@@ -1,5 +1,5 @@
 var tot = 0;
-let accum = fn(x: Num): Null {
+let accum = fn(x: Num): Num {
   tot := tot + x
 };
 [accum(1), accum(1)]

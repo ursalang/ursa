@@ -33,7 +33,7 @@ use js.Infinity
   tan = Math.tan
 
   // Range iterator
-  range = gen(n: Num): Num {
+  range = gen(n: Num): Any { // FIXME: return type should be Num
     var i = 0
     loop {
       if i == n { return null }

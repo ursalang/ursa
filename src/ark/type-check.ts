@@ -15,8 +15,8 @@ import {
   ArkBooleanTraitType,
 } from './data.js'
 import {
-  ArkType, ArkFnType, ArkUnknownType, ArkAnyType, ArkSelfType,
-  ArkStructType, ArkTraitType,
+  ArkType, ArkFnType, ArkUnknownType, ArkNonterminatingType, ArkAnyType,
+  ArkSelfType, ArkStructType, ArkTraitType, ArkUnionType,
 } from './type.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -60,7 +60,44 @@ export function typeEquals(
     }
     return true
   }
+  // FIXME: Check unions
   return false
+}
+
+function makeUnion(ty: ArkType, extraTy: ArkType, sourceLoc?: Interval): ArkType {
+  assert(ty !== ArkSelfType && extraTy !== ArkSelfType)
+  // T ∪ T = T
+  if (ty === extraTy) {
+    return ty
+  }
+  // Any ∪ T = Any
+  if (ty === ArkAnyType || extraTy === ArkAnyType) {
+    return ArkAnyType
+  }
+  // Unknown | Nonterminating ∪ T = T
+  if (ty === ArkUnknownType || ty === ArkNonterminatingType) {
+    return extraTy
+  }
+  if (extraTy === ArkUnknownType || ty === ArkNonterminatingType) {
+    return ty
+  }
+  // Take union of two regular types
+  if (!(ty instanceof ArkUnionType) && !(extraTy instanceof ArkUnionType)) {
+    if (typeEquals(ty, extraTy, sourceLoc)) {
+      return ty
+    }
+    return new ArkUnionType(new Set([ty, extraTy]))
+  }
+  // Take union of Union type and non-Union type
+  if (ty instanceof ArkUnionType && !(extraTy instanceof ArkUnionType)) {
+    return new ArkUnionType(new Set([extraTy, ...ty.types]))
+  }
+  if (extraTy instanceof ArkUnionType && !(ty instanceof ArkUnionType)) {
+    return new ArkUnionType(new Set([...extraTy.types, ty]))
+  }
+  // Take union of two Union types
+  assert(ty instanceof ArkUnionType && extraTy instanceof ArkUnionType)
+  return new ArkUnionType(new Set([...ty.types, ...extraTy.types]))
 }
 
 function checkArgsMatchParams(
@@ -89,21 +126,32 @@ function checkArgsMatchParams(
 }
 
 export function typecheck(exp: ArkExp) {
-  assert(exp.type !== ArkUnknownType)
   if (exp instanceof ArkLaunch) {
     typecheck(exp.exp)
   } else if (exp instanceof ArkAwait) {
     typecheck(exp.exp)
   } else if (exp instanceof ArkBreak) {
     typecheck(exp.exp)
+    exp.loop.type = makeUnion(exp.loop.type, exp.type, exp.sourceLoc)
   } else if (exp instanceof ArkYield) {
     typecheck(exp.exp)
+    // FIXME: Type-check generators
+    // if (!typeEquals(exp.type, exp.fn.returnType, exp.sourceLoc)) {
+    // eslint-disable-next-line max-len
+    //   throw new ArkCompilerError('Type of `yield\' expression does not match function return type')
+    // }
   } else if (exp instanceof ArkReturn) {
     typecheck(exp.exp)
-    // FIXME: Need to have access to function type
+    // FIXME: Type-check generators
+    if (!exp.fn.type.isGenerator && !typeEquals(exp.type, exp.fn.returnType, exp.sourceLoc)) {
+      throw new ArkCompilerError('Type of `return\' expression does not match function return type')
+    }
   } else if (exp instanceof ArkFn) {
     typecheck(exp.body)
-    // FIXME: Check body against return type
+    if (exp.body.type !== ArkNonterminatingType
+      && !typeEquals(exp.returnType, exp.body.type, exp.sourceLoc)) {
+      throw new ArkCompilerError('Type of function body does not match function return type', exp.sourceLoc)
+    }
   } else if (exp instanceof ArkCall) {
     typecheck(exp.fn)
     exp.args.map((a) => typecheck(a))
@@ -150,10 +198,11 @@ export function typecheck(exp: ArkExp) {
       throw new ArkCompilerError('Condition of `if\' must be Bool', exp.sourceLoc)
     }
     typecheck(exp.thenExp)
+    exp.type = exp.thenExp.type
     if (exp.elseExp !== undefined) {
       typecheck(exp.elseExp)
+      exp.type = makeUnion(exp.type, exp.elseExp.type, exp.sourceLoc)
     }
-    // FIXME: type of if should be a union of the type of thenExp and elseExp
   } else if (exp instanceof ArkAnd) {
     typecheck(exp.left)
     typecheck(exp.right)
@@ -173,4 +222,5 @@ export function typecheck(exp: ArkExp) {
   } else if (exp instanceof ArkProperty) {
     // FIXME
   }
+  assert(exp.type !== ArkUnknownType)
 }

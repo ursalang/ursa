@@ -1,4 +1,4 @@
-let g = gen(l: List<Num>): Num {
+let g = gen(l: List<Num>): Any { // FIXME: return type should be Num
     for n in l.iter() { yield n * 2 }
 }
 

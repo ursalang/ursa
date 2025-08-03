@@ -6,7 +6,7 @@ let count = gen(): Num {
     }
 }
 
-let powers = gen(m: Num): Num {
+let powers = gen(m: Num): Any { // FIXME: return type should be Num
     for n in count() {
         yield n ** m
     }
