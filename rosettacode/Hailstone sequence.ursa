@@ -12,7 +12,7 @@ let twentySeven = hailstone(27)
 print("The Hailstone sequence for 27 starts with:")
 print(twentySeven.slice(0, 4))
 print("and ends with:")
-print(twentySeven.slice(-4))
+print(twentySeven.slice(-4, infinity))
 print("and its length is:")
 print(twentySeven.len())
 

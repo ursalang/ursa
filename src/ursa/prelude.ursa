@@ -9,6 +9,7 @@ use js.RegExp
 use js.document
 use js.console
 use js.setTimeout
+use js.Infinity
 
 {
   // Basic facilities
@@ -23,6 +24,7 @@ use js.setTimeout
 
   // Maths
   pi = Math.PI
+  infinity = Infinity
   sqrt = Math.sqrt
   exp = Math.exp
   log = Math.log
