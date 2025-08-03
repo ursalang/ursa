@@ -24,12 +24,16 @@ import {
 } from './util.js'
 import {ArkCompilerError} from './error.js'
 
-export function typeEquals(t1_: ArkType, t2_: ArkType, selfType?: ArkType) {
+export function typeEquals(
+  t1_: ArkType,
+  t2_: ArkType,
+  sourceLoc: Interval | undefined,
+  selfType?: ArkType,
+) {
   const t1 = t1_ === ArkSelfType ? selfType : t1_
   const t2 = t2_ === ArkSelfType ? selfType : t2_
   if (t1 === undefined || t2 === undefined) {
-    // FIXME: add sourceLoc
-    throw new ArkCompilerError('Self does not exist in this context')
+    throw new ArkCompilerError('Self does not exist in this context', sourceLoc)
   }
   if (t1 === ArkUnknownType || t2 === ArkUnknownType) {
     return false // Unknown doesn't match anything
@@ -41,7 +45,7 @@ export function typeEquals(t1_: ArkType, t2_: ArkType, selfType?: ArkType) {
     return true // Any matches anything
   }
   if (t1 instanceof ArkFnType && t2 instanceof ArkFnType) {
-    if (!typeEquals(t1.returnType, t2.returnType, selfType)) {
+    if (!typeEquals(t1.returnType, t2.returnType, sourceLoc, selfType)) {
       return false
     }
     if (t1.params !== undefined && t2.params !== undefined) {
@@ -49,7 +53,7 @@ export function typeEquals(t1_: ArkType, t2_: ArkType, selfType?: ArkType) {
         return false
       }
       for (let i = 0; i < t1.params.length; i += 1) {
-        if (!typeEquals(t1.params[i].type, t2.params[i].type, selfType)) {
+        if (!typeEquals(t1.params[i].type, t2.params[i].type, sourceLoc, selfType)) {
           return false
         }
       }
@@ -77,7 +81,7 @@ function checkArgsMatchParams(
       throw new ArkCompilerError(`Function has ${paramTypes.length} parameters but ${args.length} arguments supplied`, sourceLoc)
     }
     for (let i = 0; i < args.length; i += 1) {
-      if (!typeEquals(args[i].type, paramTypes[i].type, selfType)) {
+      if (!typeEquals(args[i].type, paramTypes[i].type, sourceLoc, selfType)) {
         throw new ArkCompilerError(`Type of parameter ${i + 1} does not match type of argument`, sourceLoc) // FIXME: implement type → name
       }
     }
@@ -99,7 +103,7 @@ export function typecheck(exp: ArkExp) {
     // FIXME: Need to have access to function type
   } else if (exp instanceof ArkFn) {
     typecheck(exp.body)
-    // Check body against return type
+    // FIXME: Check body against return type
   } else if (exp instanceof ArkCall) {
     typecheck(exp.fn)
     exp.args.map((a) => typecheck(a))
@@ -119,7 +123,7 @@ export function typecheck(exp: ArkExp) {
       checkArgsMatchParams(method.type, [exp.obj, ...exp.args], exp.sourceLoc, objTy)
     }
   } else if (exp instanceof ArkSet) {
-    if (!typeEquals(exp.lexp.type, exp.type)) {
+    if (!typeEquals(exp.lexp.type, exp.type, exp.sourceLoc)) {
       throw new ArkCompilerError('Type error in assignment', exp.sourceLoc)
     }
   } else if (exp instanceof ArkObjectLiteral) {
@@ -142,7 +146,7 @@ export function typecheck(exp: ArkExp) {
     exp.exps.map(typecheck)
   } else if (exp instanceof ArkIf) {
     typecheck(exp.cond)
-    if (!typeEquals(exp.cond.type, ArkBooleanTraitType)) {
+    if (!typeEquals(exp.cond.type, ArkBooleanTraitType, exp.sourceLoc)) {
       throw new ArkCompilerError('Condition of `if\' must be Bool', exp.sourceLoc)
     }
     typecheck(exp.thenExp)
@@ -153,15 +157,15 @@ export function typecheck(exp: ArkExp) {
   } else if (exp instanceof ArkAnd) {
     typecheck(exp.left)
     typecheck(exp.right)
-    if (!typeEquals(exp.left.type, ArkBooleanTraitType)
-      || !typeEquals(exp.right.type, ArkBooleanTraitType)) {
+    if (!typeEquals(exp.left.type, ArkBooleanTraitType, exp.sourceLoc)
+      || !typeEquals(exp.right.type, ArkBooleanTraitType, exp.sourceLoc)) {
       throw new ArkCompilerError('Arguments to `and\' must be Bool', exp.sourceLoc)
     }
   } else if (exp instanceof ArkOr) {
     typecheck(exp.left)
     typecheck(exp.right)
-    if (!typeEquals(exp.left.type, ArkBooleanTraitType)
-      || !typeEquals(exp.right.type, ArkBooleanTraitType)) {
+    if (!typeEquals(exp.left.type, ArkBooleanTraitType, exp.sourceLoc)
+      || !typeEquals(exp.right.type, ArkBooleanTraitType, exp.sourceLoc)) {
       throw new ArkCompilerError('Arguments to `or\' must be Bool', exp.sourceLoc)
     }
   } else if (exp instanceof ArkLoop) {

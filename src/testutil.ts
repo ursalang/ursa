@@ -48,7 +48,7 @@ function doTestGroup(
   test(title, async (t) => {
     for (const [source, expected, expectedType] of tests) {
       const compiled = compile(source)
-      assert(typeEquals(compiled.type, expectedType))
+      assert(typeEquals(compiled.type, expectedType, undefined))
       if (process.env.DEBUG) {
         debug(compiled, null)
       }
