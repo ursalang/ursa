@@ -11,7 +11,7 @@ use js.console
 use js.setTimeout
 use js.Infinity
 
-{
+Struct {
   // Basic facilities
   print = console.log
 

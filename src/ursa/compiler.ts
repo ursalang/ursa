@@ -276,11 +276,9 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     return new ArkMapLiteral(inits, this.source)
   },
 
-  Struct(maybeType, _open, elems, _maybeComma, _close) {
+  Struct(type, _open, elems, _maybeComma, _close) {
     // TODO: compile the type, add to ArkStructLiteral
-    if (maybeType.children.length > 0) {
-      maybeType.children[0].toType(this.args.a)
-    }
+    type.toType(this.args.a)
     const inits = new Map<string, ArkExp>()
     elems.asIteration().children.forEach((value) => {
       const elem = value.toDefinition(this.args.a)

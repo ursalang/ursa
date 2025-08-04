@@ -31,7 +31,7 @@ Ursa {
 
   List (a list) = "[" ListOf<Exp, ","> ","? "]"
 
-  Struct (a struct) = NamedType? "{" ListOf<Definition, #sc> #sc "}"
+  Struct (a struct) = NamedType "{" ListOf<Definition, #sc> #sc "}"
 
   Map (a map) = "{" ListOf<KeyValue, ","> ","? "}"
   KeyValue = Exp ":" Exp
