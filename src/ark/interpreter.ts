@@ -13,13 +13,13 @@ import {
   ArkFnBlockOpenInst, ArkGeneratorBlockOpenInst, ArkIfBlockOpenInst, ArkInst, ArkInvokeInst,
   ArkLaunchBlockCloseInst, ArkLaunchBlockOpenInst, ArkLetBlockCloseInst, ArkLetBlockOpenInst,
   ArkLetCopyInst, ArkListLiteralInst, ArkLiteralInst, ArkLocalInst, ArkLoopBlockCloseInst,
-  ArkLoopBlockOpenInst, ArkMapLiteralInst, ArkObjectLiteralInst, ArkPropertyInst, ArkReturnInst,
+  ArkLoopBlockOpenInst, ArkMapLiteralInst, ArkStructLiteralInst, ArkPropertyInst, ArkReturnInst,
   ArkSetCaptureInst, ArkSetLocalInst, ArkSetNamedLocInst, ArkSetPropertyInst, ArkYieldInst,
 } from './flatten.js'
 import {ArkError} from './error.js'
 import {
-  ArkAbstractObjectBase, ArkBoolean, ArkList, ArkMap, ArkNull,
-  ArkObject, ArkOperation, ArkVal, NativeAsyncFn, NativeFn,
+  ArkAbstractStructBase, ArkBoolean, ArkList, ArkMap, ArkNull,
+  ArkStruct, ArkOperation, ArkVal, NativeAsyncFn, NativeFn,
   NativeOperation, ArkRef, ArkValRef, ArkClosure, ArkCallable,
   ArkContinuation, ArkTypedId, ArkUndefined,
 } from './data.js'
@@ -328,7 +328,7 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
       [ark, inst] = yield* call(ark, inst, callable, args)
     } else if (inst instanceof ArkInvokeInst) {
       const obj = mem.get(inst.objId)!
-      if (!(obj instanceof ArkAbstractObjectBase)) {
+      if (!(obj instanceof ArkAbstractStructBase)) {
         throw new ArkRuntimeError(ark, 'Invalid object', inst.sourceLoc)
       }
       const method = obj.getMethod(inst.prop) as ArkCallable
@@ -352,19 +352,19 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
       inst = inst.next
     } else if (inst instanceof ArkSetPropertyInst) {
       const result = mem.get(inst.valId)!
-      const obj = mem.get(inst.lexpId)! as ArkObject
+      const obj = mem.get(inst.lexpId)! as ArkStruct
       if (obj.get(inst.prop) === ArkUndefined()) {
         throw new ArkRuntimeError(ark, 'Invalid property', inst.sourceLoc)
       }
       obj.set(inst.prop, result)
       mem.set(inst.id, result)
       inst = inst.next
-    } else if (inst instanceof ArkObjectLiteralInst) {
+    } else if (inst instanceof ArkStructLiteralInst) {
       const members = new Map<string, ArkVal>()
       for (const [k, v] of inst.members) {
         members.set(k, mem.get(v)!)
       }
-      mem.set(inst.id, new ArkObject(members))
+      mem.set(inst.id, new ArkStruct(members))
       inst = inst.next
     } else if (inst instanceof ArkListLiteralInst) {
       mem.set(inst.id, new ArkList(inst.valIds.map((id) => mem.get(id)!)))
@@ -378,7 +378,7 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
       inst = inst.next
     } else if (inst instanceof ArkPropertyInst) {
       const obj = mem.get(inst.objId)!
-      if (!(obj instanceof ArkAbstractObjectBase)) {
+      if (!(obj instanceof ArkAbstractStructBase)) {
         throw new ArkRuntimeError(ark, 'Invalid object', inst.sourceLoc)
       }
       const result = obj.get(inst.prop)

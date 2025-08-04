@@ -26,7 +26,7 @@ function parse(
   const ast = toAST(matchResult, {
     Sequence: 0,
     List: {1: 1},
-    Object: {0: 0, 2: 2},
+    Struct: {0: 0, 2: 2},
     Map: {1: 1},
     PostfixExp_invoke: {0: 0, 2: 2, 5: 5},
     PostfixExp_call: {0: 0, 3: 3},

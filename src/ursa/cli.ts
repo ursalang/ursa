@@ -18,10 +18,10 @@ import tmp from 'tmp'
 import programVersion from '../version.js'
 import {debug} from '../ark/util.js'
 import {
-  globals, jsGlobals, toJs, ArkNull, ArkList, ArkVal, ArkString, ArkObject, ArkValRef,
+  globals, jsGlobals, toJs, ArkNull, ArkList, ArkVal, ArkString, ArkStruct, ArkValRef,
 } from '../ark/data.js'
 import {
-  ArkExp, ArkLet, ArkListLiteral, ArkObjectLiteral, ArkSequence,
+  ArkExp, ArkLet, ArkListLiteral, ArkStructLiteral, ArkSequence,
 } from '../ark/code.js'
 import {Environment, Location} from '../ark/compiler-utils.js'
 import {ArkState} from '../ark/interpreter.js'
@@ -192,15 +192,15 @@ function addReturnValues(exp: ArkExp, topLevelVars: Map<string, ArkExp> = new Ma
     exp.exps[exp.exps.length - 1] = addReturnValues(exp.exps[exp.exps.length - 1], topLevelVars)
     return exp
   } else {
-    return new ArkListLiteral([exp, new ArkObjectLiteral(topLevelVars)])
+    return new ArkListLiteral([exp, new ArkStructLiteral(topLevelVars)])
   }
 }
 
 function extractReturnValues(ark: ArkState, env: Environment, result: ArkVal | undefined) {
   assert(result instanceof ArkList)
   assert(result.list.length === 2)
-  const newVars = result.list[1] as ArkObject
-  assert(newVars instanceof ArkObject)
+  const newVars = result.list[1] as ArkStruct
+  assert(newVars instanceof ArkStruct)
   for (const [k, v] of newVars.members.entries()) {
     env = env.push([new Location(k, ArkAnyType, false)])
     ark.push([new ArkValRef(v)])

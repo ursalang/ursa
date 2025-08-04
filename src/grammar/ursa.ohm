@@ -19,7 +19,7 @@ Ursa {
     | literalString
     | number
     | Map
-    | Object
+    | Struct
     | ident             -- ident
     | List
     | Block
@@ -31,7 +31,7 @@ Ursa {
 
   List (a list) = "[" ListOf<Exp, ","> ","? "]"
 
-  Object (an object) = NamedType? "{" ListOf<Definition, #sc> #sc "}"
+  Struct (a struct) = NamedType? "{" ListOf<Definition, #sc> #sc "}"
 
   Map (a map) = "{" ListOf<KeyValue, ","> ","? "}"
   KeyValue = Exp ":" Exp
@@ -142,13 +142,13 @@ Ursa {
 
   // Structs
   // TODO: super-struct?
-  Struct = struct ident TypeParams? "{" ListOf<Member, #sc> #sc "}"
+  StructDecl = struct ident TypeParams? "{" ListOf<Member, #sc> #sc "}"
   Member = var? ident TypeAnnotation? Initializer?
 
   // Traits
   // TODO: super-traits
   // TODO: (associated) type declarations
-  Trait = trait ident TypeParams? "{" ListOf<MethodDecl, #sc> #sc "}"
+  TraitDecl = trait ident TypeParams? "{" ListOf<MethodDecl, #sc> #sc "}"
   TraitBound = ListOf<ident, "+">
   MethodDecl = pub? ident ":" FnType Block?
   Method = pub? ident ":" FnType Block

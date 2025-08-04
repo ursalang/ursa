@@ -1,6 +1,6 @@
-import {ArkObject} from '../interpreter.js'
+import {ArkStruct} from '../interpreter.js'
 
 declare module 'prelude' {
-  const prelude: ArkObject
+  const prelude: ArkStruct
   export default prelude
 }

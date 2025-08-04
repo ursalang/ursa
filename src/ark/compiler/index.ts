@@ -26,15 +26,15 @@ import {
   ArkGeneratorBlockOpenInst, ArkLetCopyInst,
   ArkLaunchBlockOpenInst, ArkLaunchBlockCloseInst, ArkLetBlockOpenInst,
   ArkLocalInst, ArkCaptureInst, ArkListLiteralInst, ArkLiteralInst, ArkMapLiteralInst,
-  ArkObjectLiteralInst, ArkPropertyInst, ArkReturnInst, ArkYieldInst,
+  ArkStructLiteralInst, ArkPropertyInst, ArkReturnInst, ArkYieldInst,
   ArkSetNamedLocInst, ArkSetPropertyInst, ArkGlobalInst,
 } from '../flatten.js'
 import {
   jsGlobals, ArkBoolean, ArkBooleanVal, ArkList, ArkMap, ArkNull,
-  ArkNumber, ArkNullVal, ArkNumberVal, ArkObject, ArkString,
+  ArkNumber, ArkNullVal, ArkNumberVal, ArkStruct, ArkString,
   ArkStringVal, ArkVal, NativeFn, ArkOperation, ArkTypedId,
   ArkNullTraitType, ArkBooleanTraitType, ArkNumberTraitType, ArkStringTraitType,
-  ArkListTraitType, ArkMapTraitType, ArkObjectTraitType,
+  ArkListTraitType, ArkMapTraitType, ArkStructTraitType,
   ArkUndefined, ArkCallable,
 } from '../data.js'
 import {
@@ -69,8 +69,8 @@ function typeToJs(ty: ArkType) {
       return 'ArkListTraitType'
     case ArkMapTraitType:
       return 'ArkMapTraitType'
-    case ArkObjectTraitType:
-      return 'ArkObjectTraitType'
+    case ArkStructTraitType:
+      return 'ArkStructTraitType'
     default:
   }
   if (ty instanceof ArkFnType) {
@@ -97,7 +97,7 @@ class UrsaStackTracey extends StackTracey {
 
 // Compile prelude and add it to globals
 export const preludeJs = fs.readFileSync(path.join(__dirname, 'prelude.js'), {encoding: 'utf-8'})
-const prelude = await evalArkJs(preludeJs) as ArkObject
+const prelude = await evalArkJs(preludeJs) as ArkStruct
 prelude.members.forEach((val, sym) => jsGlobals.set(sym, val))
 
 // Record internal values that are needed by JavaScript at runtime, and
@@ -114,8 +114,8 @@ export const runtimeContext: Record<string, unknown> = {
   ArkNumberTraitType,
   ArkString,
   ArkStringTraitType,
-  ArkObject,
-  ArkObjectTraitType,
+  ArkStruct,
+  ArkStructTraitType,
   ArkCallable,
   ArkList,
   ArkListTraitType,
@@ -256,12 +256,12 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
         return sourceNode(letAssign(inst.id, `${jsMangle(inst.lexpId.description!)} = ${inst.valId.description}`))
       } else if (inst instanceof ArkSetPropertyInst) {
         return sourceNode(letAssign(inst.id, `${inst.lexpId.description}.set('${inst.prop}', ${inst.valId.description})`))
-      } else if (inst instanceof ArkObjectLiteralInst) {
+      } else if (inst instanceof ArkStructLiteralInst) {
         const objInits: string[] = []
         for (const [k, v] of inst.members.entries()) {
           objInits.push(`[${util.inspect(k)}, ${v.description}]`)
         }
-        return sourceNode(letAssign(inst.id, `new ArkObject(new Map([${objInits.join(', ')}]))`))
+        return sourceNode(letAssign(inst.id, `new ArkStruct(new Map([${objInits.join(', ')}]))`))
       } else if (inst instanceof ArkListLiteralInst) {
         return sourceNode(letAssign(inst.id, `new ArkList([${inst.valIds.map((id) => id.description).join(', ')}])`))
       } else if (inst instanceof ArkMapLiteralInst) {

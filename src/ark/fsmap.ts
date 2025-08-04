@@ -65,7 +65,7 @@ export class FsMap {
     return fs.readdirSync(this.directory)
   }
 
-  toObject() {
+  toStruct() {
     const res: ValueTree = new Map()
     for (const key of this.keys()) {
       const subobj = this.get(key)
@@ -73,7 +73,7 @@ export class FsMap {
         res.set(key, subobj)
       } else {
         const fspath = path.join(this.directory, key)
-        res.set(key, new FsMap(fspath).toObject())
+        res.set(key, new FsMap(fspath).toStruct())
       }
     }
     return res

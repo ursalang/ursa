@@ -72,7 +72,7 @@ testGroup('let', [
   ['["let",[["const","a","Num",3]],"a"]', 3, ArkNumberTraitType],
 ])
 
-testGroup('Objects', [
+testGroup('Structs', [
   ['{"a":1,"=":2,"!=":3}', {a: 1, '=': 2, '!=': 3}, ArkAnyType],
 ])
 

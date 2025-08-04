@@ -21,7 +21,7 @@ import {
 } from '../ark/type.js'
 import {
   ArkBoundVar, ArkExp, ArkLvalue, ArkLiteral, ArkSequence, ArkIf, ArkLoop, ArkAnd, ArkOr,
-  ArkObjectLiteral, ArkListLiteral, ArkMapLiteral,
+  ArkStructLiteral, ArkListLiteral, ArkMapLiteral,
   ArkCall, ArkInvoke, ArkLet, ArkFn, ArkGenerator, ArkProperty, ArkSet, ArkReturn, ArkYield,
   ArkBreak, ArkContinue, ArkAwait, ArkLaunch, ArkNamedLoc,
 } from '../ark/code.js'
@@ -276,8 +276,8 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     return new ArkMapLiteral(inits, this.source)
   },
 
-  Object(maybeType, _open, elems, _maybeComma, _close) {
-    // TODO: compile the type, add to ArkObjectLiteral
+  Struct(maybeType, _open, elems, _maybeComma, _close) {
+    // TODO: compile the type, add to ArkStructLiteral
     if (maybeType.children.length > 0) {
       maybeType.children[0].toType(this.args.a)
     }
@@ -286,7 +286,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
       const elem = value.toDefinition(this.args.a)
       inits.set(elem.ident.sourceString, elem.exp)
     })
-    return new ArkObjectLiteral(inits, this.source)
+    return new ArkStructLiteral(inits, this.source)
   },
 
   PostfixExp_property(exp, _dot, property) {
@@ -322,7 +322,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     const innerEnv = this.args.a.env.pushFrame(
       new Frame(fnType.params!.map((p) => new Location(p.name, p.type, false)), []),
     )
-    // TODO: ArkFn should be an ArkObject which contains one method.
+    // TODO: ArkFn should be an ArkStruct which contains one method.
     const CodeConstructor = fnType.isGenerator ? ArkGenerator : ArkFn
     const fn = new CodeConstructor(
       fnType.params!,

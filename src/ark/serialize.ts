@@ -3,8 +3,8 @@
 // Released under the MIT license.
 
 import {
-  ArkVal, ArkConcreteVal, ArkNull, ArkOperation, ArkList, ArkMap, ArkObject,
-  ArkUndefined, NativeObject,
+  ArkVal, ArkConcreteVal, ArkNull, ArkOperation, ArkList, ArkMap, ArkStruct,
+  ArkUndefined, NativeStruct,
   ArkNullTraitType, ArkBooleanTraitType, ArkNumberTraitType, ArkStringTraitType,
   ArkListTraitType, ArkMapTraitType,
 } from './data.js'
@@ -15,7 +15,7 @@ import {
   ArkExp, ArkSequence,
   ArkAnd, ArkOr, ArkIf, ArkLoop, ArkBreak, ArkContinue, ArkInvoke,
   ArkSet, ArkLet, ArkCall, ArkFn, ArkGenerator, ArkReturn, ArkProperty,
-  ArkLiteral, ArkListLiteral, ArkMapLiteral, ArkObjectLiteral, ArkYield,
+  ArkLiteral, ArkListLiteral, ArkMapLiteral, ArkStructLiteral, ArkYield,
   ArkGlobal,
 } from './code.js'
 import {debug} from './util.js'
@@ -53,7 +53,7 @@ function typeToStr(ty: ArkType) {
 
 export function valToJs(val: ArkVal | ArkExp) {
   function doValToJs(val: ArkVal | ArkExp): unknown {
-    if (val instanceof NativeObject) {
+    if (val instanceof NativeStruct) {
       return val.obj
     }
     if (val instanceof ArkExp && val.debug !== undefined) {
@@ -79,15 +79,15 @@ export function valToJs(val: ArkVal | ArkExp) {
         typeToStr(val.returnType),
         doValToJs(val.body),
       ]
-    } else if (val instanceof ArkObjectLiteral) {
+    } else if (val instanceof ArkStructLiteral) {
       const obj = {}
       for (const [k, v] of val.members) {
         (obj as {[key: string]: unknown})[k] = doValToJs(v)
       }
       return obj
-    } else if (val instanceof ArkObject) {
+    } else if (val instanceof ArkStruct) {
       const obj = {}
-      for (const [k, v] of (val.constructor as typeof ArkObject).members) {
+      for (const [k, v] of (val.constructor as typeof ArkStruct).members) {
         (obj as {[key: string]: unknown})[k] = doValToJs(v)
       }
       return obj

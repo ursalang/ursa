@@ -14,7 +14,7 @@ import {compareSync, Difference} from 'dir-compare'
 import {debug} from './ark/util.js'
 import {flatToJs, evalArkJs} from './ark/compiler/index.js'
 import {expToInsts} from './ark/flatten.js'
-import {ArkObject, toJs} from './ark/data.js'
+import {ArkStruct, toJs} from './ark/data.js'
 import {ArkExp} from './ark/code.js'
 import {ArkState} from './ark/interpreter.js'
 import {compile as doArkCompile} from './ark/reader.js'
@@ -56,9 +56,9 @@ function doTestGroup(
       const jsSource = flatToJs(flat)
       const resArk = await new ArkState(flat.insts[0]).run()
       const resJs = await evalArkJs(jsSource, title)
-      if (resArk instanceof ArkObject) {
+      if (resArk instanceof ArkStruct) {
         assert(typeof expected === 'object')
-        // Remove methods of ArkObject
+        // Remove methods of ArkStruct
         // FIXME: remove this once we have separated methods from members.
         if (Object.keys(expected as object).length === 0) {
           t.deepEqual({}, expected)

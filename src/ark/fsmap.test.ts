@@ -5,7 +5,7 @@ import {FsMap, ValueTree} from './fsmap.js'
 
 function objTest(title: string, dir: string, value: ValueTree) {
   test(title, (t) => {
-    const dirAsObj = new FsMap(dir).toObject()
+    const dirAsObj = new FsMap(dir).toStruct()
     t.deepEqual(dirAsObj, value)
   })
 }

@@ -166,22 +166,22 @@ testGroup('Lists', [
   ['let x = []; x == x', true, ArkBooleanTraitType],
 ])
 
-testGroup('Objects', [
-  // ['Object {;}', {}],
+testGroup('Structs', [
+  // ['Struct {;}', {}],
   ['let x = {;}; x == x', true, ArkBooleanTraitType],
-  // ['Object {a = 1; b = 2; c=3}', {a: 1, b: 2, c: 3}],
+  // ['Struct {a = 1; b = 2; c=3}', {a: 1, b: 2, c: 3}],
   // FIXME: use this test again once we have classes
-  // ['let o = Object {a = 1; b = 2}; o.b := 3; o', {a: 1, b: 3}],
+  // ['let o = Struct {a = 1; b = 2}; o.b := 3; o', {a: 1, b: 3}],
 ])
 
-test('Object assign invalid property', async (t) => {
+test('Struct assign invalid property', async (t) => {
   const error = await t.throwsAsync(async () => runWithTraceback(
-    new ArkState(expToInst(compile('let o = Object {a = 1; b = 2}; o.c := "abc"'))),
+    new ArkState(expToInst(compile('let o = Struct {a = 1; b = 2}; o.c := "abc"'))),
   ), {instanceOf: ArkCompilerError})
   t.not(error, undefined)
   t.is(error.message, `\
 Line 1, col 32:
-> 1 | let o = Object {a = 1; b = 2}; o.c := "abc"
+> 1 | let o = Struct {a = 1; b = 2}; o.c := "abc"
                                      ^~~
 
 Invalid property \`c'`)

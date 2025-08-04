@@ -31,7 +31,7 @@ export class ArkVal {
   type: ArkType = ArkAnyType
 }
 
-export abstract class ArkAbstractObjectBase extends ArkVal {
+export abstract class ArkAbstractStructBase extends ArkVal {
   abstract getMethod(prop: string): ArkCallable | undefined
 
   abstract get(prop: string): ArkVal
@@ -79,11 +79,11 @@ export class NativeFn<T extends ArkVal[]> extends ArkCallable {
   }
 }
 
-export const ArkObjectTraitType = new ArkTraitType('Object')
+export const ArkStructTraitType = new ArkTraitType('Struct')
 // Need to define ArkBooleanTraitType before setting methods
 
-export class ArkObjectBase extends ArkAbstractObjectBase {
-  type: ArkType = ArkObjectTraitType
+export class ArkStructBase extends ArkAbstractStructBase {
+  type: ArkType = ArkStructTraitType
 
   public members: Map<string, ArkVal> = new Map()
 
@@ -94,7 +94,7 @@ export class ArkObjectBase extends ArkAbstractObjectBase {
   }
 
   getMethod(prop: string): ArkCallable | undefined {
-    return (this.constructor as typeof ArkObjectBase).methods.get(prop)
+    return (this.constructor as typeof ArkStructBase).methods.get(prop)
   }
 
   get(prop: string) {
@@ -107,13 +107,13 @@ export class ArkObjectBase extends ArkAbstractObjectBase {
   }
 }
 
-export abstract class ArkConcreteVal<T> extends ArkObjectBase {
+export abstract class ArkConcreteVal<T> extends ArkStructBase {
   constructor(public val: T) {
     super()
   }
 }
 
-export const ArkNullTraitType = new ArkTraitType('Null', new Map(), new Set([ArkObjectTraitType]))
+export const ArkNullTraitType = new ArkTraitType('Null', new Map(), new Set([ArkStructTraitType]))
 
 export class ArkNullVal extends ArkConcreteVal<null> {
   type = ArkNullTraitType
@@ -123,7 +123,7 @@ export class ArkNullVal extends ArkConcreteVal<null> {
   }
 }
 
-export const ArkBooleanTraitType = new ArkTraitType('Bool', new Map(), new Set([ArkObjectTraitType]))
+export const ArkBooleanTraitType = new ArkTraitType('Bool', new Map(), new Set([ArkStructTraitType]))
 ArkBooleanTraitType.methods = new Map([
   ['not', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType)], ArkBooleanTraitType))],
 ])
@@ -132,15 +132,15 @@ export class ArkBooleanVal extends ArkConcreteVal<boolean> {
   type = ArkBooleanTraitType
 }
 
-ArkObjectTraitType.methods = new Map([
+ArkStructTraitType.methods = new Map([
   ['equals', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('right', ArkSelfType)], ArkBooleanTraitType))],
   ['notEquals', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('right', ArkSelfType)], ArkBooleanTraitType))],
 ])
 
 // Avoid forward reference to ArkBooleanTrait
-ArkObjectBase.methods = new Map(
+ArkStructBase.methods = new Map(
   [
-    // FIXME: ArkAnyType below should be some ur-trait ArkObjectTrait
+    // FIXME: ArkAnyType below should be some ur-trait ArkStructTrait
     ['equals', new NativeFn([new ArkTypedId('right', ArkSelfType), new ArkTypedId('right', ArkAnyType)], ArkBooleanTraitType, (thisVal, right) => ArkBoolean(thisVal === right))],
     ['notEquals', new NativeFn([new ArkTypedId('right', ArkAnyType)], ArkBooleanTraitType, (thisVal, right) => ArkBoolean(thisVal !== right))],
   ],
@@ -169,7 +169,7 @@ export class ArkUndefinedVal extends ArkConcreteVal<undefined> {
   }
 }
 
-export const ArkStringTraitType = new ArkTraitType('Str', new Map(), new Set([ArkObjectTraitType]))
+export const ArkStringTraitType = new ArkTraitType('Str', new Map(), new Set([ArkStructTraitType]))
 
 export const ArkNumberTraitType = new ArkTraitType('Number')
 
@@ -201,7 +201,7 @@ ArkNumberTraitType.methods = new Map([
   ['shiftRight', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('right', ArkSelfType)], ArkNumberTraitType))],
   ['shiftRightArith', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('right', ArkSelfType)], ArkNumberTraitType))],
 ])
-ArkNumberTraitType.superTraits = new Set([ArkObjectTraitType])
+ArkNumberTraitType.superTraits = new Set([ArkStructTraitType])
 
 export class ArkNumberVal extends ArkConcreteVal<number> {
   type = ArkNumberTraitType
@@ -352,7 +352,7 @@ export class NativeAsyncFn<T extends ArkVal[]> extends ArkCallable {
   }
 }
 
-export class ArkObject extends ArkObjectBase {
+export class ArkStruct extends ArkStructBase {
   static members: Map<string, ArkVal> = new Map()
 
   constructor(members: Map<string, ArkVal>) {
@@ -366,7 +366,7 @@ export class ArkObject extends ArkObjectBase {
   }
 }
 
-export class NativeObject extends ArkAbstractObjectBase {
+export class NativeStruct extends ArkAbstractStructBase {
   constructor(public obj: object) {
     super()
   }
@@ -398,10 +398,10 @@ ArkListTraitType.methods = new Map([
   // FIXME: This should only work for List<Str>
   ['join', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('sep', ArkStringTraitType)], ArkStringTraitType))],
 ])
-ArkListTraitType.superTraits = new Set([ArkObjectTraitType])
+ArkListTraitType.superTraits = new Set([ArkStructTraitType])
 
-export class ArkList extends ArkObjectBase {
-  static methods: Map<string, ArkCallable> = new Map([...ArkObjectBase.methods])
+export class ArkList extends ArkStructBase {
+  static methods: Map<string, ArkCallable> = new Map([...ArkStructBase.methods])
 
   static {
     ArkList.addMethods([
@@ -471,10 +471,10 @@ ArkMapTraitType.methods = new Map([
   ['keys', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType)], new ArkFnType(true, undefined, ArkAnyType)))],
   ['values', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType)], new ArkFnType(true, undefined, ArkAnyType)))],
 ])
-ArkMapTraitType.superTraits = new Set([ArkObjectTraitType])
+ArkMapTraitType.superTraits = new Set([ArkStructTraitType])
 
-export class ArkMap extends ArkObjectBase {
-  static methods: Map<string, ArkCallable> = new Map([...ArkObjectBase.methods])
+export class ArkMap extends ArkStructBase {
+  static methods: Map<string, ArkCallable> = new Map([...ArkStructBase.methods])
 
   static {
     ArkMap.addMethods([
@@ -555,7 +555,7 @@ export class ArkValRef extends ArkRef {
 
 // ts-unused-exports:disable-next-line
 export class ArkPropertyRef extends ArkRef {
-  constructor(public obj: ArkAbstractObjectBase, public prop: string) {
+  constructor(public obj: ArkAbstractStructBase, public prop: string) {
     super()
   }
 
@@ -580,7 +580,7 @@ export const globals = new Map<string, ArkVal>([
     debug(obj)
     return ArkNull()
   })],
-  ['fs', new NativeFn([new ArkTypedId('path', ArkStringTraitType)], ArkAnyType, (path: ArkStringVal) => new NativeObject(new FsMap(path.val)))],
+  ['fs', new NativeFn([new ArkTypedId('path', ArkStringTraitType)], ArkAnyType, (path: ArkStringVal) => new NativeStruct(new FsMap(path.val)))],
   // FIXME: type
   ['sleep', new NativeOperation([new ArkTypedId('ms', ArkNumberTraitType)], ArkNullTraitType, function* gen(ms) {
     yield* sleep((ms as ArkNumberVal).val)
@@ -598,7 +598,7 @@ export const globals = new Map<string, ArkVal>([
   )],
 
   // JavaScript bindings—globals (with "use").
-  ['js', new ArkObject(new Map([[
+  ['js', new ArkStruct(new Map([[
     'use', new NativeFn([new ArkTypedId('id', ArkStringTraitType)], ArkAnyType, (arg: ArkStringVal) => {
       const name = arg.val
       // eslint-disable-next-line max-len
@@ -608,7 +608,7 @@ export const globals = new Map<string, ArkVal>([
   ]]))],
 
   // JavaScript bindings—imported libraries (with "use").
-  ['jslib', new ArkObject(new Map([[
+  ['jslib', new ArkStruct(new Map([[
     'use', new NativeAsyncFn([new ArkTypedId('id', ArkStringTraitType)], ArkAnyType, async (arg: ArkStringVal) => {
       const importPath = arg.val
       const module: unknown = await import(importPath)
@@ -618,7 +618,7 @@ export const globals = new Map<string, ArkVal>([
 ])
 
 // Clone interpreter globals
-export const jsGlobals = new ArkObject(new Map())
+export const jsGlobals = new ArkStruct(new Map())
 for (const [k, v] of globals.entries()) {
   jsGlobals.set(k, v)
 }
@@ -667,7 +667,7 @@ function fromJs(x: unknown, thisObj?: object, asMethod: boolean = false): ArkVal
     return new ArkMap(map)
   }
   if (typeof x === 'object') {
-    return new NativeObject(x)
+    return new NativeStruct(x)
   }
   // eslint-disable-next-line @typescript-eslint/no-base-to-string
   throw new ArkFromJsError(`Cannot convert JavaScript value ${x}`)
@@ -676,9 +676,9 @@ function fromJs(x: unknown, thisObj?: object, asMethod: boolean = false): ArkVal
 export function toJs(val: ArkVal): unknown {
   if (val instanceof ArkConcreteVal) {
     return val.val
-  } else if (val instanceof ArkObject) {
+  } else if (val instanceof ArkStruct) {
     const obj: {[key: string]: unknown} = {}
-    for (const [k, v] of (val.constructor as typeof ArkObjectBase).methods) {
+    for (const [k, v] of (val.constructor as typeof ArkStructBase).methods) {
       obj[k] = toJs(v)
     }
     for (const [k, v] of val.members) {
@@ -714,7 +714,7 @@ export const globalTypes = new Map<string, ArkType>([
   ['Num', ArkNumberTraitType],
   ['Str', ArkStringTraitType],
 
-  ['Object', ArkObjectTraitType],
+  ['Struct', ArkStructTraitType],
   ['List', ArkListTraitType],
   ['Map', ArkMapTraitType],
   ['Fn', new ArkFnType(false, undefined, ArkAnyType)],

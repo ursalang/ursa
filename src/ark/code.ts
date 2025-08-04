@@ -6,9 +6,9 @@ import {Interval} from 'ohm-js'
 
 import {Location} from './compiler-utils.js'
 import {
-  ArkNull, ArkVal, ArkObjectBase, ArkTypedId, NativeObject,
+  ArkNull, ArkVal, ArkStructBase, ArkTypedId, NativeStruct,
   ArkNullTraitType, ArkBooleanTraitType, ArkListTraitType, ArkMapTraitType,
-  ArkObjectTraitType,
+  ArkStructTraitType,
 } from './data.js'
 import {ArkCompilerError} from './error.js'
 import {
@@ -246,7 +246,7 @@ export class ArkSet extends ArkExp {
   }
 }
 
-export class ArkObjectLiteral extends ArkExp {
+export class ArkStructLiteral extends ArkExp {
   _type: ArkType
 
   get type() {
@@ -259,7 +259,7 @@ export class ArkObjectLiteral extends ArkExp {
     for (const [k, v] of members.entries()) {
       memberTypes.set(k, new ArkMemberType(v.type, true))
     }
-    this._type = new ArkStructType(memberTypes, new Set([ArkObjectTraitType]))
+    this._type = new ArkStructType(memberTypes, new Set([ArkStructTraitType]))
   }
 }
 
@@ -269,11 +269,11 @@ export class ArkProperty extends ArkLvalue {
       return ArkAnyType
     } else {
       let propVal: ArkVal | undefined
-      if (this.obj instanceof NativeObject) {
+      if (this.obj instanceof NativeStruct) {
         propVal = this.obj.get(this.prop)
       }
       if (propVal === undefined) {
-        if (this.obj instanceof ArkGlobal && this.obj.val instanceof ArkObjectBase) {
+        if (this.obj instanceof ArkGlobal && this.obj.val instanceof ArkStructBase) {
           propVal = this.obj.val.members.get(this.prop)
           if (propVal === undefined) {
             throw new ArkCompilerError(`Invalid property \`${this.prop}'`, this.sourceLoc)

@@ -10,14 +10,14 @@ import {
   debug,
 } from './util.js'
 import {
-  globals, ArkNull, ArkBoolean, ArkNumber, ArkString, ArkObject, ArkUndefined,
+  globals, ArkNull, ArkBoolean, ArkNumber, ArkString, ArkStruct, ArkUndefined,
   globalTypes,
 } from './data.js'
 import {ArkCompilerError} from './error.js'
 import {ArkType} from './type.js'
 import {
   ArkExp, ArkLvalue, ArkIf, ArkAnd, ArkOr, ArkSequence, ArkLoop, ArkBreak, ArkContinue,
-  ArkSet, ArkLocal, ArkCapture, ArkListLiteral, ArkObjectLiteral, ArkMapLiteral,
+  ArkSet, ArkLocal, ArkCapture, ArkListLiteral, ArkStructLiteral, ArkMapLiteral,
   ArkFn, ArkGenerator, ArkReturn, ArkYield,
   ArkProperty, ArkLet, ArkCall, ArkInvoke, ArkLiteral, ArkBoundVar, ArkNamedLoc,
   ArkGlobal,
@@ -315,7 +315,7 @@ function doCompile(env: Environment, value: unknown, outerFn?: ArkFn, outerLoop?
         inits.set(key, compiled)
       }
     }
-    return new ArkObjectLiteral(inits)
+    return new ArkStructLiteral(inits)
   }
   throw new ArkCompilerError(`Invalid value ${value}`)
 }
@@ -328,5 +328,5 @@ export function compile(expr: unknown, env = new Environment()): ArkExp {
 
 // Compile the prelude and add its values to the globals
 const prelude = expToInst(compile(preludeJson))
-const preludeObj = await new ArkState(prelude).run() as ArkObject
+const preludeObj = await new ArkState(prelude).run() as ArkStruct
 preludeObj.members.forEach((val, sym) => globals.set(sym, val))

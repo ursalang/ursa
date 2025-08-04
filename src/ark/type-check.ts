@@ -9,7 +9,7 @@ import {Interval} from 'ohm-js'
 import {
   ArkAnd, ArkAwait, ArkBreak, ArkCall, ArkExp, ArkFn, ArkIf,
   ArkInvoke, ArkLaunch, ArkLet, ArkListLiteral, ArkLoop, ArkMapLiteral,
-  ArkObjectLiteral, ArkOr, ArkReturn, ArkSequence, ArkSet, ArkYield, ArkProperty,
+  ArkStructLiteral, ArkOr, ArkReturn, ArkSequence, ArkSet, ArkYield, ArkProperty,
 } from './code.js'
 import {
   ArkBooleanTraitType,
@@ -174,7 +174,7 @@ export function typecheck(exp: ArkExp) {
     if (!typeEquals(exp.lexp.type, exp.type, exp.sourceLoc)) {
       throw new ArkCompilerError('Type error in assignment', exp.sourceLoc)
     }
-  } else if (exp instanceof ArkObjectLiteral) {
+  } else if (exp instanceof ArkStructLiteral) {
     for (const v of exp.members.values()) {
       typecheck(v)
     }
