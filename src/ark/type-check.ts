@@ -1,6 +1,6 @@
 // Type-check ArkExps.
 // © Reuben Thomas 2025
-// Released under the GPL version 3, or (at your option) any later version.
+// Released under the MIT license.
 
 import assert from 'assert'
 
