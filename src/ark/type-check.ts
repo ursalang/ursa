@@ -220,7 +220,8 @@ export function typecheck(exp: ArkExp) {
   } else if (exp instanceof ArkLoop) {
     typecheck(exp.body)
   } else if (exp instanceof ArkProperty) {
-    // FIXME
+    typecheck(exp.obj)
+    void exp.type // The type accessor does some type-checking.
   }
   assert(exp.type !== ArkUnknownType)
 }
