@@ -39,7 +39,7 @@ export function checkParamList(params: string[], source?: Interval): string[] {
 function getType(name: string): ArkType {
   const ty = globalTypes.get(name)
   if (ty === undefined) {
-    throw new ArkCompilerError(`unknown type ${name}`)
+    throw new ArkCompilerError(`Unknown type ${name}`)
   }
   return ty
 }
@@ -94,7 +94,7 @@ function doCompile(env: Environment, value: unknown, outerFn?: ArkFn, outerLoop?
     for (const p of params) {
       if (!(p instanceof Array) || p.length !== 4
         || typeof p[0] !== 'string' || ['const', 'var'].includes(p[1]) || typeof p[2] !== 'string') {
-        throw new ArkCompilerError(`invalid let variable binding ${p}`)
+        throw new ArkCompilerError(`Invalid let variable binding ${p}`)
       }
     }
     const boundLocations = params.map((p) => new Location(p[1], getType(p[2]), p[0] === 'var'))
