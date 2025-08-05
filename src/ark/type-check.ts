@@ -15,6 +15,7 @@ import {
   ArkBooleanTraitType,
 } from './data.js'
 import {
+  typeName,
   ArkType, ArkFnType, ArkUnknownType, ArkNonterminatingType, ArkAnyType,
   ArkSelfType, ArkStructType, ArkTraitType, ArkUnionType,
 } from './type.js'
@@ -60,7 +61,15 @@ export function typeEquals(
     }
     return true
   }
-  // FIXME: Check unions
+  if (t1 instanceof ArkUnionType && t2 instanceof ArkUnionType) {
+    for (const ty of t1.types) {
+      if (!t1.types.has(ty)) {
+        return false
+      }
+    }
+    return true
+  }
+  // FIXME: Exhaust the possible cases, and assert we don't get here
   return false
 }
 
@@ -115,11 +124,11 @@ function checkArgsMatchParams(
   if (fnType.params !== undefined) {
     const paramTypes = fnType.params
     if (paramTypes.length !== args.length) {
-      throw new ArkCompilerError(`Function has ${paramTypes.length} parameters but ${args.length} arguments supplied`, sourceLoc)
+      throw new ArkCompilerError(`Function with ${paramTypes.length} parameters passed ${args.length} arguments`, sourceLoc)
     }
     for (let i = 0; i < args.length; i += 1) {
       if (!typeEquals(args[i].type, paramTypes[i].type, sourceLoc, selfType)) {
-        throw new ArkCompilerError(`Type of parameter ${i + 1} does not match type of argument`, sourceLoc) // FIXME: implement type → name
+        throw new ArkCompilerError(`Expecting ${typeName(paramTypes[i].type)} found ${typeName(args[i].type)}`, sourceLoc)
       }
     }
   }

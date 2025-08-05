@@ -277,14 +277,13 @@ semantics.addOperation<ArkExp>('toExp(a)', {
   },
 
   Struct(type, _open, elems, _maybeComma, _close) {
-    // TODO: compile the type, add to ArkStructLiteral
-    type.toType(this.args.a)
+    const compiledType = type.toType(this.args.a)
     const inits = new Map<string, ArkExp>()
     elems.asIteration().children.forEach((value) => {
       const elem = value.toDefinition(this.args.a)
       inits.set(elem.ident.sourceString, elem.exp)
     })
-    return new ArkStructLiteral(inits, this.source)
+    return new ArkStructLiteral(compiledType, inits, this.source)
   },
 
   PostfixExp_property(exp, _dot, property) {

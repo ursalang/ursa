@@ -261,7 +261,7 @@ export function flatToJs(insts: ArkInsts, file: string | null = null): CodeWithS
         for (const [k, v] of inst.members.entries()) {
           objInits.push(`[${util.inspect(k)}, ${v.description}]`)
         }
-        return sourceNode(letAssign(inst.id, `new ArkStruct(new Map([${objInits.join(', ')}]))`))
+        return sourceNode(letAssign(inst.id, `new ArkStruct(ArkAnyType, new Map([${objInits.join(', ')}]))`)) // FIXME: correct type, not Any
       } else if (inst instanceof ArkListLiteralInst) {
         return sourceNode(letAssign(inst.id, `new ArkList([${inst.valIds.map((id) => id.description).join(', ')}])`))
       } else if (inst instanceof ArkMapLiteralInst) {

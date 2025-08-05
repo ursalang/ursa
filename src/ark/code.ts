@@ -8,7 +8,6 @@ import {Location} from './compiler-utils.js'
 import {
   ArkNull, ArkVal, ArkStructBase, ArkTypedId, NativeStruct,
   ArkNullTraitType, ArkBooleanTraitType, ArkListTraitType, ArkMapTraitType,
-  ArkStructTraitType,
 } from './data.js'
 import {ArkCompilerError} from './error.js'
 import {
@@ -253,13 +252,13 @@ export class ArkStructLiteral extends ArkExp {
     return this._type
   }
 
-  constructor(public members: Map<string, ArkExp>, sourceLoc?: Interval) {
+  constructor(type: ArkType, public members: Map<string, ArkExp>, sourceLoc?: Interval) {
     super(sourceLoc)
     const memberTypes = new Map<string, ArkMemberType>()
     for (const [k, v] of members.entries()) {
       memberTypes.set(k, new ArkMemberType(v.type, true))
     }
-    this._type = new ArkStructType(memberTypes, new Set([ArkStructTraitType]))
+    this._type = type
   }
 }
 

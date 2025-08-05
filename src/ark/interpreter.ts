@@ -364,7 +364,7 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
       for (const [k, v] of inst.members) {
         members.set(k, mem.get(v)!)
       }
-      mem.set(inst.id, new ArkStruct(members))
+      mem.set(inst.id, new ArkStruct(inst.type, members))
       inst = inst.next
     } else if (inst instanceof ArkListLiteralInst) {
       mem.set(inst.id, new ArkList(inst.valIds.map((id) => mem.get(id)!)))

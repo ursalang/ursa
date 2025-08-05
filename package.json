@@ -69,7 +69,7 @@
     "patch-diff-ohm": "patch -p0 --output=src/grammar/ursa.ohm-bundle.d.part-patched.ts < src/grammar/ursa.ohm-bundle.d.ts.diff",
     "patch-ohm": "npm run patch-diff-ohm && sed -e 's/this: NonterminalNode/this: ThisNode/' < src/grammar/ursa.ohm-bundle.d.part-patched.ts > src/grammar/ursa.ohm-bundle.d.ts",
     "generate": "npm run generate-only && npm run patch-ohm && mkdir -p lib/grammar/ && cp src/grammar/*ohm-bundle.js src/grammar/*ohm-bundle.d.ts lib/grammar/",
-    "pre-compile-prelude": "echo null > src/ark/prelude.json && echo '(function* gen() { return new ArkStruct(new Map()) })' > src/ark/compiler/prelude.js",
+    "pre-compile-prelude": "echo null > src/ark/prelude.json && echo '(function* gen() { return new ArkStruct(ArkAnyType, new Map()) })' > src/ark/compiler/prelude.js",
     "update-ohm-patch": "npm run generate-only && npm run patch-diff-ohm && diff -u src/grammar/ursa.ohm-bundle.d.ts src/grammar/ursa.ohm-bundle.d.part-patched.ts > src/grammar/ursa.ohm-bundle.d.ts.diff; npm run patch-ohm",
     "compile-prelude": "npm run pre-compile-prelude && ./bin/test-run.sh compile --output=src/ark/prelude.json src/ursa/prelude.ursa && ./bin/test-run.sh --target=js compile --output=src/ark/compiler/prelude.js src/ursa/prelude.ursa",
     "test": "npm run generate && npm run build && ava 'src/**/basics.test.ts' 'src/**/examples.test.ts' 'src/**/cli.test.ts' 'src/**/fsmap.test.ts'",

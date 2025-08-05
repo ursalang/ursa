@@ -31,6 +31,7 @@ export class ArkMemberType {
 
 export class ArkStructType {
   constructor(
+    public name: string,
     // public superType: ArkStructType,
     public members: Map<string, ArkMemberType>,
     public traits: Set<ArkTraitType> = new Set(),
@@ -103,4 +104,27 @@ export class ArkUnionType {
   constructor(
     public types: Set<ArkType>,
   ) {}
+}
+
+export function typeName(ty: ArkType): string {
+  if (typeof ty === 'string') {
+    return ty
+  } else if (ty instanceof ArkStructType || ty instanceof ArkTraitType) {
+    return ty.name
+  } else if (ty instanceof ArkFnType) {
+    const types = []
+    for (const t of ty.params ?? []) {
+      types.push(typeName(t.type))
+    }
+    // FIXME: Generics
+    return `fn (${types.join(', ')}): ${typeName(ty.returnType)}`
+  } else if (ty instanceof ArkInstantiatedType) {
+    return 'FIXME: generics'
+  } else { // ArkUnionType
+    const types = []
+    for (const t of ty.types) {
+      types.push(typeName(t))
+    }
+    return `Union<${types.join(', ')}>`
+  }
 }

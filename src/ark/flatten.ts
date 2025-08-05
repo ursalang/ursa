@@ -5,7 +5,6 @@
 import assert from 'assert'
 import {Interval} from 'ohm-js'
 
-import {ArkType} from './type.js'
 import {
   ArkAnd, ArkAwait, ArkBreak, ArkCall, ArkCapture, ArkContinue, ArkDebugInfo,
   ArkExp, ArkFn, ArkGenerator, ArkGlobal, ArkIf, ArkInvoke, ArkLaunch, ArkLet,
@@ -18,6 +17,7 @@ import {
   ArkBoolean, ArkNull, ArkTypedId, ArkVal,
   globals,
 } from './data.js'
+import {ArkType} from './type.js'
 
 export class ArkInst {
   private static nextId = 0
@@ -237,7 +237,11 @@ export class ArkSetPropertyInst extends ArkInst {
 }
 
 export class ArkStructLiteralInst extends ArkInst {
-  constructor(sourceLoc: Interval | undefined, public members: Map<string, symbol>) {
+  constructor(
+    sourceLoc: Interval | undefined,
+    public type: ArkType /* FIXME: ArkStructType */,
+    public members: Map<string, symbol>,
+  ) {
     super(sourceLoc)
   }
 }
@@ -435,7 +439,7 @@ export function expToInsts(exp: ArkExp, externalSyms = globals): ArkInsts {
           return [prop, valInsts.id]
         },
       ))
-      return new ArkInsts([...insts, new ArkStructLiteralInst(exp.sourceLoc, valMap)])
+      return new ArkInsts([...insts, new ArkStructLiteralInst(exp.sourceLoc, exp.type, valMap)])
     } else if (exp instanceof ArkListLiteral) {
       const valInsts = exp.list.map((v) => doExpToInsts(v, innerLoop, innerFn))
       const valIds = valInsts.map((insts) => insts.id)

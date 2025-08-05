@@ -8,7 +8,7 @@ import {
 
 import {
   ArkFnType, ArkType, ArkTraitType, ArkUnionType,
-  ArkMethodType, ArkAnyType, ArkSelfType, ArkUnknownType, ArkStructType,
+  ArkMethodType, ArkAnyType, ArkSelfType, ArkUnknownType,
   ArkMemberType,
 } from './type.js'
 import {FsMap} from './fsmap.js'
@@ -355,14 +355,14 @@ export class NativeAsyncFn<T extends ArkVal[]> extends ArkCallable {
 export class ArkStruct extends ArkStructBase {
   static members: Map<string, ArkVal> = new Map()
 
-  constructor(members: Map<string, ArkVal>) {
+  constructor(type: ArkType /* FIXME: ArkStructType */, members: Map<string, ArkVal>) {
     super()
     this.members = members
     const memberTypes = new Map<string, ArkMemberType>()
     for (const [k, v] of members) {
       memberTypes.set(k, new ArkMemberType(v.type))
     }
-    this.type = new ArkStructType(memberTypes)
+    this.type = type
   }
 }
 
@@ -598,7 +598,7 @@ export const globals = new Map<string, ArkVal>([
   )],
 
   // JavaScript bindings—globals (with "use").
-  ['js', new ArkStruct(new Map([[
+  ['js', new ArkStruct(ArkAnyType, new Map([[
     'use', new NativeFn([new ArkTypedId('id', ArkStringTraitType)], ArkAnyType, (arg: ArkStringVal) => {
       const name = arg.val
       // eslint-disable-next-line max-len
@@ -608,7 +608,7 @@ export const globals = new Map<string, ArkVal>([
   ]]))],
 
   // JavaScript bindings—imported libraries (with "use").
-  ['jslib', new ArkStruct(new Map([[
+  ['jslib', new ArkStruct(ArkAnyType, new Map([[
     'use', new NativeAsyncFn([new ArkTypedId('id', ArkStringTraitType)], ArkAnyType, async (arg: ArkStringVal) => {
       const importPath = arg.val
       const module: unknown = await import(importPath)
@@ -618,7 +618,7 @@ export const globals = new Map<string, ArkVal>([
 ])
 
 // Clone interpreter globals
-export const jsGlobals = new ArkStruct(new Map())
+export const jsGlobals = new ArkStruct(ArkAnyType, new Map())
 for (const [k, v] of globals.entries()) {
   jsGlobals.set(k, v)
 }

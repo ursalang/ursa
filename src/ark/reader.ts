@@ -14,7 +14,7 @@ import {
   globalTypes,
 } from './data.js'
 import {ArkCompilerError} from './error.js'
-import {ArkType} from './type.js'
+import {ArkType, ArkAnyType} from './type.js'
 import {
   ArkExp, ArkLvalue, ArkIf, ArkAnd, ArkOr, ArkSequence, ArkLoop, ArkBreak, ArkContinue,
   ArkSet, ArkLocal, ArkCapture, ArkListLiteral, ArkStructLiteral, ArkMapLiteral,
@@ -315,7 +315,7 @@ function doCompile(env: Environment, value: unknown, outerFn?: ArkFn, outerLoop?
         inits.set(key, compiled)
       }
     }
-    return new ArkStructLiteral(inits)
+    return new ArkStructLiteral(ArkAnyType, inits) // FIXME encode and read type
   }
   throw new ArkCompilerError(`Invalid value ${value}`)
 }

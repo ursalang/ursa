@@ -9,11 +9,11 @@ import {
   debug,
 } from '../ark/util.js'
 import {ArkCompilerError} from '../ark/error.js'
-import {ArkState} from '../ark/interpreter.js'
-import {compile, runWithTraceback} from './compiler.js'
+// import {ArkState} from '../ark/interpreter.js'
+import {compile /* , runWithTraceback */} from './compiler.js'
 
 import {testUrsaGroup as testGroup} from '../testutil.js'
-import {expToInst} from '../ark/flatten.js'
+// import {expToInst} from '../ark/flatten.js'
 import {
   ArkNullTraitType, ArkBooleanTraitType, ArkNumberTraitType, ArkStringTraitType,
   ArkMapTraitType, ArkListTraitType,
@@ -174,18 +174,19 @@ testGroup('Structs', [
   // ['let o = Struct {a = 1; b = 2}; o.b := 3; o', {a: 1, b: 3}],
 ])
 
-test('Struct assign invalid property', async (t) => {
-  const error = await t.throwsAsync(async () => runWithTraceback(
-    new ArkState(expToInst(compile('let o = Struct {a = 1; b = 2}; o.c := "abc"'))),
-  ), {instanceOf: ArkCompilerError})
-  t.not(error, undefined)
-  t.is(error.message, `\
-Line 1, col 32:
-> 1 | let o = Struct {a = 1; b = 2}; o.c := "abc"
-                                     ^~~
+// FIXME: reactivate once we can define structs
+// test('Struct assign invalid property', async (t) => {
+//   const error = await t.throwsAsync(async () => runWithTraceback(
+//     new ArkState(expToInst(compile('let o = Struct {a = 1; b = 2}; o.c := "abc"'))),
+//   ), {instanceOf: ArkCompilerError})
+//   t.not(error, undefined)
+//   t.is(error.message, `\
+// Line 1, col 32:
+// > 1 | let o = Struct {a = 1; b = 2}; o.c := "abc"
+//                                      ^~~
 
-Invalid property \`c'`)
-})
+// Invalid property \`c'`)
+// })
 
 testGroup('Maps', [
   ['{}', new Map<unknown, unknown>(), ArkMapTraitType],

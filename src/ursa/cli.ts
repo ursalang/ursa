@@ -192,7 +192,7 @@ function addReturnValues(exp: ArkExp, topLevelVars: Map<string, ArkExp> = new Ma
     exp.exps[exp.exps.length - 1] = addReturnValues(exp.exps[exp.exps.length - 1], topLevelVars)
     return exp
   } else {
-    return new ArkListLiteral([exp, new ArkStructLiteral(topLevelVars)])
+    return new ArkListLiteral([exp, new ArkStructLiteral(ArkAnyType, topLevelVars)])
   }
 }
 
