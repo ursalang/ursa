@@ -17,6 +17,7 @@ export type ArkType =
 // FIXME: use symbol, not string
 type ArkTypeVariable = string
 
+export const ArkUndefinedType = 'Undefined'
 export const ArkUnknownType = 'Unknown'
 export const ArkNonterminatingType = 'Nonterminating'
 export const ArkAnyType = 'Any'

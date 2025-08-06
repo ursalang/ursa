@@ -9,10 +9,10 @@ import {
   ArkNull, ArkVal, ArkStructBase, ArkTypedId, NativeStruct,
   ArkNullTraitType, ArkBooleanTraitType, ArkListTraitType, ArkMapTraitType,
 } from './data.js'
-import {ArkCompilerError} from './error.js'
 import {
   ArkType, ArkFnType, ArkAnyType, ArkUnknownType, ArkNonterminatingType,
   ArkStructType, ArkMemberType, ArkInstantiatedType, ArkUnionType,
+  ArkUndefinedType,
 } from './type.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -189,19 +189,21 @@ export class ArkInvoke extends ArkExp {
     if (typeof ty === 'string' || ty instanceof ArkFnType) {
       return ArkAnyType // FIXME
     } else if (ty instanceof ArkInstantiatedType) {
-      throw new ArkCompilerError('Implement generics: attempt to invoke on instantiated type!')
+      // FIXME: Implement generics
+      return ArkUndefinedType
     } else if (ty instanceof ArkUnionType) {
-      throw new ArkCompilerError('FIXME: implement ArkInvoke on unions')
+      // FIXME: Implement unions
+      return ArkUndefinedType
     } else if (ty instanceof ArkStructType) {
       const method = ty.getMethod(this.prop)
       if (method === undefined) {
-        throw new ArkCompilerError(`Invalid method \`${this.prop}'`, this.sourceLoc)
+        return ArkUndefinedType
       }
       return method.type.returnType
     } else {
       const method = ty.getMethod(this.prop)
       if (method === undefined) {
-        throw new ArkCompilerError(`Invalid method \`${this.prop}'`, this.sourceLoc)
+        return ArkUndefinedType
       }
       return method.type.returnType
     }
@@ -217,7 +219,7 @@ export class ArkInvoke extends ArkExp {
   }
 }
 
-export abstract class ArkLvalue extends ArkExp {}
+export class ArkLvalue extends ArkExp {}
 
 export abstract class ArkNamedLoc extends ArkLvalue {
   get type() {
@@ -275,13 +277,13 @@ export class ArkProperty extends ArkLvalue {
         if (this.obj instanceof ArkGlobal && this.obj.val instanceof ArkStructBase) {
           propVal = this.obj.val.members.get(this.prop)
           if (propVal === undefined) {
-            throw new ArkCompilerError(`Invalid property \`${this.prop}'`, this.sourceLoc)
+            return ArkUndefinedType
           }
           return propVal.type
         } else if (this.obj.type instanceof ArkStructType) {
           propVal = this.obj.type.members.get(this.prop)
           if (propVal === undefined) {
-            throw new ArkCompilerError(`Invalid property \`${this.prop}'`, this.sourceLoc)
+            return ArkUndefinedType
           }
           return propVal.type
         }

@@ -11,3 +11,9 @@ export class ArkError extends Error {
 }
 
 export class ArkCompilerError extends ArkError {}
+
+export class ArkCompilerErrors extends ArkCompilerError {
+  constructor(messages: string[], options: ErrorOptions = {}) {
+    super(messages.join('\n\n'), undefined, options)
+  }
+}

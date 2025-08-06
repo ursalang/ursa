@@ -29,7 +29,7 @@ import {
   Frame, Environment, Location,
 } from '../ark/compiler-utils.js'
 import {ArkState, ArkRuntimeError} from '../ark/interpreter.js'
-import {ArkCompilerError} from '../ark/error.js'
+import {ArkCompilerError, ArkCompilerErrors} from '../ark/error.js'
 import {symRef, checkParamList} from '../ark/reader.js'
 import {typecheck} from '../ark/type-check.js'
 
@@ -48,6 +48,7 @@ type ParserArgs = {
   outerLoop?: ArkLoop
   outerFn?: ArkFn
   inGenerator?: boolean
+  errors: ArkCompilerError[]
 }
 
 type ParserNode = Node<ParserOperations>
@@ -181,7 +182,7 @@ semantics.addOperation<LetBinding>('toLet(a)', {
       const isVar = l.children[0].ctorName === 'var'
       letVars.push(isVar)
       if (letIds.includes(ident)) {
-        throw new ArkCompilerError(`Duplicate identifier in let: ${ident}`, this.source)
+        this.args.a.errors.push(new ArkCompilerError(`Duplicate identifier in let: ${ident}`, this.source))
       }
       letIds.push(ident)
     }
@@ -333,6 +334,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
       outerLoop: undefined,
       outerFn: fn,
       inGenerator: fnType.isGenerator,
+      errors: this.args.a.errors,
     })
     fn.capturedVars = innerEnv.top().captures.map(
       (c) => symRef(this.args.a.env, c.name) as ArkNamedLoc,
@@ -469,7 +471,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     const compiledLvalue = lvalue.toLval(this.args.a)
     const compiledValue = exp.toExp(this.args.a)
     if (compiledLvalue instanceof ArkNamedLoc && !compiledLvalue.location.isVar) {
-      throw new ArkCompilerError("Cannot assign to non-'var'", lvalue.source)
+      this.args.a.errors.push(new ArkCompilerError("Cannot assign to non-'var'", lvalue.source))
     }
     return new ArkSet(compiledLvalue, compiledValue, this.source)
   },
@@ -480,7 +482,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
 
   Exp_yield(yield_, exp) {
     if (!this.args.a.inGenerator) {
-      throw new ArkCompilerError('yield may only be used in a generator', yield_.source)
+      this.args.a.errors.push(new ArkCompilerError('yield may only be used in a generator', yield_.source))
     }
     return new ArkYield(this.args.a.outerFn!, maybeVal(this.args.a, exp), this.source)
   },
@@ -491,21 +493,26 @@ semantics.addOperation<ArkExp>('toExp(a)', {
 
   Statement_break(_break, exp) {
     if (this.args.a.outerLoop === undefined) {
-      throw new ArkCompilerError('break used outside a loop', _break.source)
+      this.args.a.errors.push(new ArkCompilerError('break used outside a loop', _break.source))
     }
-    return new ArkBreak(this.args.a.outerLoop, maybeVal(this.args.a, exp), this.source)
+    return new ArkBreak(this.args.a.outerLoop
+      ?? new ArkLoop(new ArkExp(), 0), maybeVal(this.args.a, exp), this.source)
   },
   Statement_continue(_continue) {
     if (this.args.a.outerLoop === undefined) {
-      throw new ArkCompilerError('continue used outside a loop', _continue.source)
+      this.args.a.errors.push(new ArkCompilerError('continue used outside a loop', _continue.source))
     }
     return new ArkContinue(this.source)
   },
   Statement_return(return_, exp) {
     if (this.args.a.outerFn === undefined) {
-      throw new ArkCompilerError('return used outside a function', return_.source)
+      this.args.a.errors.push(new ArkCompilerError('return used outside a function', return_.source))
     }
-    return new ArkReturn(this.args.a.outerFn, maybeVal(this.args.a, exp), this.source)
+    return new ArkReturn(
+      this.args.a.outerFn ?? new ArkFn([], ArkUnknownType, [], new ArkExp()),
+      maybeVal(this.args.a, exp),
+      this.source,
+    )
   },
 
   Block(_open, seq, _close) {
@@ -543,7 +550,8 @@ semantics.addOperation<ArkType>('toType(a)', {
   NamedType(ident, _typeArgs) {
     const basicTy = globalTypes.get(ident.sourceString)
     if (basicTy === undefined) {
-      throw new ArkCompilerError('Bad type', ident.source)
+      this.args.a.errors.push(new ArkCompilerError('Bad type', ident.source))
+      return ArkUnknownType
     }
     // TODO
     // let paramTypes: ArkType[] = []
@@ -564,17 +572,19 @@ semantics.addOperation<ArkType>('toType(a)', {
   },
 })
 
-function badLvalue(node: ParserNode): never {
-  throw new ArkCompilerError('Bad lvalue', node.source)
+function badLvalue(node: ParserNode): ArkCompilerError {
+  return new ArkCompilerError('Bad lvalue', node.source)
 }
 
 // The node passed to toLval is always a PostfixExp or PrimaryExp.
 semantics.addOperation<ArkLvalue>('toLval(a)', {
   _terminal() {
-    badLvalue(this)
+    this.args.a.errors.push(badLvalue(this))
+    return new ArkLvalue()
   },
   _nonterminal() {
-    badLvalue(this)
+    this.args.a.errors.push(badLvalue(this))
+    return new ArkLvalue()
   },
 
   PrimaryExp(exp) {
@@ -606,10 +616,18 @@ export function compile(
   }
   const ast = semantics(matchResult)
   const args = {
-    env, outerLoop: undefined, outerFn: undefined, atSeqTop: true,
+    env, outerLoop: undefined, outerFn: undefined, atSeqTop: true, errors: [] as ArkCompilerError[],
   }
   const exp = ast.toExp(args)
-  typecheck(exp)
+  if (args.errors.length > 0) {
+    throw new ArkCompilerErrors(args.errors.map((e) => e.message))
+  }
+  if (args.errors.length === 0) {
+    const typeErrors = typecheck(exp)
+    if (typeErrors.length > 0) {
+      throw new ArkCompilerErrors(typeErrors.map((e) => e.message))
+    }
+  }
   return exp
 }
 
