@@ -171,7 +171,7 @@ export class ArkUndefinedVal extends ArkConcreteVal<undefined> {
 
 export const ArkStringTraitType = new ArkTraitType('Str', new Map(), new Set([ArkStructTraitType]))
 
-export const ArkNumberTraitType = new ArkTraitType('Number')
+export const ArkNumberTraitType = new ArkTraitType('Num')
 
 ArkStringTraitType.methods = new Map([
   ['get', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('index', ArkNumberTraitType)], ArkStringTraitType))],
