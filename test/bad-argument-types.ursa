@@ -1,0 +1,6 @@
+let f = fn(a: Num, b: Num): Num {
+    a + b
+}
+f(2,3)
+f(3)
+f(3, "hello")

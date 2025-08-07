@@ -53,6 +53,7 @@ import {
   ['Test error on re-assignment with wrong type', 'test/bad-reassignment'],
   ["Test error on duplicate identifiers in 'let'", 'test/duplicate-let'],
   ["Test error on 'yield' outside generator", 'test/bad-yield'],
+  ['Test errors on bad argument types', 'test/bad-argument-types'],
 
   // Rosetta code examples
   ['Accumulator factory', 'rosettacode/Accumulator factory'],

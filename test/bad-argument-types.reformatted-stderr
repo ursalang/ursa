@@ -1,0 +1,15 @@
+Error: Line 5, col 1:
+  4 | f(2, 3)
+> 5 | f(3)
+      ^~~~
+  6 | f(3, "hello")
+
+Function with 2 parameters passed 1 arguments
+
+Line 6, col 6:
+  5 | f(3)
+> 6 | f(3, "hello")
+           ^~~~~~~
+  7 | 
+
+Expecting Num found Str
