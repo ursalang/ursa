@@ -61,7 +61,7 @@ export class ArkGlobal extends ArkExp {
     return this._type
   }
 
-  constructor(public name: string, public val: ArkVal, public _type: ArkType) {
+  constructor(public name: string, public val: ArkVal, private _type: ArkType) {
     super()
   }
 }
@@ -236,19 +236,16 @@ export class ArkSet extends ArkExp {
 }
 
 export class ArkStructLiteral extends ArkExp {
-  _type: ArkType
-
   get type() {
     return this._type
   }
 
-  constructor(type: ArkType, public members: Map<string, ArkExp>, sourceLoc?: Interval) {
+  constructor(private _type: ArkType, public members: Map<string, ArkExp>, sourceLoc?: Interval) {
     super(sourceLoc)
     const memberTypes = new Map<string, ArkMemberType>()
     for (const [k, v] of members.entries()) {
       memberTypes.set(k, new ArkMemberType(v.type, true))
     }
-    this._type = type
   }
 }
 
