@@ -80,7 +80,7 @@ export class ArkTraitType {
   }
 }
 
-export class ArkInstantiatedType {
+class ArkInstantiatedType {
   constructor(
     public baseType: ArkStructType | ArkTraitType | ArkFnType,
     public typeArguments: Map<string, ArkType> = new Map(),

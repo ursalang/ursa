@@ -11,8 +11,7 @@ import {
 } from './data.js'
 import {
   ArkType, ArkFnType, ArkAnyType, ArkUnknownType, ArkNonterminatingType,
-  ArkStructType, ArkMemberType, ArkInstantiatedType, ArkUnionType,
-  ArkUndefinedType,
+  ArkStructType, ArkMemberType, ArkUndefinedType, ArkTraitType,
 } from './type.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -186,27 +185,16 @@ export class ArkCall extends ArkExp {
 export class ArkInvoke extends ArkExp {
   get type() {
     const ty = this.obj.type
-    if (typeof ty === 'string' || ty instanceof ArkFnType) {
+    if (ty === ArkAnyType) {
       return ArkAnyType // FIXME
-    } else if (ty instanceof ArkInstantiatedType) {
-      // FIXME: Implement generics
-      return ArkUndefinedType
-    } else if (ty instanceof ArkUnionType) {
-      // FIXME: Implement unions
-      return ArkUndefinedType
-    } else if (ty instanceof ArkStructType) {
-      const method = ty.getMethod(this.prop)
-      if (method === undefined) {
-        return ArkUndefinedType
-      }
-      return method.type.returnType
-    } else {
+    } else if (ty instanceof ArkStructType || ty instanceof ArkTraitType) {
       const method = ty.getMethod(this.prop)
       if (method === undefined) {
         return ArkUndefinedType
       }
       return method.type.returnType
     }
+    return ArkUndefinedType
   }
 
   constructor(
