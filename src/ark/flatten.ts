@@ -14,10 +14,9 @@ import {
 } from './code.js'
 import {Location} from './compiler-utils.js'
 import {
-  ArkBoolean, ArkNull, ArkTypedId, ArkVal,
-  globals,
+  ArkBoolean, ArkNull, ArkVal, globals,
 } from './data.js'
-import {ArkType} from './type.js'
+import {ArkType, ArkTypedId} from './type.js'
 
 export class ArkInst {
   private static nextId = 0

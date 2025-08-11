@@ -7,9 +7,9 @@ import {
 } from 'effection'
 
 import {
-  ArkFnType, ArkType, ArkTraitType, ArkUnionType,
+  ArkFnType, ArkType, ArkTypedId, ArkTraitType, ArkUnionType,
   ArkMethodType, ArkAnyType, ArkSelfType, ArkUnknownType,
-  ArkMemberType,
+  ArkMemberType, ArkStructType, ArkTypeVariable,
 } from './type.js'
 import {FsMap} from './fsmap.js'
 import programVersion from '../version.js'
@@ -21,10 +21,6 @@ import {type ArkState} from './interpreter.js'
 function isGeneratorFunction(obj: object) {
   const constructor = obj.constructor
   return constructor !== undefined && constructor.name === 'GeneratorFunction'
-}
-
-export class ArkTypedId {
-  constructor(public name: string, public type: ArkType) {}
 }
 
 export class ArkVal {
@@ -175,7 +171,13 @@ export const ArkNumberTraitType = new ArkTraitType('Num')
 
 ArkStringTraitType.methods = new Map([
   ['get', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('index', ArkNumberTraitType)], ArkStringTraitType))],
-  ['iter', new ArkMethodType(new ArkFnType(true, [new ArkTypedId('self', ArkSelfType)], ArkStringTraitType))],
+  ['iter', new ArkMethodType(
+    new ArkFnType(
+      true,
+      [new ArkTypedId('self', ArkSelfType)],
+      new ArkUnionType(new Set([ArkStringTraitType, ArkNullTraitType])),
+    )
+  )],
 ])
 
 ArkNumberTraitType.methods = new Map([
@@ -385,16 +387,28 @@ export class NativeStruct extends ArkAbstractStructBase {
   }
 }
 
-export const ArkListTraitType = new ArkTraitType('List')
+export const ArkListTraitType = new ArkTraitType('List', undefined, undefined, new Map([['T', ArkUnknownType]]))
 ArkListTraitType.methods = new Map([
   ['len', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType)], ArkNumberTraitType))],
-  ['get', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('index', ArkNumberTraitType)], ArkAnyType))],
-  ['set', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('index', ArkNumberTraitType), new ArkTypedId('val', ArkAnyType)], ArkListTraitType))],
-  ['push', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('item', ArkAnyType)], ArkListTraitType))],
-  ['pop', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType)], ArkListTraitType))],
-  ['slice', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('from', ArkNumberTraitType), new ArkTypedId('to', ArkNumberTraitType)], ArkListTraitType))],
-  ['iter', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType)], new ArkFnType(true, undefined, ArkAnyType)))],
-  ['sorted', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType)], ArkListTraitType))],
+  ['get', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('index', ArkNumberTraitType)], new ArkTypeVariable('T'), new Map([['T', ArkUnknownType]])))],
+  ['set', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('index', ArkNumberTraitType), new ArkTypedId('val', new ArkTypeVariable('T'))], ArkSelfType, new Map([['T', ArkUnknownType]])))],
+  ['push', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('item', new ArkTypeVariable('T'))], ArkSelfType, new Map([['T', ArkUnknownType]])))],
+  ['pop', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType)], ArkSelfType))],
+  ['slice', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('from', ArkNumberTraitType), new ArkTypedId('to', ArkNumberTraitType)], ArkSelfType))],
+  ['iter', new ArkMethodType(
+    new ArkFnType(
+      false,
+      [new ArkTypedId('self', ArkSelfType)],
+      new ArkFnType(
+        true,
+        undefined,
+        new ArkUnionType(new Set([new ArkTypeVariable('T'), ArkNullTraitType])),
+        new Map([['T', ArkUnknownType]]),
+      ),
+      new Map([['T', ArkUnknownType]]),
+    ),
+  )],
+  ['sorted', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType)], ArkSelfType))],
   // FIXME: This should only work for List<Str>
   ['join', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('sep', ArkStringTraitType)], ArkStringTraitType))],
 ])
@@ -406,31 +420,31 @@ export class ArkList extends ArkStructBase {
   static {
     ArkList.addMethods([
       ['len', new NativeFn([], ArkNumberTraitType, (thisVal: ArkList) => ArkNumber(thisVal.list.length))],
-      ['get', new NativeFn([new ArkTypedId('index', ArkNumberTraitType)], ArkAnyType, (thisVal: ArkList, index: ArkNumberVal) => (thisVal.list[index.val]))],
+      ['get', new NativeFn([new ArkTypedId('index', ArkNumberTraitType)], new ArkTypeVariable('T'), (thisVal: ArkList, index: ArkNumberVal) => (thisVal.list[index.val]))],
       ['set', new NativeFn(
-        [new ArkTypedId('index', ArkNumberTraitType), new ArkTypedId('val', ArkAnyType)],
-        ArkListTraitType,
+        [new ArkTypedId('index', ArkNumberTraitType), new ArkTypedId('val', new ArkTypeVariable('T'))],
+        ArkSelfType,
         (thisVal: ArkList, index: ArkNumberVal, val: ArkVal) => {
           thisVal.list[index.val] = val
           return thisVal
         },
       )],
-      ['push', new NativeFn([new ArkTypedId('item', ArkAnyType)], ArkListTraitType, (thisVal: ArkList, item: ArkVal) => {
+      ['push', new NativeFn([new ArkTypedId('item', new ArkTypeVariable('T'))], ArkSelfType, (thisVal: ArkList, item: ArkVal) => {
         thisVal.list.push(item)
         return thisVal
       })],
-      ['pop', new NativeFn([], ArkListTraitType, (thisVal: ArkList) => {
+      ['pop', new NativeFn([], ArkSelfType, (thisVal: ArkList) => {
         thisVal.list.pop()
         return thisVal
       })],
-      ['slice', new NativeFn([new ArkTypedId('from', ArkNumberTraitType), new ArkTypedId('to', ArkNumberTraitType)], ArkListTraitType, (thisVal: ArkList, from: ArkNumberVal, to: ArkNumberVal) => new ArkList(
+      ['slice', new NativeFn([new ArkTypedId('from', ArkNumberTraitType), new ArkTypedId('to', ArkNumberTraitType)], ArkSelfType, (thisVal: ArkList, from: ArkNumberVal, to: ArkNumberVal) => new ArkList(
         // FIXME: type of from and to is Maybe<Num>
         thisVal.list.slice(
           from instanceof ArkNumberVal ? from.val : 0,
           to instanceof ArkNumberVal ? to.val : undefined,
         ),
       ))],
-      ['iter', new NativeFn([], new ArkFnType(true, undefined, ArkAnyType), (thisVal: ArkList) => {
+      ['iter', new NativeFn([], new ArkFnType(true, undefined, new ArkTypeVariable('T')), (thisVal: ArkList) => {
         const list = thisVal.list
         const generator = (function* listGenerator() {
           for (const elem of list) {
@@ -438,9 +452,9 @@ export class ArkList extends ArkStructBase {
           }
           return ArkNull()
         }())
-        return new NativeFn([], ArkAnyType, () => generator.next().value)
+        return new NativeFn([], new ArkTypeVariable('T'), () => generator.next().value)
       })],
-      ['sorted', new NativeFn([], ArkListTraitType, (thisVal: ArkList) => new ArkList(thisVal.list.map(toJs).toSorted().map((v) => fromJs(v))))],
+      ['sorted', new NativeFn([], ArkSelfType, (thisVal: ArkList) => new ArkList(thisVal.list.map(toJs).toSorted().map((v) => fromJs(v))))],
       // FIXME: This should only work for List<Str>
       ['join', new NativeFn([new ArkTypedId('sep', ArkStringTraitType)], ArkStringTraitType, (thisVal: ArkList, sep: ArkStringVal) => ArkString(thisVal.list.map(toJs).join(sep.val)))],
     ])
@@ -448,12 +462,17 @@ export class ArkList extends ArkStructBase {
 
   constructor(public list: ArkVal[]) {
     super()
-    this.type = ArkListTraitType
+    let elemType: ArkType = ArkAnyType // FIXME ArkUnknownType
+    if (list.length > 0) {
+      elemType = list[0].type
+    }
+    this.type = ArkListTraitType.instantiate(new Map([['T', elemType]]))
   }
 }
 
 // Avoid a forward reference to ArkList
 ArkStringVal.addMethods([
+  // FIXME: List<Str> type in next line
   ['split', new NativeFn([new ArkTypedId('sep', ArkStringTraitType)], ArkListTraitType, (thisVal: ArkStringVal, sep: ArkStringVal) => new ArkList(thisVal.val.split(sep.val).map((s) => ArkString(s))))],
 ])
 
@@ -692,10 +711,29 @@ export const globalTypes = new Map<string, ArkType>([
   ['List', ArkListTraitType],
   ['Map', ArkMapTraitType],
   ['Fn', new ArkFnType(false, undefined, ArkAnyType)],
-
-  // TODO: implement union types.
   ['Union', new ArkUnionType(new Set())],
 ])
+
+export function typeToStr(ty: ArkType) {
+  switch (ty) {
+    case ArkUnknownType:
+      return 'Unknown'
+    case ArkAnyType:
+      return 'Any'
+    default:
+  }
+  if (ty instanceof ArkFnType) {
+    return 'Fn'
+  } else if (ty instanceof ArkUnionType) {
+    return 'Union'
+  } else if (ty instanceof ArkStructType) {
+    return 'Struct'
+  } else if (ty instanceof ArkTraitType) {
+    return ty.name
+  }
+  debug(ty)
+  throw new Error('unknown type')
+}
 
 // Re-export types from type.js for standalone scripts, which import only
 // from this module.

@@ -6,11 +6,11 @@ import {Interval} from 'ohm-js'
 
 import {Location} from './compiler-utils.js'
 import {
-  ArkNull, ArkVal, ArkStructBase, ArkTypedId, NativeStruct,
+  ArkNull, ArkVal, ArkStructBase, NativeStruct,
   ArkNullTraitType, ArkBooleanTraitType, ArkListTraitType, ArkMapTraitType,
 } from './data.js'
 import {
-  ArkType, ArkFnType, ArkAnyType, ArkUnknownType, ArkNonterminatingType,
+  ArkType, ArkTypedId, ArkFnType, ArkAnyType, ArkUnknownType, ArkNonterminatingType,
   ArkStructType, ArkMemberType, ArkUndefinedType, ArkTraitType,
 } from './type.js'
 import {
@@ -286,13 +286,17 @@ export class ArkProperty extends ArkLvalue {
 }
 
 export class ArkListLiteral extends ArkExp {
-  // eslint-disable-next-line class-methods-use-this
+  private _type = ArkListTraitType
+
   get type() {
-    return ArkListTraitType // FIXME Generics
+    return this._type
   }
 
   constructor(public list: ArkExp[], sourceLoc?: Interval) {
     super(sourceLoc)
+    if (list.length > 0) {
+      this._type = ArkListTraitType.instantiate(new Map([['T', list[0].type]]))
+    }
   }
 }
 

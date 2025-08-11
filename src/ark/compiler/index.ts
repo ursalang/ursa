@@ -32,13 +32,13 @@ import {
 import {
   jsGlobals, ArkBoolean, ArkBooleanVal, ArkList, ArkMap, ArkNull,
   ArkNumber, ArkNullVal, ArkNumberVal, ArkStruct, ArkString,
-  ArkStringVal, ArkVal, NativeFn, ArkOperation, ArkTypedId,
+  ArkStringVal, ArkVal, NativeFn, ArkOperation,
   ArkNullTraitType, ArkBooleanTraitType, ArkNumberTraitType, ArkStringTraitType,
   ArkListTraitType, ArkMapTraitType, ArkStructTraitType,
   ArkUndefined, ArkCallable,
 } from '../data.js'
 import {
-  ArkAnyType, ArkFnType, ArkUnknownType, ArkType, ArkUnionType,
+  ArkAnyType, ArkFnType, ArkUnknownType, ArkType, ArkTypedId, ArkUnionType,
 } from '../type.js'
 import {ArkExp} from '../code.js'
 import {debug} from '../util.js'

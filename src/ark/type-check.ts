@@ -14,16 +14,15 @@ import {
 import {
   ArkBooleanTraitType,
 } from './data.js'
+import {ArkCompilerError} from './error.js'
 import {
-  typeName,
-  ArkType, ArkFnType, ArkUnknownType, ArkNonterminatingType, ArkAnyType,
-  ArkSelfType, ArkStructType, ArkTraitType, ArkUnionType, ArkUndefinedType,
+  typeName, ArkType, ArkFnType, ArkUnknownType, ArkNonterminatingType, ArkAnyType,
+  ArkSelfType, ArkStructType, ArkTraitType, ArkUnionType, ArkUndefinedType, ArkTypeVariable,
 } from './type.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
 } from './util.js'
-import {ArkCompilerError} from './error.js'
 
 export function typeEquals(
   t1_: ArkType,
@@ -33,19 +32,20 @@ export function typeEquals(
 ): boolean {
   const t1 = t1_ === ArkSelfType ? selfType : t1_
   const t2 = t2_ === ArkSelfType ? selfType : t2_
-  if (t1 === undefined || t2 === undefined) {
-    throw new ArkCompilerError('Self does not exist in this context', sourceLoc)
-  }
-  if (t1 === ArkUnknownType || t2 === ArkUnknownType) {
-    return false // Unknown doesn't match anything
-  }
   if (t1 === t2) {
     return true
   }
-  if (t1 === ArkAnyType || t2 === ArkAnyType) {
+  if (t1 === undefined || t2 === undefined) {
+    throw new ArkCompilerError('Self does not exist in this context', sourceLoc)
+  } else if (t1 === ArkUnknownType || t2 === ArkUnknownType) {
+    return false // Unknown only matches itself
+  } else if (t1 === ArkAnyType || t2 === ArkAnyType) {
     return true // Any matches anything
-  }
-  if (t1 instanceof ArkFnType && t2 instanceof ArkFnType) {
+  } else if ((t1 instanceof ArkTypeVariable && t2 instanceof ArkTypeVariable)
+    || (t1 instanceof ArkStructType && t2 instanceof ArkStructType)
+    || (t1 instanceof ArkTraitType && t2 instanceof ArkTraitType)) {
+    return t1.name === t2.name
+  } else if (t1 instanceof ArkFnType && t2 instanceof ArkFnType) {
     if (!typeEquals(t1.returnType, t2.returnType, sourceLoc, selfType)) {
       return false
     }
@@ -60,16 +60,23 @@ export function typeEquals(
       }
     }
     return true
-  }
-  if (t1 instanceof ArkUnionType && t2 instanceof ArkUnionType) {
-    for (const ty of t1.types) {
-      if (!t1.types.has(ty)) {
+  } else if (t1 instanceof ArkUnionType && t2 instanceof ArkUnionType) {
+    // Search t2 for a match for each type in t1.
+    // TODO: improve efficiency.
+    for (const ty1 of t1.types) {
+      let match = false
+      for (const ty2 of t2.types) {
+        if (typeEquals(ty1, ty2, sourceLoc, selfType)) {
+          match = true
+          break
+        }
+      }
+      if (!match) {
         return false
       }
     }
     return true
   }
-  // FIXME: Exhaust the possible cases, and assert we don't get here
   return false
 }
 
@@ -146,7 +153,7 @@ export function typecheck(exp: ArkExp): ArkCompilerError[] {
       }
       for (let i = 0; i < args.length; i += 1) {
         if (!safeTypeEquals(args[i].type, paramTypes[i].type, sourceLoc, selfType)) {
-          errors.push(new ArkCompilerError(`Expecting ${typeName(paramTypes[i].type)} found ${typeName(args[i].type)}`, args[i].sourceLoc))
+          errors.push(new ArkCompilerError(`Expecting ${typeName(paramTypes[i].type, selfType)} found ${typeName(args[i].type, selfType)}`, args[i].sourceLoc))
         }
       }
     }
@@ -171,7 +178,7 @@ export function typecheck(exp: ArkExp): ArkCompilerError[] {
       doTypecheck(exp.exp)
       // FIXME: Type-check generators
       if (!exp.fn.type.isGenerator && !safeTypeEquals(exp.type, exp.fn.returnType, exp.sourceLoc)) {
-        errors.push(new ArkCompilerError('Type of `return\' expression does not match function return type'))
+        errors.push(new ArkCompilerError('Type of `return\' expression does not match function return type', exp.sourceLoc))
       }
     } else if (exp instanceof ArkFn) {
       doTypecheck(exp.body)
@@ -186,19 +193,20 @@ export function typecheck(exp: ArkExp): ArkCompilerError[] {
     } else if (exp instanceof ArkInvoke) {
       if (exp.type === ArkUndefinedType) {
         errors.push(new ArkCompilerError(`Invalid method \`${exp.prop}'`, exp.sourceLoc))
-      }
-      doTypecheck(exp.obj)
-      exp.args.map((a) => doTypecheck(a))
-      const objTy = exp.obj.type
-      if (objTy !== ArkAnyType) { // Can't assume anything about Any values
-        if (!(objTy instanceof ArkStructType || objTy instanceof ArkTraitType)) {
-          errors.push(new ArkCompilerError('Invalid method invocation', exp.sourceLoc))
-        } else {
-          const method = objTy.getMethod(exp.prop)
-          if (method === undefined) {
-            errors.push(new ArkCompilerError(`Invalid method \`${exp.prop}'`, exp.sourceLoc))
+      } else {
+        doTypecheck(exp.obj)
+        exp.args.map((a) => doTypecheck(a))
+        const objTy = exp.obj.type
+        if (objTy !== ArkAnyType) { // Can't assume anything about Any values
+          if (!(objTy instanceof ArkStructType || objTy instanceof ArkTraitType)) {
+            errors.push(new ArkCompilerError('Invalid method invocation', exp.sourceLoc))
           } else {
-            checkArgsMatchParams(method.type, [exp.obj, ...exp.args], exp.sourceLoc, objTy)
+            const method = objTy.getMethod(exp.prop)
+            if (method === undefined) {
+              errors.push(new ArkCompilerError(`Invalid method \`${exp.prop}'`, exp.sourceLoc))
+            } else {
+              checkArgsMatchParams(method.type, [exp.obj, ...exp.args], exp.sourceLoc, objTy)
+            }
           }
         }
       }
@@ -210,15 +218,18 @@ export function typecheck(exp: ArkExp): ArkCompilerError[] {
       for (const v of exp.members.values()) {
         doTypecheck(v)
       }
+      // FIXME: Check items are of correct type
     } else if (exp instanceof ArkListLiteral) {
       for (const v of exp.list) {
         doTypecheck(v)
       }
+      // FIXME: Check items are of correct type
     } else if (exp instanceof ArkMapLiteral) {
       for (const [k, v] of exp.map) {
         doTypecheck(k)
         doTypecheck(v)
       }
+      // FIXME: Check items are of correct type
     } else if (exp instanceof ArkLet) {
       doTypecheck(exp.body)
       exp.boundVars.map((bv) => doTypecheck(bv.init))
