@@ -65,18 +65,11 @@ export const ArkNonterminatingType = new ArkTypeConstant('Nonterminating')
 export const ArkAnyType = new ArkTypeConstant('Any')
 export const ArkSelfType = new ArkTypeConstant('Self')
 
-export class ArkMemberType {
-  constructor(
-    public type: ArkType,
-    public isVar: boolean = false,
-  ) {}
-}
-
 export class ArkStructType extends ArkParametricType<ArkStructType> {
   constructor(
     public name: string,
     // FIXME: public superType: ArkStructType,
-    public members: Map<string, ArkMemberType>,
+    public members: Map<string, ArkType>,
     public traits: Set<ArkTraitType> = new Set(),
     typeParameters: Map<string, ArkType> = new Map(),
   ) {
@@ -84,14 +77,14 @@ export class ArkStructType extends ArkParametricType<ArkStructType> {
   }
 
   public instantiate(substs: Map<string, ArkType>) {
-    const newMembers = new Map<string, ArkMemberType>()
-    for (const [name, m] of this.members) {
-      let newType = m.type
-      if (m.type instanceof ArkParametricType && m.type.isGeneric()) {
+    const newMembers = new Map<string, ArkType>()
+    for (const [name, ty] of this.members) {
+      let newType = ty
+      if (ty instanceof ArkParametricType && ty.isGeneric()) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        newType = m.type.instantiate(substs)
+        newType = ty.instantiate(substs)
       }
-      newMembers.set(name, new ArkMemberType(newType, m.isVar))
+      newMembers.set(name, newType)
     }
     const newTraits = new Set<ArkTraitType>()
     for (const t of this.traits) {
@@ -113,6 +106,33 @@ export class ArkStructType extends ArkParametricType<ArkStructType> {
       }
     }
     return undefined
+  }
+}
+
+export class ArkEnumType extends ArkParametricType<ArkEnumType> {
+  constructor(
+    public name: string,
+    public variants: Map<string, ArkType>,
+    typeParameters: Map<string, ArkType> = new Map(),
+  ) {
+    super(typeParameters)
+  }
+
+  public instantiate(substs: Map<string, ArkType>) {
+    const newVariants = new Map<string, ArkType>()
+    for (const [name, ty] of this.variants) {
+      let newType = ty
+      if (ty instanceof ArkParametricType && ty.isGeneric()) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        newType = ty.instantiate(substs)
+      }
+      newVariants.set(name, newType)
+    }
+    return new ArkEnumType(
+      this.name,
+      newVariants,
+      instantiateTypeVars(this.typeParameters, substs),
+    )
   }
 }
 
