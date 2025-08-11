@@ -4,13 +4,8 @@
 
 import {
   ArkVal, ArkConcreteVal, ArkNull, ArkOperation, ArkList, ArkMap, ArkStruct,
-  ArkUndefined, NativeStruct,
-  ArkNullTraitType, ArkBooleanTraitType, ArkNumberTraitType, ArkStringTraitType,
-  ArkListTraitType, ArkMapTraitType,
+  ArkUndefined, NativeStruct, typeToStr,
 } from './data.js'
-import {
-  ArkType, ArkFnType, ArkUnionType, ArkUnknownType, ArkAnyType, ArkStructType,
-} from './type.js'
 import {
   ArkExp, ArkSequence,
   ArkAnd, ArkOr, ArkIf, ArkLoop, ArkBreak, ArkContinue, ArkInvoke,
@@ -18,38 +13,6 @@ import {
   ArkLiteral, ArkListLiteral, ArkMapLiteral, ArkStructLiteral, ArkYield,
   ArkGlobal,
 } from './code.js'
-import {debug} from './util.js'
-
-function typeToStr(ty: ArkType) {
-  switch (ty) {
-    case ArkUnknownType:
-      return 'Unknown'
-    case ArkAnyType:
-      return 'Any'
-    case ArkNullTraitType:
-      return 'Null'
-    case ArkBooleanTraitType:
-      return 'Bool'
-    case ArkNumberTraitType:
-      return 'Num'
-    case ArkStringTraitType:
-      return 'Str'
-    case ArkListTraitType: // TODO Generics
-      return 'List'
-    case ArkMapTraitType: // TODO Generics
-      return 'Map'
-    default:
-  }
-  if (ty instanceof ArkFnType) {
-    return 'Fn'
-  } else if (ty instanceof ArkUnionType) {
-    return 'Union'
-  } else if (ty instanceof ArkStructType) {
-    return 'Struct'
-  }
-  debug(ty)
-  throw new Error('unknown type')
-}
 
 export function valToJs(val: ArkVal | ArkExp) {
   function doValToJs(val: ArkVal | ArkExp): unknown {

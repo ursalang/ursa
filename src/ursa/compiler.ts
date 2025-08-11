@@ -17,7 +17,7 @@ import {
   globalTypes,
 } from '../ark/data.js'
 import {
-  ArkType, ArkFnType, ArkUnknownType, ArkAnyType,
+  ArkType, ArkFnType, ArkUnknownType, ArkAnyType, ArkParametricType,
 } from '../ark/type.js'
 import {
   ArkBoundVar, ArkExp, ArkLvalue, ArkLiteral, ArkSequence, ArkIf, ArkLoop, ArkAnd, ArkOr,
@@ -320,7 +320,6 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     const innerEnv = this.args.a.env.pushFrame(
       new Frame(fnType.params!.map((p) => new Location(p.name, p.type, false)), []),
     )
-    // TODO: ArkFn should be an ArkStruct which contains one method.
     const CodeConstructor = fnType.isGenerator ? ArkGenerator : ArkFn
     const fn = new CodeConstructor(
       fnType.params!,
@@ -547,20 +546,34 @@ semantics.addOperation<ArkExp>('toExp(a)', {
 })
 
 semantics.addOperation<ArkType>('toType(a)', {
-  NamedType(ident, _typeArgs) {
+  NamedType(ident, typeArgs) {
     const basicTy = globalTypes.get(ident.sourceString)
     if (basicTy === undefined) {
       this.args.a.errors.push(new ArkCompilerError('Bad type', ident.source))
       return ArkUnknownType
     }
-    // TODO
-    // let paramTypes: ArkType[] = []
-    // if (typeArgs.children.length > 0) {
-    //   paramTypes = typeArgs.children[0].children[1].asIteration().children.map(
-    //     (child) => child.toType(this.args.a),
-    //   )
-    // }
-    return basicTy // TODO: use parameter types
+    if (typeArgs.children.length > 0) {
+      if (!(basicTy instanceof ArkParametricType)) {
+        this.args.a.errors.push(new ArkCompilerError('Type is not generic', ident.source))
+      } else if (typeArgs.children.length !== basicTy.typeParameters.size) {
+        this.args.a.errors.push(new ArkCompilerError(`Expected ${basicTy.typeParameters.size} type arguments, found ${typeArgs.children.length}`, ident.source))
+      } else {
+        const substs = new Map<string, ArkType>()
+        const paramTypes = typeArgs.children[0].children[1].asIteration().children.map(
+          (child) => child.toType(this.args.a),
+        )
+        const paramNames = []
+        for (const n of basicTy.typeParameters.keys()) {
+          paramNames.push(n)
+        }
+        for (let i = 0; i < basicTy.typeParameters.size; i += 1) {
+          substs.set(paramNames[i], paramTypes[i])
+        }
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        return basicTy.instantiate(substs)
+      }
+    }
+    return basicTy
   },
 
   // FIXME: Use typeParams

@@ -21,9 +21,9 @@ import {
   ArkAbstractStructBase, ArkBoolean, ArkList, ArkMap, ArkNull,
   ArkStruct, ArkOperation, ArkVal, NativeAsyncFn, NativeFn,
   NativeOperation, ArkRef, ArkClosure, ArkCallable,
-  ArkContinuation, ArkTypedId, ArkUndefined,
+  ArkContinuation, ArkUndefined,
 } from './data.js'
-import {ArkType} from './type.js'
+import {ArkType, ArkTypedId} from './type.js'
 import {
   ArkCapture, ArkLocal, ArkNamedLoc,
 } from './code.js'
