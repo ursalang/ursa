@@ -9,7 +9,7 @@ import {
 import {
   ArkFnType, ArkType, ArkTypedId, ArkTraitType, ArkUnionType,
   ArkMethodType, ArkAnyType, ArkSelfType, ArkUnknownType,
-  ArkMemberType, ArkStructType, ArkTypeVariable,
+  ArkStructType, ArkTypeVariable,
 } from './type.js'
 import {FsMap} from './fsmap.js'
 import programVersion from '../version.js'
@@ -360,9 +360,9 @@ export class ArkStruct extends ArkStructBase {
   constructor(type: ArkType /* FIXME: ArkStructType */, members: Map<string, ArkVal>) {
     super()
     this.members = members
-    const memberTypes = new Map<string, ArkMemberType>()
-    for (const [k, v] of members) {
-      memberTypes.set(k, new ArkMemberType(v.type))
+    const memberTypes = new Map<string, ArkType>()
+    for (const [name, ty] of members) {
+      memberTypes.set(name, ty)
     }
     this.type = type
   }

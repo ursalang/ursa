@@ -11,7 +11,7 @@ import {
 } from './data.js'
 import {
   ArkType, ArkTypedId, ArkFnType, ArkAnyType, ArkUnknownType, ArkNonterminatingType,
-  ArkStructType, ArkMemberType, ArkUndefinedType, ArkTraitType,
+  ArkStructType, ArkUndefinedType, ArkTraitType,
 } from './type.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -242,9 +242,9 @@ export class ArkStructLiteral extends ArkExp {
 
   constructor(private _type: ArkType, public members: Map<string, ArkExp>, sourceLoc?: Interval) {
     super(sourceLoc)
-    const memberTypes = new Map<string, ArkMemberType>()
-    for (const [k, v] of members.entries()) {
-      memberTypes.set(k, new ArkMemberType(v.type, true))
+    const memberTypes = new Map<string, ArkType>()
+    for (const [name, ty] of members.entries()) {
+      memberTypes.set(name, ty)
     }
   }
 }
@@ -266,11 +266,7 @@ export class ArkProperty extends ArkLvalue {
           }
           return propVal.type
         } else if (this.obj.type instanceof ArkStructType) {
-          propVal = this.obj.type.members.get(this.prop)
-          if (propVal === undefined) {
-            return ArkUndefinedType
-          }
-          return propVal.type
+          return this.obj.type.members.get(this.prop) ?? ArkUndefinedType
         }
       }
       if (propVal === undefined) {

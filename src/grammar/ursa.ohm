@@ -53,6 +53,9 @@ Ursa {
 
   For = for ident in Exp Block
 
+  Match = match Exp "{" ListOf<MatchCase, ","> ","? "}"
+  MatchCase = ident "=>" Exp
+
   UnaryExp
     = "~" UnaryExp    -- bitwise_not
     | "+" UnaryExp    -- pos
@@ -105,6 +108,7 @@ Ursa {
     = Ifs
     | Loop
     | For
+    | Match
     | await Exp       -- await
     | yield Exp?      -- yield
     | launch Exp      -- launch
@@ -142,8 +146,9 @@ Ursa {
 
   // Structs
   // TODO: super-struct?
-  StructDecl = struct ident TypeParams? "{" ListOf<Member, #sc> #sc "}"
-  Member = var? ident TypeAnnotation? Initializer?
+  StructDecl = struct ident TypeParams? Members
+  Members = "{" ListOf<Member, ","> ","? "}"
+  Member = ident TypeAnnotation? Initializer?
 
   // Traits
   // TODO: super-traits
@@ -155,12 +160,17 @@ Ursa {
   ForClause = for ident TypeParams?
   Implementation = impl TypeParams? ident ForClause? "{" ListOf<Method, #sc> #sc "}"
 
+  // Enums
+  EnumDecl = enum ident TypeParams? "{" ListOf<VariantDecl, ","> ","? "}"
+  VariantDecl = ident Members?
+
   // Convenience rules for parsing keyword tokens.
   and = "and" ~identifierPart
   await = "await" ~identifierPart
   break = "break" ~identifierPart
   continue = "continue" ~identifierPart
   else = "else" ~identifierPart
+  enum = "enum" ~identifierPart
   fn = "fn" ~identifierPart
   for = "for" ~identifierPart
   gen = "gen" ~identifierPart
@@ -170,6 +180,7 @@ Ursa {
   launch = "launch" ~identifierPart
   let = "let" ~identifierPart
   loop = "loop" ~identifierPart
+  match = "match" ~identifierPart
   not = "not" ~identifierPart
   or = "or" ~identifierPart
   pub = "pub" ~identifierPart
@@ -180,9 +191,9 @@ Ursa {
   var = "var" ~identifierPart
   yield = "yield" ~identifierPart
 
-  keyword = and | await | break | continue | else | fn | for | gen | if | in
-    | launch | let | loop | not | or | pub | return | struct | trait | use
-    | var | yield
+  keyword = and | await | break | continue | else | enum | fn | for | gen | if
+    | in | launch | let | loop | match | not | or | pub | return | struct | trait
+    | use | var | yield
 
   reservedWord = bool | null | keyword
 
