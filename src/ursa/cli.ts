@@ -18,7 +18,7 @@ import tmp from 'tmp'
 import programVersion from '../version.js'
 import {debug} from '../ark/util.js'
 import {
-  globals, jsGlobals, toJs, ArkNull, ArkList, ArkVal, ArkString, ArkStruct, ArkValRef,
+  globals, jsGlobals, toJs, ArkNull, ArkList, ArkVal, ArkString, ArkStruct, ArkRef,
 } from '../ark/data.js'
 import {
   ArkExp, ArkLet, ArkListLiteral, ArkStructLiteral, ArkSequence,
@@ -203,7 +203,7 @@ function extractReturnValues(ark: ArkState, env: Environment, result: ArkVal | u
   assert(newVars instanceof ArkStruct)
   for (const [k, v] of newVars.members.entries()) {
     env = env.push([new Location(k, ArkAnyType, false)])
-    ark.push([new ArkValRef(v)])
+    ark.push([new ArkRef(v)])
   }
   result = result.list[0]
   return {result, env}

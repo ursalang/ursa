@@ -20,7 +20,7 @@ import {ArkError} from './error.js'
 import {
   ArkAbstractStructBase, ArkBoolean, ArkList, ArkMap, ArkNull,
   ArkStruct, ArkOperation, ArkVal, NativeAsyncFn, NativeFn,
-  NativeOperation, ArkRef, ArkValRef, ArkClosure, ArkCallable,
+  NativeOperation, ArkRef, ArkClosure, ArkCallable,
   ArkContinuation, ArkTypedId, ArkUndefined,
 } from './data.js'
 import {ArkType} from './type.js'
@@ -95,7 +95,7 @@ class ArkFlatClosure extends ArkClosure {
     super(false, params, returnType, captures)
   }
 
-  async call(locals: ArkValRef[]) {
+  async call(locals: ArkRef[]) {
     return evalFlat(new ArkState(this.body, new ArkFrame(locals, this.captures)))
   }
 }
@@ -111,11 +111,11 @@ function evalRef(frame: ArkFrame, lexp: ArkNamedLoc): ArkRef {
 }
 
 function makeLocals(typedIds: ArkTypedId[], vals: ArkVal[]): ArkRef[] {
-  const locals: ArkValRef[] = typedIds.map(
-    (_val, index) => new ArkValRef(vals[index] ?? ArkUndefined()),
+  const locals: ArkRef[] = typedIds.map(
+    (_val, index) => new ArkRef(vals[index] ?? ArkUndefined()),
   )
   if (vals.length > typedIds.length) {
-    locals.push(...vals.slice(typedIds.length).map((val) => new ArkValRef(val)))
+    locals.push(...vals.slice(typedIds.length).map((val) => new ArkRef(val)))
   }
   return locals
 }

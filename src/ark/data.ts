@@ -318,7 +318,7 @@ export abstract class ArkClosure extends ArkCallable {
     super(isGenerator, params, returnType)
   }
 
-  abstract call(locals: ArkValRef[]): Promise<ArkVal>
+  abstract call(locals: ArkRef[]): Promise<ArkVal>
 }
 
 // ts-unused-exports:disable-next-line
@@ -531,16 +531,8 @@ export class ArkMap extends ArkStructBase {
   }
 }
 
-export abstract class ArkRef {
-  abstract get(): ArkVal
-
-  abstract set(val: ArkVal): ArkVal
-}
-
-export class ArkValRef extends ArkRef {
-  constructor(public val: ArkVal = ArkNull()) {
-    super()
-  }
+export class ArkRef {
+  constructor(public val: ArkVal = ArkNull()) {}
 
   get(): ArkVal {
     return this.val
@@ -677,7 +669,7 @@ export function toJs(val: ArkVal): unknown {
     return val.list.map(toJs)
   } else if (val instanceof ArkClosure) {
     return async (...args: unknown[]) => {
-      const locals = args.map((arg) => new ArkValRef(fromJs(arg)))
+      const locals = args.map((arg) => new ArkRef(fromJs(arg)))
       return val.call(locals)
     }
   } else if (val instanceof NativeFn || val instanceof NativeAsyncFn) {
