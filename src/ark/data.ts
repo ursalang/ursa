@@ -537,7 +537,6 @@ export abstract class ArkRef {
   abstract set(val: ArkVal): ArkVal
 }
 
-// ts-unused-exports:disable-next-line
 export class ArkValRef extends ArkRef {
   constructor(public val: ArkVal = ArkNull()) {
     super()
@@ -549,23 +548,6 @@ export class ArkValRef extends ArkRef {
 
   set(val: ArkVal): ArkVal {
     this.val = val
-    return val
-  }
-}
-
-// ts-unused-exports:disable-next-line
-export class ArkPropertyRef extends ArkRef {
-  constructor(public obj: ArkAbstractStructBase, public prop: string) {
-    super()
-  }
-
-  get() {
-    const val = this.obj.get(this.prop)
-    return val
-  }
-
-  set(val: ArkVal) {
-    this.obj.set(this.prop, val)
     return val
   }
 }
