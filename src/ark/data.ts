@@ -9,7 +9,7 @@ import {
 import {
   ArkFnType, ArkType, ArkTypedId, ArkTraitType, ArkUnionType,
   ArkMethodType, ArkAnyType, ArkSelfType, ArkUnknownType,
-  ArkStructType, ArkTypeVariable,
+  ArkStructType, ArkTypeVariable, ArkEnumType, ArkUndefinedType,
 } from './type.js'
 import {FsMap} from './fsmap.js'
 import programVersion from '../version.js'
@@ -165,6 +165,15 @@ export class ArkUndefinedVal extends ArkConcreteVal<undefined> {
   }
 }
 
+export const ArkOptionType = new ArkEnumType(
+  'Option',
+  new Map([
+    ['None', ArkUndefinedType],
+    ['Some', new ArkTypeVariable('T')],
+  ]),
+  new Map([['T', ArkUnknownType]]),
+)
+
 export const ArkStringTraitType = new ArkTraitType('Str', new Map(), new Set([ArkStructTraitType]))
 
 export const ArkNumberTraitType = new ArkTraitType('Num')
@@ -176,8 +185,8 @@ ArkStringTraitType.methods = new Map([
     new ArkFnType(
       true,
       [new ArkTypedId('self', ArkSelfType)],
-      new ArkUnionType(new Set([ArkStringTraitType, ArkNullTraitType])),
-    )
+      ArkOptionType.instantiate(new Map([['T', ArkStringTraitType]])),
+    ),
   )],
 ])
 
@@ -404,7 +413,7 @@ ArkListTraitType.methods = new Map([
       new ArkFnType(
         true,
         undefined,
-        new ArkUnionType(new Set([new ArkTypeVariable('T'), ArkNullTraitType])),
+        ArkOptionType.instantiate(new Map([['T', new ArkTypeVariable('T')]])),
         new Map([['T', ArkUnknownType]]),
       ),
       new Map([['T', ArkUnknownType]]),

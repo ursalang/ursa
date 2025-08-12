@@ -192,7 +192,7 @@ export function typecheck(exp: ArkExp): ArkCompilerError[] {
       checkArgsMatchParams(exp.fn.type, exp.args, exp.sourceLoc)
     } else if (exp instanceof ArkInvoke) {
       if (exp.type === ArkUndefinedType) {
-        errors.push(new ArkCompilerError(`Invalid method \`${exp.prop}'`, exp.sourceLoc))
+        errors.push(new ArkCompilerError(`No method ${typeName(exp.type)}.${exp.prop}`, exp.sourceLoc))
       } else {
         doTypecheck(exp.obj)
         exp.args.map((a) => doTypecheck(a))

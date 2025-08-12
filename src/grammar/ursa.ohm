@@ -162,7 +162,9 @@ Ursa {
 
   // Enums
   EnumDecl = enum ident TypeParams? "{" ListOf<VariantDecl, ","> ","? "}"
-  VariantDecl = ident Members?
+  VariantDecl = ident Variants?
+  Variants = "{" ListOf<Variant, ","> ","? "}"
+  Variant = ident TypeAnnotation?
 
   // Convenience rules for parsing keyword tokens.
   and = "and" ~identifierPart
