@@ -18,7 +18,7 @@ import {
 } from './flatten.js'
 import {ArkError} from './error.js'
 import {
-  ArkAbstractStructBase, ArkBoolean, ArkList, ArkMap, ArkNull,
+  ArkAbstractStruct, ArkBoolean, ArkList, ArkMap, ArkNull,
   ArkStruct, ArkOperation, ArkVal, NativeAsyncFn, NativeFn,
   NativeOperation, ArkRef, ArkClosure, ArkCallable,
   ArkContinuation, ArkUndefined,
@@ -328,10 +328,10 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
       [ark, inst] = yield* call(ark, inst, callable, args)
     } else if (inst instanceof ArkInvokeInst) {
       const obj = mem.get(inst.objId)!
-      if (!(obj instanceof ArkAbstractStructBase)) {
+      if (!(obj instanceof ArkAbstractStruct)) {
         throw new ArkRuntimeError(ark, 'Invalid object', inst.sourceLoc)
       }
-      const method = obj.getMethod(inst.prop) as ArkCallable
+      const method = obj.type.getMethod(inst.prop)
       if (method === undefined) {
         throw new ArkRuntimeError(ark, 'Invalid method', inst.sourceLoc)
       }
@@ -378,7 +378,7 @@ function* doEvalFlat(outerArk: ArkState): Operation<ArkVal> {
       inst = inst.next
     } else if (inst instanceof ArkPropertyInst) {
       const obj = mem.get(inst.objId)!
-      if (!(obj instanceof ArkAbstractStructBase)) {
+      if (!(obj instanceof ArkAbstractStruct)) {
         throw new ArkRuntimeError(ark, 'Invalid object', inst.sourceLoc)
       }
       const result = obj.get(inst.prop)

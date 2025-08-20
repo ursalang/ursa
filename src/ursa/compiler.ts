@@ -18,6 +18,7 @@ import {
 } from '../ark/data.js'
 import {
   ArkType, ArkFnType, ArkUnknownType, ArkAnyType, ArkParametricType,
+  ArkStructType,
 } from '../ark/type.js'
 import {
   ArkBoundVar, ArkExp, ArkLvalue, ArkLiteral, ArkSequence, ArkIf, ArkLoop, ArkAnd, ArkOr,
@@ -284,6 +285,10 @@ semantics.addOperation<ArkExp>('toExp(a)', {
       const elem = value.toDefinition(this.args.a)
       inits.set(elem.ident.sourceString, elem.exp)
     })
+    if (!(compiledType instanceof ArkStructType)) {
+      debug(compiledType)
+      throw new ArkCompilerError('struct must have struct type', this.source)
+    }
     return new ArkStructLiteral(compiledType, inits, this.source)
   },
 
@@ -555,7 +560,7 @@ semantics.addOperation<ArkType>('toType(a)', {
     if (typeArgs.children.length > 0) {
       if (!(basicTy instanceof ArkParametricType)) {
         this.args.a.errors.push(new ArkCompilerError('Type is not generic', ident.source))
-      } else if (typeArgs.children.length !== basicTy.typeParameters.size) {
+      } else if (typeArgs.children[0].children[1].asIteration().children.length !== basicTy.typeParameters.size) {
         this.args.a.errors.push(new ArkCompilerError(`Expected ${basicTy.typeParameters.size} type arguments, found ${typeArgs.children.length}`, ident.source))
       } else {
         const substs = new Map<string, ArkType>()

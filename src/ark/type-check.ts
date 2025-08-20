@@ -12,12 +12,12 @@ import {
   ArkStructLiteral, ArkOr, ArkReturn, ArkSequence, ArkSet, ArkYield, ArkProperty,
 } from './code.js'
 import {
-  ArkBooleanTraitType,
+  ArkBooleanType,
 } from './data.js'
 import {ArkCompilerError} from './error.js'
 import {
   typeName, ArkType, ArkFnType, ArkUnknownType, ArkNonterminatingType, ArkAnyType,
-  ArkSelfType, ArkStructType, ArkTraitType, ArkUnionType, ArkUndefinedType, ArkTypeVariable,
+  ArkSelfType, ArkStructType, ArkTrait, ArkUnionType, ArkUndefinedType, ArkTypeVariable,
 } from './type.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -43,7 +43,7 @@ export function typeEquals(
     return true // Any matches anything
   } else if ((t1 instanceof ArkTypeVariable && t2 instanceof ArkTypeVariable)
     || (t1 instanceof ArkStructType && t2 instanceof ArkStructType)
-    || (t1 instanceof ArkTraitType && t2 instanceof ArkTraitType)) {
+    || (t1 instanceof ArkTrait && t2 instanceof ArkTrait)) {
     return t1.name === t2.name
   } else if (t1 instanceof ArkFnType && t2 instanceof ArkFnType) {
     if (!typeEquals(t1.returnType, t2.returnType, sourceLoc, selfType)) {
@@ -198,10 +198,10 @@ export function typecheck(exp: ArkExp): ArkCompilerError[] {
         exp.args.map((a) => doTypecheck(a))
         const objTy = exp.obj.type
         if (objTy !== ArkAnyType) { // Can't assume anything about Any values
-          if (!(objTy instanceof ArkStructType || objTy instanceof ArkTraitType)) {
+          if (!(objTy instanceof ArkStructType || objTy instanceof ArkTrait)) {
             errors.push(new ArkCompilerError('Invalid method invocation', exp.sourceLoc))
           } else {
-            const method = objTy.getMethod(exp.prop)
+            const method = objTy.getMethodType(exp.prop)
             if (method === undefined) {
               errors.push(new ArkCompilerError(`Invalid method \`${exp.prop}'`, exp.sourceLoc))
             } else {
@@ -237,7 +237,7 @@ export function typecheck(exp: ArkExp): ArkCompilerError[] {
       exp.exps.map(doTypecheck)
     } else if (exp instanceof ArkIf) {
       doTypecheck(exp.cond)
-      if (!safeTypeEquals(exp.cond.type, ArkBooleanTraitType, exp.sourceLoc)) {
+      if (!safeTypeEquals(exp.cond.type, ArkBooleanType, exp.sourceLoc)) {
         errors.push(new ArkCompilerError('Condition of `if\' must be Bool', exp.sourceLoc))
       }
       doTypecheck(exp.thenExp)
@@ -249,15 +249,15 @@ export function typecheck(exp: ArkExp): ArkCompilerError[] {
     } else if (exp instanceof ArkAnd) {
       doTypecheck(exp.left)
       doTypecheck(exp.right)
-      if (!safeTypeEquals(exp.left.type, ArkBooleanTraitType, exp.sourceLoc)
-        || !safeTypeEquals(exp.right.type, ArkBooleanTraitType, exp.sourceLoc)) {
+      if (!safeTypeEquals(exp.left.type, ArkBooleanType, exp.sourceLoc)
+        || !safeTypeEquals(exp.right.type, ArkBooleanType, exp.sourceLoc)) {
         errors.push(new ArkCompilerError('Arguments to `and\' must be Bool', exp.sourceLoc))
       }
     } else if (exp instanceof ArkOr) {
       doTypecheck(exp.left)
       doTypecheck(exp.right)
-      if (!safeTypeEquals(exp.left.type, ArkBooleanTraitType, exp.sourceLoc)
-        || !safeTypeEquals(exp.right.type, ArkBooleanTraitType, exp.sourceLoc)) {
+      if (!safeTypeEquals(exp.left.type, ArkBooleanType, exp.sourceLoc)
+        || !safeTypeEquals(exp.right.type, ArkBooleanType, exp.sourceLoc)) {
         errors.push(new ArkCompilerError('Arguments to `or\' must be Bool', exp.sourceLoc))
       }
     } else if (exp instanceof ArkLoop) {

@@ -13,7 +13,7 @@ import {
   globals, ArkNull, ArkBoolean, ArkNumber, ArkString, ArkStruct, ArkUndefined,
   globalTypes,
 } from './data.js'
-import {ArkCompilerError} from './error.js'
+import {ArkCompilerError, ArkCompilerErrors} from './error.js'
 import {ArkType, ArkAnyType} from './type.js'
 import {
   ArkExp, ArkLvalue, ArkIf, ArkAnd, ArkOr, ArkSequence, ArkLoop, ArkBreak, ArkContinue,
@@ -36,6 +36,7 @@ export function checkParamList(params: string[], source?: Interval): string[] {
   return params
 }
 
+// FIXME: record types imported and defined during compilation.
 function getType(name: string): ArkType {
   const ty = globalTypes.get(name)
   if (ty === undefined) {
@@ -322,11 +323,16 @@ function doCompile(env: Environment, value: unknown, outerFn?: ArkFn, outerLoop?
 
 export function compile(expr: unknown, env = new Environment()): ArkExp {
   const exp = doCompile(env, expr)
-  typecheck(exp)
+  const typeErrors = typecheck(exp)
+  if (typeErrors.length > 0) {
+    throw new ArkCompilerErrors(typeErrors.map((e) => e.message))
+  }
   return exp
 }
 
 // Compile the prelude and add its values to the globals
 const prelude = expToInst(compile(preludeJson))
-const preludeObj = await new ArkState(prelude).run() as ArkStruct
-preludeObj.members.forEach((val, sym) => globals.set(sym, val))
+const preludeObj = await new ArkState(prelude).run()
+if (preludeObj instanceof ArkStruct) {
+  preludeObj.members.forEach((val, sym) => globals.set(sym, val))
+}

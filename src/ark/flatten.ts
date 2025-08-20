@@ -16,7 +16,7 @@ import {Location} from './compiler-utils.js'
 import {
   ArkBoolean, ArkNull, ArkVal, globals,
 } from './data.js'
-import {ArkType, ArkTypedId} from './type.js'
+import {ArkStructType, ArkType, ArkTypeConstant, ArkTypedId} from './type.js'
 
 export class ArkInst {
   private static nextId = 0
@@ -238,7 +238,7 @@ export class ArkSetPropertyInst extends ArkInst {
 export class ArkStructLiteralInst extends ArkInst {
   constructor(
     sourceLoc: Interval | undefined,
-    public type: ArkType /* FIXME: ArkStructType */,
+    public type: ArkStructType | ArkTypeConstant,
     public members: Map<string, symbol>,
   ) {
     super(sourceLoc)
