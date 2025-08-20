@@ -4,14 +4,41 @@
 
 import assert from 'assert'
 
-import {typeToStr} from './data.js'
+import {ArkCallable, typeToStr} from './data.js'
 import {ArkCompilerError} from './error.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
 } from './util.js'
 
-export abstract class ArkType {}
+export class ArkImpl {
+  // FIXME: Add associated types etc.
+  constructor(public methods: Map<string, ArkCallable> = new Map()) {}
+}
+
+export abstract class ArkType {
+  public impls = new Map<ArkTrait, ArkImpl>()
+
+  // FIXME: check types of implementation against trait.
+  // FIXME: Instead of SelfTrait, take a one-off trait and again check
+  // against the impl.
+  public implement(trait: ArkTrait, impl: ArkImpl) {
+    // FIXME: error if already impl'd
+    this.impls.set(trait, impl)
+  }
+
+  // FIXME: formalize overriding, access to specific impls etc.
+  public getMethod(name: string): ArkCallable | undefined {
+    for (const [_, impl] of this.impls) {
+      for (const [impl_name, method] of impl.methods) {
+        if (impl_name === name) {
+          return method
+        }
+      }
+    }
+    return undefined
+  }
+}
 
 export class ArkTypedId {
   constructor(public name: string, public type: ArkType) {}
@@ -70,7 +97,6 @@ export class ArkStructType extends ArkParametricType<ArkStructType> {
     public name: string,
     // FIXME: public superType: ArkStructType,
     public members: Map<string, ArkType>,
-    public traits: Set<ArkTraitType> = new Set(),
     typeParameters: Map<string, ArkType> = new Map(),
   ) {
     super(typeParameters)
@@ -86,23 +112,24 @@ export class ArkStructType extends ArkParametricType<ArkStructType> {
       }
       newMembers.set(name, newType)
     }
-    const newTraits = new Set<ArkTraitType>()
-    for (const t of this.traits) {
-      newTraits.add(t.instantiate(substs))
-    }
-    return new ArkStructType(
+    const newTy = new ArkStructType(
       this.name,
       newMembers,
-      newTraits,
       instantiateTypeVars(this.typeParameters, substs),
     )
+    const newImpls = new Map<ArkTrait, ArkImpl>()
+    for (const [trait, impl] of this.impls) {
+      newImpls.set(trait.instantiate(substs), impl)
+    }
+    newTy.impls = newImpls
+    return newTy
   }
 
-  public getMethod(name: string): ArkMethodType | undefined {
-    for (const t of this.traits) {
-      const m = t.getMethod(name)
-      if (m !== undefined) {
-        return m
+  public getMethodType(name: string): ArkMethodType | undefined {
+    for (const [trait, _] of this.impls) {
+      const ty = trait.getMethodType(name)
+      if (ty !== undefined) {
+        return ty
       }
     }
     return undefined
@@ -113,6 +140,7 @@ export class ArkEnumType extends ArkParametricType<ArkEnumType> {
   constructor(
     public name: string,
     public variants: Map<string, ArkType>,
+    public traits: Set<ArkTrait> = new Set(),
     typeParameters: Map<string, ArkType> = new Map(),
   ) {
     super(typeParameters)
@@ -128,9 +156,14 @@ export class ArkEnumType extends ArkParametricType<ArkEnumType> {
       }
       newVariants.set(name, newType)
     }
+    const newTraits = new Set<ArkTrait>()
+    for (const t of this.traits) {
+      newTraits.add(t.instantiate(substs))
+    }
     return new ArkEnumType(
       this.name,
       newVariants,
+      newTraits,
       instantiateTypeVars(this.typeParameters, substs),
     )
   }
@@ -143,11 +176,11 @@ export class ArkMethodType {
   ) {}
 }
 
-export class ArkTraitType extends ArkParametricType<ArkTraitType> {
+export class ArkTrait extends ArkParametricType<ArkTrait> {
   constructor(
     public name: string,
     public methods: Map<string, ArkMethodType> = new Map(),
-    public superTraits: Set<ArkTraitType> = new Set(),
+    public superTraits: Set<ArkTrait> = new Set(),
     typeParameters: Map<string, ArkType> = new Map(),
   ) {
     super(typeParameters)
@@ -159,11 +192,12 @@ export class ArkTraitType extends ArkParametricType<ArkTraitType> {
       const newMethodType = new ArkMethodType(m.type.instantiate(substs), m.isPub)
       newMethods.set(name, newMethodType)
     }
-    const newSuperTraits = new Set<ArkTraitType>()
+    const newSuperTraits = new Set<ArkTrait>()
     for (const t of this.superTraits) {
       newSuperTraits.add(t.instantiate(substs))
     }
-    return new ArkTraitType(
+    // FIXME: copy and instantiate impls as for structs
+    return new ArkTrait(
       this.name,
       newMethods,
       newSuperTraits,
@@ -171,10 +205,16 @@ export class ArkTraitType extends ArkParametricType<ArkTraitType> {
     )
   }
 
-  public getMethod(name: string): ArkMethodType | undefined {
+  public getMethodType(name: string): ArkMethodType | undefined {
     const m = this.methods.get(name)
     if (m !== undefined) {
       return m
+    }
+    for (const [trait, _] of this.impls) {
+      const ty = trait.getMethodType(name)
+      if (ty !== undefined) {
+        return ty
+      }
     }
     for (const s of this.superTraits) {
       const m = s.methods.get(name)
@@ -255,7 +295,7 @@ export function typeName(ty: ArkType, selfType?: ArkType): string {
     }
   } else if (ty instanceof ArkTypeVariable || ty instanceof ArkTypeConstant) {
     return ty.name
-  } else if (ty instanceof ArkStructType || ty instanceof ArkTraitType) {
+  } else if (ty instanceof ArkStructType || ty instanceof ArkTrait) {
     return `${ty.name}${paramsToStr(ty.typeParameters)}`
   } else if (ty instanceof ArkFnType) {
     // FIXME: Use 'where' syntax

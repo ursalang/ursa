@@ -33,12 +33,12 @@ import {
   jsGlobals, ArkBoolean, ArkBooleanVal, ArkList, ArkMap, ArkNull,
   ArkNumber, ArkNullVal, ArkNumberVal, ArkStruct, ArkString,
   ArkStringVal, ArkVal, NativeFn, ArkOperation,
-  ArkNullTraitType, ArkBooleanTraitType, ArkNumberTraitType, ArkStringTraitType,
-  ArkListTraitType, ArkMapTraitType, ArkStructTraitType,
-  ArkUndefined, ArkCallable,
+  ArkNullType, ArkBooleanType, ArkNumberType, ArkStringType,
+  ArkListType, ArkMapType, ArkUndefined, ArkCallable,
 } from '../data.js'
 import {
   ArkAnyType, ArkFnType, ArkUnknownType, ArkType, ArkTypedId, ArkUnionType,
+  ArkStructType,
 } from '../type.js'
 import {ArkExp} from '../code.js'
 import {debug} from '../util.js'
@@ -57,26 +57,26 @@ function typeToJs(ty: ArkType) {
       return 'ArkUnknownType'
     case ArkAnyType:
       return 'ArkAnyType'
-    case ArkNullTraitType:
-      return 'ArkNullTraitType'
-    case ArkBooleanTraitType:
-      return 'ArkBooleanTraitType'
-    case ArkNumberTraitType:
-      return 'ArkNumberTraitType'
-    case ArkStringTraitType:
-      return 'ArkStringTraitType'
-    case ArkListTraitType:
-      return 'ArkListTraitType'
-    case ArkMapTraitType:
-      return 'ArkMapTraitType'
-    case ArkStructTraitType:
-      return 'ArkStructTraitType'
+    case ArkNullType:
+      return 'ArkNullType'
+    case ArkBooleanType:
+      return 'ArkBooleanType'
+    case ArkNumberType:
+      return 'ArkNumberType'
+    case ArkStringType:
+      return 'ArkStringType'
+    case ArkListType:
+      return 'ArkListType'
+    case ArkMapType:
+      return 'ArkMapType'
     default:
   }
   if (ty instanceof ArkFnType) {
     return 'ArkCallable'
   } else if (ty instanceof ArkUnionType) {
     return 'ArkUnionType'
+  } else if (ty instanceof ArkStructType) {
+    return 'ArkStructType'
   }
   throw new Error('unknown type (typeToJs)')
 }
@@ -97,8 +97,10 @@ class UrsaStackTracey extends StackTracey {
 
 // Compile prelude and add it to globals
 export const preludeJs = fs.readFileSync(path.join(__dirname, 'prelude.js'), {encoding: 'utf-8'})
-const prelude = await evalArkJs(preludeJs) as ArkStruct
-prelude.members.forEach((val, sym) => jsGlobals.set(sym, val))
+const prelude = await evalArkJs(preludeJs)
+if (prelude instanceof ArkStruct) {
+  prelude.members.forEach((val, sym) => jsGlobals.set(sym, val))
+}
 
 // Record internal values that are needed by JavaScript at runtime, and
 // prevent the TypeScript compiler throwing away their imports.
@@ -107,20 +109,20 @@ export const runtimeContext: Record<string, unknown> = {
   ArkUndefined,
   ArkAnyType,
   ArkNull,
-  ArkNullTraitType,
+  ArkNullType,
   ArkBoolean,
-  ArkBooleanTraitType,
+  ArkBooleanType,
   ArkNumber,
-  ArkNumberTraitType,
+  ArkNumberType,
   ArkString,
-  ArkStringTraitType,
+  ArkStringType,
   ArkStruct,
-  ArkStructTraitType,
+  ArkStructType,
   ArkCallable,
   ArkList,
-  ArkListTraitType,
+  ArkListType,
   ArkMap,
-  ArkMapTraitType,
+  ArkMapType,
   ArkOperation,
   ArkTypedId,
   ArkUnionType,

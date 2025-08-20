@@ -6,12 +6,12 @@ import {Interval} from 'ohm-js'
 
 import {Location} from './compiler-utils.js'
 import {
-  ArkNull, ArkVal, ArkStructBase, NativeStruct,
-  ArkNullTraitType, ArkBooleanTraitType, ArkListTraitType, ArkMapTraitType,
+  ArkNull, ArkVal, NativeStruct, ArkNullType, ArkBooleanType,
+  ArkListType, ArkMapType, ArkStruct,
 } from './data.js'
 import {
   ArkType, ArkTypedId, ArkFnType, ArkAnyType, ArkUnknownType, ArkNonterminatingType,
-  ArkStructType, ArkUndefinedType, ArkTraitType,
+  ArkStructType, ArkUndefinedType, ArkTrait, ArkTypeConstant, ArkSelfType,
 } from './type.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -103,7 +103,7 @@ export class ArkBreak extends ArkExp {
 export class ArkContinue extends ArkExp {
   // eslint-disable-next-line class-methods-use-this
   get type() {
-    return ArkNullTraitType
+    return ArkNullType
   }
 }
 
@@ -187,12 +187,16 @@ export class ArkInvoke extends ArkExp {
     const ty = this.obj.type
     if (ty === ArkAnyType) {
       return ArkAnyType // FIXME
-    } else if (ty instanceof ArkStructType || ty instanceof ArkTraitType) {
-      const method = ty.getMethod(this.prop)
+    } else if (ty instanceof ArkStructType || ty instanceof ArkTrait) {
+      const method = ty.getMethodType(this.prop)
       if (method === undefined) {
         return ArkUndefinedType
       }
-      return method.type.returnType
+      let retTy = method.type.returnType
+      if (retTy === ArkSelfType) {
+        retTy = this.obj.type
+      }
+      return retTy
     }
     return ArkUndefinedType
   }
@@ -240,11 +244,11 @@ export class ArkStructLiteral extends ArkExp {
     return this._type
   }
 
-  constructor(private _type: ArkType, public members: Map<string, ArkExp>, sourceLoc?: Interval) {
+  constructor(private _type: ArkStructType | ArkTypeConstant, public members: Map<string, ArkExp>, sourceLoc?: Interval) {
     super(sourceLoc)
     const memberTypes = new Map<string, ArkType>()
     for (const [name, ty] of members.entries()) {
-      memberTypes.set(name, ty)
+      memberTypes.set(name, ty.type)
     }
   }
 }
@@ -259,7 +263,7 @@ export class ArkProperty extends ArkLvalue {
         propVal = this.obj.get(this.prop)
       }
       if (propVal === undefined) {
-        if (this.obj instanceof ArkGlobal && this.obj.val instanceof ArkStructBase) {
+        if (this.obj instanceof ArkGlobal && this.obj.val instanceof ArkStruct) {
           propVal = this.obj.val.members.get(this.prop)
           if (propVal === undefined) {
             return ArkUndefinedType
@@ -282,7 +286,7 @@ export class ArkProperty extends ArkLvalue {
 }
 
 export class ArkListLiteral extends ArkExp {
-  private _type = ArkListTraitType
+  private _type = ArkListType // FIXME: should be List<Unknown> by default
 
   get type() {
     return this._type
@@ -291,7 +295,7 @@ export class ArkListLiteral extends ArkExp {
   constructor(public list: ArkExp[], sourceLoc?: Interval) {
     super(sourceLoc)
     if (list.length > 0) {
-      this._type = ArkListTraitType.instantiate(new Map([['T', list[0].type]]))
+      this._type = ArkListType.instantiate(new Map([['T', list[0].type]]))
     }
   }
 }
@@ -299,7 +303,7 @@ export class ArkListLiteral extends ArkExp {
 export class ArkMapLiteral extends ArkExp {
   // eslint-disable-next-line class-methods-use-this
   get type() {
-    return ArkMapTraitType // FIXME Generics
+    return ArkMapType // FIXME Generics
   }
 
   constructor(public map: Map<ArkExp, ArkExp>, sourceLoc?: Interval) {
@@ -328,7 +332,7 @@ export class ArkLet extends ArkExp {
 export class ArkSequence extends ArkExp {
   get type() {
     const len = this.exps.length
-    return len === 0 ? ArkNullTraitType : this.exps[this.exps.length - 1].type
+    return len === 0 ? ArkNullType : this.exps[this.exps.length - 1].type
   }
 
   constructor(public exps: ArkExp[], sourceLoc?: Interval) {
@@ -360,7 +364,7 @@ export class ArkIf extends ArkExp {
 export class ArkAnd extends ArkExp {
   // eslint-disable-next-line class-methods-use-this
   get type() {
-    return ArkBooleanTraitType
+    return ArkBooleanType
   }
 
   constructor(public left: ArkExp, public right: ArkExp, sourceLoc?: Interval) {
@@ -371,7 +375,7 @@ export class ArkAnd extends ArkExp {
 export class ArkOr extends ArkExp {
   // eslint-disable-next-line class-methods-use-this
   get type() {
-    return ArkBooleanTraitType
+    return ArkBooleanType
   }
 
   constructor(public left: ArkExp, public right: ArkExp, sourceLoc?: Interval) {

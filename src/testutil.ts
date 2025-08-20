@@ -56,20 +56,8 @@ function doTestGroup(
       const jsSource = flatToJs(flat)
       const resArk = await new ArkState(flat.insts[0]).run()
       const resJs = await evalArkJs(jsSource, title)
-      if (resArk instanceof ArkStruct) {
-        assert(typeof expected === 'object')
-        // Remove methods of ArkStruct
-        // FIXME: remove this once we have separated methods from members.
-        if (Object.keys(expected as object).length === 0) {
-          t.deepEqual({}, expected)
-        } else {
-          t.like(toJs(resArk), expected as object)
-          t.like(toJs(resJs), expected as object)
-        }
-      } else {
-        t.deepEqual(toJs(resArk), expected)
-        t.deepEqual(toJs(resJs), expected)
-      }
+      t.deepEqual(toJs(resArk), expected)
+      t.deepEqual(toJs(resJs), expected)
     }
   })
 }
