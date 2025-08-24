@@ -32,7 +32,7 @@ import {
   debug,
 } from './util.js'
 
-// Each stack frame consists of local variabless, captures, temporaries
+// Each stack frame consists of local variables, captures, temporaries
 // (`memory`), and debug info.
 class ArkFrame {
   constructor(
