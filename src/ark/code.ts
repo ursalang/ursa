@@ -4,7 +4,7 @@
 
 import {Interval} from 'ohm-js'
 
-import {Location} from './compiler-utils.js'
+import {Location, Namespace} from './compiler-utils.js'
 import {
   ArkNull, ArkVal, NativeStruct, ArkNullType, ArkBooleanType,
   ArkListType, ArkMapType, ArkStruct,
@@ -244,9 +244,13 @@ export class ArkStructLiteral extends ArkExp {
     return this._type
   }
 
-  constructor(private _type: ArkStructType | ArkTypeConstant, public members: Map<string, ArkExp>, sourceLoc?: Interval) {
+  constructor(
+    private _type: ArkStructType | ArkTypeConstant,
+    public members: Map<string, ArkExp>,
+    sourceLoc?: Interval,
+  ) {
     super(sourceLoc)
-    const memberTypes = new Map<string, ArkType>()
+    const memberTypes = new Namespace<ArkType>()
     for (const [name, ty] of members.entries()) {
       memberTypes.set(name, ty.type)
     }

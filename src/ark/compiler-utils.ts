@@ -54,3 +54,28 @@ export class Environment {
     return new Environment([this.stack[1], ...this.stack.slice(2)], this.externalSyms)
   }
 }
+
+export class Namespace<T> extends Map<string, T> {}
+
+export class Scope<T> extends Namespace<T> {
+  constructor(public stack: Namespace<T>[] = []) {
+    super()
+  }
+
+  get(name: string): T | undefined {
+    for (const frame of this.stack) {
+      if (frame.has(name)) {
+        return frame.get(name)
+      }
+    }
+    return undefined
+  }
+
+  push(frame: Namespace<T>) {
+    return new Scope<T>([frame, ...this.stack])
+  }
+
+  pop(): Namespace<T> {
+    return new Scope<T>([...this.stack.slice(1)])
+  }
+}
