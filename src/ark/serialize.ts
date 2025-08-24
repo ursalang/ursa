@@ -13,7 +13,7 @@ import {
   ArkLiteral, ArkListLiteral, ArkMapLiteral, ArkStructLiteral, ArkYield,
   ArkGlobal,
 } from './code.js'
-import {ArkTypeConstant} from './type.js'
+import {ArkTypeConstant, typeName} from './type.js'
 
 export function valToJs(val: ArkVal | ArkExp) {
   function doValToJs(val: ArkVal | ArkExp): unknown {
@@ -52,9 +52,9 @@ export function valToJs(val: ArkVal | ArkExp) {
     } else if (val instanceof ArkStruct) {
       const obj = {}
       if (val.type instanceof ArkTypeConstant) {
-        throw new Error(`cannot serialize struct of type ${val.type}`)
+        throw new Error(`cannot serialize struct of type ${typeName(val.type)}`)
       }
-      for (const [k, _] of val.type.members) {
+      for (const k of val.type.members.keys()) {
         (obj as {[key: string]: unknown})[k] = doValToJs(val.get(k))
       }
       return obj

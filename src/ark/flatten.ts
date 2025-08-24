@@ -16,7 +16,9 @@ import {Location} from './compiler-utils.js'
 import {
   ArkBoolean, ArkNull, ArkVal, globals,
 } from './data.js'
-import {ArkStructType, ArkType, ArkTypeConstant, ArkTypedId} from './type.js'
+import {
+  ArkStructType, ArkType, ArkTypeConstant, ArkTypedId,
+} from './type.js'
 
 export class ArkInst {
   private static nextId = 0

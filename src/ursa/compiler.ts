@@ -27,7 +27,7 @@ import {
   ArkBreak, ArkContinue, ArkAwait, ArkLaunch, ArkNamedLoc,
 } from '../ark/code.js'
 import {
-  Frame, Environment, Location,
+  Frame, Environment, Location, Namespace,
 } from '../ark/compiler-utils.js'
 import {ArkState, ArkRuntimeError} from '../ark/interpreter.js'
 import {ArkCompilerError, ArkCompilerErrors} from '../ark/error.js'
@@ -286,7 +286,6 @@ semantics.addOperation<ArkExp>('toExp(a)', {
       inits.set(elem.ident.sourceString, elem.exp)
     })
     if (!(compiledType instanceof ArkStructType)) {
-      debug(compiledType)
       throw new ArkCompilerError('struct must have struct type', this.source)
     }
     return new ArkStructLiteral(compiledType, inits, this.source)
@@ -558,15 +557,14 @@ semantics.addOperation<ArkType>('toType(a)', {
       return ArkUnknownType
     }
     if (typeArgs.children.length > 0) {
+      const parsedTypeArgs = typeArgs.children[0].children[1].asIteration().children
       if (!(basicTy instanceof ArkParametricType)) {
         this.args.a.errors.push(new ArkCompilerError('Type is not generic', ident.source))
-      } else if (typeArgs.children[0].children[1].asIteration().children.length !== basicTy.typeParameters.size) {
+      } else if (parsedTypeArgs.length !== basicTy.typeParameters.size) {
         this.args.a.errors.push(new ArkCompilerError(`Expected ${basicTy.typeParameters.size} type arguments, found ${typeArgs.children.length}`, ident.source))
       } else {
-        const substs = new Map<string, ArkType>()
-        const paramTypes = typeArgs.children[0].children[1].asIteration().children.map(
-          (child) => child.toType(this.args.a),
-        )
+        const substs = new Namespace<ArkType>()
+        const paramTypes = parsedTypeArgs.map((child) => child.toType(this.args.a))
         const paramNames = []
         for (const n of basicTy.typeParameters.keys()) {
           paramNames.push(n)
