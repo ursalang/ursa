@@ -23,7 +23,7 @@ import {
   ArkGlobal,
 } from './code.js'
 import {
-  Environment, Frame, Location,
+  Environment, Frame, Location, Scope,
 } from './compiler-utils.js'
 import {expToInst} from './flatten.js'
 import {ArkState} from './interpreter.js'
@@ -86,7 +86,13 @@ export function symRef(env: Environment, name: string): ArkExp {
   return exp
 }
 
-function doCompile(env: Environment, value: unknown, outerFn?: ArkFn, outerLoop?: ArkLoop): ArkExp {
+function doCompile(
+  env: Environment,
+  tyEnv: Scope<ArkType>,
+  value: unknown,
+  outerFn?: ArkFn,
+  outerLoop?: ArkLoop,
+): ArkExp {
   function bindingList(
     env: Environment,
     params: [string, string, string, unknown][],
@@ -105,14 +111,14 @@ function doCompile(env: Environment, value: unknown, outerFn?: ArkFn, outerLoop?
       bindings.push(new ArkBoundVar(
         l,
         indexBase + i,
-        doCompile(env.push(boundLocations), params[i][3], outerFn, outerLoop),
+        doCompile(env.push(boundLocations), tyEnv, params[i][3], outerFn, outerLoop),
       ))
     }
     return bindings
   }
 
   function listToVals(env: Environment, l: unknown[]): ArkExp[] {
-    return l.map((elem) => doCompile(env, elem, outerFn, outerLoop))
+    return l.map((elem) => doCompile(env, tyEnv, elem, outerFn, outerLoop))
   }
 
   if (value === null) {
@@ -142,6 +148,7 @@ function doCompile(env: Environment, value: unknown, outerFn?: ArkFn, outerLoop?
           const params = bindingList(env, value[1] as [string, string, string, unknown][])
           const compiled = doCompile(
             env.push(params.map((p) => p.location)),
+            tyEnv,
             value[2],
             outerFn,
             outerLoop,
@@ -169,7 +176,7 @@ function doCompile(env: Environment, value: unknown, outerFn?: ArkFn, outerLoop?
             [],
             new ArkExp(),
           )
-          fn.body = doCompile(innerEnv, value[3], fn, outerLoop)
+          fn.body = doCompile(innerEnv, tyEnv, value[3], fn, outerLoop)
           fn.capturedVars = innerEnv.top().captures.map((c) => symRef(env, c.name) as ArkNamedLoc)
           return fn
         }
@@ -177,21 +184,21 @@ function doCompile(env: Environment, value: unknown, outerFn?: ArkFn, outerLoop?
           if (value.length !== 3 || typeof value[1] !== 'string') {
             throw new ArkCompilerError("Invalid 'prop'")
           }
-          const compiled = doCompile(env, value[2], outerFn, outerLoop)
+          const compiled = doCompile(env, tyEnv, value[2], outerFn, outerLoop)
           return new ArkProperty(compiled, value[1])
         }
         case 'set': {
           if (value.length !== 3) {
             throw new ArkCompilerError("Invalid 'set'")
           }
-          const compiledRef = doCompile(env, value[1], outerFn, outerLoop)
+          const compiledRef = doCompile(env, tyEnv, value[1], outerFn, outerLoop)
           if (!(compiledRef instanceof ArkLvalue)) {
             throw new ArkCompilerError('Invalid lvalue')
           }
           if (compiledRef instanceof ArkNamedLoc && !compiledRef.location.isVar) {
             throw new ArkCompilerError("Cannot assign to non-'var'")
           }
-          const compiledVal = doCompile(env, value[2], outerFn, outerLoop)
+          const compiledVal = doCompile(env, tyEnv, value[2], outerFn, outerLoop)
           return new ArkSet(compiledRef, compiledVal)
         }
         case 'list': {
@@ -204,15 +211,15 @@ function doCompile(env: Environment, value: unknown, outerFn?: ArkFn, outerLoop?
             if (!(pair instanceof Array && pair.length === 2)) {
               throw new ArkCompilerError('Invalid map element')
             }
-            const compiledKey = doCompile(env, pair[0], outerFn, outerLoop)
-            const compiledVal = doCompile(env, pair[1], outerFn, outerLoop)
+            const compiledKey = doCompile(env, tyEnv, pair[0], outerFn, outerLoop)
+            const compiledVal = doCompile(env, tyEnv, pair[1], outerFn, outerLoop)
             inits.set(compiledKey, compiledVal)
           }
           return new ArkMapLiteral(inits)
         }
         case 'seq': {
           if (value.length === 2) {
-            return doCompile(env, value[1], outerFn, outerLoop)
+            return doCompile(env, tyEnv, value[1], outerFn, outerLoop)
           }
           const elems = listToVals(env, value.slice(1))
           return new ArkSequence(elems)
@@ -221,11 +228,11 @@ function doCompile(env: Environment, value: unknown, outerFn?: ArkFn, outerLoop?
           if (value.length < 3 || value.length > 4) {
             throw new ArkCompilerError("Invalid 'if'")
           }
-          const compiledCond = doCompile(env, value[1], outerFn, outerLoop)
-          const compiledThen = doCompile(env, value[2], outerFn, outerLoop)
+          const compiledCond = doCompile(env, tyEnv, value[1], outerFn, outerLoop)
+          const compiledThen = doCompile(env, tyEnv, value[2], outerFn, outerLoop)
           let compiledElse
           if (value.length === 4) {
-            compiledElse = doCompile(env, value[3], outerFn, outerLoop)
+            compiledElse = doCompile(env, tyEnv, value[3], outerFn, outerLoop)
           }
           return new ArkIf(compiledCond, compiledThen, compiledElse)
         }
@@ -233,16 +240,16 @@ function doCompile(env: Environment, value: unknown, outerFn?: ArkFn, outerLoop?
           if (value.length !== 3) {
             throw new ArkCompilerError("Invalid 'and'")
           }
-          const compiledLeft = doCompile(env, value[1], outerFn, outerLoop)
-          const compiledRight = doCompile(env, value[2], outerFn, outerLoop)
+          const compiledLeft = doCompile(env, tyEnv, value[1], outerFn, outerLoop)
+          const compiledRight = doCompile(env, tyEnv, value[2], outerFn, outerLoop)
           return new ArkAnd(compiledLeft, compiledRight)
         }
         case 'or': {
           if (value.length !== 3) {
             throw new ArkCompilerError("Invalid 'or'")
           }
-          const compiledLeft = doCompile(env, value[1], outerFn, outerLoop)
-          const compiledRight = doCompile(env, value[2], outerFn, outerLoop)
+          const compiledLeft = doCompile(env, tyEnv, value[1], outerFn, outerLoop)
+          const compiledRight = doCompile(env, tyEnv, value[2], outerFn, outerLoop)
           return new ArkOr(compiledLeft, compiledRight)
         }
         case 'loop': {
@@ -250,7 +257,7 @@ function doCompile(env: Environment, value: unknown, outerFn?: ArkFn, outerLoop?
             throw new ArkCompilerError("Invalid 'loop'")
           }
           const loop = new ArkLoop(new ArkExp(), env.top().locals.length)
-          loop.body = doCompile(env, value[1], outerFn, loop)
+          loop.body = doCompile(env, tyEnv, value[1], outerFn, loop)
           return loop
         }
         case 'break': {
@@ -261,7 +268,7 @@ function doCompile(env: Environment, value: unknown, outerFn?: ArkFn, outerLoop?
             throw new ArkCompilerError('break used outside a loop')
           }
           if (value.length === 2) {
-            const compiledBody = doCompile(env, value[1], outerFn, outerLoop)
+            const compiledBody = doCompile(env, tyEnv, value[1], outerFn, outerLoop)
             return new ArkBreak(outerLoop, compiledBody)
           }
           return new ArkBreak(outerLoop)
@@ -282,7 +289,7 @@ function doCompile(env: Environment, value: unknown, outerFn?: ArkFn, outerLoop?
           }
           const Constructor = value[0] === 'return' ? ArkReturn : ArkYield
           if (value.length === 2) {
-            const compiledBody = doCompile(env, value[1], outerFn, outerLoop)
+            const compiledBody = doCompile(env, tyEnv, value[1], outerFn, outerLoop)
             return new Constructor(outerFn, compiledBody)
           }
           return new Constructor(outerFn)
@@ -291,12 +298,12 @@ function doCompile(env: Environment, value: unknown, outerFn?: ArkFn, outerLoop?
           if (value.length < 3 || typeof value[2] !== 'string') {
             throw new ArkCompilerError("Invalid 'invoke'")
           }
-          const compiledObj = doCompile(env, value[1], outerFn, outerLoop)
+          const compiledObj = doCompile(env, tyEnv, value[1], outerFn, outerLoop)
           const args = listToVals(env, value.slice(3))
           return new ArkInvoke(compiledObj, value[2], args)
         }
         default: {
-          const compiledFn = doCompile(env, value[0], outerFn, outerLoop)
+          const compiledFn = doCompile(env, tyEnv, value[0], outerFn, outerLoop)
           const args = listToVals(env, value.slice(1))
           return new ArkCall(compiledFn, args)
         }
@@ -309,6 +316,7 @@ function doCompile(env: Environment, value: unknown, outerFn?: ArkFn, outerLoop?
       if (Object.hasOwn(value, key)) {
         const compiled = doCompile(
           env,
+          tyEnv,
           (value as {[key: string]: unknown})[key],
           outerFn,
           outerLoop,
@@ -321,8 +329,12 @@ function doCompile(env: Environment, value: unknown, outerFn?: ArkFn, outerLoop?
   throw new ArkCompilerError(`Invalid value ${value}`)
 }
 
-export function compile(expr: unknown, env = new Environment()): ArkExp {
-  const exp = doCompile(env, expr)
+export function compile(
+  expr: unknown,
+  env = new Environment(),
+  tyEnv = new Scope<ArkType>(),
+): ArkExp {
+  const exp = doCompile(env, tyEnv, expr)
   const typeErrors = typecheck(exp)
   if (typeErrors.length > 0) {
     throw new ArkCompilerErrors(typeErrors.map((e) => e.message))

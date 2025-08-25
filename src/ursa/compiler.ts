@@ -27,7 +27,7 @@ import {
   ArkBreak, ArkContinue, ArkAwait, ArkLaunch, ArkNamedLoc,
 } from '../ark/code.js'
 import {
-  Frame, Environment, Location, Namespace,
+  Frame, Environment, Location, Namespace, Scope,
 } from '../ark/compiler-utils.js'
 import {ArkState, ArkRuntimeError} from '../ark/interpreter.js'
 import {ArkCompilerError, ArkCompilerErrors} from '../ark/error.js'
@@ -46,6 +46,7 @@ type ParserOperations = {
 
 type ParserArgs = {
   env: Environment
+  tyEnv: Scope<ArkType>
   outerLoop?: ArkLoop
   outerFn?: ArkFn
   inGenerator?: boolean
@@ -334,6 +335,7 @@ semantics.addOperation<ArkExp>('toExp(a)', {
     )
     fn.body = body.toExp({
       env: innerEnv,
+      tyEnv: this.args.a.tyEnv,
       outerLoop: undefined,
       outerFn: fn,
       inGenerator: fnType.isGenerator,
@@ -624,6 +626,7 @@ semantics.addOperation<ArkLvalue>('toLval(a)', {
 export function compile(
   expr: string,
   env: Environment = new Environment(),
+  tyEnv: Scope<ArkType> = new Scope(),
   startRule?: string,
 ): ArkExp {
   const matchResult = grammar.match(expr, startRule)
@@ -632,7 +635,12 @@ export function compile(
   }
   const ast = semantics(matchResult)
   const args = {
-    env, outerLoop: undefined, outerFn: undefined, atSeqTop: true, errors: [] as ArkCompilerError[],
+    env,
+    tyEnv,
+    outerLoop: undefined,
+    outerFn: undefined,
+    atSeqTop: true,
+    errors: [] as ArkCompilerError[],
   }
   const exp = ast.toExp(args)
   if (args.errors.length > 0) {

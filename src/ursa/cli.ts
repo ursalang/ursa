@@ -23,7 +23,7 @@ import {
 import {
   ArkExp, ArkLet, ArkListLiteral, ArkStructLiteral, ArkSequence,
 } from '../ark/code.js'
-import {Environment, Location} from '../ark/compiler-utils.js'
+import {Environment, Location, Scope} from '../ark/compiler-utils.js'
 import {ArkState} from '../ark/interpreter.js'
 import {compile as arkCompile} from '../ark/reader.js'
 import {serializeVal} from '../ark/serialize.js'
@@ -33,7 +33,7 @@ import {
   arkToJs, evalArkJs, preludeJs, runtimeContext,
 } from '../ark/compiler/index.js'
 import {expToInst} from '../ark/flatten.js'
-import {ArkAnyType} from '../ark/type.js'
+import {ArkAnyType, ArkType} from '../ark/type.js'
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
@@ -167,13 +167,14 @@ function compile(
   args: Args,
   exp: string,
   env: Environment = new Environment(),
+  tyEnv: Scope<ArkType> = new Scope(),
   startRule?: string,
 ): ArkExp {
   let compiled: ArkExp
   if (args.syntax === 'json') {
     compiled = arkCompile(JSON.parse(exp), env)
   } else {
-    compiled = ursaCompile(exp, env, startRule)
+    compiled = ursaCompile(exp, env, tyEnv, startRule)
   }
   if (process.env.DEBUG) {
     console.log('Compiled Ark')
