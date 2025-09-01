@@ -37,7 +37,7 @@ import {
   ArkListType, ArkMapType, ArkUndefined, ArkCallable,
 } from '../data.js'
 import {
-  ArkAnyType, ArkFnType, ArkUnknownType, ArkType, ArkTypedId, ArkUnionType,
+  ArkAnyType, ArkFnType, ArkUnknownType, ArkType, ArkTypedId,
   ArkStructType,
 } from '../type.js'
 import {ArkExp} from '../code.js'
@@ -73,8 +73,6 @@ function typeToJs(ty: ArkType) {
   }
   if (ty instanceof ArkFnType) {
     return 'ArkCallable'
-  } else if (ty instanceof ArkUnionType) {
-    return 'ArkUnionType'
   } else if (ty instanceof ArkStructType) {
     return 'ArkStructType'
   }
@@ -125,7 +123,6 @@ export const runtimeContext: Record<string, unknown> = {
   ArkMapType,
   ArkOperation,
   ArkTypedId,
-  ArkUnionType,
   ArkVal,
   NativeFn,
   jsGlobals,

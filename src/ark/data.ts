@@ -8,7 +8,7 @@ import {
 
 import {Namespace} from './compiler-utils.js'
 import {
-  ArkFnType, ArkType, ArkTypedId, ArkTrait, ArkUnionType,
+  ArkFnType, ArkType, ArkTypedId, ArkTrait,
   ArkMethodType, ArkAnyType, ArkSelfType, ArkUnknownType,
   ArkStructType, ArkTypeVariable, ArkEnumType, ArkUndefinedType,
   ArkImpl, ArkTypeConstant,
@@ -713,7 +713,6 @@ export const globalTypes = new Namespace<ArkType>([
   ['List', ArkListType],
   ['Map', ArkMapType],
   ['Fn', new ArkFnType(false, undefined, ArkAnyType)],
-  ['Union', new ArkUnionType(new Set())],
 ])
 
 export function typeToStr(ty: ArkType) {
@@ -726,8 +725,6 @@ export function typeToStr(ty: ArkType) {
   }
   if (ty instanceof ArkFnType) {
     return 'Fn'
-  } else if (ty instanceof ArkUnionType) {
-    return 'Union'
   } else if (ty instanceof ArkStructType || ty instanceof ArkTrait) {
     return ty.name
   }

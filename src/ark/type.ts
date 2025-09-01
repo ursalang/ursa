@@ -269,12 +269,6 @@ export class ArkFnType extends ArkParametricType<ArkFnType> {
   }
 }
 
-export class ArkUnionType extends ArkType {
-  constructor(public types: Set<ArkType>) {
-    super()
-  }
-}
-
 function paramsToStr(params: Namespace<ArkType>): string {
   let paramsStr = ''
   if (params.size > 0) {
@@ -298,7 +292,8 @@ export function typeName(ty: ArkType, selfType?: ArkType): string {
     return ty.name
   } else if (ty instanceof ArkStructType || ty instanceof ArkTrait) {
     return `${ty.name}${paramsToStr(ty.typeParameters)}`
-  } else if (ty instanceof ArkFnType) {
+  } else {
+    assert(ty instanceof ArkFnType)
     // FIXME: Use 'where' syntax
     const types = []
     for (const t of ty.params ?? []) {
@@ -306,12 +301,5 @@ export function typeName(ty: ArkType, selfType?: ArkType): string {
     }
     const paramsStr = paramsToStr(ty.typeParameters)
     return `fn${paramsStr} (${types.join(', ')}): ${typeName(ty.returnType, selfType)}`
-  } else {
-    assert(ty instanceof ArkUnionType)
-    const types = []
-    for (const t of ty.types) {
-      types.push(typeName(t, selfType))
-    }
-    return `Union<${types.join(', ')}>`
   }
 }

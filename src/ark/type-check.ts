@@ -17,7 +17,7 @@ import {
 import {ArkCompilerError} from './error.js'
 import {
   typeName, ArkType, ArkFnType, ArkUnknownType, ArkNonterminatingType, ArkAnyType,
-  ArkSelfType, ArkStructType, ArkTrait, ArkUnionType, ArkUndefinedType, ArkTypeVariable,
+  ArkSelfType, ArkStructType, ArkTrait, ArkUndefinedType, ArkTypeVariable,
 } from './type.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -60,22 +60,6 @@ export function typeEquals(
       }
     }
     return true
-  } else if (t1 instanceof ArkUnionType && t2 instanceof ArkUnionType) {
-    // Search t2 for a match for each type in t1.
-    // TODO: improve efficiency.
-    for (const ty1 of t1.types) {
-      let match = false
-      for (const ty2 of t2.types) {
-        if (typeEquals(ty1, ty2, sourceLoc, selfType)) {
-          match = true
-          break
-        }
-      }
-      if (!match) {
-        return false
-      }
-    }
-    return true
   }
   return false
 }
@@ -99,7 +83,8 @@ export function typecheck(exp: ArkExp): ArkCompilerError[] {
     }
   }
 
-  function makeUnion(ty: ArkType, extraTy: ArkType, sourceLoc?: Interval): ArkType {
+  // Trivial type union (without union types).
+  function typeUnion(ty: ArkType, extraTy: ArkType): ArkType {
     assert(ty !== ArkSelfType && extraTy !== ArkSelfType)
     // T ∪ T = T
     if (ty === extraTy) {
@@ -109,30 +94,15 @@ export function typecheck(exp: ArkExp): ArkCompilerError[] {
     if (ty === ArkAnyType || extraTy === ArkAnyType) {
       return ArkAnyType
     }
-    // Unknown | Nonterminating ∪ T = T
-    if (ty === ArkUnknownType || ty === ArkNonterminatingType) {
+    // Nonterminating ∪ T = T
+    if (ty === ArkNonterminatingType) {
       return extraTy
     }
-    if (extraTy === ArkUnknownType || ty === ArkNonterminatingType) {
+    if (extraTy === ArkNonterminatingType) {
       return ty
     }
-    // Take union of two regular types
-    if (!(ty instanceof ArkUnionType) && !(extraTy instanceof ArkUnionType)) {
-      if (safeTypeEquals(ty, extraTy, sourceLoc)) {
-        return ty
-      }
-      return new ArkUnionType(new Set([ty, extraTy]))
-    }
-    // Take union of Union type and non-Union type
-    if (ty instanceof ArkUnionType && !(extraTy instanceof ArkUnionType)) {
-      return new ArkUnionType(new Set([extraTy, ...ty.types]))
-    }
-    if (extraTy instanceof ArkUnionType && !(ty instanceof ArkUnionType)) {
-      return new ArkUnionType(new Set([...extraTy.types, ty]))
-    }
-    // Take union of two Union types
-    assert(ty instanceof ArkUnionType && extraTy instanceof ArkUnionType)
-    return new ArkUnionType(new Set([...ty.types, ...extraTy.types]))
+    // Otherwise, result is Unknown
+    return ArkUnknownType
   }
 
   function checkArgsMatchParams(
@@ -166,7 +136,7 @@ export function typecheck(exp: ArkExp): ArkCompilerError[] {
       doTypecheck(exp.exp)
     } else if (exp instanceof ArkBreak) {
       doTypecheck(exp.exp)
-      exp.loop.type = makeUnion(exp.loop.type, exp.type, exp.sourceLoc)
+      exp.loop.type = typeUnion(exp.loop.type, exp.type)
     } else if (exp instanceof ArkYield) {
       doTypecheck(exp.exp)
       // FIXME: Type-check generators
@@ -244,7 +214,7 @@ export function typecheck(exp: ArkExp): ArkCompilerError[] {
       exp.type = exp.thenExp.type
       if (exp.elseExp !== undefined) {
         doTypecheck(exp.elseExp)
-        exp.type = makeUnion(exp.type, exp.elseExp.type, exp.sourceLoc)
+        exp.type = typeUnion(exp.type, exp.elseExp.type)
       }
     } else if (exp instanceof ArkAnd) {
       doTypecheck(exp.left)
