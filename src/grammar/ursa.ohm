@@ -134,26 +134,27 @@ Ursa {
   Block (a block) = "{" Sequence "}"
 
   // Types
-  // TODO: Type declarations (aliases)
   // TODO: Add namespace support: NamedType = Path TypeArgs?
   // TODO: 'where' clauses giving trait bounds
+  // TODO: optional TypeAnnotation on Exp
   NamedType = ident TypeArgs?
-  Type = NamedType | FnType
+  Type = NamedType | FnType | StructType | EnumType | TraitType
   TypeParams = "<" ListOf<TypeParam, ","> ","? ">"
   TypeParam = ident TypeAnnotation
   TypeArgs = "<" ListOf<Type, ","> ","? ">"
   TypeAnnotation = ":" Type
+  TypeDecl = type ident "=" Type
 
   // Structs
   // TODO: super-struct?
-  StructDecl = struct ident TypeParams? Members
+  StructType = struct TypeParams? Members
   Members = "{" ListOf<Member, ","> ","? "}"
   Member = ident TypeAnnotation? Initializer?
 
   // Traits
   // TODO: super-traits
   // TODO: (associated) type declarations
-  TraitDecl = trait ident TypeParams? "{" ListOf<MethodDecl, #sc> #sc "}"
+  TraitType = trait TypeParams? "{" ListOf<MethodDecl, #sc> #sc "}"
   TraitBound = ListOf<ident, "+">
   MethodDecl = pub? ident ":" FnType Block?
   Method = pub? ident ":" FnType Block
@@ -161,7 +162,7 @@ Ursa {
   Implementation = impl TypeParams? ident ForClause? "{" ListOf<Method, #sc> #sc "}"
 
   // Enums
-  EnumDecl = enum ident TypeParams? "{" ListOf<VariantDecl, ","> ","? "}"
+  EnumType = enum TypeParams? "{" ListOf<VariantDecl, ","> ","? "}"
   VariantDecl = ident Variants?
   Variants = "{" ListOf<Variant, ","> ","? "}"
   Variant = ident TypeAnnotation?
@@ -189,13 +190,14 @@ Ursa {
   return = "return" ~identifierPart
   struct = "struct" ~identifierPart
   trait = "trait" ~identifierPart
+  type = "type" ~identifierPart
   use = "use" ~identifierPart
   var = "var" ~identifierPart
   yield = "yield" ~identifierPart
 
   keyword = and | await | break | continue | else | enum | fn | for | gen | if
     | in | launch | let | loop | match | not | or | pub | return | struct | trait
-    | use | var | yield
+    | type | use | var | yield
 
   reservedWord = bool | null | keyword
 
