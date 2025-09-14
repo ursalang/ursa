@@ -12,6 +12,7 @@ import {
 import {
   ArkType, ArkTypedId, ArkFnType, ArkAnyType, ArkUnknownType, ArkNonterminatingType,
   ArkStructType, ArkUndefinedType, ArkTrait, ArkTypeConstant, ArkSelfType,
+  ArkInstantiatedStructType,
 } from './type.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -193,6 +194,7 @@ export class ArkInvoke extends ArkExp {
         return ArkUndefinedType
       }
       let retTy = method.type.returnType
+      // FIXME: This conversion should not be done here!
       if (retTy === ArkSelfType) {
         retTy = this.obj.type
       }
@@ -290,7 +292,7 @@ export class ArkProperty extends ArkLvalue {
 }
 
 export class ArkListLiteral extends ArkExp {
-  private _type = ArkListType // FIXME: should be List<Unknown> by default
+  private _type = new ArkInstantiatedStructType(ArkListType, new Namespace<ArkType>([['T', ArkUnknownType]]))
 
   get type() {
     return this._type
@@ -299,7 +301,7 @@ export class ArkListLiteral extends ArkExp {
   constructor(public list: ArkExp[], sourceLoc?: Interval) {
     super(sourceLoc)
     if (list.length > 0) {
-      this._type = ArkListType.instantiate(new Map([['T', list[0].type]]))
+      this._type = new ArkInstantiatedStructType(ArkListType, new Namespace<ArkType>([['T', list[0].type]]))
     }
   }
 }

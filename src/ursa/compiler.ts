@@ -2,6 +2,8 @@
 // © Reuben Thomas 2023-2025
 // Released under the GPL version 3, or (at your option) any later version.
 
+import assert from 'assert'
+
 import {Interval} from 'ohm-js'
 
 import grammar, {
@@ -13,12 +15,13 @@ import {
   debug,
 } from '../ark/util.js'
 import {
+  globalTypes, Environment,
   ArkVal, ArkNull, ArkBoolean, ArkNumber, ArkString,
-  globalTypes,
 } from '../ark/data.js'
 import {
   ArkType, ArkFnType, ArkUnknownType, ArkAnyType, ArkParametricType,
-  ArkStructType,
+  ArkStructType, ArkEnumType, ArkTrait, ArkInstantiatedStructType,
+  ArkInstantiatedEnumType, ArkInstantiatedTrait, ArkInstantiatedFnType,
 } from '../ark/type.js'
 import {
   ArkBoundVar, ArkExp, ArkLvalue, ArkLiteral, ArkSequence, ArkIf, ArkLoop, ArkAnd, ArkOr,
@@ -27,7 +30,7 @@ import {
   ArkBreak, ArkContinue, ArkAwait, ArkLaunch, ArkNamedLoc,
 } from '../ark/code.js'
 import {
-  Frame, Environment, Location, Namespace, Scope,
+  Frame, Location, Namespace, Scope,
 } from '../ark/compiler-utils.js'
 import {ArkState, ArkRuntimeError} from '../ark/interpreter.js'
 import {ArkCompilerError, ArkCompilerErrors} from '../ark/error.js'
@@ -574,8 +577,16 @@ semantics.addOperation<ArkType>('toType(a)', {
         for (let i = 0; i < basicTy.typeParameters.size; i += 1) {
           substs.set(paramNames[i], paramTypes[i])
         }
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-        return basicTy.instantiate(substs)
+        if (basicTy instanceof ArkStructType) {
+          return new ArkInstantiatedStructType(basicTy, substs)
+        } else if (basicTy instanceof ArkEnumType) {
+          return new ArkInstantiatedEnumType(basicTy, substs)
+        } else if (basicTy instanceof ArkTrait) {
+          return new ArkInstantiatedTrait(basicTy, substs)
+        } else {
+          assert(basicTy instanceof ArkFnType)
+          return new ArkInstantiatedFnType(basicTy, substs)
+        }
       }
     }
     return basicTy

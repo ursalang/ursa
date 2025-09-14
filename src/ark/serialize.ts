@@ -4,7 +4,7 @@
 
 import {
   ArkVal, ArkConcreteVal, ArkNull, ArkOperation, ArkList, ArkMap, ArkStruct,
-  ArkUndefined, NativeStruct, typeToStr,
+  ArkUndefined, NativeStruct,
 } from './data.js'
 import {
   ArkExp, ArkSequence,
@@ -13,7 +13,7 @@ import {
   ArkLiteral, ArkListLiteral, ArkMapLiteral, ArkStructLiteral, ArkYield,
   ArkGlobal,
 } from './code.js'
-import {ArkTypeConstant, typeName} from './type.js'
+import {ArkTypeConstant, typeName, typeToStr} from './type.js'
 
 export function valToJs(val: ArkVal | ArkExp) {
   function doValToJs(val: ArkVal | ArkExp): unknown {

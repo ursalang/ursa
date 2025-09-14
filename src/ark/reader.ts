@@ -10,8 +10,11 @@ import {
   debug,
 } from './util.js'
 import {
-  globals, ArkNull, ArkBoolean, ArkNumber, ArkString, ArkStruct, ArkUndefined,
-  globalTypes,
+  Frame, Location, Scope,
+} from './compiler-utils.js'
+import {
+  globals, globalTypes, Environment,
+  ArkNull, ArkBoolean, ArkNumber, ArkString, ArkStruct, ArkUndefined,
 } from './data.js'
 import {ArkCompilerError, ArkCompilerErrors} from './error.js'
 import {ArkType, ArkAnyType} from './type.js'
@@ -22,9 +25,6 @@ import {
   ArkProperty, ArkLet, ArkCall, ArkInvoke, ArkLiteral, ArkBoundVar, ArkNamedLoc,
   ArkGlobal,
 } from './code.js'
-import {
-  Environment, Frame, Location, Scope,
-} from './compiler-utils.js'
 import {expToInst} from './flatten.js'
 import {ArkState} from './interpreter.js'
 import {typecheck} from './type-check.js'

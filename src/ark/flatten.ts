@@ -5,6 +5,7 @@
 import assert from 'assert'
 import {Interval} from 'ohm-js'
 
+import {Location} from './compiler-utils.js'
 import {
   ArkAnd, ArkAwait, ArkBreak, ArkCall, ArkCapture, ArkContinue, ArkDebugInfo,
   ArkExp, ArkFn, ArkGenerator, ArkGlobal, ArkIf, ArkInvoke, ArkLaunch, ArkLet,
@@ -12,7 +13,6 @@ import {
   ArkStructLiteral, ArkOr, ArkProperty, ArkReturn, ArkSequence, ArkSet,
   ArkYield,
 } from './code.js'
-import {Location} from './compiler-utils.js'
 import {
   ArkBoolean, ArkNull, ArkVal, globals,
 } from './data.js'

@@ -5,12 +5,9 @@
 import assert from 'assert'
 
 import {Namespace} from './compiler-utils.js'
-import {ArkCallable, typeToStr} from './data.js'
+import {type ArkCallable} from './data.js'
 import {ArkCompilerError} from './error.js'
-import {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  debug,
-} from './util.js'
+import {debug} from './util.js'
 
 export class ArkImpl {
   // FIXME: Add associated types etc.
@@ -45,31 +42,10 @@ export class ArkTypedId {
   constructor(public name: string, public type: ArkType) {}
 }
 
-function instantiateTypeVars(
-  typeParameters: Namespace<ArkType>,
-  substs: Namespace<ArkType>,
-): Namespace<ArkType> {
-  const newTypeParams: Namespace<ArkType> = new Map()
-  for (const [name, ty] of typeParameters) {
-    let newTy = ty
-    if (substs.has(name)) {
-      newTy = substs.get(name)!
-    }
-    newTypeParams.set(name, newTy)
-  }
-  return newTypeParams
-}
-
-export abstract class ArkParametricType<T extends ArkParametricType<T>> extends ArkType {
-  constructor(public typeParameters: Namespace<ArkType> = new Map()) {
+export class ArkParametricType<T extends ArkParametricType<T>> extends ArkType {
+  constructor(public typeParameters = new Namespace<ArkType>()) {
     super()
   }
-
-  public isGeneric(): boolean {
-    return this.typeParameters.size > 0
-  }
-
-  public abstract instantiate(substs: Namespace<ArkType>): T
 }
 
 export class ArkTypeVariable extends ArkType {
@@ -98,32 +74,9 @@ export class ArkStructType extends ArkParametricType<ArkStructType> {
     public name: string,
     // FIXME: public superType: ArkStructType,
     public members: Namespace<ArkType>,
-    typeParameters: Namespace<ArkType> = new Map(),
+    typeParameters = new Namespace<ArkType>(),
   ) {
     super(typeParameters)
-  }
-
-  public instantiate(substs: Namespace<ArkType>) {
-    const newMembers = new Namespace<ArkType>()
-    for (const [name, ty] of this.members) {
-      let newType = ty
-      if (ty instanceof ArkParametricType && ty.isGeneric()) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        newType = ty.instantiate(substs)
-      }
-      newMembers.set(name, newType)
-    }
-    const newTy = new ArkStructType(
-      this.name,
-      newMembers,
-      instantiateTypeVars(this.typeParameters, substs),
-    )
-    const newImpls = new Map<ArkTrait, ArkImpl>()
-    for (const [trait, impl] of this.impls) {
-      newImpls.set(trait.instantiate(substs), impl)
-    }
-    newTy.impls = newImpls
-    return newTy
   }
 
   public getMethodType(name: string): ArkMethodType | undefined {
@@ -137,36 +90,33 @@ export class ArkStructType extends ArkParametricType<ArkStructType> {
   }
 }
 
+export class ArkInstantiatedStructType extends ArkStructType {
+  constructor(baseType: ArkStructType, substs: Namespace<ArkType>) {
+    super(baseType.name, baseType.members, baseType.typeParameters.with(substs))
+    this.impls = baseType.impls
+  }
+}
+
 export class ArkEnumType extends ArkParametricType<ArkEnumType> {
   constructor(
     public name: string,
     public variants: Namespace<ArkType>,
     public traits: Set<ArkTrait> = new Set(),
-    typeParameters: Namespace<ArkType> = new Map(),
+    typeParameters = new Namespace<ArkType>(),
   ) {
     super(typeParameters)
   }
+}
 
-  public instantiate(substs: Namespace<ArkType>) {
-    const newVariants = new Namespace<ArkType>()
-    for (const [name, ty] of this.variants) {
-      let newType = ty
-      if (ty instanceof ArkParametricType && ty.isGeneric()) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        newType = ty.instantiate(substs)
-      }
-      newVariants.set(name, newType)
-    }
-    const newTraits = new Set<ArkTrait>()
-    for (const t of this.traits) {
-      newTraits.add(t.instantiate(substs))
-    }
-    return new ArkEnumType(
-      this.name,
-      newVariants,
-      newTraits,
-      instantiateTypeVars(this.typeParameters, substs),
+export class ArkInstantiatedEnumType extends ArkEnumType {
+  constructor(baseType: ArkEnumType, substs: Namespace<ArkType>) {
+    super(
+      baseType.name,
+      baseType.variants,
+      baseType.traits,
+      baseType.typeParameters.with(substs),
     )
+    this.impls = baseType.impls
   }
 }
 
@@ -182,28 +132,9 @@ export class ArkTrait extends ArkParametricType<ArkTrait> {
     public name: string,
     public methods: Map<string, ArkMethodType> = new Map(),
     public superTraits: Set<ArkTrait> = new Set(),
-    typeParameters: Namespace<ArkType> = new Map(),
+    typeParameters = new Namespace<ArkType>(),
   ) {
     super(typeParameters)
-  }
-
-  public instantiate(substs: Namespace<ArkType>) {
-    const newMethods = new Map<string, ArkMethodType>()
-    for (const [name, m] of this.methods) {
-      const newMethodType = new ArkMethodType(m.type.instantiate(substs), m.isPub)
-      newMethods.set(name, newMethodType)
-    }
-    const newSuperTraits = new Set<ArkTrait>()
-    for (const t of this.superTraits) {
-      newSuperTraits.add(t.instantiate(substs))
-    }
-    // FIXME: copy and instantiate impls as for structs
-    return new ArkTrait(
-      this.name,
-      newMethods,
-      newSuperTraits,
-      instantiateTypeVars(this.typeParameters, substs),
-    )
   }
 
   public getMethodType(name: string): ArkMethodType | undefined {
@@ -227,45 +158,39 @@ export class ArkTrait extends ArkParametricType<ArkTrait> {
   }
 }
 
+export class ArkInstantiatedTrait extends ArkTrait {
+  constructor(baseType: ArkTrait, substs: Namespace<ArkType>) {
+    super(
+      baseType.name,
+      baseType.methods,
+      baseType.superTraits,
+      baseType.typeParameters.with(substs),
+    )
+    this.impls = baseType.impls
+  }
+}
+
 // FIXME: just a trait with one method, 'call'?
 export class ArkFnType extends ArkParametricType<ArkFnType> {
   constructor(
     public isGenerator: boolean,
     public params: ArkTypedId[] | undefined,
     public returnType: ArkType,
-    typeParameters: Namespace<ArkType> = new Map(),
+    typeParameters = new Namespace<ArkType>(),
   ) {
     super(typeParameters)
   }
+}
 
-  public instantiate(substs: Namespace<ArkType>) {
-    let newParams: ArkTypedId[] | undefined
-    if (this.params !== undefined) {
-      newParams = []
-      for (const p of this.params) {
-        let newType = p.type
-        if (p.type instanceof ArkTypeVariable && substs.has(p.type.name)) {
-          newType = substs.get(p.type.name)!
-        } else if (p.type instanceof ArkParametricType && p.type.isGeneric()) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          newType = p.type.instantiate(substs)
-        }
-        newParams.push(new ArkTypedId(p.name, newType))
-      }
-    }
-    let newReturnType = this.returnType
-    if (newReturnType instanceof ArkTypeVariable && substs.has(newReturnType.name)) {
-      newReturnType = substs.get(newReturnType.name)!
-    } else if (newReturnType instanceof ArkParametricType && newReturnType.isGeneric()) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      newReturnType = newReturnType.instantiate(substs)
-    }
-    return new ArkFnType(
-      this.isGenerator,
-      newParams,
-      newReturnType,
-      instantiateTypeVars(this.typeParameters, substs),
+export class ArkInstantiatedFnType extends ArkFnType {
+  constructor(baseType: ArkFnType, substs: Namespace<ArkType>) {
+    super(
+      baseType.isGenerator,
+      baseType.params,
+      baseType.returnType,
+      baseType.typeParameters.with(substs),
     )
+    this.impls = baseType.impls
   }
 }
 
@@ -302,4 +227,21 @@ export function typeName(ty: ArkType, selfType?: ArkType): string {
     const paramsStr = paramsToStr(ty.typeParameters)
     return `fn${paramsStr} (${types.join(', ')}): ${typeName(ty.returnType, selfType)}`
   }
+}
+
+export function typeToStr(ty: ArkType) {
+  switch (ty) {
+    case ArkUnknownType:
+      return 'Unknown'
+    case ArkAnyType:
+      return 'Any'
+    default:
+  }
+  if (ty instanceof ArkFnType) {
+    return 'Fn'
+  } else if (ty instanceof ArkStructType || ty instanceof ArkTrait) {
+    return ty.name
+  }
+  debug(ty)
+  throw new Error('unknown type')
 }

@@ -18,6 +18,7 @@ import StackTracey, {Entry} from '@sc3d/stacktracey'
 import {Interval} from 'ohm-js'
 import prettier from '@prettier/sync'
 
+import {Frame, Location} from '../compiler-utils.js'
 import {
   expToInsts, ArkInsts, ArkInst, ArkAwaitInst,
   ArkBlockCloseInst, ArkBlockOpenInst, ArkIfBlockOpenInst, ArkLoopBlockOpenInst,
@@ -30,7 +31,7 @@ import {
   ArkSetNamedLocInst, ArkSetPropertyInst, ArkGlobalInst,
 } from '../flatten.js'
 import {
-  jsGlobals, ArkBoolean, ArkBooleanVal, ArkList, ArkMap, ArkNull,
+  jsGlobals, Environment, ArkBoolean, ArkBooleanVal, ArkList, ArkMap, ArkNull,
   ArkNumber, ArkNullVal, ArkNumberVal, ArkStruct, ArkString,
   ArkStringVal, ArkVal, NativeFn, ArkOperation,
   ArkNullType, ArkBooleanType, ArkNumberType, ArkStringType,
@@ -42,9 +43,6 @@ import {
 } from '../type.js'
 import {ArkExp} from '../code.js'
 import {debug} from '../util.js'
-import {
-  Environment, Frame, Location,
-} from '../compiler-utils.js'
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = fileURLToPath(new URL('.', import.meta.url))

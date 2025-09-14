@@ -2,16 +2,18 @@
 // © Reuben Thomas 2023-2025
 // Released under the MIT license.
 
+import assert from 'assert'
+
 import {
   action, call, Operation, Reject, Resolve, run, sleep,
 } from 'effection'
 
-import {Namespace} from './compiler-utils.js'
+import {Location, Namespace, Frame} from './compiler-utils.js'
 import {
   ArkFnType, ArkType, ArkTypedId, ArkTrait,
   ArkMethodType, ArkAnyType, ArkSelfType, ArkUnknownType,
   ArkStructType, ArkTypeVariable, ArkEnumType, ArkUndefinedType,
-  ArkImpl, ArkTypeConstant,
+  ArkImpl, ArkTypeConstant, ArkInstantiatedStructType, ArkInstantiatedEnumType,
 } from './type.js'
 import {FsMap} from './fsmap.js'
 import programVersion from '../version.js'
@@ -95,14 +97,14 @@ export abstract class ArkConcreteVal<T> extends ArkAbstractStruct {
   }
 }
 
-export const ArkBooleanType = new ArkStructType('Bool', new Map())
+export const ArkBooleanType = new ArkStructType('Bool', new Namespace<ArkType>())
 
 const EqTrait = new ArkTrait('Eq', new Map([
   ['equals', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('right', ArkSelfType)], ArkBooleanType))],
   ['notEquals', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('right', ArkSelfType)], ArkBooleanType))],
 ]))
 
-export const ArkNullType = new ArkStructType('Null', new Map())
+export const ArkNullType = new ArkStructType('Null', new Namespace<ArkType>())
 
 export class ArkNullVal extends ArkConcreteVal<null> {
   type = ArkNullType
@@ -150,19 +152,20 @@ export class ArkUndefinedVal extends ArkConcreteVal<undefined> {
   }
 }
 
+// ts-unused-exports:disable-next-line
 export const ArkOptionType = new ArkEnumType(
   'Option',
-  new Map([
+  new Namespace<ArkType>([
     ['None', ArkUndefinedType],
     ['Some', new ArkTypeVariable('T')],
   ]),
   undefined,
-  new Map([['T', ArkUnknownType]]),
+  new Namespace<ArkType>([['T', ArkUnknownType]]),
 )
 
-export const ArkStringType = new ArkStructType('Str', new Map())
+export const ArkStringType = new ArkStructType('Str', new Namespace<ArkType>())
 
-export const ArkNumberType = new ArkStructType('Num', new Map())
+export const ArkNumberType = new ArkStructType('Num', new Namespace<ArkType>())
 ArkNumberType.implement(EqTrait, ConcreteEqImpl)
 
 export class ArkNumberVal extends ArkConcreteVal<number> {
@@ -317,7 +320,7 @@ export class NativeAsyncFn<T extends ArkVal[]> extends ArkCallable {
 
 export class ArkStruct extends ArkAbstractStruct {
   constructor(
-    public type: ArkStructType | ArkTypeConstant,
+    public type: ArkInstantiatedStructType | ArkTypeConstant,
     public members: Map<string, ArkVal> = new Map(),
   ) {
     super()
@@ -357,7 +360,7 @@ export class NativeStruct extends ArkAbstractStruct {
   }
 }
 
-export const ArkListType = new ArkStructType('List', new Map(), new Map([['T', ArkUnknownType]]))
+export const ArkListType = new ArkStructType('List', new Namespace<ArkType>(), new Namespace<ArkType>([['T', ArkUnknownType]]))
 ArkListType.implement(EqTrait, EqImpl)
 
 export class ArkList extends ArkStruct {
@@ -366,7 +369,7 @@ export class ArkList extends ArkStruct {
     if (list.length > 0) {
       elemType = list[0].type
     }
-    super(ArkListType.instantiate(new Map([['T', elemType]])))
+    super(new ArkInstantiatedStructType(ArkListType, new Namespace<ArkType>([['T', elemType]])))
   }
 }
 
@@ -381,7 +384,7 @@ ArkStringType.implement(
         new ArkFnType(
           true,
           [new ArkTypedId('self', ArkSelfType)],
-          ArkOptionType.instantiate(new Map([['T', ArkStringType]])),
+          new ArkInstantiatedEnumType(ArkOptionType, new Namespace<ArkType>([['T', ArkStringType]])),
         ),
       )],
       // FIXME: List<Str> in next line
@@ -411,9 +414,9 @@ ArkListType.implement(
     'ListTrait',
     new Map([
       ['len', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType)], ArkNumberType))],
-      ['get', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('index', ArkNumberType)], new ArkTypeVariable('T'), new Map([['T', ArkUnknownType]])))],
-      ['set', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('index', ArkNumberType), new ArkTypedId('val', new ArkTypeVariable('T'))], ArkSelfType, new Map([['T', ArkUnknownType]])))],
-      ['push', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('item', new ArkTypeVariable('T'))], ArkSelfType, new Map([['T', ArkUnknownType]])))],
+      ['get', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('index', ArkNumberType)], new ArkTypeVariable('T'), new Namespace<ArkType>([['T', ArkUnknownType]])))],
+      ['set', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('index', ArkNumberType), new ArkTypedId('val', new ArkTypeVariable('T'))], ArkSelfType, new Namespace<ArkType>([['T', ArkUnknownType]])))],
+      ['push', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('item', new ArkTypeVariable('T'))], ArkSelfType, new Namespace<ArkType>([['T', ArkUnknownType]])))],
       ['pop', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType)], ArkSelfType))],
       ['slice', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType), new ArkTypedId('from', ArkNumberType), new ArkTypedId('to', ArkNumberType)], ArkSelfType))],
       ['iter', new ArkMethodType(
@@ -423,10 +426,10 @@ ArkListType.implement(
           new ArkFnType(
             true,
             undefined,
-            ArkOptionType.instantiate(new Map([['T', new ArkTypeVariable('T')]])),
-            new Map([['T', ArkUnknownType]]),
+            new ArkInstantiatedEnumType(ArkOptionType, new Namespace<ArkType>([['T', new ArkTypeVariable('T')]])),
+            new Namespace<ArkType>([['T', ArkUnknownType]]),
           ),
-          new Map([['T', ArkUnknownType]]),
+          new Namespace<ArkType>([['T', ArkUnknownType]]),
         ),
       )],
       ['sorted', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType)], ArkSelfType))],
@@ -476,7 +479,7 @@ ArkListType.implement(
   ])),
 )
 
-export const ArkMapType = new ArkStructType('Map', new Map(), new Map([['K', ArkUnknownType], ['V', ArkUnknownType]]))
+export const ArkMapType = new ArkStructType('Map', new Namespace<ArkType>(), new Namespace<ArkType>([['K', ArkUnknownType], ['V', ArkUnknownType]]))
 ArkMapType.implement(EqTrait, EqImpl)
 ArkMapType.implement(
   new ArkTrait(
@@ -709,27 +712,43 @@ export const globalTypes = new Namespace<ArkType>([
   ['Num', ArkNumberType],
   ['Str', ArkStringType],
 
-  ['Struct', new ArkStructType('Struct', new Map())],
+  ['Struct', new ArkStructType('Struct', new Namespace<ArkType>())],
   ['List', ArkListType],
   ['Map', ArkMapType],
   ['Fn', new ArkFnType(false, undefined, ArkAnyType)],
 ])
 
-export function typeToStr(ty: ArkType) {
-  switch (ty) {
-    case ArkUnknownType:
-      return 'Unknown'
-    case ArkAnyType:
-      return 'Any'
-    default:
+export class Environment {
+  constructor(
+    public stack: [Frame, ...Frame[]] = [new Frame([], [])],
+    public externalSyms = globals,
+  ) {}
+
+  top() {
+    return this.stack[0]
   }
-  if (ty instanceof ArkFnType) {
-    return 'Fn'
-  } else if (ty instanceof ArkStructType || ty instanceof ArkTrait) {
-    return ty.name
+
+  push(items: (Location | undefined)[]) {
+    return new Environment(
+      [
+        new Frame(
+          [...this.top().locals, ...items],
+          this.top().captures,
+        ),
+        ...this.stack.slice(1),
+      ],
+      this.externalSyms,
+    )
   }
-  debug(ty)
-  throw new Error('unknown type')
+
+  pushFrame(frame: Frame) {
+    return new Environment([frame, ...this.stack], this.externalSyms)
+  }
+
+  popFrame() {
+    assert(this.stack.length > 1)
+    return new Environment([this.stack[1], ...this.stack.slice(2)], this.externalSyms)
+  }
 }
 
 // Re-export types from type.js for standalone scripts, which import only

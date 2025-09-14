@@ -18,12 +18,13 @@ import tmp from 'tmp'
 import programVersion from '../version.js'
 import {debug} from '../ark/util.js'
 import {
-  globals, jsGlobals, toJs, ArkNull, ArkList, ArkVal, ArkString, ArkStruct, ArkRef,
+  globals, jsGlobals, toJs, Environment,
+  ArkNull, ArkList, ArkVal, ArkString, ArkStruct, ArkRef,
 } from '../ark/data.js'
 import {
   ArkExp, ArkLet, ArkListLiteral, ArkStructLiteral, ArkSequence,
 } from '../ark/code.js'
-import {Environment, Location, Scope} from '../ark/compiler-utils.js'
+import {Location, Scope} from '../ark/compiler-utils.js'
 import {ArkState} from '../ark/interpreter.js'
 import {compile as arkCompile} from '../ark/reader.js'
 import {serializeVal} from '../ark/serialize.js'

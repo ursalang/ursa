@@ -6,6 +6,7 @@ import assert from 'assert'
 
 import {Interval} from 'ohm-js'
 
+import {Namespace, Scope} from './compiler-utils.js'
 import {
   ArkAnd, ArkAwait, ArkBreak, ArkCall, ArkExp, ArkFn, ArkIf,
   ArkInvoke, ArkLaunch, ArkLet, ArkListLiteral, ArkLoop, ArkMapLiteral,
@@ -18,35 +19,84 @@ import {ArkCompilerError} from './error.js'
 import {
   typeName, ArkType, ArkFnType, ArkUnknownType, ArkNonterminatingType, ArkAnyType,
   ArkSelfType, ArkStructType, ArkTrait, ArkUndefinedType, ArkTypeVariable,
+  ArkInstantiatedStructType, ArkInstantiatedEnumType, ArkInstantiatedTrait,
+  ArkInstantiatedFnType, ArkParametricType,
 } from './type.js'
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debug,
 } from './util.js'
 
+function sameNames(n1: Namespace<unknown>, n2: Namespace<unknown>) {
+  const s = new Set()
+  for (const name of n1.keys()) {
+    s.add(name)
+  }
+  for (const name of n2.keys()) {
+    if (!s.has(name)) {
+      return false
+    }
+    s.delete(name)
+  }
+  return s.size === 0
+}
+
+function lookupType(env: Scope<ArkType>, ty: ArkType): ArkType {
+  if (ty instanceof ArkTypeVariable) {
+    const realTy = env.get(ty.name)
+    if (realTy !== undefined) {
+      return realTy
+    }
+  }
+  return ty
+}
+
 export function typeEquals(
+  env: Scope<ArkType>,
   t1_: ArkType,
   t2_: ArkType,
   sourceLoc: Interval | undefined,
   selfType?: ArkType,
 ): boolean {
-  const t1 = t1_ === ArkSelfType ? selfType : t1_
-  const t2 = t2_ === ArkSelfType ? selfType : t2_
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function typeParametersEqual(t1: ArkParametricType<any>, t2: ArkParametricType<any>) {
+    if (!sameNames(t1.typeParameters, t2.typeParameters)) {
+      return false
+    }
+    for (const [name, ty] of t1.typeParameters) {
+      if (!typeEquals(env, ty, t2.typeParameters.get(name)!, sourceLoc, selfType)) {
+        return false
+      }
+    }
+    return true
+  }
+
+  let t1 = t1_ === ArkSelfType ? selfType : t1_
+  let t2 = t2_ === ArkSelfType ? selfType : t2_
   if (t1 === t2) {
     return true
   }
   if (t1 === undefined || t2 === undefined) {
+    // selfType must be undefined
     throw new ArkCompilerError('Self does not exist in this context', sourceLoc)
-  } else if (t1 === ArkUnknownType || t2 === ArkUnknownType) {
+  }
+  t1 = lookupType(env, t1)
+  t2 = lookupType(env, t2)
+  if (t1 === ArkUnknownType || t2 === ArkUnknownType) {
     return false // Unknown only matches itself
   } else if (t1 === ArkAnyType || t2 === ArkAnyType) {
     return true // Any matches anything
-  } else if ((t1 instanceof ArkTypeVariable && t2 instanceof ArkTypeVariable)
-    || (t1 instanceof ArkStructType && t2 instanceof ArkStructType)
+  } else if ((t1 instanceof ArkInstantiatedStructType && t2 instanceof ArkInstantiatedStructType)
+    || (t1 instanceof ArkInstantiatedEnumType && t2 instanceof ArkInstantiatedEnumType)
+    || (t1 instanceof ArkInstantiatedTrait && t2 instanceof ArkInstantiatedTrait)) {
+    return (t1.name === t2.name && typeParametersEqual(t1, t2))
+  } else if ((t1 instanceof ArkStructType && t2 instanceof ArkStructType)
     || (t1 instanceof ArkTrait && t2 instanceof ArkTrait)) {
     return t1.name === t2.name
+  } else if (t1 instanceof ArkInstantiatedFnType && t2 instanceof ArkInstantiatedFnType) {
+    return typeParametersEqual(t1, t2)
   } else if (t1 instanceof ArkFnType && t2 instanceof ArkFnType) {
-    if (!typeEquals(t1.returnType, t2.returnType, sourceLoc, selfType)) {
+    if (!typeEquals(env, t1.returnType, t2.returnType, sourceLoc, selfType)) {
       return false
     }
     if (t1.params !== undefined && t2.params !== undefined) {
@@ -54,7 +104,7 @@ export function typeEquals(
         return false
       }
       for (let i = 0; i < t1.params.length; i += 1) {
-        if (!typeEquals(t1.params[i].type, t2.params[i].type, sourceLoc, selfType)) {
+        if (!typeEquals(env, t1.params[i].type, t2.params[i].type, sourceLoc, selfType)) {
           return false
         }
       }
@@ -68,13 +118,14 @@ export function typecheck(exp: ArkExp): ArkCompilerError[] {
   const errors: ArkCompilerError[] = []
 
   function safeTypeEquals(
-    t1_: ArkType,
-    t2_: ArkType,
+    env: Scope<ArkType>,
+    t1: ArkType,
+    t2: ArkType,
     sourceLoc: Interval | undefined,
     selfType?: ArkType,
   ): boolean {
     try {
-      return typeEquals(t1_, t2_, sourceLoc, selfType)
+      return typeEquals(env, t1, t2, sourceLoc, selfType)
     } catch (e) {
       if (e instanceof ArkCompilerError) {
         errors.push(e)
@@ -106,6 +157,7 @@ export function typecheck(exp: ArkExp): ArkCompilerError[] {
   }
 
   function checkArgsMatchParams(
+    env: Scope<ArkType>,
     fnType: ArkType,
     args: ArkExp[],
     sourceLoc: Interval | undefined,
@@ -122,50 +174,51 @@ export function typecheck(exp: ArkExp): ArkCompilerError[] {
         errors.push(new ArkCompilerError(`Function with ${paramTypes.length} parameters passed ${args.length} arguments`, sourceLoc))
       }
       for (let i = 0; i < args.length; i += 1) {
-        if (!safeTypeEquals(args[i].type, paramTypes[i].type, sourceLoc, selfType)) {
-          errors.push(new ArkCompilerError(`Expecting ${typeName(paramTypes[i].type, selfType)} found ${typeName(args[i].type, selfType)}`, args[i].sourceLoc))
+        if (!safeTypeEquals(env, args[i].type, paramTypes[i].type, sourceLoc, selfType)) {
+          errors.push(new ArkCompilerError(`Expecting ${typeName(lookupType(env, paramTypes[i].type), selfType)} found ${typeName(lookupType(env, args[i].type), selfType)}`, args[i].sourceLoc))
         }
       }
     }
   }
 
-  function doTypecheck(exp: ArkExp) {
+  function doTypecheck(exp: ArkExp, env: Scope<ArkType>) {
     if (exp instanceof ArkLaunch) {
-      doTypecheck(exp.exp)
+      doTypecheck(exp.exp, env)
     } else if (exp instanceof ArkAwait) {
-      doTypecheck(exp.exp)
+      doTypecheck(exp.exp, env)
     } else if (exp instanceof ArkBreak) {
-      doTypecheck(exp.exp)
+      doTypecheck(exp.exp, env)
       exp.loop.type = typeUnion(exp.loop.type, exp.type)
     } else if (exp instanceof ArkYield) {
-      doTypecheck(exp.exp)
+      doTypecheck(exp.exp, env)
       // FIXME: Type-check generators
-      // if (!typeEquals_(exp.type, exp.fn.returnType, exp.sourceLoc)) {
+      // if (!safeTypeEquals(exp.type, exp.fn.returnType, exp.sourceLoc)) {
       // eslint-disable-next-line max-len
       //   errors.push(new ArkCompilerError('Type of `yield\' expression does not match function return type'))
       // }
     } else if (exp instanceof ArkReturn) {
-      doTypecheck(exp.exp)
+      doTypecheck(exp.exp, env)
       // FIXME: Type-check generators
-      if (!exp.fn.type.isGenerator && !safeTypeEquals(exp.type, exp.fn.returnType, exp.sourceLoc)) {
+      if (!exp.fn.type.isGenerator
+        && !safeTypeEquals(env, exp.type, exp.fn.returnType, exp.sourceLoc)) {
         errors.push(new ArkCompilerError('Type of `return\' expression does not match function return type', exp.sourceLoc))
       }
     } else if (exp instanceof ArkFn) {
-      doTypecheck(exp.body)
+      doTypecheck(exp.body, env.push(exp.type.typeParameters))
       if (exp.body.type !== ArkNonterminatingType
-        && !safeTypeEquals(exp.returnType, exp.body.type, exp.sourceLoc)) {
+        && !safeTypeEquals(env, exp.returnType, exp.body.type, exp.sourceLoc)) {
         errors.push(new ArkCompilerError('Type of function body does not match function return type', exp.sourceLoc))
       }
     } else if (exp instanceof ArkCall) {
-      doTypecheck(exp.fn)
-      exp.args.map((a) => doTypecheck(a))
-      checkArgsMatchParams(exp.fn.type, exp.args, exp.sourceLoc)
+      doTypecheck(exp.fn, env)
+      exp.args.map((a) => doTypecheck(a, env))
+      checkArgsMatchParams(env, exp.fn.type, exp.args, exp.sourceLoc)
     } else if (exp instanceof ArkInvoke) {
       if (exp.type === ArkUndefinedType) {
-        errors.push(new ArkCompilerError(`No method ${typeName(exp.type)}.${exp.prop}`, exp.sourceLoc))
+        errors.push(new ArkCompilerError(`No method ${typeName(lookupType(env, exp.type))}.${exp.prop}`, exp.sourceLoc))
       } else {
-        doTypecheck(exp.obj)
-        exp.args.map((a) => doTypecheck(a))
+        doTypecheck(exp.obj, env)
+        exp.args.map((a) => doTypecheck(a, env))
         const objTy = exp.obj.type
         if (objTy !== ArkAnyType) { // Can't assume anything about Any values
           if (!(objTy instanceof ArkStructType || objTy instanceof ArkTrait)) {
@@ -175,65 +228,71 @@ export function typecheck(exp: ArkExp): ArkCompilerError[] {
             if (method === undefined) {
               errors.push(new ArkCompilerError(`Invalid method \`${exp.prop}'`, exp.sourceLoc))
             } else {
-              checkArgsMatchParams(method.type, [exp.obj, ...exp.args], exp.sourceLoc, objTy)
+              checkArgsMatchParams(
+                env.push(objTy.typeParameters),
+                method.type,
+                [exp.obj, ...exp.args],
+                exp.sourceLoc,
+                objTy,
+              )
             }
           }
         }
       }
     } else if (exp instanceof ArkSet) {
-      if (!safeTypeEquals(exp.lexp.type, exp.type, exp.sourceLoc)) {
+      if (!safeTypeEquals(env, exp.lexp.type, exp.type, exp.sourceLoc)) {
         errors.push(new ArkCompilerError('Type error in assignment', exp.sourceLoc))
       }
     } else if (exp instanceof ArkStructLiteral) {
       for (const v of exp.members.values()) {
-        doTypecheck(v)
+        doTypecheck(v, env)
       }
       // FIXME: Check items are of correct type
     } else if (exp instanceof ArkListLiteral) {
       for (const v of exp.list) {
-        doTypecheck(v)
+        doTypecheck(v, env)
       }
       // FIXME: Check items are of correct type
     } else if (exp instanceof ArkMapLiteral) {
       for (const [k, v] of exp.map) {
-        doTypecheck(k)
-        doTypecheck(v)
+        doTypecheck(k, env)
+        doTypecheck(v, env)
       }
       // FIXME: Check items are of correct type
     } else if (exp instanceof ArkLet) {
-      doTypecheck(exp.body)
-      exp.boundVars.map((bv) => doTypecheck(bv.init))
+      doTypecheck(exp.body, env)
+      exp.boundVars.map((bv) => doTypecheck(bv.init, env))
     } else if (exp instanceof ArkSequence) {
-      exp.exps.map(doTypecheck)
+      exp.exps.map((exp) => doTypecheck(exp, env))
     } else if (exp instanceof ArkIf) {
-      doTypecheck(exp.cond)
-      if (!safeTypeEquals(exp.cond.type, ArkBooleanType, exp.sourceLoc)) {
+      doTypecheck(exp.cond, env)
+      if (!safeTypeEquals(env, exp.cond.type, ArkBooleanType, exp.sourceLoc)) {
         errors.push(new ArkCompilerError('Condition of `if\' must be Bool', exp.sourceLoc))
       }
-      doTypecheck(exp.thenExp)
+      doTypecheck(exp.thenExp, env)
       exp.type = exp.thenExp.type
       if (exp.elseExp !== undefined) {
-        doTypecheck(exp.elseExp)
+        doTypecheck(exp.elseExp, env)
         exp.type = typeUnion(exp.type, exp.elseExp.type)
       }
     } else if (exp instanceof ArkAnd) {
-      doTypecheck(exp.left)
-      doTypecheck(exp.right)
-      if (!safeTypeEquals(exp.left.type, ArkBooleanType, exp.sourceLoc)
-        || !safeTypeEquals(exp.right.type, ArkBooleanType, exp.sourceLoc)) {
+      doTypecheck(exp.left, env)
+      doTypecheck(exp.right, env)
+      if (!safeTypeEquals(env, exp.left.type, ArkBooleanType, exp.sourceLoc)
+        || !safeTypeEquals(env, exp.right.type, ArkBooleanType, exp.sourceLoc)) {
         errors.push(new ArkCompilerError('Arguments to `and\' must be Bool', exp.sourceLoc))
       }
     } else if (exp instanceof ArkOr) {
-      doTypecheck(exp.left)
-      doTypecheck(exp.right)
-      if (!safeTypeEquals(exp.left.type, ArkBooleanType, exp.sourceLoc)
-        || !safeTypeEquals(exp.right.type, ArkBooleanType, exp.sourceLoc)) {
+      doTypecheck(exp.left, env)
+      doTypecheck(exp.right, env)
+      if (!safeTypeEquals(env, exp.left.type, ArkBooleanType, exp.sourceLoc)
+        || !safeTypeEquals(env, exp.right.type, ArkBooleanType, exp.sourceLoc)) {
         errors.push(new ArkCompilerError('Arguments to `or\' must be Bool', exp.sourceLoc))
       }
     } else if (exp instanceof ArkLoop) {
-      doTypecheck(exp.body)
+      doTypecheck(exp.body, env)
     } else if (exp instanceof ArkProperty) {
-      doTypecheck(exp.obj)
+      doTypecheck(exp.obj, env)
       if (exp.type === ArkUndefinedType) {
         errors.push(new ArkCompilerError(`Invalid property \`${exp.prop}'`, exp.sourceLoc))
       }
@@ -241,6 +300,6 @@ export function typecheck(exp: ArkExp): ArkCompilerError[] {
     assert(exp.type !== ArkUnknownType)
   }
 
-  doTypecheck(exp)
+  doTypecheck(exp, new Scope<ArkType>())
   return errors
 }

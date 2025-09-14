@@ -12,6 +12,7 @@ import {ExecaError, Options as ExecaOptions, execa} from 'execa'
 import {compareSync, Difference} from 'dir-compare'
 
 import {debug} from './ark/util.js'
+import {Scope} from './ark/compiler-utils.js'
 import {flatToJs, evalArkJs} from './ark/compiler/index.js'
 import {expToInsts} from './ark/flatten.js'
 import {toJs} from './ark/data.js'
@@ -48,7 +49,7 @@ function doTestGroup(
   test(title, async (t) => {
     for (const [source, expected, expectedType] of tests) {
       const compiled = compile(source)
-      assert(typeEquals(compiled.type, expectedType, undefined))
+      assert(typeEquals(new Scope<ArkType>(), compiled.type, expectedType, undefined))
       if (process.env.DEBUG) {
         debug(compiled, null)
       }

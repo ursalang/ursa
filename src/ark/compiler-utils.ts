@@ -2,10 +2,7 @@
 // © Reuben Thomas 2023-2025
 // Released under the MIT license.
 
-import assert from 'assert'
-
-import {globals} from './data.js'
-import {ArkType} from './type.js'
+import {type ArkType} from './type.js'
 
 export class Location {
   constructor(public name: string, public type: ArkType, public isVar: boolean) {
@@ -22,45 +19,18 @@ export class Frame {
   ) {}
 }
 
-export class Environment {
-  constructor(
-    public stack: [Frame, ...Frame[]] = [new Frame([], [])],
-    public externalSyms = globals,
-  ) {}
-
-  top() {
-    return this.stack[0]
-  }
-
-  push(items: (Location | undefined)[]) {
-    return new Environment(
-      [
-        new Frame(
-          [...this.top().locals, ...items],
-          this.top().captures,
-        ),
-        ...this.stack.slice(1),
-      ],
-      this.externalSyms,
-    )
-  }
-
-  pushFrame(frame: Frame) {
-    return new Environment([frame, ...this.stack], this.externalSyms)
-  }
-
-  popFrame() {
-    assert(this.stack.length > 1)
-    return new Environment([this.stack[1], ...this.stack.slice(2)], this.externalSyms)
+export class Namespace<T> extends Map<string, T> {
+  public with(substs: Namespace<T>): Namespace<T> {
+    const res = new Namespace<T>(this)
+    for (const [k, v] of substs) {
+      res.set(k, v)
+    }
+    return res
   }
 }
 
-export class Namespace<T> extends Map<string, T> {}
-
-export class Scope<T> extends Namespace<T> {
-  constructor(public stack: Namespace<T>[] = []) {
-    super()
-  }
+export class Scope<T> {
+  constructor(public stack: Namespace<T>[] = []) {}
 
   get(name: string): T | undefined {
     for (const frame of this.stack) {
@@ -73,9 +43,5 @@ export class Scope<T> extends Namespace<T> {
 
   push(frame: Namespace<T>) {
     return new Scope<T>([frame, ...this.stack])
-  }
-
-  pop(): Namespace<T> {
-    return new Scope<T>([...this.stack.slice(1)])
   }
 }
