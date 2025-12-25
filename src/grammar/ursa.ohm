@@ -93,7 +93,7 @@ Ursa {
     | CompareExp
 
   LogicNotExp
-    = not BitwiseExp          -- not
+    = not LogicNotExp          -- not
     | BitwiseExp
 
   LogicExp
