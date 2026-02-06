@@ -95,7 +95,7 @@ interactParser.set_defaults({func: interactCommand})
 const compileParser = subparsers.add_parser('compile', {aliases: ['c'], description: 'Compile source code to JSON'})
 compileParser.set_defaults({func: compileCommand})
 compileParser.add_argument('source', {metavar: 'FILE', help: 'Ursa program to compile'})
-compileParser.add_argument('--output', '-o', {metavar: 'FILE', help: 'JSON output file [default: standard output]'})
+compileParser.add_argument('--output', '-o', {metavar: 'FILE', help: "JSON output file [`-' for standard output]"})
 compileParser.add_argument('--executable', '-x', {action: 'store_true', help: 'Output a complete executable'})
 
 const fmtParser = subparsers.add_parser('fmt', {aliases: ['f', 'format'], description: 'Format source code'})
