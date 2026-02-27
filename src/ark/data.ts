@@ -174,6 +174,7 @@ export const ArkStringTraitType = new ArkTraitType('Str', new Map(), new Set([Ar
 export const ArkNumberTraitType = new ArkTraitType('Num')
 
 ArkStringTraitType.methods = new Map([
+  ['len', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('self', ArkSelfType)], ArkNumberTraitType))],
   ['get', new ArkMethodType(new ArkFnType(false, [new ArkTypedId('index', ArkNumberTraitType)], ArkStringTraitType))],
   ['iter', new ArkMethodType(new ArkFnType(true, [new ArkTypedId('self', ArkSelfType)], ArkStringTraitType))],
 ])
@@ -244,6 +245,7 @@ export class ArkStringVal extends ArkConcreteVal<string> {
   static {
     ArkStringVal.addMethods(
       [
+        ['len', new NativeFn([], ArkNumberTraitType, (thisVal: ArkStringVal) => ArkNumber(thisVal.val.length))],
         ['get', new NativeFn([new ArkTypedId('index', ArkNumberTraitType)], ArkStringTraitType, (thisVal: ArkStringVal, index: ArkNumberVal) => ArkString(thisVal.val[index.val]))],
         ['iter', new NativeFn([], ArkStringTraitType, (thisVal: ArkStringVal) => {
           const str = thisVal.val
