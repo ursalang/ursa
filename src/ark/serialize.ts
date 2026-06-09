@@ -142,8 +142,6 @@ export function valToJs(val: ArkVal | ArkExp) {
     } else if (val instanceof ArkOperation) {
       // FIXME: Can we properly serialize a promise?
       return ['promise']
-    } else if (val === ArkNull()) {
-      return null
     } else if (val === ArkUndefined()) {
       return undefined
     }
