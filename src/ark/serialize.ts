@@ -1,9 +1,9 @@
 // Serialize Ark code to JSON.
-// © Reuben Thomas 2023-2025
+// © Reuben Thomas 2023-2026
 // Released under the MIT license.
 
 import {
-  ArkVal, ArkConcreteVal, ArkNull, ArkOperation, ArkList, ArkMap, ArkStruct,
+  ArkVal, ArkConcreteVal, ArkOperation, ArkList, ArkMap, ArkStruct,
   ArkUndefined, NativeStruct,
   ArkNullTraitType, ArkBooleanTraitType, ArkNumberTraitType, ArkStringTraitType,
   ArkListTraitType, ArkMapTraitType,
@@ -142,8 +142,6 @@ export function valToJs(val: ArkVal | ArkExp) {
     } else if (val instanceof ArkOperation) {
       // FIXME: Can we properly serialize a promise?
       return ['promise']
-    } else if (val === ArkNull()) {
-      return null
     } else if (val === ArkUndefined()) {
       return undefined
     }
