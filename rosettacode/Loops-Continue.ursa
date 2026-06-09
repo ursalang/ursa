@@ -1,5 +1,3 @@
-let write = process.stdout.write
-
 for i in range(10) {
     let n = i + 1
     write(n.toString())

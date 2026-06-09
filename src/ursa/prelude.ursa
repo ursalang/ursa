@@ -14,6 +14,7 @@ use js.Infinity
 Struct {
   // Basic facilities
   print = console.log
+  write = process.stdout.write
 
   // Various JavaScript facilities
   JSON = JSON
