@@ -20,7 +20,7 @@ import {
 } from './code.js'
 import {debug} from './util.js'
 
-function typeToStr(ty: ArkType) {
+export function typeToStr(ty: ArkType) {
   switch (ty) {
     case ArkUnknownType:
       return 'Unknown'
