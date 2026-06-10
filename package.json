@@ -63,7 +63,7 @@
   "scripts": {
     "lint": "eslint . --ext .ts && ts-unused-exports ./tsconfig.json --ignoreFiles=\"./src/grammar/ursa.ohm-bundle.*.ts\" && depcheck",
     "prebuild": "node --print \"'export default \\'' + require('./package.json').version + '\\';'\" > src/version.ts && npm run pre-compile-prelude",
-    "build": "tsc --build && npm run compile-prelude && mkdir -p lib/ark/compiler lib/ursa lib/topiary && cp src/ark/prelude.json lib/ark/ && cp src/ark/compiler/prelude.js lib/ark/compiler/ && cp src/ursa/prelude.ursa lib/ursa/ && cp src/topiary/ursa.scm lib/topiary/",
+    "build": "tsc --build && npm run compile-prelude && mkdir -p lib/ark/compiler lib/ursa lib/topiary && cp src/ark/prelude.json lib/ark/ && cp src/ark/compiler/prelude.js src/ark/compiler/prelude.scm lib/ark/compiler/ && cp src/ursa/prelude.ursa lib/ursa/ && cp src/topiary/ursa.scm lib/topiary/",
     "clean": "tsc --build --clean && rm -f src/grammar/ursa.ohm-bundle.ts src/grammar/ursa.ohm-bundle.d.ts",
     "generate-only": "ohm generateBundles --withTypes --esm 'src/grammar/*.ohm'",
     "patch-diff-ohm": "patch -p0 --output=src/grammar/ursa.ohm-bundle.d.part-patched.ts < src/grammar/ursa.ohm-bundle.d.ts.diff",

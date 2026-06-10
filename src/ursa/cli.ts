@@ -1,5 +1,5 @@
 // Ursa command-line front-end and REPL.
-// © Reuben Thomas 2023-2025
+// © Reuben Thomas 2023-2026
 // Released under the GPL version 3, or (at your option) any later version.
 
 import assert from 'assert'
@@ -9,6 +9,7 @@ import {fileURLToPath} from 'url'
 
 import {ArgumentParser, RawDescriptionHelpFormatter} from 'argparse'
 import envPaths from 'env-paths'
+import {execaSync} from 'execa'
 import fs, {PathOrFileDescriptor} from 'fs-extra'
 import tildify from 'tildify'
 import {rollup} from 'rollup'
@@ -28,6 +29,7 @@ import {ArkState} from '../ark/interpreter.js'
 import {compile as arkCompile} from '../ark/reader.js'
 import {serializeVal} from '../ark/serialize.js'
 import {runWithTraceback, compile as ursaCompile} from './compiler.js'
+import {valToScheme, preludeScheme} from '../ark/compiler/scheme.js'
 import {format} from './fmt.js'
 import {
   arkToJs, evalArkJs, preludeJs, runtimeContext,
@@ -59,8 +61,8 @@ URSA_HISTORY (default: ${tildify(historyFile)})`,
 parser.add_argument('--version', {
   action: 'version',
   version: `%(prog)s ${programVersion}
-© 2023-2025 Reuben Thomas <rrt@sc3d.org>
-https://github.com/ursalang/ursa
+© 2023-2026 Reuben Thomas <rrt@sc3d.org>
+https://ursalang.github.io
 Distributed under the GNU General Public License version 3, or (at
 your option) any later version. There is no warranty.`,
 })
@@ -68,7 +70,7 @@ parser.add_argument('--syntax', {
   default: 'ursa', choices: ['ursa', 'json'], help: 'syntax to use [default: ursa]',
 })
 parser.add_argument('--target', {
-  default: 'ark', choices: ['ark', 'js'], help: 'compile target to use [default: ark]',
+  default: 'ark', choices: ['ark', 'js', 'scheme'], help: 'compile target to use [default: ark]',
 })
 
 const subparsers = parser.add_subparsers({description: 'action to take'})
@@ -164,13 +166,13 @@ function readSourceFile(inputFile: PathOrFileDescriptor) {
 }
 
 function compile(
-  args: Args,
+  syntax: string,
   exp: string,
   env: Environment = new Environment(),
   startRule?: string,
 ): ArkExp {
   let compiled: ArkExp
-  if (args.syntax === 'json') {
+  if (syntax === 'json') {
     compiled = arkCompile(JSON.parse(exp), env)
   } else {
     compiled = ursaCompile(exp, env, startRule)
@@ -242,7 +244,7 @@ async function repl(args: Args, ark = new ArkState(), env = new Environment()): 
   rl.on('SIGINT', rlSigintHandler)
   for await (const line of rl) {
     try {
-      const exp = addReturnValues(compile(args, line, env))
+      const exp = addReturnValues(compile(args.syntax, line, env))
       ark.inst = expToInst(exp)
       if (process.stdin.isTTY) {
         process.stdin.setRawMode(false)
@@ -280,25 +282,37 @@ async function runCode(source: string, args: Args) {
   // Any otherwise uncaught exception is reported as an error.
   const ark = new ArkState()
   // Add command-line arguments.
-  const ursaArgv = new ArkList(
-    [ArkString(prog ?? process.argv[1]), ...args.argument.map((s) => ArkString(s))],
-  )
+  const progArgs = [prog ?? process.argv[1], ...args.argument]
+  const ursaArgv = new ArkList(progArgs.map((s) => ArkString(s)))
   globals.set('argv', ursaArgv)
   jsGlobals.set('argv', ursaArgv)
   // Run the program
   let result: ArkVal | undefined
   let env = new Environment()
   if (source !== undefined) {
-    let exp = compile(args, source)
+    let exp = compile(args.syntax, source)
     if (args.interactive) {
       exp = addReturnValues(exp)
     }
-    if (args.target === 'ark') {
-      const flat = expToInst(exp)
-      ark.inst = flat
-      result = await runWithTraceback(ark)
-    } else {
-      result = await evalArkJs(arkToJs(exp, prog), prog)
+    switch (args.target) {
+      case 'ark':
+        const flat = expToInst(exp)
+        ark.inst = flat
+        result = await runWithTraceback(ark)
+        break
+      case 'js':
+        result = await evalArkJs(arkToJs(exp, prog), prog)
+        break
+      case 'scheme':
+        if (args.interactive) {
+          throw new Error('implement Scheme evaluation for REPL')
+        }
+        // FIXME: get result
+        const schemeFile = tmp.fileSync({discardDescriptor: true})
+        await compileFile(args.syntax, args.target, true, getInputFile(args), schemeFile.name)
+        execaSync(schemeFile.name, ['--', ...progArgs], {stdout: 'inherit', stderr: 'inherit'})
+        schemeFile.removeCallback()
+        break
     }
     if (args.interactive) {
       ({result, env} = extractReturnValues(ark, env, result))
@@ -342,23 +356,33 @@ function recordKeys<K extends PropertyKey, T>(object: Record<K, T>) {
   return Object.keys(object) as (K)[]
 }
 
-async function compileCommand(args: Args) {
-  const outputFile = getOutputFile(args, true)
+async function compileFile(
+  syntax: string,
+  target: string,
+  executable: boolean,
+  inputFile: PathOrFileDescriptor,
+  outputFile: PathOrFileDescriptor,
+) {
   // Any otherwise uncaught exception is reported as an error.
   // Read input
-  const inputFile = getInputFile(args)
   const source = readSourceFile(inputFile)
-  const exp = compile(args, source)
+  const exp = compile(syntax, source)
   let output = ''
-  if (args.target === 'ark') {
-    if (args.executable) {
+  if (target === 'ark') {
+    if (executable) {
       if (path.basename(process.argv[1]) === 'cli.ts') {
         throw new Error('Cannot create executable from test-run.sh')
       }
       output += `#!/usr/bin/env -S ${process.argv0} --no-warnings ${process.argv[1]} --syntax=json run\n`
     }
     output += serializeVal(exp)
-  } else if (args.executable) {
+  } else if (target === 'scheme') {
+    if (executable) {
+      output += '#!/usr/bin/env -S guile -s\n!#\n'
+      output += preludeScheme + '\n'
+    }
+    output += valToScheme(exp)
+  } else if (executable) {
     // Read prelude but elide the "use strict" line.
     const prelude = preludeJs.slice(preludeJs.indexOf('\n') + 1)
     const names = []
@@ -383,9 +407,14 @@ async function compileCommand(args: Args) {
     output += arkToJs(exp, prog).code
   }
   fs.writeFileSync(outputFile, output)
-  if (args.executable && typeof outputFile !== 'number') {
+  if (executable && typeof outputFile !== 'number') {
     fs.chmodSync(outputFile, 0o775)
   }
+}
+
+async function compileCommand(args: Args) {
+  const outputFile = getOutputFile(args, true)
+  await compileFile(args.syntax, args.target, args.executable, getInputFile(args), outputFile)
 }
 
 function fmtCommand(args: Args) {
