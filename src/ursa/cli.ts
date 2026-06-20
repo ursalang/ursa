@@ -378,7 +378,7 @@ async function compileCommand(args: Args) {
     fs.writeFileSync(tmpFile.name, output)
     output = await buildRuntime(tmpFile.name)
     tmpFile.removeCallback()
-    output = `#!/usr/bin/env -S node --experimental-default-type=module --\n${output}`
+    output = `#!/usr/bin/env -S node --\n${output}`
   } else {
     output += arkToJs(exp, prog).code
   }
