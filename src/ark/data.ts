@@ -3,7 +3,7 @@
 // Released under the MIT license.
 
 import {
-  action, call, Operation, Reject, Resolve, run, sleep,
+  action, call, Operation, run, sleep,
 } from 'effection'
 
 import {
@@ -566,8 +566,8 @@ export const globals = new Map<string, ArkVal>([
     [new ArkTypedId('resolve', new ArkFnType(false, undefined, ArkAnyType)), new ArkTypedId('reject', new ArkFnType(false, undefined, ArkAnyType))],
     ArkAnyType,
     function* gen(fn) {
-      const result = yield* action(
-        toJs(fn) as (resolve: Resolve<unknown>, reject: Reject) => Operation<void>,
+      const result = action(
+        toJs(fn) as (resolve: (value: unknown) => void, reject: (error: Error) => void) => () => void,
       )
       return fromJs(result)
     },

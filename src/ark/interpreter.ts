@@ -3,7 +3,7 @@
 // Released under the MIT license.
 
 import {
-  Instruction, Operation, run, sleep, spawn,
+  Effect, Operation, run, sleep, spawn,
 } from 'effection'
 import {Interval} from 'ohm-js'
 
@@ -129,7 +129,7 @@ function* call(
   inst: ArkCallInst | ArkInvokeInst,
   callable: ArkCallable,
   args: ArkVal[],
-): Generator<Instruction, [ArkState, ArkInst | undefined]> {
+): Generator<Effect<unknown>, [ArkState, ArkInst | undefined]> {
   if (callable instanceof ArkFlatGeneratorClosure) {
     const result = new ArkContinuation(new ArkState(
       callable.body,

@@ -16,7 +16,7 @@
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@sc3d/stacktracey": "^2.1.9",
     "argparse": "^2.0.1",
-    "effection": "^3.6.1",
+    "effection": "^4.0.3",
     "env-paths": "^4.0.0",
     "execa": "^9.6.1",
     "fs-extra": "^11.3.5",
